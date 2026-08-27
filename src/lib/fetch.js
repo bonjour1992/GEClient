@@ -1,6 +1,9 @@
+
+const server="http://192.168.1.19:8500/"
+
 export async function fetchAPI(url, method, body) {
 
-    const res = await fetch("http://localhost:3000/" + url,
+    const res = await fetch(server + url,
         {
             method: method,
             headers: { "Content-Type": "application/json", Authorization: 'GRANT', },
@@ -60,4 +63,4 @@ export async function getImage()
     return await fetchAPI("image",'GET')
 }
 
-export const pub= "http://localhost:3000/public"
+export const pub=server + "public"
