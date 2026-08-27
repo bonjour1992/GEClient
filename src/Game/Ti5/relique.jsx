@@ -2,7 +2,7 @@ import { TextInput } from "../../Input/TextInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text, Explication } from "../../Component/Text"
-import { backgroundColor, borderColor } from "./ti5"
+import { backgroundColor, backgroundColorFull, borderColor } from "./ti5"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 import { SmallPo } from "../../Component/Size"
@@ -26,7 +26,7 @@ function Display({ content, explication, style = {} }) {
     return (
         <div style={{
             ...SmallPo,
-            ...backgroundColor,
+            ...backgroundColorFull,
             ...borderColor,
             color: "white",
             ...fullBorder,
@@ -87,6 +87,27 @@ function Display({ content, explication, style = {} }) {
     )
 }
 
+function Verso({ content, explication, style = {} }) {
+
+
+    return (
+        <div style={{
+            ...SmallPo,
+            ...backgroundColorFull,
+            color: "white",
+            ...style,
+            position: "relative",
+            borderRadius: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+        }}>
+            <img src={pub + "/ti/relic/relicCiv.png"} height="140px" />
+
+        </div>
+    )
+}
+
 function Form({ content, onChange, onSubmit, style }) {
 
     return (
@@ -104,4 +125,4 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Relique", classe: Habilite, form: Form, display: { default: Display } }
+export default { name: "Relique", classe: Habilite, form: Form, display: { default: Display, verso: Verso } }

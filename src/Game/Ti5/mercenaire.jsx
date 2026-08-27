@@ -2,7 +2,7 @@ import { TextInput } from "../../Input/TextInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text, Explication } from "../../Component/Text"
-import { backgroundColor, borderColor } from "./ti5"
+import { backgroundColor, backgroundColorFull, borderColor } from "./ti5"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 import { SmallPa } from "../../Component/Size"
@@ -29,7 +29,7 @@ function Display({ content, explication, style = {} }) {
     return (
         <div style={{
             ...SmallPa,
-            ...backgroundColor,
+            ...backgroundColorFull,
             boxSizing: "border-box",
             ...borderColor,
             color: "white",
@@ -51,7 +51,7 @@ function Display({ content, explication, style = {} }) {
                 fontWeight: "bold",
                 width: "100%",
                 ...bottomBorder(2),
-                borderColor: bColor,
+                ...borderColor,
             }}
                 text={content.sousTitre} />
             <Text style={{
@@ -70,7 +70,7 @@ export function Verso({ content, explication, style }) {
     return (<div
         style={{
             ...SmallPa,
-            ...backgroundColor,
+            ...backgroundColorFull,
             borderRadius: 0,
             display:"flex",
             alignItems:"center",

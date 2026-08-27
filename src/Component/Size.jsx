@@ -8,6 +8,10 @@ export const SmallPo={width:165,height:256,boxSizing: "border-box",borderRadius:
 export const MiniPo={width:155,height:238,boxSizing: "border-box"}
 
 export const A4Pa={width: 1124, height: 794,boxSizing: "border-box"}
+export const A4Po={width: 794, height: 1124,boxSizing: "border-box"}
+
+export const A3Pa={width: 1588, height: 1124,boxSizing: "border-box"}
+export const A3Po={width: 1124, height: 1588,boxSizing: "border-box"}
 
 export const A5Po={width: 561, height: 794,boxSizing: "border-box"}
 

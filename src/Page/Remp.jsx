@@ -33,7 +33,9 @@ export default function Remp() {
     function addCSS(i) {
         return () => {
             let res = [...remp]
-            if (typeof(res[i].css!=="Array")) res[i].css=[]
+            console.log(typeof(res[i].css))
+            if (typeof(res[i].css)!=="object") res[i].css=[]
+            console.log(res[i].css)
             res[i].css.push(["", ""])
             res[i].modified = true
             setter(res,jeu)

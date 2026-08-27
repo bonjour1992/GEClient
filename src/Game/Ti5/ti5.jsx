@@ -18,6 +18,7 @@ export const turnNumber = 10
 
 export const borderColor = { borderColor: "#343434" }
 export const backgroundColor = { backgroundColor: "#172045BB" }
+export const backgroundColorFull = { backgroundColor: "#172045" }
 
 export const Handler = {
     "unit": unitHandler,

@@ -43,7 +43,7 @@ function Search({ search }) {
         let r = search.filter(i => i.name + ":" + i.type + "(" + i.id + ")" === e.target.value)
         console.log(r)
         if (r.length)
-            navigate("/" + jeu + "/" + r[0].type + "/" + r[0].id)
+            navigate("/GE/" + jeu + "/" + r[0].type + "/" + r[0].id)
 
     }
 
@@ -96,7 +96,7 @@ function Add() {
             <button onMouseEnter={show} style={{fontSize:20}}>Ajouter</button>
             <ul id="listAdd" style={{ display: "none" }}>
                 {Object.keys(games[jeu].handlers).map((e, i) => {
-                    return (<li key={i}><Link to={"/" + jeu + "/" + e + "/new"} >{games[jeu].handlers[e].name}</Link></li>)
+                    return (<li key={i}><Link to={"/GE/" + jeu + "/" + e + "/new"} >{games[jeu].handlers[e].name}</Link></li>)
                 }
                 )}
             </ul>

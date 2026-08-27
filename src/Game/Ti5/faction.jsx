@@ -138,19 +138,19 @@ export function Verso({ content, style, explication }) {
             padding: 4,
         }}>
             {Array.from((new Faction).agents.keys()).map((i) => {
-                return content.agents && content.agents[i].id !== -1 && content.agentSetup[i] != 0 && <>
-                    <LoadAndDisplay key={i} link={content.agents[i]} displayeur="nom" style={{ display: "inline" }} />
+                return content.agents && content.agents[i].id !== -1 && content.agentSetup[i] != 0 && <div key={i} >
+                    <LoadAndDisplay link={content.agents[i]} displayeur="nom" style={{ display: "inline" }} />
                     <span style={{ color: "white" }}>: {content.agentSetup[i]}</span>
                     <br />
-                </>
+                </div>
             })}
             <Separateur />
             {Array.from((new Faction).units.keys()).map((i) => {
-                return content.units && content.units[i].id !== -1 && content.unitNum[i] != 0 && <>
-                    <LoadAndDisplay key={i} link={content.units[i]} displayeur="nom" style={{ display: "inline", color: "white" }} />
+                return content.units && content.units[i].id !== -1 && content.unitNum[i] != 0 && <div key={i} >
+                    <LoadAndDisplay link={content.units[i]} displayeur="nom" style={{ display: "inline", color: "white" }} />
                     <span style={{ color: "white" }}>: {content.unitNum[i]}</span>
                     <br />
-                </>
+                </div>
             })}
             <Separateur />
             <Text text={content.setup} style={{ color: "white", fontSize: 12 }} rule={explication} />

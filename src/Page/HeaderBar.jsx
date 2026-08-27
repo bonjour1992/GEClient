@@ -19,7 +19,7 @@ const page = {
 
 function Location({ location }) {
 
-    const fil = [["Acceuil", "/"]]
+    const fil = [["Acceuil", "/GE/"]]
     const search = useSearch((state) => state.search)
     const part = location.pathname.split("/")
 
