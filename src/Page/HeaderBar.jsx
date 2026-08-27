@@ -25,20 +25,20 @@ function Location({ location }) {
 
 
     if (false) false
-    else part[1] && fil.push([games[part[1]].name, "/" + part[1]])
+    else part[2] && fil.push([games[part[2]].name, "/GE/" + part[2]])
 
-    if (part[2] === "remp") fil.push(["Remplacement", ""])
-    else part[2] && fil.push([games[part[1]].handlers[part[2]].name, "/" + part[1] + "/" + part[2]])
+    if (part[3] === "remp") fil.push(["Remplacement", ""])
+    else part[3] && fil.push([games[part[2]].handlers[part[3]].name, "/GE/" + part[2] + "/" + part[3]])
 
 
-    if (part[3] === "new") fil.push(["Nouveau", ""])
-    else if (part[3] === "print") fil.push(["Impression", ""])
-    else if (part[3]) {
-        let r = search.filter(e => e.id == part[3])
-        fil.push([r[0] ? r[0].name : "erreur", "/" + part[1] + "/" + part[2] + "/" + part[3]])
+    if (part[4] === "new") fil.push(["Nouveau", ""])
+    else if (part[4] === "print") fil.push(["Impression", ""])
+    else if (part[4]) {
+        let r = search.filter(e => e.id == part[4])
+        fil.push([r[0] ? r[0].name : "erreur", "/GE/" + part[2] + "/" + part[3] + "/" + part[4]])
     }
 
-    if (part[4] === "edit") fil.push(["Edit", "/" + part[1] + "/" + part[2] + "/" + part[3] + "/edit"])
+    if (part[5] === "edit") fil.push(["Edit", "/GE/" + part[2] + "/" + part[3] + "/" + part[4] + "/edit"])
 
     return (<div className="no-print" style={{ zIndex: 50, backgroundColor: "white", position: "fixed", top: 0, marginRight: "60%", width: "40%", height: 40, borderBottomWidth: 2, borderBottomStyle: "solid" }}>
         {fil.map((e, i) => {

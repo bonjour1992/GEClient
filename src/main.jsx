@@ -21,7 +21,7 @@ import Print from "./Page/Print.jsx";
 // router
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: "/GE/",
     Component: HeaderBar,
     children: [
       {
