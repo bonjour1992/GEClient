@@ -1,0 +1,33 @@
+import { Outlet, useLoaderData, useParams, Link, NavLink } from "react-router";
+import { getHandler } from "../Game/games";
+
+
+export default function Liste() {
+
+    return (<>
+        <div>Liste</div>
+        <NavLink to={"./new"}>Créer nouveau</NavLink>
+        <br />
+        <NavLink to={"./print"}>Page impression</NavLink>
+
+        <div style={{
+            display: "flex",
+            flexWrap: "wrap"
+        }}>
+            {useLoaderData().element.map((e, i) =>
+                <Displayeur key={i} elem={e} />
+            )}
+        </div>
+    </>)
+}
+function Displayeur({ elem }) {
+    let Display = getHandler(useParams().jeu, useParams().elem).display.default
+    return (
+        <div style={{ float: "left", margin: 2 }}>
+            <NavLink to={"./" + elem.id}>Voir</NavLink>
+            <NavLink to={"./" + elem.id + "/edit"}>Editer</NavLink>
+            <Display content={elem.content} />
+
+        </div>
+    )
+}

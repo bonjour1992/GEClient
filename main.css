@@ -1,0 +1,25 @@
+.tiptap{
+    width: 396px;
+    min-height: 80px;
+    margin: 2px;
+    background-color: #DDDDDD;
+}
+
+p{
+  margin:0;
+}
+
+
+@media print
+{    
+    .no-print, .no-print *
+    {
+        display: none !important;
+    }
+}
+
+
+ body {
+        margin: 0px;
+        padding: 0px;
+      }
