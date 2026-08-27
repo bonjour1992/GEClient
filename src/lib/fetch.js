@@ -1,5 +1,5 @@
 
-const server="http://192.168.1.19:8500/"
+const server="http://xorg-compagny.ddns.net:8500/"
 
 export async function fetchAPI(url, method, body) {
 
