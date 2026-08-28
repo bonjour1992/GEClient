@@ -24,7 +24,7 @@ function Location({ location }) {
     const part = location.pathname.split("/")
 
 
-    if (false) false
+    if (part[2]==="library") fil.push(["Librairie d'image","/GE/library"])
     else part[2] && fil.push([games[part[2]].name, "/GE/" + part[2]])
 
     if (part[3] === "remp") fil.push(["Remplacement", ""])

@@ -6,14 +6,14 @@ import { TextInput } from "../../Input/TextInput"
 import { NumberInput } from "../../Input/NumberInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ColorInput } from "../../Input/ColorInput"
-import { backgroundColor, techType } from "./ti5"
+import { backgroundColor, backgroundColorFull, techType } from "./ti5"
 import { bottomBorder } from "../../Component/style"
 import { fullBorder } from "../../Component/style"
 import { Text, Explication } from "../../Component/Text"
 import ReactDOMServer from "react-dom/server"
 import FormBase from "../../Input/FormBase"
 import { SmallPo } from "../../Component/Size"
-
+import { pub } from "../../lib/fetch"
 
 const bColor="#990000"
 
@@ -56,6 +56,27 @@ function Display({ content, style, explication }) {
     )
 }
 
+function Verso({ content, explication, style = {} }) {
+
+
+    return (
+        <div style={{
+            ...SmallPo,
+            ...backgroundColorFull,
+            color: "white",
+            ...style,
+            position: "relative",
+            borderRadius: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+        }}>
+            <img src={pub + "/ti/Color/General Icons/Secret regular.png"} height="120px" />
+
+        </div>
+    )
+}
+
 function Form({ content, onChange, onSubmit,style}) {
 
     return (
@@ -69,4 +90,4 @@ function Form({ content, onChange, onSubmit,style}) {
 }
 
 
-export default { name: "Objectif militaire", classe: Classe, form: Form, display: {default:Display}, print: "grid-cols-6" }
+export default { name: "Objectif militaire", classe: Classe, form: Form, display: {default:Display,verso:Verso}, print: "grid-cols-6" }

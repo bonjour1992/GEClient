@@ -1,13 +1,13 @@
 
 const server="http://xorg-compagny.ddns.net:8500/"
 
-export async function fetchAPI(url, method, body) {
+export async function fetchAPI(url, method, body,content) {
 
     const res = await fetch(server + url,
         {
             method: method,
-            headers: { "Content-Type": "application/json", Authorization: 'GRANT', },
-            body: JSON.stringify(body)
+            headers: { "Content-Type":content || "application/json", Authorization: 'GRANT', },
+            body: content?body:JSON.stringify(body)
         })
     return await res.json()
 
@@ -61,6 +61,11 @@ export async function getSearch(jeu)
 export async function getImage()
 {
     return await fetchAPI("image",'GET')
+}
+
+export async function saveImage(blob,path)
+{
+    return await fetchAPI("upload-image?path="+path,'POST',blob,blob.type)
 }
 
 export const pub=server + "public"

@@ -4,9 +4,10 @@ import { Handler as HandlerTI5 } from './Ti5/ti5'
 import { Handler as HandlerTOW } from './Tow/tow'
 import { Link } from '../lib/datatype'
 import { Handler as HandlerFolowyn } from './Followyn/Followyn'
+import { pub } from '../lib/fetch'
 
 export const games = {
-    "ti5": { handlers: HandlerTI5, name: "Twiligth imperium 5" },
+    "ti5": { handlers: HandlerTI5, name: "Twiligth imperium 5",pict: "/ti5.jpg"},
     "tow": { handlers: HandlerTOW, name: "Warhammer The Old World" },
     "followyn":{handlers:HandlerFolowyn,name:"Followyn JDR"}
 }

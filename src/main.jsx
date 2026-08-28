@@ -14,6 +14,7 @@ import Edit from "./Page/Edit";
 import Create from "./Page/Create.jsx";
 import Duplicate from "./Page/Duplicate.jsx";
 import Print from "./Page/Print.jsx";
+import { ImageLibrary } from "./Page/ImageLibrary.jsx";
 
 
 
@@ -26,6 +27,9 @@ const router = createBrowserRouter([
     children: [
       {
         index: true, Component: Home
+      },
+      {
+        path: "library", Component: ImageLibrary
       },
       {
         path: ":jeu/", Component: JeuBar, children: [
