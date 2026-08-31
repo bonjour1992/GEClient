@@ -14,6 +14,8 @@ import evenementHandler from "./evenement"
 import phaseHandler from "./phase"
 import techSheetHandler from "./techSheet"
 import neutralFactionHandler from "./neutralFaction"
+import derouleHandler from "./deroule"
+
 export const turnNumber = 10
 
 export const borderColor = { borderColor: "#343434" }
@@ -36,7 +38,8 @@ export const Handler = {
     "evenement":evenementHandler,
     "phase":phaseHandler,
     "techsheet":techSheetHandler,
-    "neutral":neutralFactionHandler
+    "neutral":neutralFactionHandler,
+    "deroule":derouleHandler
 }
 
 export const techType = { gen: "Génétique", spa: "Spatial", mil: "Militaire", soc: "Social", storm: "Tempete" }

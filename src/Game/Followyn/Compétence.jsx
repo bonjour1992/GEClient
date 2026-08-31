@@ -11,7 +11,10 @@ import { Text, Explication } from "../../Component/Text"
 import ReactDOMServer from "react-dom/server"
 import FormBase from "../../Input/FormBase"
 import { ElementJDR } from "./FollowynDatatype"
-import { Description, FormElementJDR,Card } from "./FollowynComponent"
+import { FormElementJDR } from "./Component/FormElementJDR"
+import { Card } from "./Component/Card"
+import { Description } from "./Component/Description"
+import { NavLink } from "react-router"
 
 const elementColor = "rgb(16, 93, 10)"
 
@@ -33,7 +36,7 @@ function Display({ content, explication, style }) {
 
 
     return (
-        <Card nom={content.name} color={elementColor}>
+        <Card content={content} color={elementColor}>
             <Description content={content} />
             <Text text={content.maitrise} />
             <Text text={content.puissance} />

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
-export default function FreeTagInput({ value, name, onChange,label }) {
-    let tags = value[name] || []
+export default function FreeTagInput({ value, name, onChange,label,index }) {
+    let tags = (index !== undefined?value[name][index]:value[name]) || []
     const [input, setInput] = useState("");
 
     const addTag = (value) => {
@@ -9,12 +9,12 @@ export default function FreeTagInput({ value, name, onChange,label }) {
 
         if (!tag || tags.includes(tag)) return;
 
-        onChange(name, [...tags, tag]);
+        onChange(name, [...tags, tag],index);
         setInput("");
     };
 
     const removeTag = (tagToRemove) => {
-        onChange(name, tags.filter((tag) => tag !== tagToRemove));
+        onChange(name, tags.filter((tag) => tag !== tagToRemove),index);
     };
 
     const handleKeyDown = (e) => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "../lib/datatype"
 import { getHandler } from "../Game/games"
-import { useParams } from "react-router"
+import { NavLink, useParams } from "react-router"
 import { getElement } from "../lib/fetch"
 
 export function LoadAndDisplay({ link, style, displayeur, context }) {
@@ -20,5 +20,13 @@ export function LoadAndDisplay({ link, style, displayeur, context }) {
     return (
         <Display content={elem} style={style} context={context} />
 
+    )
+}
+
+export function LoadLink({ link, style, displayeur="nom", context }){
+    return (
+        <NavLink to={"../"+link.type+"/"+link.id}>
+            <LoadAndDisplay link={link} style={style} displayeur={displayeur} context={context}/>
+        </NavLink>
     )
 }

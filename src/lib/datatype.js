@@ -26,3 +26,17 @@ export class Link {
 export function LinkToString(link){
   return link.type + "#" + link.id
 }
+
+export const aggregation = (Base, ...Mixins) => {
+    class Mixed extends Base {
+        constructor(...args) {
+            super(...args);
+
+            Mixins.forEach(Mixin => {
+                Object.assign(this, new Mixin());
+            });
+        }
+    }
+
+    return Mixed;
+};

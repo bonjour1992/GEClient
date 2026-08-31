@@ -9,18 +9,33 @@ export default function Editor({ elem, creer =false}) {
     let jeu = useParams().jeu
 
 
-    const split = { width: "50%", float: "left" }
+   
 
-    function handleInputChange(name, value, index) {
+function handleInputChange(name, value, index) {
+    setElement(prevElement => {
         if (index !== undefined) {
-            let table = [...element.content[name]]
-            table[index] = value
-            setElement({ ...element, content: { ...element.content, [name]: table } });
+            const table = [...prevElement.content[name]];
+            table[index] = value;
+
+            return {
+                ...prevElement,
+                content: {
+                    ...prevElement.content,
+                    [name]: table
+                }
+            };
         }
-        else {
-            setElement({ ...element, content: { ...element.content, [name]: value } });
-        }
-    }
+
+        return {
+            ...prevElement,
+            content: {
+                ...prevElement.content,
+                [name]: value
+            }
+        };
+    });
+}
+
 
     function save(e) {
         let f = async () => {
@@ -39,7 +54,7 @@ export default function Editor({ elem, creer =false}) {
 
 
     let Form = getHandler(jeu, element.meta.type).form
-
+let split = getHandler(jeu, element.meta.type).editor!=="noSplit"?  { width: "49%",paddingRight:"1%", float: "left" }:{}
     return (<>
         <div>Edition</div>
         <div style={split}>

@@ -4,14 +4,23 @@ import StarterKit from "@tiptap/starter-kit";
 import { ReactNode, useEffect } from "react";
 import { Label } from "./inputUtils";
 
-export function EditorInput({ index, onChange, name = "name", value, label, size = { width: 400, height: 200 } }) {
+export     const stripTags = (html) => html?html.replace(/<[^>]*>/g, ""):"";
+
+
+const editorStyle={
+    normal : "width: 98%; min-width:200px;  min-height: 80px;    margin: 2px;    background-color: #DDDDDD;",
+    compact:"width: 98%; min-width:200px;   min-height: 16px;    margin: 2px;    background-color: #DDDDDD;"
+}
+
+
+export function EditorInput({ index, onChange, name = "name", value, label, type="normal" }) {
     const val = index !== undefined ? value[name][index] : value[name]
     const extensions = [StarterKit]
     const editor = useEditor({
         extensions: extensions,
         editorProps: {
             attributes: {
-                class: "tiptap",
+                style:editorStyle[type]
             },
         },
         content: val || "loading",
@@ -40,13 +49,13 @@ export function EditorInput({ index, onChange, name = "name", value, label, size
 
     return (
         <div style={{
-            width: 400,
+            width: "100%",
             borderWidth: 2,
             borderStyle: "solid",
             borderRadius: 8,
             paddingBottom: 4
         }}>
-            {label && (<Label style={{
+            {label && type!== "compact" && (<Label style={{
                 textAlign: "center",
                 width: "100%",
                 display: "block",
@@ -62,6 +71,8 @@ export function EditorInput({ index, onChange, name = "name", value, label, size
                             paddingLeft: 3,
                             padding: 1
                         }}>
+                           {label && type=== "compact" && (<Label style={{
+            }} name={label} />)} 
                         <button
                             onClick={(e) => {
                                 editor.chain().focus().toggleBold().run()
