@@ -37,7 +37,7 @@ export function TableResolutionForm({ content, onChange }) {
 
     return (<>
         <TableInput onChange={onChange} Line={resolutionLine} name="tableResolutionNum" value={content} label="Table de résolution"
-         composant={["tableResolutionCond", "tableResolutionColor","tableResolutionType","tableResolutionPoid","tableResolutionEffet"]} />
+            composant={["tableResolutionCond", "tableResolutionColor", "tableResolutionType", "tableResolutionPoid", "tableResolutionEffet"]} />
 
     </>)
 }
@@ -61,33 +61,39 @@ export function TableResolution({ content }) {
         return null;
     }
 
-function renderTypes(types, poid) {
-    if (!Array.isArray(types)) {
-        return null;
-    }
+    function renderTypes(types, poid) {
+        if (!Array.isArray(types)) {
+            return null;
+        }
 
-    return types.map((type, index) => (
-        <React.Fragment key={index}>
-            {index > 0 && (
-                <span style={{ marginLeft: "4px" }}>
-                    {" / "}
+        return (<span> {types.map((type, index) => (
+            <React.Fragment key={index}>
+                {index > 0 && (
+                    <span style={{ marginLeft: "4px" }}>
+                        {" / "}
+                    </span>
+                )}
+
+                <span style={{ fontWeight: "bold" }}>
+                    {type}
+
+
                 </span>
-            )}
+            </React.Fragment>
+        ))}
 
-            <span style={{ fontWeight: "bold" }}>
-                {type}
-
-                {poid !== undefined &&
-                    poid !== null &&
-                    poid !== "" && (
-                        <span>
-                            ({poid})
-                        </span>
-                    )}
-            </span>
-        </React.Fragment>
-    ));
-}
+            {(poid !== undefined &&
+                poid !== null &&
+                poid !== "" && poid !== 0) ? (
+                <span>
+                    ({poid})
+                </span>
+            ) :
+                <span>
+                    X
+                </span>}
+        </span>)
+    }
 
 
     return (
@@ -144,7 +150,7 @@ function renderTypes(types, poid) {
                                     <Text
                                         text={
                                             tableResolutionCond[
-                                                index
+                                            index
                                             ]
                                         }
                                     />
@@ -165,17 +171,17 @@ function renderTypes(types, poid) {
                                     {tableResolutionEffet[
                                         index
                                     ] && (
-                                        <span>
-                                            :{" "}
-                                            <Text
-                                                text={
-                                                    tableResolutionEffet[
+                                            <span>
+                                                :{" "}
+                                                <Text
+                                                    text={
+                                                        tableResolutionEffet[
                                                         index
-                                                    ]
-                                                }
-                                            />
-                                        </span>
-                                    )}
+                                                        ]
+                                                    }
+                                                />
+                                            </span>
+                                        )}
                                 </td>
                             </tr>
                         );

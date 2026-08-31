@@ -1,5 +1,8 @@
 import { Text } from "../../../Component/Text";
 import { stripTags } from "../../../Input/EditorInput";
+import { NumberInput } from "../../../Input/NumberInput";
+import { EditorInput } from "../../../Input/EditorInput";
+
 
 export class ObjectifCarac{
 
@@ -10,7 +13,7 @@ export class ObjectifCarac{
 
 export function ObjectifForm({content, onChange})
 {
-                <table style={{
+              return ( <table style={{
                 width: "100%"
             }}>
                 <thead>
@@ -32,8 +35,7 @@ export function ObjectifForm({content, onChange})
                         </td>
                     </tr>
                 </tbody>
-            </table>
-}
+            </table>)}
 
 export function Objectif({ content }) {
     const {
