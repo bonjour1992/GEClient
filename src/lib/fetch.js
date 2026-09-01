@@ -1,3 +1,5 @@
+import { useSearch } from "./store"
+
 
 const server="http://xorg-compagny.ddns.net:8500/"
 
@@ -22,18 +24,29 @@ export async function getList(jeu,type) {
     return await fetchAPI("element/" + jeu+"/"+type, 'GET')
 }
 
-export async function updateElement( id, content) {
-    return await fetchAPI("element/" + id, 'POST', content)
+export async function updateElement(id, content, jeu) {
+    const result = await fetchAPI("element/" + id, "POST", content);
+
+    await useSearch.getState().update(jeu, true);
+
+    return result;
 }
 
-export async function createElement(  content) {
-    return await fetchAPI("element/new" , 'POST', content)
+export async function createElement(content, jeu) {
+    const result = await fetchAPI("element/new", "POST", content);
+
+    await useSearch.getState().update(jeu, true);
+
+    return result;
 }
 
-export async function deleteElement(  id) {
-    return await fetchAPI("element/"+id , 'DELETE')
-}
+export async function deleteElement(id, jeu) {
+    const result = await fetchAPI("element/" + id, "DELETE");
 
+    await useSearch.getState().update(jeu, true);
+
+    return result;
+}
 
 export async function updateRemp( jeu, content) {
     return await fetchAPI("remp/update/" + jeu, 'POST', content)
@@ -66,6 +79,17 @@ export async function getImage()
 export async function saveImage(blob,path)
 {
     return await fetchAPI("upload-image?path="+path,'POST',blob,blob.type)
+}
+
+export async function getTags()
+{
+    return await fetchAPI("tag/all","GET")
+}
+
+
+export async function createTag(type,value)
+{
+    return await fetchAPI("tag/"+type+"/new","POST",value)
 }
 
 export const pub=server + "public"

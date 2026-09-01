@@ -3,24 +3,26 @@ import { useEditor, useEditorState, EditorContext, EditorContent } from "@tiptap
 import StarterKit from "@tiptap/starter-kit";
 import { ReactNode, useEffect } from "react";
 import { Label } from "./inputUtils";
+import { ModalPickerEditorButton } from "./ModalPickerInput";
 
-export     const stripTags = (html) => html?html.replace(/<[^>]*>/g, ""):"";
+
+export const stripTags = (html) => html ? html.replace(/<[^>]*>/g, "") : "";
 
 
-const editorStyle={
-    normal : "width: 98%; min-width:200px;  min-height: 80px;    margin: 2px;    background-color: #DDDDDD;",
-    compact:"width: 98%; min-width:200px;   min-height: 16px;    margin: 2px;    background-color: #DDDDDD;"
+const editorStyle = {
+    normal: "width: 98%; min-width:200px;  min-height: 80px;    margin: 2px;    background-color: #DDDDDD;",
+    compact: "width: 98%; min-width:200px;   min-height: 16px;    margin: 2px;    background-color: #DDDDDD;"
 }
 
 
-export function EditorInput({ index, onChange, name = "name", value, label, type="normal" }) {
+export function EditorInput({ index, onChange, name = "name", value, label, type = "normal" }) {
     const val = index !== undefined ? value[name][index] : value[name]
     const extensions = [StarterKit]
     const editor = useEditor({
         extensions: extensions,
         editorProps: {
             attributes: {
-                style:editorStyle[type]
+                style: editorStyle[type]
             },
         },
         content: val || "loading",
@@ -55,42 +57,54 @@ export function EditorInput({ index, onChange, name = "name", value, label, type
             borderRadius: 8,
             paddingBottom: 4
         }}>
-            {label && type!== "compact" && (<Label style={{
+            {label && type !== "compact" && (<Label style={{
                 textAlign: "center",
                 width: "100%",
                 display: "block",
                 borderBottomStyle: "solid",
                 borderWidth: 2
             }} name={label} />)}
-            <EditorContext.Provider value={{ editor }} >
-                <div >
-                    <div
-                        style={{
-                            display: "flex",
-                            gap: 2,
-                            paddingLeft: 3,
-                            padding: 1
-                        }}>
-                           {label && type=== "compact" && (<Label style={{
-            }} name={label} />)} 
-                        <button
-                            onClick={(e) => {
-                                editor.chain().focus().toggleBold().run()
-                                e.preventDefault()
-                            }}
+            <EditorContext.Provider value={{ editor }}>
+                <div>
+                    {editor && (
+                        <div
                             style={{
-                                borderStyle: "solid",
-                                borderWidth: 3,
-                                borderColor: editorState?.isBold ? "#555" : "#AAA",
-                                borderRadius: 6
+                                display: "flex",
+                                gap: 2,
+                                paddingLeft: 3,
+                                padding: 1
                             }}
                         >
-                            B
-                        </button>
-                    </div>
+                            {label && type === "compact" && (
+                                <Label name={label} />
+                            )}
+
+                            <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    editor.chain().focus().toggleBold().run();
+                                }}
+                                style={{
+                                    borderStyle: "solid",
+                                    borderWidth: 3,
+                                    borderColor: editorState?.isBold
+                                        ? "#555"
+                                        : "#AAA",
+                                    borderRadius: 6
+                                }}
+                            >
+                                B
+                            </button>
+
+                            <ModalPickerEditorButton editor={editor} />
+                        </div>
+                    )}
                 </div>
+
                 <EditorContent editor={editor} />
             </EditorContext.Provider>
+
         </div>
     )
 }

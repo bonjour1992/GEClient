@@ -78,7 +78,8 @@ export function Jet({ content }) {
             (value) =>
                 value !== undefined &&
                 value !== null &&
-                value !== ""
+                value !== "" &&
+                value.id !== -1
         );
 
     const hasNumDe =
@@ -97,7 +98,7 @@ export function Jet({ content }) {
      */
     function renderCompetences(competences) {
         return competences.map((comp, index) => (
-            <React.Fragment key={index} style={{ display: "inline" }}>
+            <React.Fragment key={index} >
                 {index > 0 && (
                     <span style={{ margin: "0 4px" }}>
                         /
@@ -403,9 +404,9 @@ export function Jet({ content }) {
                     </tbody>
                 </table>
             )}
-                {modificateurJet && (
-                    <Text text={modificateurJet} />
-                )}
+            {modificateurJet && (
+                <Text text={modificateurJet} />
+            )}
         </div>
     );
 }

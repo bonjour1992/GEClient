@@ -3,14 +3,17 @@ import { fullBorder } from "../../../Component/style";
 import { Text } from "../../../Component/Text";
 import { Tags } from "./Tags";
 
-export function Card({ content, color, children }) {
+export function Card({ content, color, children ,style}) {
     return (<div
         style={{
             borderColor: color,
             ...fullBorder,
             borderRadius: 12,
             width: A6l,
-            minHeight: 65
+            minHeight: 65,
+            position:"relative",
+            paddingBottom:18,
+            ...style
         }}>
         <Text style={{
             color: "white",

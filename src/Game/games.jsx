@@ -17,6 +17,10 @@ export function getHandler(jeu, meta) {
     return games[jeu].handlers[meta]
 }
 
+export function getHandlerTypes(jeu) {
+    return Object.keys(games[jeu].handlers);
+}
+
 
 export function SelecteurDisplayeur({ jeu, type,content }) {
         let [disp, setDisp] = useState("default")

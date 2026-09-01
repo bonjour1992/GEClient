@@ -1,6 +1,6 @@
 import { Outlet, useLoaderData, useParams, Link, NavLink } from "react-router";
 import { getHandler } from "../Game/games";
-
+import { Action } from "../Component/Action";
 
 export default function Liste() {
 
@@ -24,8 +24,7 @@ function Displayeur({ elem }) {
     let Display = getHandler(useParams().jeu, useParams().elem).display.default
     return (
         <div style={{ float: "left", margin: 2 }}>
-            <NavLink to={"./" + elem.id}>Voir</NavLink>
-            <NavLink to={"./" + elem.id + "/edit"}>Editer</NavLink>
+            <Action id={elem.id} jeu={useParams().jeu}  type={useParams().elem}/>
             <Display content={elem.content} />
 
         </div>

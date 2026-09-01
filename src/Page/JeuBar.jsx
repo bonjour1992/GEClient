@@ -10,21 +10,12 @@ export default function HeaderBar() {
 
     jeu = useParams().jeu
 
-    const setterRemp = useRemp((state) => state.setRemp)
-    const loadedRemp = useRemp((state) => state.loaded)
-    const setterSearch = useSearch((state) => state.setSearch)
-    const loadedSearch = useSearch((state) => state.loaded)
+    const updateRemp = useRemp((state) => state.update);
+    const updateSearch = useSearch((state) => state.update);
     const search = useSearch((state) => state.search)
 
-    let f = async () => setterRemp(await getRemp(jeu), jeu)
-    jeu === loadedRemp || f()
-
-
-
-
-    let g = async () => setterSearch(await getSearch(jeu), jeu)
-    jeu === loadedSearch || g()
-
+    updateSearch(jeu);
+    updateRemp(jeu);
 
 
     return (<>
@@ -64,9 +55,9 @@ function Search({ search }) {
         }
 
     }
-    return (<div  className="no-print"  style={{ zIndex: 50, backgroundColor: "white", position: "fixed", top: 0, width: "20%", marginLeft: "40%", height: 40, borderBottomWidth: 2, borderBottomStyle: "solid" }}>
-        <span style={{fontSize:24}}>&#128269; </span>
-        <input onChange={searchClick} onKeyDown={searchEnter} id="search" list="searchitem" type="text" placeholder="rechercher" style={{fontSize:20,width:"80%"}} />
+    return (<div className="no-print" style={{ zIndex: 50, backgroundColor: "white", position: "fixed", top: 0, width: "20%", marginLeft: "40%", height: 40, borderBottomWidth: 2, borderBottomStyle: "solid" }}>
+        <span style={{ fontSize: 24 }}>&#128269; </span>
+        <input onChange={searchClick} onKeyDown={searchEnter} id="search" list="searchitem" type="text" placeholder="rechercher" style={{ fontSize: 20, width: "80%" }} />
         <datalist id="searchitem" >
             {search.map((e, i) => {
                 return (<option value={e.name + ":" + e.type + "(" + e.id + ")"} key={i} />)
@@ -90,10 +81,10 @@ function Add() {
 
     return (<div
         onMouseLeave={hide}
-         className="no-print" 
+        className="no-print"
         style={{ zIndex: 50, backgroundColor: "white", position: "fixed", top: 0, width: "20%", marginLeft: "60%", height: 40, borderBottomWidth: 2, borderBottomStyle: "solid" }}>
         <div style={{ backgroundColor: "white" }}>
-            <button onMouseEnter={show} style={{fontSize:20}}>Ajouter</button>
+            <button onMouseEnter={show} style={{ fontSize: 20 }}>Ajouter</button>
             <ul id="listAdd" style={{ display: "none" }}>
                 {Object.keys(games[jeu].handlers).map((e, i) => {
                     return (<li key={i}><Link to={"/GE/" + jeu + "/" + e + "/new"} >{games[jeu].handlers[e].name}</Link></li>)

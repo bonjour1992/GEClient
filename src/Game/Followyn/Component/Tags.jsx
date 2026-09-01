@@ -1,7 +1,7 @@
 export function Tags({ content }) {
     if (!content.tags) return null
     return (
-        <div style={{display:"flex"}}>
+        <div style={{display:"flex",position:"absolute",bottom:0}}>
       {content.tags.map((t,i)=>(<span style={{
         fontSize:10,
         backgroundColor:"blue",
@@ -9,7 +9,7 @@ export function Tags({ content }) {
         borderRadius:4,
         color:"white",
         padding:1,
-        marginRight:2
+        margin:2
       }}>{t}</span>))}
       </div>
     );

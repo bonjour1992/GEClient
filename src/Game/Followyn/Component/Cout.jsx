@@ -96,7 +96,7 @@ export const Cout = ({ content }) => {
             style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "4px",
+                fontSize:12
             }}
         >
             {/* Ligne des coûts */}

@@ -1,27 +1,53 @@
+import { create } from "zustand";
+import { getRemp, getSearch } from "./fetch.js";
 
-import { create } from 'zustand'
-import { getElement, getRemp, getSearch, getList } from "./fetch.js";
+export const useRemp = create((set, get) => ({
+    remp: [],
+    loaded: false,
+
+    update: async (jeu, force = false) => {
+        if (!force && get().loaded === jeu) {
+            return;
+        }
+
+        const remp = await getRemp(jeu);
+
+        set({
+            remp,
+            loaded: jeu
+        });
+    }
+}));
 
 
-export const useRemp = create((set) => ({
-  remp: [],
-  setRemp: (r, jeu) => set({ remp: r, loaded: jeu }),
-  loaded: false,
-}))
+export const useSearch = create((set, get) => ({
+    search: [],
+    loaded: false,
 
-export const useSearch = create((set) => ({
-  search: [],
-  setSearch: (r, jeu) => set({ search: r, loaded: jeu }),
-  loaded: false,
-}))
+    update: async (jeu, force = false) => {
+        if (!force && get().loaded === jeu) {
+            return;
+        }
 
-export function getFromSearch(search,id, def = "not found") {
-  let res = search.filter(e => e.id === id)
-  return res.length ? res[0] : def
+        const search = await getSearch(jeu);
+
+        set({
+            search,
+            loaded: jeu
+        });
+    }
+}));
+
+
+// Recherche un élément par son id
+export function getFromSearch(search, id, def = "not found") {
+    return search.find(e => e.id === id) ?? def;
 }
 
-export function getFromType(search,type) {
-  let res = search.filter(e => type.indexOf(e.type) !== -1)
-  res.sort((a, b) => a.name > b.name ? a.name === b.name ? 0 : 1 : -1)
-  return res
+
+// Récupère les éléments correspondant aux types
+export function getFromType(search, type) {
+    return search
+        .filter(e => type.includes(e.type))
+        .sort((a, b) => a.name.localeCompare(b.name));
 }

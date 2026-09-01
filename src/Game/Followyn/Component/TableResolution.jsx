@@ -90,7 +90,7 @@ export function TableResolution({ content }) {
                 </span>
             ) :
                 <span>
-                    X
+                    (X)
                 </span>}
         </span>)
     }
@@ -100,7 +100,8 @@ export function TableResolution({ content }) {
         <table
             style={{
                 width: "100%",
-                borderCollapse: "collapse"
+                borderCollapse: "collapse",
+                fontSize:12
             }}
         >
             <thead>
