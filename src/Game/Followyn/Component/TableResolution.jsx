@@ -3,12 +3,15 @@ import { NumberInput } from "../../../Input/NumberInput"
 import { EnumInput } from "../../../Input/EnumInput"
 import FreeTagInput from "../../../Input/FreeTagInput"
 import { TableInput } from "../../../Input/TableInput"
-
+import React from "react";
+import { LoadLink } from "../../../Component/LoadAndDisplay";
+import { Text } from "../../../Component/Text";
+import { stripTags } from "../../../Input/EditorInput"
 const resolutionColor = {
     echecCritique: "#F00",
     echec: "#e39e1e",
     reussite: "#6bd70c",
-    reussitCritique: "#5e985b",
+    reussitCritique: "#739f71",
     autre: "#d9d77d",
 };
 
@@ -50,11 +53,9 @@ export function TableResolutionForm({ content, onChange }) {
     </>)
 }
 
-import React from "react";
-import { LoadLink } from "../../../Component/LoadAndDisplay";
-import { Text } from "../../../Component/Text";
 
-export function TableResolution({ content }) {
+
+export function TableResolution({ content, monoLigne = false }) {
     const {
         tableResolutionCond = [],
         tableResolutionType = [],
@@ -64,7 +65,6 @@ export function TableResolution({ content }) {
         tableResolutionNum = 0
     } = content || {};
 
-    // Rien à afficher
     if (tableResolutionNum <= 0) {
         return null;
     }
@@ -74,42 +74,106 @@ export function TableResolution({ content }) {
             return null;
         }
 
-        return (<span> {types.map((type, index) => (
-            <React.Fragment key={index}>
-                {index > 0 && (
-                    <span style={{ marginLeft: "4px" }}>
-                        {" / "}
+        return (
+            <span style={{ fontSize: 12 }}>
+                {types.map((type, index) => (
+                    <React.Fragment key={index}>
+                        {index > 0 && (
+                            <span style={{ marginLeft: "2px" }}>
+                                {" / "}
+                            </span>
+                        )}
+
+                        <span style={{ fontWeight: "bold" }}>
+                            {type}
+                        </span>
+                    </React.Fragment>
+                ))}
+
+                {poid !== undefined &&
+                poid !== null &&
+                poid !== "" &&
+                poid !== 0 ? (
+                    <span>
+                        ({poid})
+                    </span>
+                ) : (
+                    <span>
+                        (X)
                     </span>
                 )}
-
-                <span style={{ fontWeight: "bold" }}>
-                    {type}
-
-
-                </span>
-            </React.Fragment>
-        ))}
-
-            {(poid !== undefined &&
-                poid !== null &&
-                poid !== "" && poid !== 0) ? (
-                <span>
-                    ({poid})
-                </span>
-            ) :
-                <span>
-                    (X)
-                </span>}
-        </span>)
+            </span>
+        );
     }
 
+    function renderConsequence(index) {
+        return (
+            <>
+                {renderTypes(
+                    tableResolutionType[index],
+                    tableResolutionPoid[index]
+                )}
 
+                {tableResolutionEffet[index] && (
+                    <span style={{ fontSize: 12 }}>
+                        :{" "}
+                        <Text
+                            text={tableResolutionEffet[index]}
+                        />
+                    </span>
+                )}
+            </>
+        );
+    }
+
+    const isMonoLine =
+        tableResolutionNum === 1 &&
+        stripTags(tableResolutionCond[0]).trim() === "";
+
+    /*
+     * monoLigne = true
+     *
+     * On affiche uniquement le format simplifié
+     * si la résolution est effectivement mono-ligne.
+     */
+    if (monoLigne) {
+        if (!isMonoLine) {
+            return null;
+        }
+
+        return (
+            <div>
+                <span
+                    style={{
+                        fontWeight: "bold",
+                        fontSize: 12
+                    }}
+                >
+                    Conséquence:
+                </span>{" "}
+                {renderConsequence(0)}
+            </div>
+        );
+    }
+
+    /*
+     * monoLigne = false
+     *
+     * On n'affiche rien si la résolution est mono-ligne.
+     */
+    if (isMonoLine) {
+        return null;
+    }
+
+    /*
+     * Sinon affichage normal sous forme de tableau.
+     */
     return (
         <table
             style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                fontSize:12
+                fontSize: 12
             }}
         >
             <thead>
@@ -139,7 +203,9 @@ export function TableResolution({ content }) {
                     { length: tableResolutionNum },
                     (_, index) => {
                         const color =
-                            resolutionColor[tableResolutionColor[index]]
+                            resolutionColor[
+                                tableResolutionColor[index]
+                            ];
 
                         return (
                             <tr
@@ -149,7 +215,6 @@ export function TableResolution({ content }) {
                                         color || "transparent"
                                 }}
                             >
-                                {/* Résultat */}
                                 <td
                                     style={{
                                         padding: "4px",
@@ -158,39 +223,18 @@ export function TableResolution({ content }) {
                                 >
                                     <Text
                                         text={
-                                            tableResolutionCond[
-                                            index
-                                            ]
+                                            tableResolutionCond[index]
                                         }
                                     />
                                 </td>
 
-                                {/* Conséquence */}
                                 <td
                                     style={{
                                         padding: "4px",
                                         verticalAlign: "top"
                                     }}
                                 >
-                                    {renderTypes(
-                                        tableResolutionType[index],
-                                        tableResolutionPoid[index]
-                                    )}
-
-                                    {tableResolutionEffet[
-                                        index
-                                    ] && (
-                                            <span>
-                                                :{" "}
-                                                <Text
-                                                    text={
-                                                        tableResolutionEffet[
-                                                        index
-                                                        ]
-                                                    }
-                                                />
-                                            </span>
-                                        )}
+                                    {renderConsequence(index)}
                                 </td>
                             </tr>
                         );
@@ -200,5 +244,3 @@ export function TableResolution({ content }) {
         </table>
     );
 }
-
-export default TableResolution;

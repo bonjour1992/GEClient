@@ -44,7 +44,7 @@ const actionType = {
 }
 
 
-class Classe extends aggregation(ElementJDR, JetCarac, PrerequisCarac, CoutCarac, ObjectifCarac, TableResolutionCarac,XPCarac) {
+class Classe extends aggregation(ElementJDR, JetCarac, PrerequisCarac, CoutCarac, ObjectifCarac, TableResolutionCarac, XPCarac) {
     actionType = "actionPA"
     parametre = ""
 
@@ -61,7 +61,7 @@ function Display({ content, explication, style }) {
 
     return (
         <Card content={content} color={elementColor[content.actionType]}>
-            <XP  content={content} />
+            <XP content={content} />
             <Prerequis content={content} />
             <Description content={content} />
 
@@ -104,16 +104,18 @@ function Display({ content, explication, style }) {
                                 "<span><b>Paramétre de l'action:</b></span>" +
                                 content.parametre
                             }
-                            style={{fontSize:12, marginBottom:8}}
+                            style={{ fontSize: 12, marginBottom: 8 }}
                         />
                     }
 
                     <Objectif content={content} />
                     <Jet content={content} />
+                    <TableResolution content={content} monoLigne={true} />
+
                 </div>
             </div>
 
-            <TableResolution content={content} />
+            <TableResolution content={content} monoLigne={false} />
         </Card>
     );
 }

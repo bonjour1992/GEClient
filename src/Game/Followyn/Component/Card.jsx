@@ -24,7 +24,7 @@ export function Card({ content, color, children ,style}) {
             fontWeight: "bold",
             textAlign: "left"
         }} text={content.name} />
-        <div style={{margin:2}}>
+        <div style={{margin:4}}>
         {children}
         </div>
         <Tags content={content} />
