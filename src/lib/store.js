@@ -1,10 +1,16 @@
 import { create } from "zustand";
 import { getRemp, getSearch, getTags, createTag } from "./fetch.js";
 
-
 export const useRemp = create((set, get) => ({
     remp: [],
     loaded: false,
+
+    setRemp: (remp, jeu) => {
+        set({
+            remp,
+            loaded: jeu
+        });
+    },
 
     update: async (jeu, force = false) => {
         if (!force && get().loaded === jeu) {
@@ -19,7 +25,6 @@ export const useRemp = create((set, get) => ({
         });
     }
 }));
-
 
 export const useSearch = create((set, get) => ({
     search: [],

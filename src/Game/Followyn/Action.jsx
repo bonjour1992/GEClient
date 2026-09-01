@@ -104,7 +104,7 @@ function Display({ content, explication, style }) {
                                 "<span><b>Paramétre de l'action:</b></span>" +
                                 content.parametre
                             }
-                            style={{fontSize:12}}
+                            style={{fontSize:12, marginBottom:8}}
                         />
                     }
 

@@ -14,7 +14,7 @@ export class ObjectifCarac{
 export function ObjectifForm({content, onChange})
 {
               return ( <table style={{
-                width: "100%"
+                width: "100%",
             }}>
                 <thead>
                     <tr>
@@ -43,7 +43,7 @@ export function Objectif({ content }) {
     } = content || {};
 
     const hasType = cibleType !== undefined && cibleType !== null && stripTags(cibleType) !== "";
-    const hasDist = cibleDist !== undefined && cibleDist !== null;
+    const hasDist = cibleDist !== undefined && cibleDist !== null && cibleDist!==0;
     const hasLibre = cibleLibre !== undefined && cibleLibre !== null && stripTags(cibleLibre) !== "";
 
     // Aucun contenu à afficher
@@ -54,7 +54,7 @@ export function Objectif({ content }) {
     return (
         <div style={styles.container}>
 
-            <Cible />
+            <Cible size={18}/>
 
             <div style={styles.content}>
 
@@ -82,7 +82,8 @@ const styles = {
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        fontSize:12
+        fontSize:12,
+        marginBottom:8
     },
 
     content: {
@@ -94,11 +95,11 @@ const styles = {
     },
 };
 
-function Cible() {
+function Cible({size}) {
     return (<svg
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
+        width={size}
+        height={size}
+        viewBox={"0 0 24 24"}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
     >
