@@ -54,7 +54,7 @@ export function Objectif({ content }) {
     return (
         <div style={styles.container}>
 
-            <Cible size={18}/>
+            <Cible size={12}/>
 
             <div style={styles.content}>
 

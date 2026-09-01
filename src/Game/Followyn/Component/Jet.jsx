@@ -68,10 +68,6 @@ export function Jet({ content }) {
         modificateurJet = ""
     } = content || {};
 
-    /*
-     * Si aucune compétence et aucun numDe :
-     * on n'affiche absolument rien.
-     */
     const hasCompetence =
         competenceNum > 0 &&
         competence.some(
@@ -87,40 +83,49 @@ export function Jet({ content }) {
         numDe !== null &&
         numDe !== 0;
 
-    if (!hasCompetence && !hasNumDe) {
-        return modificateurJet ? (
-            <Text text={modificateurJet} style={{fontSize:12}}/>
-        ) : null
-    }
+    const hasModificateurDifficulte =
+        modificateurDifficulteNum > 0;
 
     /*
-     * Affichage des compétences :
-     *
-     * compétence / compétence / compétence
+     * Rien à afficher si :
+     * - aucune compétence
+     * - aucun dé
+     * - aucun modificateur de difficulté
      */
+    if (
+        !hasCompetence &&
+        !hasNumDe &&
+        !hasModificateurDifficulte
+    ) {
+        return modificateurJet ? (
+            <Text
+                text={modificateurJet}
+                style={{ fontSize: 12 ,marginBottom:8}}
+            />
+        ) : null;
+    }
+
     function renderCompetences(competences) {
         return competences.map((comp, index) => (
-            <React.Fragment key={index} >
+            <React.Fragment key={index}>
                 {index > 0 && (
                     <span style={{ margin: "0 4px" }}>
                         /
                     </span>
                 )}
 
-                <LoadLink link={comp} style={{ display: "inline" }} />
+                <LoadLink
+                    link={comp}
+                    style={{ display: "inline" }}
+                />
             </React.Fragment>
         ));
     }
 
-    /*
-     * Première ligne
-     */
     function renderPremiereLigne() {
         if (hasNumDe) {
             return (
-                <span style={{
-                    fontWeight: 800
-                }}>
+                <span style={{ fontWeight: 800 }}>
                     {numDe}
                 </span>
             );
@@ -144,19 +149,6 @@ export function Jet({ content }) {
         );
     }
 
-    /*
-     * Regroupement des compétences par différence.
-     *
-     * Exemple :
-     *
-     * competence     = [Force, Agilité, Épée]
-     * competenceDiff = [0, 2, 2]
-     *
-     * donne :
-     *
-     * 0 => Force
-     * 2 => Agilité / Épée
-     */
     function getCompetencesParDiff() {
         const groupes = new Map();
 
@@ -171,12 +163,6 @@ export function Jet({ content }) {
             ) {
                 continue;
             }
-
-            /*
-             * Si competenceDiff contient une valeur,
-             * même 0 est une valeur valide.
-             */
-
 
             if (!groupes.has(diff || 0)) {
                 groupes.set(diff || 0, []);
@@ -193,9 +179,6 @@ export function Jet({ content }) {
     const hasCompetenceDiff =
         groupesCompetences.size > 1;
 
-    const hasModificateurDifficulte =
-        modificateurDifficulteNum > 0;
-
     const hasTableauDifficulte =
         hasCompetenceDiff ||
         hasModificateurDifficulte;
@@ -204,6 +187,13 @@ export function Jet({ content }) {
         groupesCompetences.size === 1 &&
         [...groupesCompetences.values()][0].length > 0;
 
+    /*
+     * On affiche la ligne du dé uniquement s'il y a
+     * effectivement un dé ou une compétence.
+     */
+    const hasPremiereLigne =
+        hasNumDe || hasCompetence;
+
     return (
         <div
             style={{
@@ -211,35 +201,34 @@ export function Jet({ content }) {
             }}
         >
             {/* Première ligne */}
-            <div
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px"
-                }}
-            >
-                {/* Icône de dé */}
-                <span
+            {hasPremiereLigne && (
+                <div
                     style={{
-                        fontSize: "1.5em"
-                    }}
-                    aria-hidden="true"
-                >
-                    🎲
-                </span>
-
-                {renderPremiereLigne()}
-
-                <span
-                    style={{
-                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
                     }}
                 >
-                    D10
-                </span>
+                    <span
+                        style={{
+                            fontSize: "1.5em"
+                        }}
+                        aria-hidden="true"
+                    >
+                        🎲
+                    </span>
 
+                    {renderPremiereLigne()}
 
-            </div>
+                    <span
+                        style={{
+                            fontWeight: 800,
+                        }}
+                    >
+                        D10
+                    </span>
+                </div>
+            )}
 
             {/* Seuil simple */}
             {!hasTableauDifficulte && (
@@ -276,7 +265,6 @@ export function Jet({ content }) {
                 </div>
             )}
 
-
             {/* Tableau des difficultés */}
             {hasTableauDifficulte && (
                 <table
@@ -291,13 +279,6 @@ export function Jet({ content }) {
                         {/* Difficultés des compétences */}
                         {[...groupesCompetences.entries()].map(
                             ([diff, competences]) => {
-
-                                /*
-                                 * La difficulté finale est :
-                                 *
-                                 * difficulté de base
-                                 * + différence de compétence
-                                 */
                                 const seuil =
                                     Number(difficulte || 0) +
                                     Number(diff || 0);
@@ -330,12 +311,11 @@ export function Jet({ content }) {
                                         <td
                                             style={{
                                                 padding: "3px 0",
-                                                display: "inline-flex"
+                                                display:
+                                                    "inline-flex"
                                             }}
                                         >
-                                            {"Maîtrise"}
-
-                                            {" ("}
+                                            {"Maîtrise ("}
 
                                             {renderCompetences(
                                                 competences
@@ -349,7 +329,9 @@ export function Jet({ content }) {
                                                         "bold"
                                                 }}
                                             >
-                                                {formatNombre(seuil)}
+                                                {formatNombre(
+                                                    seuil
+                                                )}
                                             </span>
                                         </td>
                                     </tr>
@@ -364,15 +346,13 @@ export function Jet({ content }) {
                                     modificateurDifficulteNum
                             },
                             (_, index) => {
-
                                 const valeur =
                                     modificateurDifficulte[
-                                    index
+                                        index
                                     ];
 
                                 if (
-                                    valeur ===
-                                    undefined ||
+                                    valeur === undefined ||
                                     valeur === null ||
                                     valeur === 0
                                 ) {
@@ -396,7 +376,7 @@ export function Jet({ content }) {
                                             <Text
                                                 text={
                                                     modificateurDifficulteText[
-                                                    index
+                                                        index
                                                     ]
                                                 }
                                             />
@@ -418,15 +398,13 @@ export function Jet({ content }) {
                                 );
                             }
                         )}
-
                     </tbody>
                 </table>
             )}
+
             {modificateurJet && (
                 <Text text={modificateurJet} />
             )}
         </div>
     );
 }
-
-

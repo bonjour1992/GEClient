@@ -7,6 +7,7 @@ export default function Home() {
     return (
         <>
             <div>Home</div>
+            <NavLink to="library" >Bibliothéque d'image</NavLink>
 
             <div style={{
                 display: "flex",

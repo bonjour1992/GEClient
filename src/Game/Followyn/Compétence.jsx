@@ -38,8 +38,8 @@ function Display({ content, explication, style }) {
     return (
         <Card content={content} color={elementColor}>
             <Description content={content} />
-            <Text text={content.maitrise} />
-            <Text text={content.puissance} />
+            <Text text={"<span><b>Maitrise:</b></span>"+content.maitrise} />
+            <Text text={"<span><b>Puissance:</b></span>"+content.puissance} />
         </Card>
 
     )

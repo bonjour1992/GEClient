@@ -27,10 +27,10 @@ import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
 
 const elementColor = {
-    occupation: "#33C",
-    occupationProlonge: "#00F",
-    reaction: "#C0C",
-    actionPA: "#F00",
+    occupation: "#34495e",
+    occupationProlonge: "#34495e",
+    reaction: "#843fa1",
+    actionPA: "#B22",
     actionTempsReel: "Action en temps réel"
 }
 

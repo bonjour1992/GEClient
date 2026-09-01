@@ -9,7 +9,7 @@ import { pub } from '../lib/fetch'
 export const games = {
     "ti5": { handlers: HandlerTI5, name: "Twiligth imperium 5",pict: "/ti5.jpg"},
     "tow": { handlers: HandlerTOW, name: "Warhammer The Old World" },
-    "followyn":{handlers:HandlerFolowyn,name:"Followyn JDR"}
+    "followyn":{handlers:HandlerFolowyn,name:"Followyn JDR",pict:"/Followyn/theme-cover7.png"}
 }
 
 export function getHandler(jeu, meta) {

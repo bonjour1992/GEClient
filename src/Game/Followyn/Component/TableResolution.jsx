@@ -8,10 +8,10 @@ import { LoadLink } from "../../../Component/LoadAndDisplay";
 import { Text } from "../../../Component/Text";
 import { stripTags } from "../../../Input/EditorInput"
 const resolutionColor = {
-    echecCritique: "#F00",
-    echec: "#e39e1e",
-    reussite: "#6bd70c",
-    reussitCritique: "#739f71",
+    echecCritique: "#F8cac6",
+    echec: "#efe4e3",
+    reussite: "#e8f3e6",
+    reussitCritique: "#DAFAD2",
     autre: "#d9d77d",
 };
 
