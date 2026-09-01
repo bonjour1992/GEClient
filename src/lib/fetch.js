@@ -89,7 +89,7 @@ export async function getTags()
 
 export async function createTag(type,value)
 {
-    return await fetchAPI("tag/"+type+"/new","POST",value)
+    return await fetchAPI("tag/"+type+"/new","POST",{val:value})
 }
 
 export const pub=server + "public"

@@ -57,53 +57,53 @@ export function TableInput({
         setDraggedRow(rowIndex);
     }
 
- function handleDrop(targetIndex, event) {
-    event.preventDefault();
+    function handleDrop(targetIndex, event) {
+        event.preventDefault();
 
-    if (draggedRow === null || draggedRow === targetIndex) {
+        if (draggedRow === null || draggedRow === targetIndex) {
+            setDraggedRow(null);
+            return;
+        }
+
+        // On travaille à partir de l'ordre actuel
+        const newOrder = [...order];
+
+        const draggedPosition = newOrder.indexOf(draggedRow);
+        const targetPosition = newOrder.indexOf(targetIndex);
+
+        if (draggedPosition === -1 || targetPosition === -1) {
+            setDraggedRow(null);
+            return;
+        }
+
+        // Calcul du nouvel ordre
+        newOrder.splice(draggedPosition, 1);
+        newOrder.splice(targetPosition, 0, draggedRow);
+
+        /*
+         * On réordonne tous les tableaux à partir
+         * EXACTEMENT du même snapshot de value.
+         */
+        if (composant) {
+            composant.forEach((tableau) => {
+                if (!Array.isArray(value[tableau])) {
+                    return;
+                }
+
+                const nouveauTableau = newOrder.map(
+                    index => value[tableau][index]
+                );
+
+                onChange(tableau, nouveauTableau);
+            });
+        }
+
+        setOrder(
+            Array.from({ length: val }, (_, i) => i)
+        );
+
         setDraggedRow(null);
-        return;
     }
-
-    // On travaille à partir de l'ordre actuel
-    const newOrder = [...order];
-
-    const draggedPosition = newOrder.indexOf(draggedRow);
-    const targetPosition = newOrder.indexOf(targetIndex);
-
-    if (draggedPosition === -1 || targetPosition === -1) {
-        setDraggedRow(null);
-        return;
-    }
-
-    // Calcul du nouvel ordre
-    newOrder.splice(draggedPosition, 1);
-    newOrder.splice(targetPosition, 0, draggedRow);
-
-    /*
-     * On réordonne tous les tableaux à partir
-     * EXACTEMENT du même snapshot de value.
-     */
-    if (composant) {
-        composant.forEach((tableau) => {
-            if (!Array.isArray(value[tableau])) {
-                return;
-            }
-
-            const nouveauTableau = newOrder.map(
-                index => value[tableau][index]
-            );
-
-            onChange(tableau, nouveauTableau);
-        });
-    }
-
-    setOrder(
-        Array.from({ length: val }, (_, i) => i)
-    );
-
-    setDraggedRow(null);
-}
     function handleDragOver(event) {
         event.preventDefault();
     }
@@ -142,11 +142,9 @@ export function TableInput({
                     )}
 
                     <tbody>
-
                         {order.map((rowIndex) => (
                             <tr
                                 key={rowIndex}
-                                draggable
                                 onDragOver={handleDragOver}
                                 onDrop={(event) =>
                                     handleDrop(rowIndex, event)
@@ -161,28 +159,26 @@ export function TableInput({
                                 }}
                             >
 
-                                {/* Poignée de déplacement */}
                                 <td className="drag-column">
                                     <span
                                         className="drag-handle"
                                         draggable
-                                        onDragStart={() =>
-                                            handleDragStart(rowIndex)
-                                        }
+                                        onDragStart={(event) => {
+                                            event.stopPropagation();
+                                            handleDragStart(rowIndex);
+                                        }}
                                         title="Déplacer"
                                     >
                                         ⋮⋮
                                     </span>
                                 </td>
 
-                                {/* Contenu de la ligne */}
                                 {Line(rowIndex).map((l, j) => (
                                     <td key={j}>
                                         {l}
                                     </td>
                                 ))}
 
-                                {/* Suppression */}
                                 <td className="action-column">
                                     <button
                                         type="button"
@@ -199,8 +195,8 @@ export function TableInput({
 
                             </tr>
                         ))}
-
                     </tbody>
+
 
                 </table>
 

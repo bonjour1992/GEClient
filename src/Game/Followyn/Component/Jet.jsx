@@ -88,7 +88,9 @@ export function Jet({ content }) {
         numDe !== 0;
 
     if (!hasCompetence && !hasNumDe) {
-        return null;
+        return modificateurJet ? (
+            <Text text={modificateurJet} style={{fontSize:12}}/>
+        ) : null
     }
 
     /*
@@ -116,7 +118,9 @@ export function Jet({ content }) {
     function renderPremiereLigne() {
         if (hasNumDe) {
             return (
-                <span>
+                <span style={{
+                    fontWeight: 800
+                }}>
                     {numDe}
                 </span>
             );
@@ -196,6 +200,10 @@ export function Jet({ content }) {
         hasCompetenceDiff ||
         hasModificateurDifficulte;
 
+    const hasCompetenceUnique =
+        groupesCompetences.size === 1 &&
+        [...groupesCompetences.values()][0].length > 0;
+
     return (
         <div
             style={{
@@ -213,8 +221,7 @@ export function Jet({ content }) {
                 {/* Icône de dé */}
                 <span
                     style={{
-                        fontSize: "1.25em",
-                        lineHeight: 1
+                        fontSize: "1.5em"
                     }}
                     aria-hidden="true"
                 >
@@ -225,8 +232,7 @@ export function Jet({ content }) {
 
                 <span
                     style={{
-                        fontWeight: "bold",
-                        fontSize: "1.15em"
+                        fontWeight: 800,
                     }}
                 >
                     D10
@@ -245,9 +251,20 @@ export function Jet({ content }) {
                     >
                         Seuil de réussite:
                     </span>{" "}
+
                     {jetBrut
                         ? ""
                         : "Maîtrise"}
+
+                    {hasNumDe && hasCompetenceUnique && (
+                        <>
+                            {" ("}
+                            {renderCompetences(
+                                [...groupesCompetences.values()][0]
+                            )}
+                            {")"}
+                        </>
+                    )}
 
                     {difficulte !== undefined &&
                         difficulte !== null && (
@@ -258,6 +275,7 @@ export function Jet({ content }) {
                         )}
                 </div>
             )}
+
 
             {/* Tableau des difficultés */}
             {hasTableauDifficulte && (

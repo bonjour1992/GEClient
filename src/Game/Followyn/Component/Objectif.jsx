@@ -82,6 +82,7 @@ const styles = {
         display: "flex",
         alignItems: "center",
         gap: "10px",
+        fontSize:12
     },
 
     content: {

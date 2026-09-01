@@ -25,43 +25,28 @@ import { aggregation } from "../../lib/datatype"
 import { TableResolution, TableResolutionCarac, TableResolutionForm } from "./Component/TableResolution"
 import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
+import { Effet, EffetCarac, EffetForm } from "./Component/effet"
 
-const elementColor = {
-    occupation: "#33C",
-    occupationProlonge: "#00F",
-    reaction: "#C0C",
-    actionPA: "#F00",
-    actionTempsReel: "Action en temps réel"
-}
+const elementColor = "#0B0"
 
 
-const actionType = {
-    occupation: "Occupation",
-    occupationProlonge: "Occupation prolongé",
-    reaction: "Réaction",
-    actionPA: "Action temps fin",
-    actionTempsReel: "Action en temps réel"
-}
 
-
-class Classe extends aggregation(ElementJDR, JetCarac, PrerequisCarac, CoutCarac, ObjectifCarac, TableResolutionCarac,XPCarac) {
-    actionType = "actionPA"
-    parametre = ""
+class Classe extends aggregation(ElementJDR, PrerequisCarac, XPCarac, EffetCarac) {
 
 
 }
 
 function Nom({ content, explication, style = {} }) {
     return (
-        <Text text={content.name} style={{ ...style, color: elementColor[content.actionType] }} />
+        <Text text={content.name} style={{ ...style, color: elementColor }} />
     )
 }
 
 function Display({ content, explication, style }) {
 
     return (
-        <Card content={content} color={elementColor[content.actionType]}>
-            <XP  content={content} />
+        <Card content={content} color={elementColor}>
+            <XP content={content} />
             <Prerequis content={content} />
             <Description content={content} />
 
@@ -95,25 +80,10 @@ function Display({ content, explication, style }) {
                         width: content.icone ? "70%" : "100%"
                     }}
                 >
-                    <Cout content={content} />
-
-                    {content.parametre &&
-                        stripTags(content.parametre) !== "" &&
-                        <Text
-                            text={
-                                "<span><b>Paramétre de l'action:</b></span>" +
-                                content.parametre
-                            }
-                            style={{fontSize:12}}
-                        />
-                    }
-
-                    <Objectif content={content} />
-                    <Jet content={content} />
+                    <Effet content={content} />
                 </div>
             </div>
 
-            <TableResolution content={content} />
         </Card>
     );
 }
@@ -125,18 +95,13 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormElementJDR content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-            <EnumInput value={content} name="actionType" onChange={onChange} label="Type d'action" enumClass={actionType} />
             <XPForm content={content} onChange={onChange} />
             <PrerequisForm content={content} onChange={onChange} />
-            <CoutForm content={content} onChange={onChange} />
-            <EditorInput value={content} name="parametre" onChange={onChange} label="Parametre de l'action" />
-            <ObjectifForm content={content} onChange={onChange} />
-            <FormJet content={content} onChange={onChange} />
-            <TableResolutionForm content={content} onChange={onChange} />
+            <EffetForm content={content} onChange={onChange} />
         </FormElementJDR>
     )
 }
 
 
-export default { name: "Action", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
+export default { name: "Passif", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
 

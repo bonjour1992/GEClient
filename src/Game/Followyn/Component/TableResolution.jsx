@@ -5,13 +5,21 @@ import FreeTagInput from "../../../Input/FreeTagInput"
 import { TableInput } from "../../../Input/TableInput"
 
 const resolutionColor = {
-    "#F00": "echec critique",
-    "#e39e1e": "echec",
-    "#6bd70c": "reussite",
-    "#0c4309": "reussite critique",
-    "#d9d77d": "autre",
+    echecCritique: "#F00",
+    echec: "#e39e1e",
+    reussite: "#6bd70c",
+    reussitCritique: "#5e985b",
+    autre: "#d9d77d",
+};
 
-}
+const resolutionType = {
+    echecCritique: "Échec Critique",
+    echec: "Échec",
+    reussite: "Réussite",
+    reussitCritique: "Réussite Critique",
+    autre: "Autre",
+};
+
 
 export class TableResolutionCarac {
     tableResolutionCond = []
@@ -27,8 +35,8 @@ export function TableResolutionForm({ content, onChange }) {
     function resolutionLine(x) {
         return [
             (<EditorInput onChange={onChange} name={"tableResolutionCond"} value={content} index={x} type="compact" />),
-            (<EnumInput onChange={onChange} name="tableResolutionColor" value={content} index={x} enumClass={resolutionColor} />),
-            (<FreeTagInput onChange={onChange} name="tableResolutionType" index={x} value={content} label="type" />),
+            (<EnumInput onChange={onChange} name="tableResolutionColor" value={content} index={x} enumClass={resolutionType} />),
+            (<FreeTagInput onChange={onChange} name="tableResolutionType" index={x} value={content} label="type" tagType={"resolutionType"}/>),
             (<NumberInput onChange={onChange} name="tableResolutionPoid" value={content} index={x} />),
             (<EditorInput onChange={onChange} name={"tableResolutionEffet"} value={content} index={x} type="compact" />),
         ]
@@ -131,7 +139,7 @@ export function TableResolution({ content }) {
                     { length: tableResolutionNum },
                     (_, index) => {
                         const color =
-                            tableResolutionColor[index];
+                            resolutionColor[tableResolutionColor[index]]
 
                         return (
                             <tr

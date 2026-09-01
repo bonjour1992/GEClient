@@ -10,7 +10,7 @@ export function FormElementJDR({ content, onChange, onSubmit, style, children })
             <ImagePicker onChange={onChange} name="icone" value={content} label="Icone" />
             <EditorInput onChange={onChange} name="description" value={content} label="Description" />
             {children}
-            <FreeTagInput onChange={onChange} name="tags" value={content} label="Mots clés" />
+            <FreeTagInput onChange={onChange} name="tags" value={content} label="Mots clés" tagType={"tags"} />
         </FormBase>
 
     )
