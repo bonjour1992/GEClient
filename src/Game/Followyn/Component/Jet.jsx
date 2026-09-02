@@ -33,22 +33,22 @@ function formatNombre(x) {
 export function FormJet({ onChange, content }) {
     function competenceLine(x) {
         return [(<ModalPickerInput onChange={onChange} name={"competence"} value={content} index={x} type={["competence"]} />),
-        (<NumberInput onChange={onChange} name={"competenceDiff"} value={content} index={x} label="Diff" />),
+        (<NumberInput onChange={onChange} name={"competenceDiff"} value={content} index={x} label="Bonus" />),
 
         ]
     }
 
     function modificateurDifficulteLine(x) {
         return [
-            (<NumberInput onChange={onChange} name={"modificateurDifficulte"} value={content} index={x} label="Diff" />),
-            (<EditorInput onChange={onChange} name={"modificateurDifficulteText"} value={content} index={x} type="compact" />)
+            (<EditorInput onChange={onChange} name={"modificateurDifficulteText"} value={content} index={x} type="compact" />),
+            (<NumberInput onChange={onChange} name={"modificateurDifficulte"} value={content} index={x} label="Bonus" />),
         ]
     }
     return (<>
         <TableInput onChange={onChange} Line={competenceLine} name="competenceNum" value={content} label="JET : Competence" composant={["competence", "competenceDiff"]} />
         <NumberInput onChange={onChange} name={"numDe"} value={content} label={"Nb Dé"} />
         <BooleanInput onChange={onChange} name={"jetBrut"} value={content} label="Jet brut?" />
-        <NumberInput onChange={onChange} name={"difficulte"} value={content} min={-10} max={10} label={content.jetBrut ? "valeur" : "difficulté"} />
+        <NumberInput onChange={onChange} name={"difficulte"} value={content} min={-10} max={10} label={content.jetBrut ? "valeur" : "Bonus"} />
         <TableInput onChange={onChange} Line={modificateurDifficulteLine} name="modificateurDifficulteNum" value={content} label="Modificateur de difficulte" composant={["modificateurDifficulteText", "modificateurDifficulte"]} />
         <EditorInput onChange={onChange} name="modificateurJet" value={content} label="Autres infos Jet" />
     </>)
@@ -246,7 +246,7 @@ export function Jet({ content, explication }) {
                                             maxWidth: "70%"
                                         }}
                                         >
-                                            <Text text={modificateurDifficulteText[index]} rule={explication}/>
+                                            <Text text={modificateurDifficulteText[index]} rule={explication} />
                                         </td>
 
                                         <td

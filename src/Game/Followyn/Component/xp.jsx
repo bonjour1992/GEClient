@@ -8,8 +8,8 @@ export class XPCarac{
 export function XP({ content }) {
     return content.xp?(<div style={{
         position: "absolute", top: 0, right: 4,
-        fontSize: 16,
-        fontWeight: 700,
+        fontSize: "1.5em",
+        fontWeight: 800,
         color: "white"
     }}>
         {content.xp}

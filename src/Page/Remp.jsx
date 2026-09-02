@@ -18,7 +18,6 @@ export default function Remp() {
     const newKeyRef = useRef(null);
 
     const [copiedCSS, setCopiedCSS] = useState(null);
-    console.log(remp)
 
     useEffect(() => {
         if (newIndex === null)
@@ -42,7 +41,6 @@ export default function Remp() {
         setCopiedCSS(
             (remp[i].css || []).map(css => [...css])
         );
-        console.log("CSS copié :", css);
     }
 
 

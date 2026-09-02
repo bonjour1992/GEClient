@@ -5,7 +5,8 @@ import { TagInput } from "../../Input/TagInput"
 import { TextInput } from "../../Input/TextInput"
 import { NumberInput } from "../../Input/NumberInput"
 import { EditorInput, stripTags } from "../../Input/EditorInput"
-import { bottomBorder, fullBorder } from "../../Component/style"
+import { bottomBorder } from "../../Component/style"
+import { fullBorder } from "../../Component/style"
 import { Text, Explication } from "../../Component/Text"
 import ReactDOMServer from "react-dom/server"
 import FormBase from "../../Input/FormBase"
@@ -25,12 +26,14 @@ import { TableResolution, TableResolutionCarac, TableResolutionForm } from "./Co
 import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
 import { Effet, EffetCarac, EffetForm } from "./Component/effet"
+import { FullEditorInput } from "../../Input/FullEditorInput"
 
-const elementColor = "#ab4500"
+const elementColor = "#000"
 
-class Classe extends aggregation(ElementJDR, ObjectifCarac, TableResolutionCarac, XPCarac, EffetCarac) {
-    puissanceMin = 0
-    puissancePlus
+
+
+class Classe extends aggregation(ElementJDR, PrerequisCarac, XPCarac, EffetCarac) {
+rule=""
 
 }
 
@@ -43,8 +46,7 @@ function Nom({ content, explication, style = {} }) {
 function Display({ content, explication, style }) {
 
     return (
-        <Card content={content} color={elementColor}>
-            <XP content={content} />
+        <Card content={content} color={elementColor} >
             <Description content={content} explication={explication}/>
 
             <div
@@ -74,17 +76,13 @@ function Display({ content, explication, style }) {
 
                 <div
                     style={{
-                        width: content.icone ? "70%" : "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
+                        width: content.icone ? "70%" : "100%"
                     }}
                 >
-                    <Objectif content={content} explication={explication} />
-                    <Effet content={content} explication={explication} />
+                    <Text text={content.rule} rule={explication}/>
                 </div>
             </div>
-            <TableResolution content={content}  explication={explication} />
+
         </Card>
     );
 }
@@ -96,16 +94,11 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormElementJDR content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-            <XPForm content={content} onChange={onChange} />
-            <NumberInput value={content} name="puissanceMin" onChange={onChange} label="Puissance Min" />
-            <BooleanInput value={content} name="puissancePlus" onChange={onChange} label="+?" />
-            <ObjectifForm content={content} onChange={onChange} />
-            <EffetForm content={content} onChange={onChange} />
-            <TableResolutionForm content={content} onChange={onChange} />
+            <FullEditorInput onChange={onChange} value={content} name="rule" />
         </FormElementJDR>
     )
 }
 
 
-export default { name: "Habilité", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
+export default { name: "Régle", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
 

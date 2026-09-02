@@ -23,7 +23,7 @@ import { Contenu, ContenuCarac, ContenuForm } from "./Component/Contenu"
 
 const elementColor = "rgb(16, 93, 10)"
 
-class Classe extends aggregation(ElementJDR, CompCarac, PrerequisCarac, ContenuCarac) {
+class Classe extends aggregation(ElementJDR, ContenuCarac) {
 
 
 
@@ -41,9 +41,7 @@ function Display({ content, explication, style }) {
 
     return (
         <Card content={content} color={elementColor} explication={explication}>
-            <Prerequis content={content} explication={explication} />
             <Description content={content} explication={explication} />
-            <Comp content={content} explication={explication} />
             <Contenu content={content} explication={explication} />
         </Card>
 
@@ -54,12 +52,10 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormElementJDR content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-            <PrerequisForm content={content} onChange={onChange} />
-            <CompForm content={content} onChange={onChange} />
-            <ContenuForm content={content} onChange={onChange} types={["trait", "habilite", "passif", "action","domaine"]} />
+            <ContenuForm content={content} onChange={onChange} types={[ "habilite"]} />
         </FormElementJDR>
     )
 }
 
 
-export default { name: "Traits", classe: Classe, form: Form, display: { default: Display, nom: Nom } }
+export default { name: "Domaines", classe: Classe, form: Form, display: { default: Display, nom: Nom } }

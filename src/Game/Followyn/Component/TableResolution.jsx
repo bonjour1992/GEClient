@@ -5,7 +5,7 @@ import FreeTagInput from "../../../Input/FreeTagInput"
 import { TableInput } from "../../../Input/TableInput"
 import React from "react";
 import { LoadLink } from "../../../Component/LoadAndDisplay";
-import { Text } from "../../../Component/Text";
+import { Explication, Text } from "../../../Component/Text";
 import { stripTags } from "../../../Input/EditorInput"
 const resolutionColor = {
     echecCritique: "#F8cac6",
@@ -55,7 +55,7 @@ export function TableResolutionForm({ content, onChange }) {
 
 
 
-export function TableResolution({ content, monoLigne = false }) {
+export function TableResolution({ content, monoLigne = false ,explication}) {
     const {
         tableResolutionCond = [],
         tableResolutionType = [],
@@ -117,9 +117,7 @@ export function TableResolution({ content, monoLigne = false }) {
                 {tableResolutionEffet[index] && (
                     <span style={{ fontSize: 12 }}>
                         :{" "}
-                        <Text
-                            text={tableResolutionEffet[index]}
-                        />
+                        <Text text={tableResolutionEffet[index]} rule={explication}/>
                     </span>
                 )}
             </>
@@ -205,24 +203,15 @@ export function TableResolution({ content, monoLigne = false }) {
                             ];
 
                         return (
-                            <tr
-                                key={index}
+                            <tr key={index}
                                 style={{
-                                    backgroundColor:
-                                        color || "transparent"
-                                }}
-                            >
-                                <td
-                                    style={{
-                                        padding: "4px",
-                                        verticalAlign: "top"
-                                    }}
-                                >
-                                    <Text
-                                        text={
-                                            tableResolutionCond[index]
-                                        }
-                                    />
+                                    backgroundColor: color || "transparent"
+                                }}>
+                                <td style={{
+                                    padding: "4px",
+                                    verticalAlign: "top"
+                                }}>
+                                    <Text text={tableResolutionCond[index]} rule={explication}/>
                                 </td>
 
                                 <td

@@ -57,7 +57,7 @@ function handleInputChange(name, value, index) {
 let split = getHandler(jeu, element.meta.type).editor!=="noSplit"?  { width: "49%",paddingRight:"1%", float: "left" }:{}
     return (<>
         <div>Edition</div>
-        <div style={split}>
+        <div style={{maxWidth:1600,...split}}>
             <Form content={element.content} onChange={handleInputChange} onSubmit={save} />
         </div>
         <div style={split}>
