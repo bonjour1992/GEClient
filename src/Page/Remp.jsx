@@ -18,7 +18,7 @@ export default function Remp() {
     const newKeyRef = useRef(null);
 
     const [copiedCSS, setCopiedCSS] = useState(null);
-
+    console.log(remp)
 
     useEffect(() => {
         if (newIndex === null)
@@ -42,6 +42,7 @@ export default function Remp() {
         setCopiedCSS(
             (remp[i].css || []).map(css => [...css])
         );
+        console.log("CSS copié :", css);
     }
 
 
@@ -84,12 +85,28 @@ export default function Remp() {
     function onChangeCSS(i, j) {
         return (name, value) => {
             const res = [...remp];
-            const css = [...(res[i].css || [])];
 
-            css[j] = {
-                ...css[j],
-                [name]: value
+            const css = (res[i].css || []).map(row => [...row]);
+
+            css[j][Number(name)] = value;
+
+            res[i] = {
+                ...res[i],
+                css,
+                modified: true
             };
+
+            setter(res, jeu);
+        };
+    }
+
+    function removeCSS(i, j) {
+        return () => {
+            const res = [...remp];
+
+            const css = (res[i].css || []).filter(
+                (_, index) => index !== j
+            );
 
             res[i] = {
                 ...res[i],
@@ -376,16 +393,14 @@ export default function Remp() {
                                                     minWidth: 0,
                                                     display: "grid",
                                                     gridTemplateColumns:
-                                                        "minmax(0, 1fr) minmax(0, 1fr)",
-                                                    gap: 3
+                                                        "minmax(0, 1fr) minmax(0, 1fr) 20px",
+                                                    gap: 3,
+                                                    alignItems: "center"
                                                 }}
                                             >
                                                 <TextInput
                                                     onChange={
-                                                        onChangeCSS(
-                                                            i,
-                                                            j
-                                                        )
+                                                        onChangeCSS(i, j)
                                                     }
                                                     value={css}
                                                     name="0"
@@ -394,16 +409,44 @@ export default function Remp() {
 
                                                 <TextInput
                                                     onChange={
-                                                        onChangeCSS(
-                                                            i,
-                                                            j
-                                                        )
+                                                        onChangeCSS(i, j)
                                                     }
                                                     value={css}
                                                     name="1"
                                                     style={inputStyle}
                                                 />
+
+                                                <button
+                                                    type="button"
+                                                    onClick={removeCSS(i, j)}
+                                                    title="Supprimer ce CSS"
+                                                    aria-label="Supprimer ce CSS"
+                                                    style={{
+                                                        width: 20,
+                                                        height: 20,
+                                                        padding: 0,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent: "center",
+                                                        border: "none",
+                                                        borderRadius: 4,
+                                                        background: "transparent",
+                                                        color: "#dc2626",
+                                                        fontSize: 17,
+                                                        lineHeight: 1,
+                                                        cursor: "pointer"
+                                                    }}
+                                                    onMouseEnter={e => {
+                                                        e.currentTarget.style.background = "#fee2e2";
+                                                    }}
+                                                    onMouseLeave={e => {
+                                                        e.currentTarget.style.background = "transparent";
+                                                    }}
+                                                >
+                                                    ×
+                                                </button>
                                             </div>
+
                                         )
                                     )}
 

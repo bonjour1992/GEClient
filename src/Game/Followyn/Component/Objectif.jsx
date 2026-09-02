@@ -81,9 +81,8 @@ const styles = {
     container: {
         display: "flex",
         alignItems: "center",
-        gap: "10px",
         fontSize:12,
-        marginBottom:8
+
     },
 
     content: {

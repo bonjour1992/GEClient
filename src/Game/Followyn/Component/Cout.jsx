@@ -9,8 +9,8 @@ import { BooleanInput } from "../../../Input/BooleanInput";
 import { EditorInput } from "../../../Input/EditorInput";
 
 
-export class CoutCarac{
-        couts = []
+export class CoutCarac {
+    couts = []
     coutsAttribut = []
     coutsNum = []
     coutsGain = []
@@ -18,8 +18,7 @@ export class CoutCarac{
 }
 
 
-export function CoutForm({content,onChange})
-{
+export function CoutForm({ content, onChange }) {
 
     function coutLine(x) {
         return [
@@ -30,15 +29,13 @@ export function CoutForm({content,onChange})
         ]
     }
     return (<>
-                <TableInput onChange={onChange} Line={coutLine} name="coutNum" value={content} label="Cout"
-                composant={["coutsNum", "coutsGain", "coutsAttribut", "couts"]} />
+        <TableInput onChange={onChange} Line={coutLine} name="coutNum" value={content} label="Cout"
+            composant={["coutsNum", "coutsGain", "coutsAttribut", "couts"]} />
     </>)
 }
 
-export const Cout = ({ content }) => {
-    const {
-        couts = [], coutsAttribut = [], coutsNum = [], coutsGain = [], coutNum = 0,
-    } = content || {};
+export const Cout = ({ content, explication }) => {
+    const { couts = [], coutsAttribut = [], coutsNum = [], coutsGain = [], coutNum = 0, } = content || {};
 
     const separateur = ((elements) => elements.flatMap((element, index) => {
         const length = elements.length;
@@ -48,10 +45,10 @@ export const Cout = ({ content }) => {
         }
 
         if (length === 2 || index === length - 1) {
-            return [(<span>{"\u00A0"}et{"\u00A0"}</span>), element];
+            return [(<span>{"\u00A0"}et</span>), element];
         }
 
-        return [(<span>,{"\u00A0"}</span>), element];
+        return [(<span>,</span>), element];
     }));
 
     const renderElement = (index) => {
@@ -69,9 +66,9 @@ export const Cout = ({ content }) => {
                 <span>{coutNumValue}{"\u00A0"}</span>
 
                 {stripTags(cout) ? (
-                    <Text text={cout} style={{ display: "inline" }} />
+                    <Text text={cout} style={{ display: "inline" }} explication={explication}/>
                 ) : (
-                    <LoadLink link={coutAttribut || new Link("attribut")} />
+                    <LoadLink link={coutAttribut || new Link("attribut")}  explication={explication} />
                 )}
             </span>
         );
@@ -91,13 +88,11 @@ export const Cout = ({ content }) => {
     coutElements = separateur(coutElements);
     gainElements = separateur(gainElements);
 
-    return (
+    return (coutElements.length || gainElements.length) ? (
         <div
             style={{
                 display: "flex",
                 flexDirection: "column",
-                fontSize:12,
-                marginBottom:8
             }}
         >
             {/* Ligne des coûts */}
@@ -105,7 +100,6 @@ export const Cout = ({ content }) => {
                 <div
                     style={{
                         display: "flex",
-                        alignItems: "center",
                         flexWrap: "wrap",
                     }}
                 >
@@ -122,7 +116,6 @@ export const Cout = ({ content }) => {
                 <div
                     style={{
                         display: "flex",
-                        alignItems: "center",
                         flexWrap: "wrap",
                     }}
                 >
@@ -134,5 +127,5 @@ export const Cout = ({ content }) => {
                 </div>
             )}
         </div>
-    );
+    ) : null
 };

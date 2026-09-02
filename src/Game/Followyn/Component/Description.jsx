@@ -1,13 +1,14 @@
 import { Text } from "../../../Component/Text";
+import { stripTags } from "../../../Input/EditorInput";
 
-
-export function Description({ content }) {
-    return (
+export function Description({ content ,explication}) {
+    return stripTags(content.description)!==""?(
         <Text style={{
-            fontSize: 12,
             backgroundColor: "#bef7f0",
-            margin: "0px 5px ",
-            fontStyle: "italic"
-        }} text={content.description} />
-    );
+            margin: "2px 5px ",
+            fontStyle: "italic",
+            padding:2,
+            borderRadius:6
+        }} text={content.description} rule={explication}/>
+    ):null
 }

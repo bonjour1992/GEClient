@@ -23,7 +23,8 @@ export function LoadAndDisplay({ link, style, displayeur, context }) {
     )
 }
 
-export function LoadLink({ link, style, displayeur="nom", context }){
+export function LoadLink({ link, style, displayeur="nom", context ,explication}){
+    explication && explication.addLien(link.id)
     return (
         <NavLink to={"../"+link.type+"/"+link.id}>
             <LoadAndDisplay link={link} style={style} displayeur={displayeur} context={context}/>

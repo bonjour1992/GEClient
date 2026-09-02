@@ -60,11 +60,17 @@ function Nom({ content, explication, style = {} }) {
 function Display({ content, explication, style }) {
 
     return (
-        <Card content={content} color={elementColor[content.actionType]}>
-            <XP content={content} />
-            <Prerequis content={content} />
-            <Description content={content} />
-
+        <Card content={content} color={elementColor[content.actionType]} explication={explication} >
+            <div style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                marginBottom: 8
+            }} >
+                <XP content={content} />
+                <Prerequis content={content} />
+                <Description content={content} explication={explication} />
+            </div>
             <div
                 style={{
                     display: "flex",
@@ -92,10 +98,13 @@ function Display({ content, explication, style }) {
 
                 <div
                     style={{
-                        width: content.icone ? "70%" : "100%"
+                        width: content.icone ? "70%" : "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
                     }}
                 >
-                    <Cout content={content} />
+                    <Cout content={content} explication={explication} />
 
                     {content.parametre &&
                         stripTags(content.parametre) !== "" &&
@@ -104,7 +113,6 @@ function Display({ content, explication, style }) {
                                 "<span><b>Paramétre de l'action:</b></span>" +
                                 content.parametre
                             }
-                            style={{ fontSize: 12, marginBottom: 8 }}
                         />
                     }
 
@@ -114,8 +122,9 @@ function Display({ content, explication, style }) {
 
                 </div>
             </div>
-
-            <TableResolution content={content} monoLigne={false} />
+            <div style={{ marginTop: 8 }}>
+                <TableResolution content={content} monoLigne={false} />
+            </div>
         </Card>
     );
 }

@@ -12,7 +12,7 @@ const resolutionColor = {
     echec: "#efe4e3",
     reussite: "#e8f3e6",
     reussitCritique: "#DAFAD2",
-    autre: "#d9d77d",
+    autre: "#f5f5e1",
 };
 
 const resolutionType = {
@@ -39,7 +39,7 @@ export function TableResolutionForm({ content, onChange }) {
         return [
             (<EditorInput onChange={onChange} name={"tableResolutionCond"} value={content} index={x} type="compact" />),
             (<EnumInput onChange={onChange} name="tableResolutionColor" value={content} index={x} enumClass={resolutionType} />),
-            (<FreeTagInput onChange={onChange} name="tableResolutionType" index={x} value={content} label="type" tagType={"resolutionType"}/>),
+            (<FreeTagInput onChange={onChange} name="tableResolutionType" index={x} value={content} label="type" tagType={"resolutionType"} />),
             (<NumberInput onChange={onChange} name="tableResolutionPoid" value={content} index={x} />),
             (<EditorInput onChange={onChange} name={"tableResolutionEffet"} value={content} index={x} type="compact" />),
         ]
@@ -91,9 +91,9 @@ export function TableResolution({ content, monoLigne = false }) {
                 ))}
 
                 {poid !== undefined &&
-                poid !== null &&
-                poid !== "" &&
-                poid !== 0 ? (
+                    poid !== null &&
+                    poid !== "" &&
+                    poid !== 0 ? (
                     <span>
                         ({poid})
                     </span>
@@ -126,9 +126,7 @@ export function TableResolution({ content, monoLigne = false }) {
         );
     }
 
-    const isMonoLine =
-        tableResolutionNum === 1 &&
-        stripTags(tableResolutionCond[0]).trim() === "";
+    const isMonoLine = tableResolutionNum === 1 && stripTags(tableResolutionCond[0]).trim() === "";
 
     /*
      * monoLigne = true
@@ -146,7 +144,6 @@ export function TableResolution({ content, monoLigne = false }) {
                 <span
                     style={{
                         fontWeight: "bold",
-                        fontSize: 12
                     }}
                 >
                     Conséquence:
@@ -204,7 +201,7 @@ export function TableResolution({ content, monoLigne = false }) {
                     (_, index) => {
                         const color =
                             resolutionColor[
-                                tableResolutionColor[index]
+                            tableResolutionColor[index]
                             ];
 
                         return (

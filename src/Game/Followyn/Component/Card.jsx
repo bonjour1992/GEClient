@@ -13,6 +13,7 @@ export function Card({ content, color, children ,style}) {
             minHeight: 65,
             position:"relative",
             paddingBottom:18,
+            fontSize:12,
             ...style
         }}>
         <Text style={{
@@ -20,11 +21,11 @@ export function Card({ content, color, children ,style}) {
             backgroundColor: color,
             paddingLeft: 4,
             paddingBottom: 4,
-            fontSize: 16,
+            fontSize: "1.5em",
             fontWeight: "bold",
             textAlign: "left"
         }} text={content.name} />
-        <div style={{margin:4,fontSize:12}}>
+        <div style={{margin:4}}>
         {children}
         </div>
         <Tags content={content} />

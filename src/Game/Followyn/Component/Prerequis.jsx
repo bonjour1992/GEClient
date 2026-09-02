@@ -2,21 +2,20 @@ import { TableInput } from "../../../Input/TableInput";
 import { EditorInput } from "../../../Input/EditorInput";
 import { Text } from "../../../Component/Text";
 
-export class PrerequisCarac{
+export class PrerequisCarac {
 
-        prerequis = []
+    prerequis = []
     prerequisNum = 0
 }
 
-export function PrerequisForm({onChange,content})
-{
+export function PrerequisForm({ onChange, content }) {
     function prerequisLine(x) {
         return [(<EditorInput onChange={onChange} name={"prerequis"} value={content} index={x} type="compact" />)]
     }
 
     return (<>
-                <TableInput onChange={onChange} Line={prerequisLine} name="prerequisNum" value={content} label="Prerequis" composant={["prerequis"]} />
-    
+        <TableInput onChange={onChange} Line={prerequisLine} name="prerequisNum" value={content} label="Prerequis" composant={["prerequis"]} />
+
     </>)
 }
 
@@ -25,13 +24,13 @@ export function Prerequis({ content }) {
     const prerequis = content?.prerequis || [];
     const prerequisNum = content?.prerequisNum || 0;
 
-    return (
+    return prerequisNum?(
         <div style={styles.container}>
             {prerequis.slice(0, prerequisNum).map((text, index) => (
                 <div key={index} style={styles.bar}>
-                    <div style={styles.icon}>
+                    <span style={styles.icon}>
                         !
-                    </div>
+                    </span>
 
                     <Text
                         text={text}
@@ -40,7 +39,7 @@ export function Prerequis({ content }) {
                 </div>
             ))}
         </div>
-    );
+    ):null
 }
 
 const styles = {
@@ -53,7 +52,6 @@ const styles = {
 
     bar: {
         display: "flex",
-        alignItems: "center",
         backgroundColor: "#fff3e0",
         borderLeft: "4px solid #f97316",
         borderRadius: "4px",

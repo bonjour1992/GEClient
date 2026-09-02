@@ -7,7 +7,7 @@ import { ModalPickerInput } from "../../../Input/ModalPickerInput";
 import { BooleanInput } from "../../../Input/BooleanInput";
 import { EditorInput } from "../../../Input/EditorInput";
 import React from "react";
-
+import { stripTags } from "../../../Input/EditorInput";
 
 export class JetCarac {
     competence = []
@@ -54,7 +54,7 @@ export function FormJet({ onChange, content }) {
     </>)
 }
 
-export function Jet({ content }) {
+export function Jet({ content, explication }) {
     const {
         competence = [],
         competenceDiff = [],
@@ -68,40 +68,12 @@ export function Jet({ content }) {
         modificateurJet = ""
     } = content || {};
 
-    const hasCompetence =
-        competenceNum > 0 &&
-        competence.some(
-            (value) =>
-                value !== undefined &&
-                value !== null &&
-                value !== "" &&
-                value.id !== -1
-        );
-
-    const hasNumDe =
-        numDe !== undefined &&
-        numDe !== null &&
-        numDe !== 0;
-
     const hasModificateurDifficulte =
         modificateurDifficulteNum > 0;
 
-    /*
-     * Rien à afficher si :
-     * - aucune compétence
-     * - aucun dé
-     * - aucun modificateur de difficulté
-     */
-    if (
-        !hasCompetence &&
-        !hasNumDe &&
-        !hasModificateurDifficulte
-    ) {
-        return modificateurJet ? (
-            <Text
-                text={modificateurJet}
-                style={{ fontSize: 12 ,marginBottom:8}}
-            />
+    if (!competenceNum > 0 && !numDe && !hasModificateurDifficulte) {
+        return stripTags(modificateurJet) ? (
+            <Text text={modificateurJet} rule={explication} />
         ) : null;
     }
 
@@ -109,7 +81,7 @@ export function Jet({ content }) {
         return competences.map((comp, index) => (
             <React.Fragment key={index}>
                 {index > 0 && (
-                    <span style={{ margin: "0 4px" }}>
+                    <span >
                         /
                     </span>
                 )}
@@ -123,7 +95,7 @@ export function Jet({ content }) {
     }
 
     function renderPremiereLigne() {
-        if (hasNumDe) {
+        if (numDe) {
             return (
                 <span style={{ fontWeight: 800 }}>
                     {numDe}
@@ -133,18 +105,7 @@ export function Jet({ content }) {
 
         return (
             <span style={{ display: "inline-flex" }}>
-                Puissance (
-                {renderCompetences(
-                    competence
-                        .slice(0, competenceNum)
-                        .filter(
-                            (comp) =>
-                                comp !== undefined &&
-                                comp !== null &&
-                                comp !== ""
-                        )
-                )}
-                )
+                Puissance ({renderCompetences(competence)})
             </span>
         );
     }
@@ -156,13 +117,6 @@ export function Jet({ content }) {
             const comp = competence[i];
             const diff = competenceDiff[i];
 
-            if (
-                comp === undefined ||
-                comp === null ||
-                comp === ""
-            ) {
-                continue;
-            }
 
             if (!groupes.has(diff || 0)) {
                 groupes.set(diff || 0, []);
@@ -176,55 +130,29 @@ export function Jet({ content }) {
 
     const groupesCompetences = getCompetencesParDiff();
 
-    const hasCompetenceDiff =
-        groupesCompetences.size > 1;
+    const hasCompetenceDiff = groupesCompetences.size > 1;
 
-    const hasTableauDifficulte =
-        hasCompetenceDiff ||
-        hasModificateurDifficulte;
+    const hasTableauDifficulte = hasCompetenceDiff || hasModificateurDifficulte;
 
-    const hasCompetenceUnique =
-        groupesCompetences.size === 1 &&
-        [...groupesCompetences.values()][0].length > 0;
+    const hasCompetenceUnique = groupesCompetences.size === 1 && [...groupesCompetences.values()][0].length > 0;
 
-    /*
-     * On affiche la ligne du dé uniquement s'il y a
-     * effectivement un dé ou une compétence.
-     */
-    const hasPremiereLigne =
-        hasNumDe || hasCompetence;
 
     return (
-        <div
-            style={{
-                fontSize: 11
-            }}
-        >
+        <div      >
             {/* Première ligne */}
-            {hasPremiereLigne && (
-                <div
-                    style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px"
-                    }}
-                >
-                    <span
-                        style={{
-                            fontSize: "1.5em"
-                        }}
-                        aria-hidden="true"
-                    >
+            {(numDe || competenceNum > 0) && (
+                <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                }}                >
+                    <span aria-hidden="true"                   >
                         🎲
                     </span>
 
                     {renderPremiereLigne()}
 
-                    <span
-                        style={{
-                            fontWeight: 800,
-                        }}
-                    >
+                    <span style={{ fontWeight: 800 }}                    >
                         D10
                     </span>
                 </div>
@@ -233,47 +161,34 @@ export function Jet({ content }) {
             {/* Seuil simple */}
             {!hasTableauDifficulte && (
                 <div>
-                    <span
-                        style={{
-                            fontWeight: "bold"
-                        }}
-                    >
+                    <span style={{ fontWeight: "bold" }}                  >
                         Seuil de réussite:
                     </span>{" "}
 
-                    {jetBrut
-                        ? ""
-                        : "Maîtrise"}
+                    {!jetBrut ? (<span>Maîtrise
 
-                    {hasNumDe && hasCompetenceUnique && (
-                        <>
-                            {" ("}
-                            {renderCompetences(
-                                [...groupesCompetences.values()][0]
-                            )}
-                            {")"}
-                        </>
-                    )}
+                        {(numDe && hasCompetenceUnique) ? (
+                            <>
+                                {" ("}
+                                {renderCompetences(
+                                    [...groupesCompetences.values()][0]
+                                )}
+                                {")"}
+                            </>
+                        ) : null}
 
-                    {difficulte !== undefined &&
-                        difficulte !== null && (
-                            <span>
-                                {" "}
-                                {formatNombre(difficulte)}
-                            </span>
-                        )}
+                        {difficulte ? (<span> {formatNombre(difficulte)}</span>) : null}
+                    </span>) : <span>{difficulte}</span>}
                 </div>
             )}
 
             {/* Tableau des difficultés */}
             {hasTableauDifficulte && (
-                <table
-                    style={{
-                        borderCollapse: "collapse",
-                        width: "100%",
-                        fontSize: "0.95em"
-                    }}
-                >
+                <table style={{
+                    borderCollapse: "collapse",
+                    width: "100%",
+                    fontSize: "0.90em"
+                }}               >
                     <tbody>
 
                         {/* Difficultés des compétences */}
@@ -287,51 +202,26 @@ export function Jet({ content }) {
                                     <tr
                                         key={`diff-${diff}`}
                                     >
-                                        <td
-                                            style={{
-                                                padding:
-                                                    "3px 8px 3px 0",
-                                                verticalAlign:
-                                                    "top",
-                                                whiteSpace:
-                                                    "nowrap"
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontWeight:
-                                                        "bold"
-                                                }}
-                                            >
-                                                Seuil de
-                                                réussite:
+                                        <td style={{
+                                            padding: "3px 8px 3px 0",
+                                            verticalAlign: "top",
+                                            whiteSpace: "nowrap"
+                                        }}>
+                                            <span style={{ fontWeight: "bold" }}                                           >
+                                                Seuil de réussite:
                                             </span>
                                         </td>
 
-                                        <td
-                                            style={{
-                                                padding: "3px 0",
-                                                display:
-                                                    "inline-flex"
-                                            }}
-                                        >
+                                        <td style={{
+                                            padding: "3px 0",
+                                            display: "inline-flex"
+                                        }}                                       >
                                             {"Maîtrise ("}
-
-                                            {renderCompetences(
-                                                competences
-                                            )}
-
+                                            {renderCompetences(competences)}
                                             {") "}
 
-                                            <span
-                                                style={{
-                                                    fontWeight:
-                                                        "bold"
-                                                }}
-                                            >
-                                                {formatNombre(
-                                                    seuil
-                                                )}
+                                            <span style={{ fontWeight: "bold" }}                                           >
+                                                {formatNombre(seuil)}
                                             </span>
                                         </td>
                                     </tr>
@@ -341,58 +231,30 @@ export function Jet({ content }) {
 
                         {/* Modificateurs de difficulté */}
                         {Array.from(
-                            {
-                                length:
-                                    modificateurDifficulteNum
-                            },
+                            { length: modificateurDifficulteNum },
                             (_, index) => {
-                                const valeur =
-                                    modificateurDifficulte[
-                                        index
-                                    ];
+                                const valeur = modificateurDifficulte[index];
 
-                                if (
-                                    valeur === undefined ||
-                                    valeur === null ||
-                                    valeur === 0
-                                ) {
-                                    return null;
-                                }
+                                if (!valeur) return null;
+
 
                                 return (
-                                    <tr
-                                        key={`mod-${index}`}
-                                    >
-                                        <td
-                                            style={{
-                                                padding:
-                                                    "3px 8px 3px 0",
-                                                verticalAlign:
-                                                    "top",
-                                                whiteSpace:
-                                                    "nowrap"
-                                            }}
+                                    <tr key={`mod-${index}`}                                   >
+                                        <td style={{
+                                            padding: "3px 8px 3px 0",
+                                            verticalAlign: "top",
+                                            maxWidth: "70%"
+                                        }}
                                         >
-                                            <Text
-                                                text={
-                                                    modificateurDifficulteText[
-                                                        index
-                                                    ]
-                                                }
-                                            />
+                                            <Text text={modificateurDifficulteText[index]} rule={explication}/>
                                         </td>
 
                                         <td
                                             style={{
-                                                padding:
-                                                    "3px 0",
-                                                fontWeight:
-                                                    "bold"
-                                            }}
-                                        >
-                                            {valeur > 0
-                                                ? `+${valeur}`
-                                                : valeur}
+                                                padding: "3px 0",
+                                                fontWeight: "bold"
+                                            }}                                       >
+                                            {formatNombre(valeur)}
                                         </td>
                                     </tr>
                                 );
@@ -402,9 +264,7 @@ export function Jet({ content }) {
                 </table>
             )}
 
-            {modificateurJet && (
-                <Text text={modificateurJet} />
-            )}
+            {modificateurJet && (<Text text={modificateurJet} rule={explication} />)}
         </div>
     );
 }

@@ -19,7 +19,6 @@ export function Explication({ explication, ajout, afficher }) {
     let s = explication || ""
     ajout.remp.forEach((elemCode) => {
         var elem = remp.filter(e => e.key === elemCode.toLowerCase())[0] || { val: "erreur remplacement", rule: "" }
-
         s += ReactDOMServer.renderToStaticMarkup(<p><b dangerouslySetInnerHTML={{ __html: elem.val }}></b>:{elem.rule}</p>)
     })
 
