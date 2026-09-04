@@ -66,7 +66,7 @@ export const Cout = ({ content, explication }) => {
                 <span>{coutNumValue}{"\u00A0"}</span>
 
                 {stripTags(cout) ? (
-                    <Text text={cout} style={{ display: "inline" }} explication={explication}/>
+                    <Text text={cout} style={{ display: "inline" }} rule={explication}/>
                 ) : (
                     <LoadLink link={coutAttribut || new Link("attribut")}  explication={explication} />
                 )}

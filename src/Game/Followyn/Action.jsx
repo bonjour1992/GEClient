@@ -113,17 +113,18 @@ function Display({ content, explication, style }) {
                                 "<span><b>Paramétre de l'action:</b></span>" +
                                 content.parametre
                             }
+                            rule={explication}
                         />
                     }
 
                     <Objectif content={content} />
                     <Jet content={content} />
-                    <TableResolution content={content} monoLigne={true} />
+                    <TableResolution content={content} monoLigne={true}  explication={explication}/>
 
                 </div>
             </div>
             <div style={{ marginTop: 8 }}>
-                <TableResolution content={content} monoLigne={false} />
+                <TableResolution content={content} monoLigne={false} explication={explication} />
             </div>
         </Card>
     );

@@ -33,7 +33,7 @@ export class TableResolutionCarac {
     tableResolutionNum = 0
 }
 
-export function TableResolutionForm({ content, onChange }) {
+export function TableResolutionForm({ content, onChange,explication }) {
 
     function resolutionLine(x) {
         return [
