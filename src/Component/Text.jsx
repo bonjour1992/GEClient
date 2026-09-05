@@ -119,21 +119,18 @@ export function Explication({ explication, ajout, afficher }) {
         const elem =
             remp.find(
                 e => e.key === elemCode.toLowerCase()
-            ) || {
-                val: "erreur remplacement",
-                rule: ""
-            }
+            ) || null
 
         /*
          * On ajoute directement du HTML.
          *
          * Il sera ensuite parsé par Text().
          */
-        s +=
+        s +=elem?
             `<p>` +
             `<b>${elem.val || ""}</b>` +
             `:${elem.rule || ""}` +
-            `</p>`
+            `</p>`:""
     })
 
     return (
@@ -265,7 +262,7 @@ function renderTextNode(
      * soit interprété comme un remplacement normal.
      */
     const regex =
-        /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g
+        /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g
 
     const result = []
 
@@ -503,8 +500,6 @@ function renderTextNode(
  * pas entre eux.
  */
 
-
-
 function renderRemplacement(
     elem,
     elemCode,
@@ -519,52 +514,29 @@ function renderRemplacement(
     onLien,
     key
 ) {
+    /*
+     * #reu& signifie explicitement pluriel.
+     *
+     * On normalise d'abord &amp; -> &
+     */
+    const pluralRequested =
+        plu === "&" ||
+        plu === "&amp;" ||
+        (num && Number(num) > 1)
+
     let value = ""
 
     /*
      * -----------------------------------------------------------------------
-     * Nombre devant le remplacement
-     * -----------------------------------------------------------------------
-     *
-     * Ancien comportement :
-     *
-     * #foo(2)
-     *
-     * donne :
-     *
-     * 2 valeur
-     *
-     * sauf pour plural === "repeat"
-     * et plural === "after".
-     */
-    if (
-        num &&
-        elem.plural !== "repeat" &&
-        elem.plural !== "after"
-    ) {
-        value += num + " "
-    }
-
-
-    /*
-     * -----------------------------------------------------------------------
-     * Pluriel
+     * PLURIEL
      * -----------------------------------------------------------------------
      */
-    const isPlural =
-        (num && num > 1) ||
-        plu === "&amp;"
-
-
     if (
-        isPlural &&
+        pluralRequested &&
         elem.plural !== "repeat"
     ) {
-
         /*
-         * -------------------------------------------------------------------
-         * plural === "after"
-         * -------------------------------------------------------------------
+         * Cas spécial "after".
          */
         if (elem.plural === "after") {
             value =
@@ -575,52 +547,47 @@ function renderRemplacement(
                 " " +
                 num
 
-
-            /*
-             * Multiplicateur.
-             *
-             * #foo(2, 3)
-             *
-             * donne par exemple :
-             *
-             * valeur 2 ***
-             */
             if (
                 mult &&
                 !Number.isNaN(
                     parseInt(mult)
                 )
             ) {
-                value +=
-                    "*".repeat(
-                        parseInt(mult)
-                    )
+                value += "*".repeat(
+                    parseInt(mult)
+                )
             } else if (mult) {
                 value += " " + mult
             }
-
         } else {
-
             /*
-             * ----------------------------------------------------------------
-             * Pluriel normal
-             * ----------------------------------------------------------------
+             * Si Remp.plural est renseigné, on l'utilise.
+             *
+             * Sinon on ajoute simplement "s".
              */
-            value +=
+            value =
                 toMaj(
                     elem.plural ||
                     (elem.val || "") + "s",
                     isMaj(elemCode)
                 )
         }
+    }
 
-    } else {
+    /*
+     * -----------------------------------------------------------------------
+     * SINGULIER
+     * -----------------------------------------------------------------------
+     */
+    else {
+        if (
+            num &&
+            elem.plural !== "repeat" &&
+            elem.plural !== "after"
+        ) {
+            value += num + " "
+        }
 
-        /*
-         * -------------------------------------------------------------------
-         * Singulier
-         * -------------------------------------------------------------------
-         */
         value +=
             toMaj(
                 elem.val || "",
@@ -628,17 +595,10 @@ function renderRemplacement(
             )
     }
 
-
     /*
      * -----------------------------------------------------------------------
-     * repeat
+     * REPEAT
      * -----------------------------------------------------------------------
-     *
-     * Ancien comportement :
-     *
-     *   res.repeat(num)
-     *
-     * Ici on génère réellement plusieurs éléments React.
      */
     if (
         elem.plural === "repeat" &&
@@ -649,9 +609,7 @@ function renderRemplacement(
         for (let i = 0; i < num; i++) {
             result.push(
                 <span
-                    key={
-                        `remp-${key}-repeat-${i}`
-                    }
+                    key={`remp-${key}-repeat-${i}`}
                     style={rebuildCSS(
                         elem.css || [],
                         size
@@ -673,21 +631,10 @@ function renderRemplacement(
         return result
     }
 
-
     /*
      * -----------------------------------------------------------------------
-     * Remplacement normal
+     * Rendu normal
      * -----------------------------------------------------------------------
-     *
-     * elem.val est envoyé dans format().
-     *
-     * Donc :
-     *
-     *   HTML -> React
-     *
-     * au lieu de :
-     *
-     *   HTML -> dangerouslySetInnerHTML
      */
     return (
         <span

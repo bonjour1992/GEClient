@@ -6,7 +6,7 @@ import HabiliteHandler from "./Habilite"
 import RuleHandler from "./Rule"
 import TraitHandler from "./Trait"
 import DomaineHandler from "./Domaine"
-
+import ObjetHandler from "./Objet"
 
 export const Handler = {
 "attribut":AttributHandler,
@@ -16,6 +16,7 @@ export const Handler = {
 "habilite":HabiliteHandler,
 "rule":RuleHandler,
 "trait":TraitHandler,
-"domaine":DomaineHandler
+"domaine":DomaineHandler,
+"objet":ObjetHandler
 }
 
