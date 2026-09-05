@@ -5,10 +5,10 @@ export class EffetCarac {
     effet = ""
 }
 
-export function Effet({ content }) {
+export function Effet({ content,explication }) {
     return stripTags(content.effet)!==""?(<div>
         <p style={{ fontWeight: 700 }}>Effet:</p>
-        <Text text={content.effet} />
+        <Text text={content.effet} rule={explication}/>
     </div>):null
 }
 

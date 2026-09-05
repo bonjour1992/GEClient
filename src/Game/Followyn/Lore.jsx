@@ -33,7 +33,7 @@ const elementColor = "#000"
 
 
 class Classe extends aggregation(ElementJDR) {
-rule=""
+info=""
 
 }
 
@@ -79,7 +79,7 @@ function Display({ content, explication, style }) {
                         width: content.icone ? "70%" : "100%"
                     }}
                 >
-                    <Text text={content.rule} rule={explication}/>
+                    <Text text={content.info} rule={explication}/>
                 </div>
             </div>
 
@@ -94,11 +94,11 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormElementJDR content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-            <FullEditorInput onChange={onChange} value={content} name="rule" />
+            <FullEditorInput onChange={onChange} value={content} name="info" />
         </FormElementJDR>
     )
 }
 
 
-export default { name: "Régle", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
+export default { name: "Lore", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
 
