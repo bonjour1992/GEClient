@@ -1,5 +1,5 @@
 import { NavLink, useLoaderData, useParams } from "react-router";
-import { games, getHandler } from "../Game/games";
+import { games } from "../Game/games";
 
 export default function JeuHome() {
     const jeu = games[useParams().jeu]

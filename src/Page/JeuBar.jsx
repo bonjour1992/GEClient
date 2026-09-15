@@ -1,7 +1,5 @@
-import { Outlet, useLoaderData, useParams, useNavigate, Link } from "react-router";
-import { useState, useEffect } from "react";
+import { Outlet, useParams, useNavigate, Link } from "react-router";
 import { useRemp, useSearch } from "../lib/store"
-import { getRemp, getSearch } from "../lib/fetch";
 import { games } from "../Game/games";
 
 let jeu

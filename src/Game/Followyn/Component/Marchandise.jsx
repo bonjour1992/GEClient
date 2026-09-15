@@ -10,7 +10,7 @@ export class MarchandiseCarac {
 export function MarchandiseForm({ onChange, content }) {
     return (
         <>
-            <NumberInput onChange={onChange} value={content} name={"encombrement"} label="Encombrement" />
+            <NumberInput onChange={onChange} value={content} name={"encombrement"} label="Encombrement" step={0.1}/>
             <NumberInput onChange={onChange} value={content} name={"prix"} label="Prix" />
             <NumberInput onChange={onChange} value={content} name={"lot"} label="En lot de" />
 

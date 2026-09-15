@@ -1,4 +1,4 @@
-import { Outlet, useLoaderData, useParams, Link, NavLink } from "react-router";
+import { useLoaderData, useParams, NavLink } from "react-router";
 import { getHandler } from "../Game/games";
 import { Action } from "../Component/Action";
 

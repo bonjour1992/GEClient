@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from "react-router";
+import { NavLink } from "react-router";
 import { games } from "../Game/games";
 import { pub } from "../lib/fetch";
 

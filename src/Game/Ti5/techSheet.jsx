@@ -1,13 +1,9 @@
 import { ElementContent, Link } from "../../lib/datatype.js";
-import { TextInput } from "../../Input/TextInput.jsx";
-import { backgroundColor, borderColor, turnNumber } from "./ti5.jsx";
+import { backgroundColor, borderColor } from "./ti5.jsx";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
-import { ColorInput } from "../../Input/ColorInput.jsx";
-import { TableInput } from "../../Input/TableInput";
 import { EditorInput } from "../../Input/EditorInput.jsx";
 import { Text } from "../../Component/Text.jsx";
-import { Image } from "../../Component/Image.jsx";
 import { imgURL } from "../../lib/styleUtils.js";
 import { LoadAndDisplay } from "../../Component/LoadAndDisplay.jsx";
 import FormBase from "../../Input/FormBase"

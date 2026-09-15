@@ -6,9 +6,6 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
 import { Highlight } from "@tiptap/extension-highlight";
 import { TextAlign } from "@tiptap/extension-text-align";
-import { Subscript } from "@tiptap/extension-subscript";
-import { Superscript } from "@tiptap/extension-superscript";
-import { Typography } from "@tiptap/extension-typography";
 import { useEffect } from "react";
 import { ModalPickerEditorButton } from "./ModalPickerInput";
 export const fullEditorStyle = {

@@ -4,7 +4,6 @@ import { Handler as HandlerTI5 } from './Ti5/ti5'
 import { Handler as HandlerTOW } from './Tow/tow'
 import { Link } from '../lib/datatype'
 import { Handler as HandlerFolowyn } from './Followyn/Followyn'
-import { pub } from '../lib/fetch'
 import { useLocation } from 'react-router'
 
 
@@ -13,6 +12,8 @@ export const games = {
     "tow": { handlers: HandlerTOW, name: "Warhammer The Old World" },
     "followyn": { handlers: HandlerFolowyn, name: "Followyn JDR", pict: "/Followyn/theme-cover7.png" }
 }
+
+
 
 export function getHandler(jeu, meta) {
 

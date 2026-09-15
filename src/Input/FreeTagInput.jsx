@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTags } from "../lib/store";
 import { createPortal } from "react-dom";
 

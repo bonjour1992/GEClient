@@ -1,6 +1,5 @@
-import { Outlet, useLoaderData, Link, useParams, useNavigate } from "react-router";
-import { getHandler, Displayeur, SelecteurDisplayeur } from "../Game/games";
-import { Button } from "../Component/Button";
+import { useLoaderData, useParams, useNavigate } from "react-router";
+import { getHandler, SelecteurDisplayeur } from "../Game/games";
 import { deleteElement } from "../lib/fetch";
 import { Action } from "../Component/Action";
 

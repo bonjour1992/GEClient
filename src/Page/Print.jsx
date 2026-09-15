@@ -1,12 +1,10 @@
-import { Outlet, useLoaderData, useParams, NavLink } from "react-router";
+import { useParams } from "react-router";
 import { getHandler } from "../Game/games";
 import { getFromType, useSearch } from "../lib/store";
 import { useState } from "react";
 import { LoadAndDisplay } from "../Component/LoadAndDisplay";
 import { Link } from "../lib/datatype";
 import { A3Pa, A3Po, A4Pa, A4Po } from "../Component/Size";
-import { fullBorder } from "../Component/style";
-import { backgroundColorFull } from "../Game/Ti5/ti5";
 
 const pageOption = {
     "A4 paysage": A4Pa,

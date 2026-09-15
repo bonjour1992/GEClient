@@ -1,5 +1,4 @@
 import AttributHandler from "./Attribut"
-import CompétenceHandler from "./Compétence"
 import ActionHandler from "./Action"
 import PassifHandler from "./Passif"
 import HabiliteHandler from "./Habilite"
@@ -8,9 +7,13 @@ import TraitHandler from "./Trait"
 import DomaineHandler from "./Domaine"
 import ObjetHandler from "./Objet"
 import LoreHandler from "./Lore"
+import ConditionHandler from "./Condition"
+import CompetenceHandler from "./Competence"
+
+
 export const Handler = {
 "attribut":AttributHandler,
-"competence":CompétenceHandler,
+"competence":CompetenceHandler,
 "action":ActionHandler,
 "passif":PassifHandler,
 "habilite":HabiliteHandler,
@@ -18,6 +21,7 @@ export const Handler = {
 "trait":TraitHandler,
 "domaine":DomaineHandler,
 "objet":ObjetHandler,
-"lore":LoreHandler
+"lore":LoreHandler,
+"condition":ConditionHandler
 }
 

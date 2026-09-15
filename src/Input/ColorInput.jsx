@@ -1,4 +1,3 @@
-import { ReactNode } from "react";
 import { SketchPicker } from 'react-color';
 import { Label } from "./inputUtils";
 

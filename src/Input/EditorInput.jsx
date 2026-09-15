@@ -1,7 +1,7 @@
-import { generateHTML, Editor } from "@tiptap/core";
+import { generateHTML } from "@tiptap/core";
 import { useEditor, useEditorState, EditorContext, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { ReactNode, useEffect } from "react";
+import { useEffect } from "react";
 import { Label } from "./inputUtils";
 import { ModalPickerEditorButton } from "./ModalPickerInput";
 

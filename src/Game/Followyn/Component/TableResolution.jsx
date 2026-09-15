@@ -4,8 +4,7 @@ import { EnumInput } from "../../../Input/EnumInput"
 import FreeTagInput from "../../../Input/FreeTagInput"
 import { TableInput } from "../../../Input/TableInput"
 import React from "react";
-import { LoadLink } from "../../../Component/LoadAndDisplay";
-import { Explication, Text } from "../../../Component/Text";
+import { Text } from "../../../Component/Text";
 import { stripTags } from "../../../Input/EditorInput"
 const resolutionColor = {
     echecCritique: "#F8cac6",
@@ -16,11 +15,12 @@ const resolutionColor = {
 };
 
 const resolutionType = {
+    autre: "Autre",
     echecCritique: "Échec Critique",
     echec: "Échec",
     reussite: "Réussite",
     reussitCritique: "Réussite Critique",
-    autre: "Autre",
+
 };
 
 
@@ -33,7 +33,7 @@ export class TableResolutionCarac {
     tableResolutionNum = 0
 }
 
-export function TableResolutionForm({ content, onChange,explication }) {
+export function TableResolutionForm({ content, onChange, explication }) {
 
     function resolutionLine(x) {
         return [
@@ -55,7 +55,7 @@ export function TableResolutionForm({ content, onChange,explication }) {
 
 
 
-export function TableResolution({ content, monoLigne = false ,explication}) {
+export function TableResolution({ content, monoLigne = false, explication }) {
     const {
         tableResolutionCond = [],
         tableResolutionType = [],
@@ -117,7 +117,7 @@ export function TableResolution({ content, monoLigne = false ,explication}) {
                 {tableResolutionEffet[index] && (
                     <span style={{ fontSize: 12 }}>
                         :{" "}
-                        <Text text={tableResolutionEffet[index]} rule={explication}/>
+                        <Text text={tableResolutionEffet[index]} rule={explication} />
                     </span>
                 )}
             </>
@@ -211,7 +211,7 @@ export function TableResolution({ content, monoLigne = false ,explication}) {
                                     padding: "4px",
                                     verticalAlign: "top"
                                 }}>
-                                    <Text text={tableResolutionCond[index]} rule={explication}/>
+                                    <Text text={tableResolutionCond[index]} rule={explication} />
                                 </td>
 
                                 <td

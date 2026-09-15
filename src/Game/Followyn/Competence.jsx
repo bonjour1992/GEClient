@@ -1,20 +1,10 @@
 
-import { divider } from "../../lib/styleUtils"
-import { EnumInput } from "../../Input/EnumInput"
-import { TagInput } from "../../Input/TagInput"
-import { TextInput } from "../../Input/TextInput"
-import { NumberInput } from "../../Input/NumberInput"
 import { EditorInput } from "../../Input/EditorInput"
-import { bottomBorder } from "../../Component/style"
-import { fullBorder } from "../../Component/style"
-import { Text, Explication } from "../../Component/Text"
-import ReactDOMServer from "react-dom/server"
-import FormBase from "../../Input/FormBase"
+import { Text } from "../../Component/Text"
 import { ElementJDR } from "./FollowynDatatype"
 import { FormElementJDR } from "./Component/FormElementJDR"
 import { Card } from "./Component/Card"
 import { Description } from "./Component/Description"
-import { NavLink } from "react-router"
 
 const elementColor = "rgb(16, 93, 10)"
 

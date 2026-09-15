@@ -45,6 +45,7 @@ function ModalPicker({
         new Link(availableTypes[0])
     );
 
+
     const open = () => {
         setSelectedType(null);
         setSelected(new Link(availableTypes[0]));

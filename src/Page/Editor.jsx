@@ -1,5 +1,5 @@
-import { Navigate, Outlet, useLoaderData, useNavigate, useParams } from "react-router";
-import { getHandler, Displayeur, SelecteurDisplayeur } from "../Game/games";
+import { useNavigate, useParams } from "react-router";
+import { getHandler, SelecteurDisplayeur } from "../Game/games";
 import { useState } from "react";
 import { updateElement,createElement } from "../lib/fetch";
 

@@ -1,7 +1,6 @@
-import { TextInput } from "../../Input/TextInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
-import { Text, Explication } from "../../Component/Text"
+import { Text } from "../../Component/Text"
 import { backgroundColor, borderColor } from "./ti5"
 import { bottomBorder, fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"

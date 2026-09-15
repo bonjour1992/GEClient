@@ -1,6 +1,5 @@
 
 import { ElementContent } from "../../lib/datatype";
-import React from "react";
 import { A4Pa } from "../../Component/Size";
 import FormBase from "../../Input/FormBase";
 

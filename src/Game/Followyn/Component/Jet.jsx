@@ -1,5 +1,4 @@
 import { LoadLink } from "../../../Component/LoadAndDisplay";
-import { Link } from "../../../lib/datatype";
 import { Text } from "../../../Component/Text";
 import { TableInput } from "../../../Input/TableInput";
 import { NumberInput } from "../../../Input/NumberInput";

@@ -1,28 +1,11 @@
 
-import { divider } from "../../lib/styleUtils"
-import { EnumInput } from "../../Input/EnumInput"
-import { TagInput } from "../../Input/TagInput"
-import { TextInput } from "../../Input/TextInput"
-import { NumberInput } from "../../Input/NumberInput"
-import { EditorInput, stripTags } from "../../Input/EditorInput"
-import { bottomBorder } from "../../Component/style"
-import { fullBorder } from "../../Component/style"
-import { Text, Explication } from "../../Component/Text"
-import ReactDOMServer from "react-dom/server"
-import FormBase from "../../Input/FormBase"
+import { Text } from "../../Component/Text"
 import { ElementJDR } from "./FollowynDatatype"
 import { FormElementJDR } from "./Component/FormElementJDR"
 import { Card } from "./Component/Card"
 import { Description } from "./Component/Description"
-import { ModalPickerInput } from "../../Input/ModalPickerInput"
-import { TableInput } from "../../Input/TableInput"
 import { Prerequis, PrerequisCarac, PrerequisForm } from "./Component/Prerequis"
-import { BooleanInput } from "../../Input/BooleanInput"
-import { Cout, CoutCarac, CoutForm } from "./Component/Cout"
-import { Objectif, ObjectifCarac, ObjectifForm } from "./Component/Objectif"
-import { FormJet, Jet, JetCarac } from "./Component/Jet"
 import { aggregation } from "../../lib/datatype"
-import { TableResolution, TableResolutionCarac, TableResolutionForm } from "./Component/TableResolution"
 import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
 import { Effet, EffetCarac, EffetForm } from "./Component/effet"
@@ -80,7 +63,7 @@ function Display({ content, explication, style }) {
                         width: content.icone ? "70%" : "100%"
                     }}
                 >
-                    <Effet content={content} />
+                    <Effet content={content} explication={explication}/>
                 </div>
             </div>
 

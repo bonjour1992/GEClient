@@ -1,9 +1,8 @@
 'use client';
-import { ReactNode } from "react";
 import { Label } from "./inputUtils";
 
 
-export function NumberInput({ index, className, onChange, name = "name", value, label, min = -1000000, max = 1000000, disabled=false }){
+export function NumberInput({ index, onChange, name = "name", value, label, min = -1000000, max = 1000000, disabled=false ,step=1}){
 
 
     return (
@@ -17,7 +16,8 @@ export function NumberInput({ index, className, onChange, name = "name", value, 
                 disabled={disabled}
                 min={min}
                 max={max}
-                onChange={e => onChange(name , parseInt(e.target.value) ,index)} />
+                step={step}
+                onChange={e => onChange(name ,step===1? parseInt(e.target.value):parseFloat(e.target.value) ,index)} />
         </span>
     );
 }
