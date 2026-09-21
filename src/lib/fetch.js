@@ -1,8 +1,8 @@
 import { useSearch, useUser } from "./store"
 
 
-//const server="http://xorg-compagny.ddns.net:8500/"
-const server = "http://localhost:3000/"
+const server="http://xorg-compagny.ddns.net:8500/"
+//const server = "http://localhost:3000/"
 
 
 export async function fetchAPI(url, method, body, content) {
