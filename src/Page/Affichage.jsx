@@ -1,27 +1,87 @@
-import { useLoaderData, useParams, useNavigate } from "react-router";
-import { getHandler, SelecteurDisplayeur } from "../Game/games";
-import { deleteElement } from "../lib/fetch";
+import {
+    useLoaderData,
+    useParams
+} from "react-router";
+
+import {
+    getHandler,
+    SelecteurDisplayeur
+} from "../Game/games";
+
 import { Action } from "../Component/Action";
 
+
 export default function Affichage() {
-    let jeu = useParams().jeu
-    let element = useLoaderData().element || { meta: null, content: null }
-    let navigate = useNavigate();
 
-    let Display = getHandler(jeu, element.meta.type).display.default
+    const params = useParams();
 
-    function suppr() {
-        let f = async () => {
-            let res = await deleteElement(element.id)
-            navigate("./..")
-        }
-        f()
-    }
+    const jeu = params.jeu;
 
-    return (<>
-        <div>Affichage</div>
-        <Action jeu={jeu} type={element.meta.type} id={element.id} />
-        <SelecteurDisplayeur jeu={jeu} type={element.meta.type} content={element.content} />
-        <p>{JSON.stringify(element)}</p>
-    </>)
+    const element =
+        useLoaderData().element ||
+        {
+            meta: null,
+            content: null
+        };
+
+
+    const Display =
+        getHandler(
+            jeu,
+            element.meta.type
+        ).display.default;
+
+
+    const isVersion =
+        !!params.version;
+
+
+    return (
+        <>
+
+            <div>
+                {isVersion
+                    ? "Affichage d'une version"
+                    : "Affichage"
+                }
+            </div>
+
+
+            {isVersion && (
+
+                <div
+                    style={{
+                        padding: 10,
+                        margin: "10px 0",
+                        border: "1px solid #ccc",
+                        fontFamily: "monospace"
+                    }}
+                >
+                    Version : {params.version}
+                </div>
+
+            )}
+
+
+            <Action
+                jeu={jeu}
+                type={element.meta.type}
+                id={element.id}
+                version={params.version}
+            />
+
+
+            <SelecteurDisplayeur
+                jeu={jeu}
+                type={element.meta.type}
+                content={element.content}
+            />
+
+
+            <p>
+                {JSON.stringify(element)}
+            </p>
+
+        </>
+    );
 }

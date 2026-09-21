@@ -66,3 +66,46 @@ export function Displayeur({ jeu, type, explication = false, content, style, dis
         </>
     )
 }
+
+export function normalizeElement(element) {
+
+if (!element?.content) {
+    return element;
+}
+
+const handler = getHandler(
+    element.meta?.jeu,
+    element.meta?.type
+);
+
+if (!handler?.classe) {
+    return element;
+}
+
+let defaults;
+
+try {
+    defaults = new handler.classe();
+} catch (e) {
+    console.error(
+        "Impossible de créer la classe par défaut pour",
+        element.meta?.jeu,
+        element.meta?.type,
+        e
+    );
+
+    return element;
+}
+
+const content = {
+    ...defaults,
+    ...element.content
+};
+
+return {
+    ...element,
+    content
+};
+
+
+}

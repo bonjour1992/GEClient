@@ -1,6 +1,32 @@
 import { create } from "zustand";
 import { getRemp, getSearch, getTags, createTag } from "./fetch.js";
 
+export const useUser = create((set) => ({
+    login: "",
+    token: "",
+
+    setUser: (user, token) => {
+        set({
+            login: user.name,
+            token
+        });
+    },
+
+    setLogin: (login) => {
+        set({
+            login
+        });
+    },
+
+    logout: () => {
+        set({
+            login: "",
+            token: ""
+        });
+    }
+}));
+
+
 export const useRemp = create((set, get) => ({
     remp: [],
     loaded: false,
