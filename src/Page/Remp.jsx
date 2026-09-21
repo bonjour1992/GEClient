@@ -1,5 +1,6 @@
 
 import { BooleanInput } from "../Input/BooleanInput";
+import { EditorInput } from "../Input/EditorInput";
 import { TextInput } from "../Input/TextInput";
 import { updateRemp } from "../lib/fetch";
 import { useRemp } from "../lib/store";
@@ -474,34 +475,7 @@ export default function Remp() {
                             </td>
 
                             <td style={cellStyle}>
-                                <textarea
-                                    value={e.rule || ""}
-                                    onChange={event =>
-                                        onChange(i)(
-                                            "rule",
-                                            event.target.value
-                                        )
-                                    }
-                                    wrap="soft"
-                                    rows={3}
-                                    style={{
-                                        display: "block",
-                                        width: "100%",
-                                        maxWidth: "100%",
-                                        minWidth: 0,
-                                        minHeight: 65,
-                                        boxSizing: "border-box",
-                                        resize: "vertical",
-                                        padding: "6px 8px",
-                                        border: "1px solid #ccc",
-                                        borderRadius: 4,
-                                        fontFamily: "inherit",
-                                        fontSize: "inherit",
-                                        lineHeight: 1.4,
-                                        whiteSpace: "pre-wrap",
-                                        overflowWrap: "break-word"
-                                    }}
-                                />
+                                <EditorInput name="rule" value={e} onChange={onChange(i)}/>
                             </td>
                         </tr>
                     ))}

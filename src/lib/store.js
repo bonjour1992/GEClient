@@ -1,30 +1,39 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { getRemp, getSearch, getTags, createTag } from "./fetch.js";
 
-export const useUser = create((set) => ({
-    login: "",
-    token: "",
-
-    setUser: (user, token) => {
-        set({
-            login: user.name,
-            token
-        });
-    },
-
-    setLogin: (login) => {
-        set({
-            login
-        });
-    },
-
-    logout: () => {
-        set({
+export const useUser = create(
+    persist(
+        (set) => ({
             login: "",
-            token: ""
-        });
-    }
-}));
+            token: "",
+
+            setUser: (user, token) => {
+                set({
+                    login: user.name,
+                    token
+                });
+            },
+
+            setLogin: (login) => {
+                set({
+                    login
+                });
+            },
+
+            logout: () => {
+                set({
+                    login: "",
+                    token: ""
+                });
+            }
+        }),
+        {
+            name: "ge-user"
+        }
+    )
+);
+
 
 
 export const useRemp = create((set, get) => ({

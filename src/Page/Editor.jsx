@@ -1,43 +1,45 @@
 import { useNavigate, useParams } from "react-router";
 import { getHandler, SelecteurDisplayeur } from "../Game/games";
 import { useState } from "react";
-import { updateElement,createElement } from "../lib/fetch";
+import { updateElement, createElement } from "../lib/fetch";
 
-export default function Editor({ elem, creer =false}) {
+export default function Editor({ elem, creer = false }) {
     let [element, setElement] = useState(elem || { meta: null, content: null })
     let navigate = useNavigate();
     let jeu = useParams().jeu
 
 
-   
 
-function handleInputChange(name, value, index) {
-    setElement(prevElement => {
-        if (index !== undefined) {
-            const table = [...prevElement.content[name]];
-            table[index] = value;
+
+    function handleInputChange(name, value, index) {
+        setElement(prevElement => {
+            if (index !== undefined) {
+                const table = [...prevElement.content[name]];
+                table[index] = value;
+
+                return {
+                    ...prevElement,
+                    content: {
+                        ...prevElement.content,
+                        [name]: table
+                    }
+                };
+            }
 
             return {
                 ...prevElement,
                 content: {
                     ...prevElement.content,
-                    [name]: table
+                    [name]: value
                 }
             };
-        }
-
-        return {
-            ...prevElement,
-            content: {
-                ...prevElement.content,
-                [name]: value
-            }
-        };
-    });
-}
+        });
+    }
 
 
     function save(e) {
+        e.preventDefault()
+        e.currentTarget.disabled = true;
         let f = async () => {
             if (creer) {
                 let res = await createElement(element)
@@ -49,15 +51,14 @@ function handleInputChange(name, value, index) {
             }
         }
         f()
-        e.preventDefault()
     }
 
 
     let Form = getHandler(jeu, element.meta.type).form
-let split = getHandler(jeu, element.meta.type).editor!=="noSplit"?  { width: "49%",paddingRight:"1%", float: "left" }:{}
+    let split = getHandler(jeu, element.meta.type).editor !== "noSplit" ? { width: "49%", paddingRight: "1%", float: "left" } : {}
     return (<>
         <div>Edition</div>
-        <div style={{maxWidth:1600,...split}}>
+        <div style={{ maxWidth: 1600, ...split }}>
             <Form content={element.content} onChange={handleInputChange} onSubmit={save} />
         </div>
         <div style={split}>

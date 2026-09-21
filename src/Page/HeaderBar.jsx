@@ -282,7 +282,6 @@ function User() {
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "0 5px",
-                boxSizing: "border-box"
             }}
         >
 
