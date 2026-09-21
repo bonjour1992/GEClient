@@ -125,7 +125,7 @@ export function PlanetPict({ content, style, context, explication }) {
                 {content.inf ? <Hexagone color="blue">{content.inf}</Hexagone> : ""}
                 {content.ruine ? <Ruine type={content.ruineType} /> : ""}
                 {content.ruine2 ? <Ruine type={content.ruineType2} /> : ""}
-                {content.techSpe.map((e, i) => <img key={i} src={pub + (techIcon.get(e) || "/404.jpeg")} alt={techIcon.get(e) || "/404.jpeg"} width={20} height={20} />)}
+                {content.techSpe&& content.techSpe.map((e, i) => <img key={i} src={pub + (techIcon.get(e) || "/404.jpeg")} alt={techIcon.get(e) || "/404.jpeg"} width={20} height={20} />)}
             </div>
         </div>
     </div>)

@@ -1,17 +1,47 @@
-
 import { ElementContent } from "../../lib/datatype";
-import { A4Pa } from "../../Component/Size";
+import { A4Po } from "../../Component/Size";
 import FormBase from "../../Input/FormBase";
+import { EditorInput } from "../../Input/EditorInput";
+import { Text } from "../../Component/Text";
+import { TextInput } from "../../Input/TextInput";
+import { TableInput } from "../../Input/TableInput";
+import { NumberInput } from "../../Input/NumberInput";
+import { EnumInput } from "../../Input/EnumInput";
+import { BooleanInput } from "../../Input/BooleanInput";
 
-class deroule extends ElementContent { }
+const event = {
+    none: "Aucun",
+    min: "Mineur",
+    maj: "Majeur",
 
-function Display() {
+}
+
+
+class deroule extends ElementContent {
+    fin = ""
+    recru = []
+    surCout = []
+    mecatol = []
+    evenement = []
+    militaire = []
+    faveur = []
+    ministre = []
+    siege = []
+    siege2 = []
+    tourNum = 10
+}
+
+function Display({ content, explication }) {
     // ============================================================
     // PARAMÈTRES
     // ============================================================
 
-    const nombrePages = 2;
-    const toursParPage = 5;
+    const nombrePages = 3;
+
+    // Page 1 : tours 1-3
+    // Page 2 : tours 4-7
+    // Page 3 : tours 8-10
+    const toursParPage = [3, 4, 3];
 
     const paddingPage = 0;
 
@@ -19,36 +49,47 @@ function Display() {
     const couleurEntete = "#eeeeee";
     const couleurBordure = "#000000";
 
-    const boites = [3, 4, 5, 6, 7, 8, 9]
-    const hauteurBoites = 75;
+    // Cases du haut
+    const boites = [3, 4, 5, 6, 7, 8, 9];
+
+    // Toutes les cases ont la même hauteur ET la même largeur.
+    const hauteurBoites = "30mm";
     const espaceEntreBoites = 5;
-    const hauteurZoneBoites = 75;
-    const hauteurLegende = hauteurZoneBoites;
 
-    // Compteurs
+    // Une case sur les pages 1 et 2 occupe 1/3 de la largeur.
+    // La case 9 doit avoir exactement la même largeur.
+    const largeurBoite = 33.3333;
+    const largeurLegende = 66.6667;
+
+    // ============================================================
+    // COMPTEURS
+    // ============================================================
+
     const maxPoints = 25;
-    const maxInfamie = 25;
-    const maxSieges = 25;
 
-    const compteurDebutParPage = [0, 12];
-    const compteurFinParPage = [11, 25];
 
-    const hauteurCompteur = 22;
+    const compteurDebutParPage = [0, 9, 18];
+    const compteurFinParPage = [8, 17, 25];
+
+    // Compteurs légèrement agrandis
+    const hauteurCompteur = 30;
+
     const largeurCaseFinale = 2;
 
-    // Tableau
-    const hauteurTour = 22;
-    const hauteurRecrutement = 22;
-    const hauteurMecatol = 22;
-    const hauteurObjectif = 241;
-    const hauteurEvenement = 241;
-    const hauteurFaveur = 22;
+    // ============================================================
+    // TABLEAU
+    // ============================================================
+
+    const hauteurSmallRow = 22;
+
+    // Hauteurs en MILLIMÈTRES
+    const hauteurCarte = "70mm";
+
+
 
     // ============================================================
     // DONNÉES
     // ============================================================
-    const evenement = ["Mineur", , , "Mineur", , "Majeur"]
-
 
     const infa = [
         0, 3, 5, 7, 8, 9, 10, 11, 11, 12,
@@ -56,50 +97,12 @@ function Display() {
         18, 18, 19, 19, 20,
     ];
 
-    const recrutement = [
-        "3,4,5,6,7,8,9",
-        "3,5,7",
-        "4,5,6",
-        "4,5,7",
-        "4,6,8",
-        "5,6,7",
-        "5,7,9",
-        "6,7,8",
-        "6,8,9",
-        "7,8,9",
-    ];
-
-    const mecatol = [
-        1, 1, 1, 1, 1,
-        2, 2, 2, 2, 4,
-    ];
-
-    const Militaire = [
-        false, false, true, false, false,
-        true, false, true, false, true,
-    ];
-
-    const faveur = [
-        0, 0, 0, 1, 1,
-        0, 1, 0, 1, 2,
-    ];
-
-    const siege = [
-        0, 0, 2, 0, 2,
-        2, 3, 3, 3, 4, 4,
-    ];
-
-    const ministere = [
-        2, 2, 0, 1, 0,
-        0, 0, 0, 0, 0, 0,
-    ];
-
     // ============================================================
     // STYLES
     // ============================================================
 
     const pageStyle = {
-        ...A4Pa,
+        ...A4Po,
         padding: paddingPage,
         margin: 0,
         border: "none",
@@ -124,7 +127,7 @@ function Display() {
     };
 
     // ============================================================
-    // BOÎTES
+    // BOÎTES DU HAUT
     // ============================================================
 
     function Boxes({ first, last, width }) {
@@ -132,11 +135,11 @@ function Display() {
             <div
                 style={{
                     width: width + "%",
-                    height: hauteurZoneBoites,
+                    height: hauteurBoites,
                     display: "flex",
                     alignItems: "center",
                     boxSizing: "border-box",
-                    float: "left"
+                    float: "left",
                 }}
             >
                 <div
@@ -153,7 +156,10 @@ function Display() {
                             style={{
                                 flex: 1,
                                 height: hauteurBoites,
-                                display: (numero >= first && numero <= last) ? "flex" : "none",
+                                display:
+                                    numero >= first && numero <= last
+                                        ? "flex"
+                                        : "none",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 border: "3px solid #000",
@@ -161,7 +167,7 @@ function Display() {
                                 fontWeight: "bold",
                                 boxSizing: "border-box",
                                 minWidth: 0,
-                                color:"#888"
+                                color: "#888",
                             }}
                         >
                             {numero}
@@ -189,13 +195,13 @@ function Display() {
         return (
             <div
                 style={{
-                    width: "22%",
-                    height: hauteurLegende,
+                    width: largeurLegende + "%",
+                    height: hauteurBoites,
                     display: "flex",
                     alignItems: "center",
                     padding: "10px 15px",
                     boxSizing: "border-box",
-                    float: "left"
+                    float: "left",
                 }}
             >
                 <div
@@ -206,14 +212,26 @@ function Display() {
                         fontSize: 14,
                     }}
                 >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                        }}
+                    >
                         <span style={cubeStyle(true)} />
                         <span>
                             Mercenaire coûte 2 supplémentaire
                         </span>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                        }}
+                    >
                         <span style={cubeStyle(false)} />
                         <span>
                             plan de relique coût normal
@@ -251,7 +269,9 @@ function Display() {
                         minWidth: 0,
                     }}
                 >
-                    {title === "Infamie" ? infa[i] : i + (i === max && "+")}
+                    {title === "Infamie"
+                        ? (infa[i] === 0 ? "0" : "-" + infa[i])
+                        : i + (i === max && "+")}
                 </div>
             );
         }
@@ -328,7 +348,7 @@ function Display() {
                     title="Infamie"
                     start={compteurDebutParPage[pageIndex]}
                     end={compteurFinParPage[pageIndex]}
-                    max={maxInfamie}
+                    max={maxPoints}
                     pageIndex={pageIndex}
                 />
 
@@ -336,7 +356,7 @@ function Display() {
                     title="Sièges au conseil"
                     start={compteurDebutParPage[pageIndex]}
                     end={compteurFinParPage[pageIndex]}
-                    max={maxSieges}
+                    max={maxPoints}
                     pageIndex={pageIndex}
                 />
             </div>
@@ -349,8 +369,44 @@ function Display() {
 
     function HeaderPage({ pageIndex }) {
         return (
-            <div style={{ width: "100%", flexShrink: 0 }}>
-                {pageIndex === 0 ? <Boxes first={3} last={6} width={100} /> : <> <Boxes first={7} last={9} width={75} /> <Legend /></>}
+            <div
+                style={{
+                    width: "100%",
+                    flexShrink: 0,
+                }}
+            >
+                {pageIndex === 0 && (
+                    <Boxes
+                        first={3}
+                        last={5}
+                        width={100}
+                    />
+                )}
+
+                {pageIndex === 1 && (
+                    <Boxes
+                        first={6}
+                        last={8}
+                        width={100}
+                    />
+                )}
+
+                {pageIndex === 2 && (
+                    <>
+                        {/* 
+                            Case 9 = exactement la largeur
+                            d'une case des pages précédentes.
+                        */}
+                        <Boxes
+                            first={9}
+                            last={9}
+                            width={largeurBoite}
+                        />
+
+                        <Legend />
+                    </>
+                )}
+
                 <CountersPage pageIndex={pageIndex} />
             </div>
         );
@@ -379,41 +435,44 @@ function Display() {
         );
     }
 
-
     // ============================================================
     // CONTENU AGENDA
     // ============================================================
 
     function AgendaContent({ tour }) {
-        const nombreMinisteres = ministere[tour - 1] || 0;
-        const nombreSieges = siege[tour - 1] || 0;
-
+        const nombreMinisteres = content.ministre && content.ministre[tour - 1] || 0;
+        const nombreSieges = content.siege && content.siege[tour - 1] || 0;
+        const nombreSieges2 = content.siege2 && content.siege2[tour - 1] || 0;
 
         function Siege({ nombreSieges }) {
-            return nombreSieges > 0 && (
-                <div
-                    style={{
-                        fontWeight: "bold",
-                        fontSize: 13,
-                        marginBottom: 8,
-                        borderBottom: "1px dashed #aaa",
-                    }}
-                >
-                    Voter pour obtenir{" "}
-                    {Array.from(
-                        { length: nombreSieges },
-                        (_, i) => nombreSieges - i
-                    ).join("/")}{" "}
-                    siège{nombreSieges > 1 ? "s" : ""} au conseil
-                </div>
-            )
+            return (
+                nombreSieges > 0 && (
+                    <div
+                        style={{
+                            fontWeight: "bold",
+                            fontSize: 13,
+                            marginBottom: 8,
+                            borderBottom: "1px dashed #aaa",
+                        }}
+                    >
+                        Voter pour obtenir{" "}
+                        {Array.from(
+                            { length: nombreSieges },
+                            (_, i) => nombreSieges - i
+                        ).join("/")}{" "}
+                        siège
+                        {nombreSieges > 1 ? "s" : ""} au conseil
+                    </div>
+                )
+            );
         }
-
 
         return (
             <>
                 <Siege nombreSieges={nombreSieges} />
-                {tour === 10 ? <Siege nombreSieges={siege[10] || 0} /> : ""}
+                <Siege nombreSieges={nombreSieges2} />
+
+
                 {nombreMinisteres > 0 && (
                     <div
                         style={{
@@ -424,7 +483,8 @@ function Display() {
                         }}
                     >
                         Ajouter {nombreMinisteres} poste
-                        {nombreMinisteres > 1 ? "s" : ""} de ministre au hasard
+                        {nombreMinisteres > 1 ? "s" : ""} de ministre au
+                        hasard
                     </div>
                 )}
 
@@ -438,362 +498,428 @@ function Display() {
         );
     }
 
-
     // ============================================================
     // TABLEAU
     // ============================================================
 
     function TablePage({ pageIndex }) {
-        const debut = pageIndex * toursParPage;
+        const debut = [0, 3, 7][pageIndex];
+        const nombreTours = toursParPage[pageIndex];
 
         const tours = Array.from(
-            { length: toursParPage },
+            { length: nombreTours },
             (_, i) => debut + i + 1
         );
 
         const labelColumn = pageIndex === 0;
+        const dernierePage = pageIndex === 2;
 
-        return (
-            <table
-                style={{
-                    width: "100%",
-                    height: "100%",
-                    borderCollapse: "collapse",
-                    tableLayout: "fixed",
-                    boxSizing: "border-box",
-                    flex: 1,
-                }}
-            >
-                <colgroup>
-                    {labelColumn && <col style={{ width: 145 }} />}
+        // ============================================================
+        // CELLULE DE LABEL
+        // ============================================================
+
+        function LabelCell({ children, style = {} }) {
+            if (!labelColumn) return null;
+
+            return (
+                <Cell
+                    style={{
+                        backgroundColor: couleurEntete,
+                        fontWeight: "bold",
+                        textAlign: "left",
+                        paddingLeft: 6,
+                        ...style,
+                    }}
+                >
+                    {children}
+                </Cell>
+            );
+        }
+
+        // ============================================================
+        // LIGNES COMMUNES DU TABLEAU
+        // ============================================================
+
+        function TourRow() {
+            return (
+                <tr style={{ height: hauteurSmallRow }}>
+                    <LabelCell>Tour</LabelCell>
 
                     {tours.map((tour) => (
-                        <col
+                        <Cell
                             key={tour}
                             style={{
-                                width:
-                                    tour === 10
-                                        ? "calc((100% - 40%) / 3)"
-                                        : "auto",
+                                backgroundColor: couleurEntete,
+                                fontWeight: "bold",
+                                fontSize: 16,
                             }}
-                        />
+                        >
+                            {tour}
+                        </Cell>
                     ))}
-                </colgroup>
+                </tr>
+            );
+        }
 
-                <tbody>
-
-                    {/* ==================================================
-            TOUR
-            ================================================== */}
-
-                    <tr style={{ height: hauteurTour }}>
-                        {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                Tour
-                            </Cell>
-                        )}
-
-                        {tours.map((tour) => (
-                            <Cell
-                                key={tour}
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    fontSize: 16,
-                                }}
-                            >
-                                {tour}
-                            </Cell>
-                        ))}
-                    </tr>
+        function RecrutementRow() {
 
 
-                    {/* ==================================================
-            RECRUTEMENT
-            ================================================== */}
+            return (
+                <tr style={{ height: hauteurSmallRow }}>
+                    <LabelCell>Recrutement</LabelCell>
 
-                    <tr style={{ height: hauteurRecrutement }}>
-                        {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    textAlign: "left",
-                                    paddingLeft: 6,
-                                }}
-                            >
-                                Recrutement
-                            </Cell>
-                        )}
+                    {tours.map((tour) => (
+                        <Cell key={tour}>
+                            {content.recru ? (content.recru[tour - 1] || "") : ""}
+                        </Cell>
+                    ))}
+                </tr>
+            );
+        }
 
-                        {tours.map((tour) => (
-                            <Cell key={tour}>
-                                {recrutement[tour - 1] || ""}
-                            </Cell>
-                        ))}
-                    </tr>
+        function SurcoutAgentRow() {
+            return (
+                <tr style={{ height: hauteurSmallRow }}>
+                    <LabelCell>
+                        Surcout pour &#x25A0;agent
+                    </LabelCell>
 
+                    {tours.map((tour) => (
+                        <Cell key={tour}>
+                            {content.surCout ?
+                                (content.surCout[tour - 1] ?
+                                    ("+" + content.surCout[tour - 1] + " Influence" + (content.surCout[tour - 1] > 1 ? "s" : ""))
+                                    : "")
+                                : ""}
+                        </Cell>
+                    ))}
+                </tr>
+            );
+        }
 
-                    {/* ==================================================
-            MECATOL
-            ================================================== */}
+        function MecatolRow() {
+            return (
+                <tr style={{ height: hauteurSmallRow }}>
+                    <LabelCell>
+                        Point pour Mecatol
+                    </LabelCell>
 
-                    <tr style={{ height: hauteurMecatol }}>
-                        {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    textAlign: "left",
-                                    paddingLeft: 6,
-                                }}
-                            >
-                                Point pour Mecatol
-                            </Cell>
-                        )}
+                    {tours.map((tour) => (
+                        <Cell key={tour}>
+                            {content.mecatol ? (
+                                content.mecatol[tour - 1] ? (content.mecatol[tour - 1] + " Point" + (content.mecatol[tour - 1] > 1 ? "s" : ""))
+                                    : "")
+                                : ""}
+                        </Cell>
+                    ))}
+                </tr>
+            );
+        }
 
-                        {tours.map((tour) => (
-                            <Cell key={tour}>
-                                {mecatol[tour - 1] || ""}
-                            </Cell>
-                        ))}
-                    </tr>
-                    {/* ==================================================
-                    Evenement   
-                    ================================================== */}
+        function EvenementRow() {
+            return (
+                <tr style={{ height: hauteurCarte }}>
+                    <LabelCell
+                        style={{
+                            verticalAlign: "top",
+                        }}
+                    >
+                        Evenement
+                    </LabelCell>
 
-                    <tr style={{ height: hauteurEvenement}}>
-                        {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    textAlign: "left",
-                                    paddingLeft: 6,
-                                    verticalAlign: "top",
-                                }}
-                            >
-                                Evenement
-                            </Cell>
-                        )}
-
-                        {tours.map((tour) => (
-                            <Cell
-                                key={tour}
-                                style={{
-                                    fontSize: 12,
-                                    verticalAlign: "top",
-                                    textAlign: "left",
-                                    padding: 8,
-                                }}
-                            >
-                                {evenement[tour - 1] && (
-                                    <>
-                                        <div
-                                            style={{
-                                                fontWeight: "bold",
-                                                marginBottom: 8,
-                                            }}
-                                        >
-                                            Evenement {evenement[tour - 1]}
-                                        </div>
-
-
-                                    </>
-                                )}
-                            </Cell>
-                        ))}
-                    </tr>
-
-                    {/* ==================================================
-            OBJECTIF MILITAIRE
-            ================================================== */}
-
-                    <tr style={{ height: hauteurObjectif }}>
-                        {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    textAlign: "left",
-                                    paddingLeft: 6,
-                                    verticalAlign: "top",
-                                }}
-                            >
-                                Objectif militaire
+                    {tours.map((tour) => (
+                        <Cell
+                            key={tour}
+                            style={{
+                                height: hauteurCarte,
+                                fontSize: 12,
+                                verticalAlign: "top",
+                                textAlign: "left",
+                                padding: 8,
+                            }}
+                        >
+                            {content.evenement&& content.evenement[tour - 1] && content.evenement[tour - 1] != "none" && (
                                 <div
                                     style={{
-                                        fontSize: 11,
+                                        fontWeight: "bold",
+                                        marginBottom: 8,
                                     }}
                                 >
-                                    Le prochain objectif militaire est toujours visible
+                                    Evenement {event[content.evenement[tour - 1]]}
                                 </div>
-                            </Cell>
-                        )}
+                            )}
+                        </Cell>
+                    ))}
+                </tr>
+            );
+        }
 
-                        {tours.map((tour) => (
-                            <Cell
-                                key={tour}
-                                style={{
-                                    height: hauteurObjectif,
-                                    fontSize: 12,
-                                    verticalAlign: "top",
-                                    textAlign: "left",
-                                    padding: 8,
-                                }}
-                            >
-                                {Militaire[tour - 1] && (
-                                    <>
-                                        <div
-                                            style={{
-                                                fontWeight: "bold",
-                                                marginBottom: 8,
-                                            }}
-                                        >
-                                            Afficher un objectif militaire ici
-                                        </div>
+        function ObjectifMilitaireRow() {
+            return (
+                <tr style={{ height: hauteurCarte }}>
+                    <LabelCell
+                        style={{
+                            verticalAlign: "top",
+                        }}
+                    >
+                        Objectif militaire
 
+                        <div style={{ fontSize: 11 }}>
+                            Le prochain objectif militaire est
+                            toujours visible
+                        </div>
+                    </LabelCell>
 
-                                    </>
+                    {tours.map((tour) => (
+                        <Cell
+                            key={tour}
+                            style={{
+                                height: hauteurCarte,
+                                fontSize: 12,
+                                verticalAlign: "top",
+                                textAlign: "left",
+                                padding: 8,
+                            }}
+                        >
+                            {content.militaire && content.militaire[tour - 1] && (
+                                <div
+                                    style={{
+                                        fontWeight: "bold",
+                                        marginBottom: 8,
+                                    }}
+                                >
+                                    Afficher un objectif militaire ici
+                                </div>
+                            )}
+                        </Cell>
+                    ))}
+                </tr>
+            );
+        }
+
+        function FaveurRow() {
+            return (
+                <tr style={{ height: hauteurSmallRow }}>
+                    <LabelCell>Faveur</LabelCell>
+
+                    {tours.map((tour) => {
+                        return (
+                            <Cell key={tour}>
+                                {content.faveur && content.faveur[tour - 1] > 0 && (
+                                    <b>
+                                        Encaisser des faveurs
+                                        {content.faveur[tour - 1] > 1
+                                            ? ` ${content.faveur[tour - 1]} fois`
+                                            : ""}
+                                    </b>
                                 )}
                             </Cell>
-                        ))}
-                    </tr>
+                        );
+                    })}
+                </tr>
+            );
+        }
 
+        function AgendaRow() {
+            return (
+                <tr style={{ height: "auto" }}>
+                    <LabelCell
+                        style={{
+                            verticalAlign: "top",
+                            padding: 6,
+                        }}
+                    >
+                        Agenda
+                    </LabelCell>
 
-                    {/* ==================================================
-            FAVEUR
-            ================================================== */}
+                    {tours.map((tour) => (
+                        <Cell
+                            key={tour}
+                            style={{
+                                height: "100%",
+                                minHeight: 0,
+                                verticalAlign: "top",
+                                textAlign: "left",
+                                padding: 7,
+                            }}
+                        >
+                            <AgendaContent tour={tour} />
+                        </Cell>
+                    ))}
+                </tr>
+            );
+        }
 
-                    <tr style={{ height: hauteurFaveur }}>
+        // ============================================================
+        // TABLEAU PRINCIPAL
+        // ============================================================
+
+        function ToursTable() {
+            return (
+                <table
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        borderCollapse: "collapse",
+                        tableLayout: "fixed",
+                        boxSizing: "border-box",
+                        flex: 1,
+                        minHeight: 0,
+                    }}
+                >
+                    <colgroup>
                         {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    textAlign: "left",
-                                    paddingLeft: 6,
-                                }}
-                            >
-                                Faveur
-                            </Cell>
-                        )}
-
-                        {tours.map((tour) => {
-                            const nombre = faveur[tour - 1] || 0;
-
-                            return (
-                                <Cell key={tour}>
-                                    <span><b>
-                                        {nombre > 0 &&
-                                            `Encaisser des faveurs${nombre > 1
-                                                ? ` ${nombre} fois`
-                                                : ""
-                                            }`}
-                                    </b></span>
-                                </Cell>
-                            );
-                        })}
-                    </tr>
-
-
-                    {/* ==================================================
-            AGENDA
-            ================================================== */}
-
-                    <tr style={{ height: "auto" }}>
-                        {labelColumn && (
-                            <Cell
-                                style={{
-                                    backgroundColor: couleurEntete,
-                                    fontWeight: "bold",
-                                    textAlign: "left",
-                                    verticalAlign: "top",
-                                    padding: 6,
-                                }}
-                            >
-                                Agenda
-                            </Cell>
+                            <col style={{ width: 145 }} />
                         )}
 
                         {tours.map((tour) => (
-                            <Cell
+                            <col
                                 key={tour}
-                                style={{
-                                    height: "100%",
-                                    verticalAlign: "top",
-                                    textAlign: "left",
-                                    padding: 7,
-                                }}
-                            >
-                                <AgendaContent tour={tour} />
-                            </Cell>
+                                style={{ width: "auto" }}
+                            />
                         ))}
-                    </tr>
+                    </colgroup>
 
-                </tbody>
-            </table>
-        );
+                    <tbody>
+                        <TourRow />
+                        <RecrutementRow />
+                        <SurcoutAgentRow />
+                        <MecatolRow />
+                        <EvenementRow />
+                        <ObjectifMilitaireRow />
+                        <FaveurRow />
+                        <AgendaRow />
+                    </tbody>
+                </table>
+            );
+        }
+
+        // ============================================================
+        // PAGE 3 : TABLEAU + FIN DE PARTIE
+        // ============================================================
+
+        if (dernierePage) {
+            return (
+                <div
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        flexDirection: "row",
+                        boxSizing: "border-box",
+                    }}
+                >
+                    <div
+                        style={{
+                            width: "75%",
+                            height: "100%",
+                            minWidth: 0,
+                        }}
+                    >
+                        <ToursTable />
+                    </div>
+
+                    <table
+                        style={{
+                            width: "25%",
+                            height: "100%",
+                            borderCollapse: "collapse",
+                            tableLayout: "fixed",
+                            boxSizing: "border-box",
+                            flexShrink: 0,
+                        }}
+                    >
+                        <colgroup>
+                            <col style={{ width: "100%" }} />
+                        </colgroup>
+
+                        <tbody>
+                            <tr style={{ height: hauteurSmallRow }}>
+                                <Cell
+                                    style={{
+                                        backgroundColor: couleurEntete,
+                                        fontWeight: "bold",
+                                        fontSize: 16,
+                                        textAlign: "center",
+                                        verticalAlign: "middle",
+                                    }}
+                                >
+                                    Fin de partie
+                                </Cell>
+                            </tr>
+
+                            <tr style={{ height: "auto" }}>
+                                <Cell
+                                    style={{
+                                        height: "100%",
+                                        verticalAlign: "top",
+                                        textAlign: "left",
+                                        padding: 8,
+                                        fontWeight: "normal",
+                                    }}
+                                >
+                                    <Text
+                                        text={content.fin}
+                                        explication={explication}
+                                    />
+                                </Cell>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            );
+        }
+
+        // ============================================================
+        // PAGES 1 ET 2
+        // ============================================================
+
+        return <ToursTable />;
     }
 
 
     // ============================================================
-    // RENDU — 2 DIVS DISTINCTS POUR L'IMPRESSION
+    // RENDU — 3 PAGES A4 PORTRAIT
     // ============================================================
 
     return (
         <div style={containerStyle}>
+            {Array.from(
+                { length: nombrePages },
+                (_, pageIndex) => {
+                    const estDernierePage =
+                        pageIndex === nombrePages - 1;
 
-            {/* PAGE 1 — TOURS 1 À 5 */}
-            <div
-                style={{
-                    ...pageStyle,
-                    pageBreakAfter: "always",
-                    breakAfter: "page",
-                }}
-            >
-                <HeaderPage pageIndex={0} />
+                    return (
+                        <div
+                            key={pageIndex}
+                            style={{
+                                ...pageStyle,
+                                pageBreakAfter: estDernierePage
+                                    ? "auto"
+                                    : "always",
+                                breakAfter: estDernierePage
+                                    ? "auto"
+                                    : "page",
+                            }}
+                        >
+                            <HeaderPage pageIndex={pageIndex} />
 
-                <div
-                    style={{
-                        flex: 1,
-                        minHeight: 0,
-                        width: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                    }}
-                >
-                    <TablePage pageIndex={0} />
-                </div>
-            </div>
-
-            {/* PAGE 2 — TOURS 6 À 10 */}
-            <div
-                style={{
-                    ...pageStyle,
-                    pageBreakAfter: "auto",
-                    breakAfter: "auto",
-                }}
-            >
-                <HeaderPage pageIndex={1} />
-
-                <div
-                    style={{
-                        flex: 1,
-                        minHeight: 0,
-                        width: "100%",
-                        display: "flex",
-                        flexDirection: "column",
-                    }}
-                >
-                    <TablePage pageIndex={1} />
-                </div>
-            </div>
+                            <div
+                                style={{
+                                    flex: 1,
+                                    minHeight: 0,
+                                    width: "100%",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                }}
+                            >
+                                <TablePage pageIndex={pageIndex} />
+                            </div>
+                        </div>
+                    );
+                }
+            )}
         </div>
     );
 }
@@ -802,14 +928,42 @@ function Display() {
 // FORM
 // ============================================================
 
-function Form({ content, onChange, onSubmit, style }) {
+
+
+function Form({
+    content,
+    onChange,
+    onSubmit,
+    style,
+}) {
+
+    function TourLine(x) {
+        return [
+            (<TextInput onChange={onChange} index={x} name="recru" value={content} label="Box" />),
+            (<NumberInput onChange={onChange} index={x} name="surCout" value={content} label="Surcout" />),
+            (<NumberInput onChange={onChange} index={x} name="mecatol" value={content} label="M.Rex" />),
+            (<EnumInput onChange={onChange} index={x} name="evenement" value={content} label="Event" enumClass={event} />),
+            (<BooleanInput onChange={onChange} index={x} name="militaire" value={content} label="militaire" />),
+            (<NumberInput onChange={onChange} index={x} name="faveur" value={content} label="faveur" />),
+            (<NumberInput onChange={onChange} index={x} name="ministre" value={content} label="ministre" />),
+
+            (<NumberInput onChange={onChange} index={x} name="siege" value={content} label="Siege" />),
+            (<NumberInput onChange={onChange} index={x} name="siege2" value={content} label="et" />),
+
+
+        ]
+    }
+
     return (
         <FormBase
             content={content}
             onChange={onChange}
             onSubmit={onSubmit}
             style={style}
-        />
+        >
+            <TableInput onChange={onChange} name="tourNum" value={content} lable="Table tour" Line={TourLine} />
+            <EditorInput onChange={onChange} value={content} name="fin" label="Fin de partie" />
+        </FormBase>
     );
 }
 
@@ -821,5 +975,3 @@ export default {
         default: Display,
     },
 };
-
-

@@ -57,7 +57,7 @@ const h= w/1.15306122
         {content.anomaly  && <img src={pub + (anomalyPict.get(content.anomaly) || "/404.jpeg")} alt={content.anomaly} width={w} height={h} />}
         {content.anomaly && content.anomaly.indexOf("hpl")===-1  && <img src={pub + "/ti/system/anomalie.png"} alt="contient anomalie" width={w} height={h} style={{ position: "absolute", top: 0, left: 0 }} />}
 
-        {content.elems.map((e, i) =>
+        {content.elems && content.elems.map((e, i) =>
             <Sizer
                 key={i}
                 X={content.elemsX[i]}

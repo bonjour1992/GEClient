@@ -6,6 +6,7 @@ import * as math from "mathjs"
 import { useRemp, useSearch } from "../lib/store"
 import { LoadAndDisplay } from "./LoadAndDisplay"
 import { pub } from "../lib/fetch"
+import { stripTags } from "../Input/EditorInput"
 
 /*
  * ---------------------------------------------------------------------------
@@ -30,7 +31,12 @@ import { pub } from "../lib/fetch"
  * Aucun renderToStaticMarkup().
  * Aucun dangerouslySetInnerHTML().
  */
-export function Text({ style, text, rule }) {
+export function Text({
+    style,
+    text,
+    rule,
+    disableRuleMacro = false
+}) {
     const remp = useRemp((s) => s.remp)
     const search = useSearch((s) => s.search)
 
@@ -42,9 +48,6 @@ export function Text({ style, text, rule }) {
     const pendingRemp = useRef([])
     const pendingLien = useRef([])
 
-    /*
-     * Nouvelle liste à chaque render.
-     */
     pendingRemp.current = []
     pendingLien.current = []
 
@@ -60,20 +63,13 @@ export function Text({ style, text, rule }) {
             }
         },
         (elem) => {
-            /*
-             * Évite d'ajouter plusieurs fois le même lien
-             * pendant un même render.
-             */
             if (!pendingLien.current.some(e => e.id === elem.id)) {
                 pendingLien.current.push(elem)
             }
-        }
+        },
+        disableRuleMacro
     )
 
-    /*
-     * Les modifications du store sont effectuées
-     * après le render de React.
-     */
     useEffect(() => {
         if (rule?.addRemp) {
             pendingRemp.current.forEach((key) => {
@@ -111,49 +107,125 @@ export function Text({ style, text, rule }) {
  * Les éléments React sont construits directement.
  */
 export function Explication({ explication, ajout, afficher }) {
+    const size = 11
+
     const remp = useRemp((s) => s.remp)
 
-    let s = explication || ""
+    const hasExplication = Boolean(
+        stripTags(explication?.trim())
+    )
 
-    ajout.remp.forEach((elemCode) => {
-        const elem =
-            remp.find(
+    const remplacements = ajout?.remp
+        ?.map((elemCode) => {
+            return remp.find(
                 e => e.key === elemCode.toLowerCase()
-            ) || null
+            )
+        })
+        .filter(Boolean) || []
 
-        /*
-         * On ajoute directement du HTML.
-         *
-         * Il sera ensuite parsé par Text().
-         */
-        s +=elem?
-            `<p>` +
-            `<b>${elem.val || ""}</b>` +
-            `:${elem.rule || ""}` +
-            `</p>`:""
-    })
+    const hasRemplacements =
+        remplacements.length > 0
+
+    const hasLiens =
+        ajout?.lien?.length > 0
+
+    const hasContent =
+        hasExplication ||
+        hasRemplacements ||
+        hasLiens
+
+    if (!hasContent) {
+        return null
+    }
 
     return (
-        <div>
-            <p>Explication</p>
+        <div
+            style={{
+                margin: "12px 0",
+                padding: "12px 14px",
+                backgroundColor: "#f7f7f7",
+                border: "1px solid #d0d0d0",
+                borderLeft: "4px solid #666",
+                borderRadius: "4px",
+                boxSizing: "border-box",
+                color: "#222",
+                fontFamily: "Arial, sans-serif",
+            }}
+        >
+            {(hasExplication || hasRemplacements) && (
+                <>
+                    <p
+                        style={{
+                            margin: "0 0 5px 0",
+                            fontSize: size * 1.15,
+                            fontWeight: "bold",
+                            color: "#333",
+                            borderBottom: "1px solid #ddd",
+                            paddingBottom: "6px",
+                        }}
+                    >
+                        Explication
+                    </p>
 
-            <Text
-                style={{
-                    fontSize: 11,
-                    paddingLeft: 2,
-                    lineHeight: 1.2
-                }}
-                text={s}
-            />
+                    {hasExplication && (
+                        <Text
+                            style={{
+                                fontSize: size,
+                                paddingLeft: 2,
+                            }}
+                            text={explication}
+                        />
+                    )}
 
-            {ajout.lien.map((e, i) => {
-                return (
-                    <LoadAndDisplay
-                        key={i}
-                        link={e}
-                    />
-                )
-            })}
+                    {remplacements.map((elem) => (
+                        <div
+                            key={elem.key}
+                            style={{
+                                display: "flex",
+                                alignItems: "baseline",
+                                gap: 4,
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontSize: size,
+                                }}
+                                text={`#${toMaj(elem.key,true)}: ${elem.rule?stripTags(elem.rule):""}`}
+                            />
+
+                        </div>
+                    ))}
+                </>
+            )}
+
+            {hasLiens && (
+                <>
+                    <p
+                        style={{
+                            margin:
+                                hasExplication ||
+                                hasRemplacements
+                                    ? "10px 0 5px 0"
+                                    : "0 0 5px 0",
+                            fontSize: size * 1.15,
+                            fontWeight: "bold",
+                            color: "#333",
+                            borderBottom:
+                                "1px solid #ddd",
+                            paddingBottom: "6px",
+                        }}
+                    >
+                        Lien
+                    </p>
+
+                    {ajout.lien.map((e, i) => (
+                        <LoadAndDisplay
+                            key={i}
+                            link={e}
+                        />
+                    ))}
+                </>
+            )}
         </div>
     )
 }
@@ -186,22 +258,13 @@ export function format(
     search,
     rule,
     onRemp,
-    onLien
+    onLien,
+    disableRuleMacro = false
 ) {
-    /*
-     * Les !...! sont supprimés avant le parsing HTML.
-     */
     s = nameAff(s)
 
-    /*
-     * html-react-parser s'occupe du HTML existant.
-     *
-     * Le traitement des codes spéciaux est effectué
-     * uniquement dans les nœuds texte.
-     */
     return parse(s, {
         replace: (node) => {
-
             if (node.type !== "text") {
                 return undefined
             }
@@ -213,33 +276,14 @@ export function format(
                 search,
                 rule,
                 onRemp,
-                onLien
+                onLien,
+                disableRuleMacro
             )
         }
     })
 }
 
 
-/*
- * ---------------------------------------------------------------------------
- * renderTextNode
- * ---------------------------------------------------------------------------
- *
- * Traite un nœud texte.
- *
- * Exemple :
- *
- *   "Bonjour |123| #dragon(2)"
- *
- * devient :
- *
- *   [
- *       "Bonjour ",
- *       <NavLink ... />,
- *       " ",
- *       <span ... />
- *   ]
- */
 function renderTextNode(
     text,
     size,
@@ -247,22 +291,21 @@ function renderTextNode(
     search,
     rule,
     onRemp,
-    onLien
+    onLien,
+    disableRuleMacro = false
 ) {
     /*
-     * Les différents tokens reconnus :
+     * Tokens :
      *
      * #img[src]
      * |123|
      * #xxx
+     * #xxx€
      * #xxx(2)
      * #xxx(2, xxx)
-     *
-     * #img est placé avant #xxx pour éviter que #img
-     * soit interprété comme un remplacement normal.
      */
     const regex =
-        /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g
+        /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(€)?(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g
 
     const result = []
 
@@ -271,6 +314,7 @@ function renderTextNode(
     let index = 0
 
     while ((match = regex.exec(text)) !== null) {
+
         /*
          * Texte normal avant le token.
          */
@@ -282,11 +326,10 @@ function renderTextNode(
             )
         }
 
-
         /*
-         * -------------------------------------------------------------------
+         * ---------------------------------------------------------------
          * #img[src]
-         * -------------------------------------------------------------------
+         * ---------------------------------------------------------------
          */
         if (match[1] !== undefined) {
             const src = match[1]
@@ -309,11 +352,10 @@ function renderTextNode(
             continue
         }
 
-
         /*
-         * -------------------------------------------------------------------
+         * ---------------------------------------------------------------
          * |123|
-         * -------------------------------------------------------------------
+         * ---------------------------------------------------------------
          */
         if (match[2] !== undefined) {
             const id = match[2]
@@ -326,21 +368,10 @@ function renderTextNode(
                     jeu: "null"
                 }
 
-            /*
-             * Le lien est enregistré après le render
-             * via useEffect dans Text().
-             */
             if (onLien) {
                 onLien(elem)
             }
 
-            /*
-             * IMPORTANT :
-             *
-             * On utilise maintenant directement NavLink.
-             *
-             * Il n'y a plus de <a> généré sous forme de HTML.
-             */
             result.push(
                 <NavLink
                     key={`link-${index++}`}
@@ -356,18 +387,9 @@ function renderTextNode(
                         textDecoration: "none"
                     }}
                 >
-                    {
-                        /*
-                         * On conserve le comportement original :
-                         *
-                         * nameAff(removeDiese(elem.name))
-                         */
-                        nameAff(
-                            removeDiese(
-                                elem.name
-                            )
-                        )
-                    }
+                    {nameAff(
+                        removeDiese(elem.name)
+                    )}
                 </NavLink>
             )
 
@@ -375,20 +397,28 @@ function renderTextNode(
             continue
         }
 
-
         /*
-         * -------------------------------------------------------------------
-         * #xxx(...)
-         * -------------------------------------------------------------------
+         * ---------------------------------------------------------------
+         * #xxx...
+         * ---------------------------------------------------------------
          */
         if (match[3] !== undefined) {
-
-
-
             const elemCode = match[3]
-            const plu = match[4]
-            const num = match[5]
-            const mult = match[6]
+
+            /*
+             * Nouveau suffixe :
+             *
+             * #xxx€
+             */
+            const ruleMacro = match[4] === "€"
+
+            /*
+             * Comme le € est maintenant avant le & dans la regex,
+             * les groupes suivants sont décalés.
+             */
+            const plu = match[5]
+            const num = match[6]
+            const mult = match[7]
 
             const elem =
                 remp.find(
@@ -398,12 +428,90 @@ function renderTextNode(
                 ) || {
                     key: elemCode.toLowerCase(),
                     val: "erreur remplacement",
+                    rule: "",
                     css: []
                 }
 
+            /*
+             * -----------------------------------------------------------
+             * #xxx€
+             * -----------------------------------------------------------
+             *
+             * On transforme :
+             *
+             * #dragon€
+             *
+             * en :
+             *
+             * Dragon: règle du dragon
+             *
+             * Le Text imbriqué reçoit disableRuleMacro=true.
+             */
+            if (ruleMacro && !disableRuleMacro) {
+                if (onRemp) {
+                    onRemp(elem.key)
+                }
 
-            // Enregistrement du remplacement.
+                result.push(
+                    <Text
+                        key={`rule-macro-${index++}`}
+                        style={{
+                            fontSize: size,
+                        }}
+                        text={
+                            `#${toMaj(elem.key, true)}: ` +
+                            `${elem.rule ? stripTags(elem.rule) : ""}`
+                        }
+                        disableRuleMacro={true}
+                        rule={rule}
+                    />
+                )
 
+                lastIndex = regex.lastIndex
+                continue
+            }
+
+            /*
+             * -----------------------------------------------------------
+             * Protection contre la récursion
+             * -----------------------------------------------------------
+             *
+             * Si un #xxx€ apparaît alors que la macro est désactivée,
+             * on affiche simplement elem.val.
+             */
+            if (ruleMacro && disableRuleMacro) {
+                if (onRemp) {
+                    onRemp(elem.key)
+                }
+
+                result.push(
+                    <span
+                        key={`remp-rule-disabled-${index++}`}
+                        style={rebuildCSS(
+                            elem.css || [],
+                            size
+                        )}
+                    >
+                        {format(
+                            elem.val || "",
+                            size,
+                            remp,
+                            search,
+                            rule,
+                            onRemp,
+                            onLien,
+                            disableRuleMacro
+                        )}
+                    </span>
+                )
+
+                lastIndex = regex.lastIndex
+                continue
+            }
+
+            /*
+             * Enregistrement du remplacement normal.
+             */
             if (onRemp) {
                 onRemp(elem.key)
             }
@@ -426,9 +534,6 @@ function renderTextNode(
 
             index++
 
-
-            // Le remplacement peut produire plusieurs éléments dans le cas plural === "repeat".
-
             if (Array.isArray(replacement)) {
                 replacement.forEach(
                     element => result.push(element)
@@ -442,9 +547,8 @@ function renderTextNode(
         }
     }
 
-
     /*
-     * Texte restant après le dernier token.
+     * Texte restant.
      */
     if (lastIndex < text.length) {
         result.push(
@@ -454,12 +558,6 @@ function renderTextNode(
         )
     }
 
-
-    /*
-     * Aucun token trouvé.
-     *
-     * On retourne simplement le texte.
-     */
     if (result.length === 0) {
         return text
     }
@@ -499,7 +597,6 @@ function renderTextNode(
  * même si, dans ton modèle actuel, les Remp ne se référencent
  * pas entre eux.
  */
-
 function renderRemplacement(
     elem,
     elemCode,
@@ -519,64 +616,87 @@ function renderRemplacement(
      *
      * On normalise d'abord &amp; -> &
      */
-    const pluralRequested =
+    const explicitPlural =
         plu === "&" ||
-        plu === "&amp;" ||
-        (num && Number(num) > 1)
+        plu === "&amp;"
+
+    const numberIsPlural =
+        num &&
+        Number(num) > 1
 
     let value = ""
 
     /*
      * -----------------------------------------------------------------------
-     * PLURIEL
+     * AFTER
      * -----------------------------------------------------------------------
+     *
+     * "after" est indépendant de la logique normale de pluriel.
+     *
+     * - Le nombre est toujours affiché, même au singulier.
+     * - num > 1 ne déclenche PAS automatiquement elem.plural.
+     * - & ou &amp; déclenche explicitement le pluriel.
+     * - mult est toujours ajouté lorsqu'il est présent.
      */
-    if (
-        pluralRequested &&
-        elem.plural !== "repeat"
-    ) {
-        /*
-         * Cas spécial "after".
-         */
-        if (elem.plural === "after") {
-            value =
-                toMaj(
-                    elem.val || "",
-                    isMaj(elemCode)
-                ) +
-                " " +
-                num
-
-            if (
-                mult &&
-                !Number.isNaN(
-                    parseInt(mult)
-                )
-            ) {
-                value += "*".repeat(
-                    parseInt(mult)
-                )
-            } else if (mult) {
-                value += " " + mult
-            }
-        } else {
-            /*
-             * Si Remp.plural est renseigné, on l'utilise.
-             *
-             * Sinon on ajoute simplement "s".
-             */
-            value =
-                toMaj(
+    if (elem.after === true) {
+        const text =
+            explicitPlural
+                ? (
                     elem.plural ||
-                    (elem.val || "") + "s",
-                    isMaj(elemCode)
+                    (elem.val || "") + "s"
                 )
+                : (
+                    elem.val || ""
+                )
+
+        value =
+            toMaj(
+                text,
+                isMaj(elemCode)
+            ) +
+            (num?" " +num:"")
+
+        if (
+            mult &&
+            !Number.isNaN(
+                parseInt(mult)
+            )
+        ) {
+            value += "*".repeat(
+                parseInt(mult)
+            )
+        } else if (mult) {
+            value += " " + mult
         }
     }
 
     /*
      * -----------------------------------------------------------------------
-     * SINGULIER
+     * PLURIEL NORMAL
+     * -----------------------------------------------------------------------
+     *
+     * Ici on conserve la logique existante :
+     *
+     * - & explicite le pluriel
+     * - num > 1 déclenche automatiquement le pluriel
+     * - sauf pour repeat
+     */
+    else if (
+        (explicitPlural || numberIsPlural) &&
+        elem.plural !== "repeat"
+    ) {
+        value =
+            (num ? num + " " : "") +
+            toMaj(
+                elem.plural ||
+                (elem.val || "") + "s",
+                isMaj(elemCode)
+            )
+    }
+
+    /*
+     * -----------------------------------------------------------------------
+     * SINGULIER NORMAL
      * -----------------------------------------------------------------------
      */
     else {
@@ -633,7 +753,7 @@ function renderRemplacement(
 
     /*
      * -----------------------------------------------------------------------
-     * Rendu normal
+     * RENDU NORMAL
      * -----------------------------------------------------------------------
      */
     return (
@@ -746,6 +866,7 @@ function rebuildCSS(css, size) {
 
     return res
 }
+
 
 
 function isMaj(s) {

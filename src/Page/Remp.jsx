@@ -1,4 +1,5 @@
 
+import { BooleanInput } from "../Input/BooleanInput";
 import { TextInput } from "../Input/TextInput";
 import { updateRemp } from "../lib/fetch";
 import { useRemp } from "../lib/store";
@@ -164,6 +165,7 @@ export default function Remp() {
                 val: "",
                 key: "",
                 plural: "",
+                after:false,
                 css: [],
                 rule: ""
             }
@@ -302,8 +304,9 @@ export default function Remp() {
                     <col style={{ width: "9%" }} />
                     <col style={{ width: "10%" }} />
                     <col style={{ width: "10%" }} />
+                    <col style={{ width: "4%" }} />
                     <col style={{ width: "20%" }} />
-                    <col style={{ width: "51%" }} />
+                    <col style={{ width: "47%" }} />
                 </colgroup>
 
                 <thead>
@@ -316,6 +319,7 @@ export default function Remp() {
                         <th style={headerStyle}>Clé</th>
                         <th style={headerStyle}>Valeur</th>
                         <th style={headerStyle}>Pluriel</th>
+                                                <th style={headerStyle}>After</th>
                         <th style={headerStyle}>CSS</th>
                         <th style={headerStyle}>Règle</th>
                     </tr>
@@ -368,7 +372,14 @@ export default function Remp() {
                                     style={inputStyle}
                                 />
                             </td>
-
+                            <td style={cellStyle}>
+                                <BooleanInput
+                                    onChange={onChange(i)}
+                                    value={e}
+                                    name="after"
+                                    style={inputStyle}
+                                />
+                            </td>
                             <td style={{
                                 ...cellStyle,
                                 overflow: "hidden"

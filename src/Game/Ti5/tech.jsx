@@ -44,6 +44,7 @@ function Display({ content, context = { unlocked: false }, style, explication })
             paddingLeft: 7,
             ...borderColor,
             fontSize: 12,
+            color:content.special?"#f2f086":"white",
             fontWeight: "bold",
         }} />
         <Text text={content.effet} style={{
