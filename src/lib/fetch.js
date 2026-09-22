@@ -1,7 +1,7 @@
 import { useSearch, useUser } from "./store"
 
 
-const server="http://xorg-compagny.ddns.net:8500/"
+const server = "http://xorg-compagny.ddns.net:8500/"
 //const server = "http://localhost:3000/"
 
 
@@ -27,6 +27,16 @@ export async function fetchAPI(url, method, body, content) {
                 : JSON.stringify(body)
         }
     );
+    if (res.status === 401) {
+
+        useUser.getState().logout();
+
+        if (window.location.pathname !== "/GE/login") {
+            window.location.assign("/GE/login");
+        }
+
+        return null;
+    }
 
     return await res.json();
 }

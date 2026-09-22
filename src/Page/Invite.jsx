@@ -8,7 +8,7 @@ export default function Invite() {
     const { code } = useParams();
     const navigate = useNavigate();
 
-    const setLogin = useUser((state) => state.setLogin);
+    const setUser = useUser((state) => state.setUser);
 
     const [login, setLoginInput] = useState("");
     const [password, setPassword] = useState("");
@@ -60,7 +60,10 @@ export default function Invite() {
              * Pour l'instant notre store ne contient
              * que le login.
              */
-            setLogin(result.user.name);
+            setUser(
+                result.user,
+                result.token
+            );
 
             /*
              * On pourra stocker le token dans le store
