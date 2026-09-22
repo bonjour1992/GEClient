@@ -22,245 +22,249 @@ import * as fAPI from "./lib/fetch.js";
 import Versions from "./Page/Versions.jsx";
 import Deleted from "./Page/Deleted.jsx";
 import { normalizeElement } from "./Game/games";
-
+import Tool from "./Page/Tool.jsx";
 
 const router = createBrowserRouter([
-    {
-        path: "/GE/login",
-        Component: Login
-    },
+  {
+    path: "/GE/login",
+    Component: Login
+  },
 
-    {
-        path: "/GE/invite/:code",
-        Component: Invite
-    },
+  {
+    path: "/GE/invite/:code",
+    Component: Invite
+  },
 
-    {
-        path: "/GE/",
-        Component: RequireAuth,
+  {
+    path: "/GE/",
+    Component: RequireAuth,
+
+    children: [
+
+      {
+        Component: HeaderBar,
 
         children: [
 
-            {
-                Component: HeaderBar,
+          {
+            index: true,
+            Component: Home
+          },
 
-                children: [
+          {
+            path: "admin",
+            Component: Admin
+          },
 
-                    {
-                        index: true,
-                        Component: Home
-                    },
+          {
+            path: "library",
+            Component: ImageLibrary
+          },
 
-                    {
-                        path: "admin",
-                        Component: Admin
-                    },
+          {
+            path: ":jeu/",
+            Component: JeuBar,
 
-                    {
-                        path: "library",
-                        Component: ImageLibrary
-                    },
+            children: [
 
-                    {
-                        path: ":jeu/",
-                        Component: JeuBar,
+              {
+                index: true,
+                Component: JeuHome,
 
-                        children: [
+                loader: async ({ params }) => {
 
-                            {
-                                index: true,
-                                Component: JeuHome,
+                  return await fAPI.getStat(
+                    params.jeu
+                  );
 
-                                loader: async ({ params }) => {
-
-                                    return await fAPI.getStat(
-                                        params.jeu
-                                    );
-
-                                }
-                            },
+                }
+              },
 
 
-                            {
-                                path: "remp",
-                                Component: Remp
-                            },
+              {
+                path: "remp",
+                Component: Remp
+              },
 
 
-                            // =========================
-                            // CORBEILLE
-                            // =========================
+              // =========================
+              // CORBEILLE
+              // =========================
 
-                            {
-                                path: "deleted",
-                                Component: Deleted
-                            },
+              {
+                path: "deleted",
+                Component: Deleted
+              },
 
+              {
+                path: "tools/:tool",
+                Component: Tool
+              },
 
-                            // =========================
-                            // ELEMENTS
-                            // =========================
+              // =========================
+              // ELEMENTS
+              // =========================
 
-                            {
-                                path: ":elem",
-                                Component: Liste,
+              {
+                path: ":elem",
+                Component: Liste,
 
-                                loader: async ({ params }) => {
+                loader: async ({ params }) => {
 
-                                    return {
-                                        element: await fAPI.getList(
-                                            params.jeu,
-                                            params.elem
-                                        )
-                                    };
+                  return {
+                    element: await fAPI.getList(
+                      params.jeu,
+                      params.elem
+                    )
+                  };
 
-                                }
-                            },
-
-
-                            {
-                                path: ":elem/new",
-                                Component: Create
-                            },
+                }
+              },
 
 
-                            {
-                                path: ":elem/print",
-                                Component: Print
-                            },
+              {
+                path: ":elem/new",
+                Component: Create
+              },
 
 
-                            // =========================
-                            // VERSIONS
-                            // =========================
-
-                            {
-                                path: ":elem/:id/versions",
-                                Component: Versions,
-
-                                loader: async ({ params }) => {
-
-                                    return {
-                                        versions: await fAPI.getElementVersions(
-                                            params.id
-                                        )
-                                    };
-
-                                }
-                            },
+              {
+                path: ":elem/print",
+                Component: Print
+              },
 
 
-                            // =========================
-                            // VERSION PRECISE
-                            // =========================
+              // =========================
+              // VERSIONS
+              // =========================
 
-                            {
-                                path: ":elem/:id/version/:version",
-                                Component: Affichage,
+              {
+                path: ":elem/:id/versions",
+                Component: Versions,
 
-                                loader: async ({ params }) => {
+                loader: async ({ params }) => {
 
-                                    const element =
-                                        await fAPI.getElementVersion(
-                                            params.id,
-                                            params.version
-                                        );
+                  return {
+                    versions: await fAPI.getElementVersions(
+                      params.id
+                    )
+                  };
 
-                                    return {
-                                        element: normalizeElement(
-                                            element
-                                        )
-                                    };
-
-                                }
-                            },
+                }
+              },
 
 
-                            // =========================
-                            // EDITION
-                            // =========================
+              // =========================
+              // VERSION PRECISE
+              // =========================
 
-                            {
-                                path: ":elem/:id/edit",
-                                Component: Edit,
+              {
+                path: ":elem/:id/version/:version",
+                Component: Affichage,
 
-                                loader: async ({ params }) => {
+                loader: async ({ params }) => {
 
-                                    const element =
-                                        await fAPI.getElement(
-                                            params.id
-                                        );
+                  const element =
+                    await fAPI.getElementVersion(
+                      params.id,
+                      params.version
+                    );
 
-                                    return {
-                                        element: normalizeElement(
-                                            element
-                                        )
-                                    };
+                  return {
+                    element: normalizeElement(
+                      element
+                    )
+                  };
 
-                                }
-                            },
-
-
-                            // =========================
-                            // AFFICHAGE
-                            // =========================
-
-                            {
-                                path: ":elem/:id",
-                                Component: Affichage,
-
-                                loader: async ({ params }) => {
-
-                                    const element =
-                                        await fAPI.getElement(
-                                            params.id
-                                        );
-
-                                    return {
-                                        element: normalizeElement(
-                                            element
-                                        )
-                                    };
-
-                                }
-                            },
+                }
+              },
 
 
-                            // =========================
-                            // DUPLICATION
-                            // =========================
+              // =========================
+              // EDITION
+              // =========================
 
-                            {
-                                path: ":elem/:id/duplicate",
-                                Component: Duplicate,
+              {
+                path: ":elem/:id/edit",
+                Component: Edit,
 
-                                loader: async ({ params }) => {
+                loader: async ({ params }) => {
 
-                                    const element =
-                                        await fAPI.getElement(
-                                            params.id
-                                        );
+                  const element =
+                    await fAPI.getElement(
+                      params.id
+                    );
 
-                                    return {
-                                        element: normalizeElement(
-                                            element
-                                        )
-                                    };
+                  return {
+                    element: normalizeElement(
+                      element
+                    )
+                  };
 
-                                }
-                            }
+                }
+              },
 
-                        ]
-                    }
-                ]
-            }
+
+              // =========================
+              // AFFICHAGE
+              // =========================
+
+              {
+                path: ":elem/:id",
+                Component: Affichage,
+
+                loader: async ({ params }) => {
+
+                  const element =
+                    await fAPI.getElement(
+                      params.id
+                    );
+
+                  return {
+                    element: normalizeElement(
+                      element
+                    )
+                  };
+
+                }
+              },
+
+
+              // =========================
+              // DUPLICATION
+              // =========================
+
+              {
+                path: ":elem/:id/duplicate",
+                Component: Duplicate,
+
+                loader: async ({ params }) => {
+
+                  const element =
+                    await fAPI.getElement(
+                      params.id
+                    );
+
+                  return {
+                    element: normalizeElement(
+                      element
+                    )
+                  };
+
+                }
+              }
+
+            ]
+          }
         ]
-    }
+      }
+    ]
+  }
 ]);
 
 
 const root = document.getElementById("root");
 
 ReactDOM.createRoot(root).render(
-    <RouterProvider router={router} />
+  <RouterProvider router={router} />
 );

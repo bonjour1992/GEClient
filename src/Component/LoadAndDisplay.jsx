@@ -15,21 +15,35 @@ export function LoadAndDisplay({ link, style, displayeur, context }) {
     const [elem, setElem] = useState(() => classe ? new classe() : null)
 
     useEffect(() => {
-        if (!handler || !classe) {
-            setElem(null)
-            return
-        }
+        let cancelled = false;
 
-        const f = async () => {
+        async function charger() {
+            if (!handler || !classe) {
+                setElem(null);
+                return;
+            }
+
             if (link?.id !== undefined && link?.id !== -1) {
-                setElem((await getElement(link.id)).content)
-            } else {
-                setElem(new classe())
+                try {
+                    const resultat = await getElement(link.id);
+
+                    if (!cancelled) {
+                        setElem(resultat.content);
+                    }
+                } catch (error) {
+                    console.error("Erreur de chargement du système :", error);
+                }
+            } else if (!cancelled) {
+                setElem(new classe());
             }
         }
 
-        f()
-    }, [link, handler, classe])
+        charger();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [link?.id, link?.type, jeu]);
 
     // Le hook est créé avant ce return
     if (!link?.type || !handler) {
@@ -38,7 +52,7 @@ export function LoadAndDisplay({ link, style, displayeur, context }) {
 
     const Display = handler.display[displayeur || "default"]
 
-    if (!Display||!elem) {
+    if (!Display || !elem) {
         return null
     }
 
@@ -51,7 +65,7 @@ export function LoadAndDisplay({ link, style, displayeur, context }) {
     )
 }
 
-export function LoadLink({ link =new Link, style, displayeur="nom", context ,explication}){
+export function LoadLink({ link = new Link, style, displayeur = "nom", context, explication }) {
 
     useEffect(() => {
         if (explication) {
@@ -59,8 +73,8 @@ export function LoadLink({ link =new Link, style, displayeur="nom", context ,exp
         }
     }, [explication, link.id])
     return (
-        <NavLink to={"../"+link.type+"/"+link.id}>
-            <LoadAndDisplay link={link} style={style} displayeur={displayeur} context={context}/>
+        <NavLink to={"../" + link.type + "/" + link.id}>
+            <LoadAndDisplay link={link} style={style} displayeur={displayeur} context={context} />
         </NavLink>
     )
 }
