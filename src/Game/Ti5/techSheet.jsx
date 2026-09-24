@@ -1,5 +1,5 @@
 import { ElementContent, Link } from "../../lib/datatype.js";
-import { backgroundColor, borderColor } from "./ti5.jsx";
+import { backgroundColor, borderColor } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
 import { EditorInput } from "../../Input/EditorInput.jsx";
@@ -12,7 +12,7 @@ import { bottomBorder, fullBorder } from "../../Component/style.jsx";
 import { A4Pa, demiA4Pa } from "../../Component/Size.jsx";
 import { TechColor } from "./tech.jsx";
 import { EnumInput } from "../../Input/EnumInput.jsx";
-import { techType } from "./ti5.jsx";
+import { techType } from "./ti5Const.js";
 import { BooleanInput } from "../../Input/BooleanInput.jsx";
 
 class TechSheet extends ElementContent {
@@ -91,10 +91,10 @@ function Connaissance({ content, LineNumber, explication, style }) {
             ...borderColor,
             ...style
         }}>
-            <div style={{ ...bottomBorder(2), ...borderColor }}>
+            <div style={{ ...bottomBorder(2), ...borderColor,marginLeft:2 }}>
                 <span > Connaissance</span>
             </div>
-            <Text text={content?.connaissance} explication={explication} style={{ height: 280, fontSize: 9 }} />
+            <Text text={content?.connaissance} explication={explication} style={{ height: 280, fontSize: 10,marginLeft:2 }} />
             <div style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(" + (content.connaissanceReq || 8) + ",1fr)",

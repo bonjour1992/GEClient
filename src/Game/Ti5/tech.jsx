@@ -1,7 +1,8 @@
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text } from "../../Component/Text"
-import { backgroundColor, borderColor, techType } from "./ti5"
+import { backgroundColor, borderColor } from "./ti5Const"
+import { techType } from "./ti5Const"
 import { bottomBorder } from "../../Component/style"
 import { fullBorder } from "../../Component/style"
 import { SmallPa } from "../../Component/Size"
@@ -48,9 +49,10 @@ function Display({ content, context = { unlocked: false }, style, explication })
             fontWeight: "bold",
         }} />
         <Text text={content.effet} style={{
-            fontSize: 10,
+            fontSize: 11,
             paddingLeft: 2,
-            paddingBottom: 2
+            paddingBottom: 2,
+            fontWeight:500
         }}
             rule={explication} />
         <div style={{

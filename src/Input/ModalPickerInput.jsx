@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useRef, useState } from "react";
 import { Link, LinkToString } from "../lib/datatype";
 import { useSearch, getFromSearch, getFromType } from "../lib/store";
@@ -8,12 +9,6 @@ import { Label } from "./inputUtils";
 import { Text } from "../Component/Text";
 
 
-/*
- * Composant interne commun aux deux usages.
- *
- * Il ne sait pas ce qu'on fait de l'élément sélectionné.
- * C'est onValidate qui décide.
- */
 function ModalPicker({
     type,
     value,
@@ -25,53 +20,74 @@ function ModalPicker({
     const jeu = useParams().jeu;
 
     const modalId = useRef(
-        "modalPicker" + Math.random().toString(36).substring(2)
+        "modalPicker" +
+        Math.random().toString(36).substring(2)
     );
 
-    /*
-     * Si type est fourni, on limite les types.
-     * Sinon on prend tous les types du jeu.
-     */
     const availableTypes = type?.length
         ? type
         : getHandlerTypes(jeu);
 
-    /*
-     * null = Tous
-     */
-    const [selectedType, setSelectedType] = useState(null);
+    const [selectedType, setSelectedType] =
+        useState(null);
 
-    const [selected, setSelected] = useState(
-        new Link(availableTypes[0])
-    );
-
+    const [selected, setSelected] =
+        useState(
+            new Link(availableTypes[0])
+        );
 
     const open = () => {
         setSelectedType(null);
-        setSelected(new Link(availableTypes[0]));
 
-        document.getElementById(modalId.current).style.display = "block";
+        setSelected(
+            new Link(availableTypes[0])
+        );
+
+        const modal =
+            document.getElementById(
+                modalId.current
+            );
+
+        if (modal) {
+            modal.style.display = "block";
+        }
     };
 
     const close = () => {
-        document.getElementById(modalId.current).style.display = "none";
+        const modal =
+            document.getElementById(
+                modalId.current
+            );
+
+        if (modal) {
+            modal.style.display = "none";
+        }
     };
 
     const changeType = (e) => {
-        const newType = e.target.value;
+        const newType =
+            e.target.value;
 
         if (newType === "__all__") {
             setSelectedType(null);
-            setSelected(new Link(availableTypes[0]));
+            setSelected(
+                new Link(availableTypes[0])
+            );
             return;
         }
 
         setSelectedType(newType);
-        setSelected(new Link(newType));
+
+        setSelected(
+            new Link(newType)
+        );
     };
 
     const validate = () => {
-        if (!selected || selected.id === -1) {
+        if (
+            !selected ||
+            selected.id === -1
+        ) {
             close();
             return;
         }
@@ -80,142 +96,246 @@ function ModalPicker({
         close();
     };
 
-    /*
-     * Tous les types ou uniquement le type sélectionné.
-     */
-    const options = selectedType
-        ? getFromType(search, [selectedType])
-        : getFromType(search, availableTypes);
+    const options =
+        selectedType
+            ? getFromType(
+                search,
+                [selectedType]
+            )
+            : getFromType(
+                search,
+                availableTypes
+            );
 
     return (
         <>
             {children({ open })}
 
-            <div
-                id={modalId.current}
-                style={{
-                    display: "none",
-                    position: "fixed",
-                    backgroundColor: "#DDDDDD88",
-                    zIndex: 100,
-                    left: 0,
-                    top: 0,
-                    width: "100%",
-                    height: "100%"
-                }}
-            >
+            {createPortal(
                 <div
+                    id={modalId.current}
                     style={{
-                        position: "relative",
-                        margin: "auto",
-                        top: 50,
-                        width: 400,
-                        height: 400,
-                        backgroundColor: "#FFF",
-                        borderColor: "#444",
-                        borderStyle: "solid",
-                        borderRadius: 12,
-                        borderWidth: 5,
+                        display: "none",
+
+                        position: "fixed",
+
+                        backgroundColor:
+                            "#DDDDDD88",
+
+                        zIndex: 10000,
+
+                        left: 0,
+                        top: 0,
+
+                        width: "100vw",
+                        height: "100vh",
                     }}
                 >
-                    <div>
-                        <button
-                            type="button"
-                            onClick={close}
-                            style={{ float: "right" }}
-                        >
-                            Fermer
-                        </button>
+                    <div
+                        style={{
+                            position: "relative",
 
-                        <span
+                            margin: "50px auto 0 auto",
+
+                            width: 400,
+                            height: 400,
+
+                            backgroundColor:
+                                "#FFF",
+
+                            borderColor:
+                                "#444",
+
+                            borderStyle:
+                                "solid",
+
+                            borderRadius:
+                                12,
+
+                            borderWidth:
+                                5,
+
+                            boxSizing:
+                                "border-box",
+
+                            overflow:
+                                "hidden",
+                        }}
+                    >
+
+                        {/* ==================================
+                            EN-TÊTE
+                        ================================== */}
+
+                        <div
                             style={{
-                                fontSize: 20,
-                                fontWeight: 700
+                                padding: 8,
+                                borderBottom:
+                                    "2px solid #ccc",
                             }}
                         >
-                            {title}
-                        </span>
-                    </div>
 
-                    <div className="w-full border-b-2 pt-1 pb-1">
-
-                        {availableTypes.length > 1 && (
-                            <select
-                                value={selectedType ?? "__all__"}
-                                onChange={changeType}
+                            <button
+                                type="button"
+                                onClick={close}
+                                style={{
+                                    float: "right",
+                                }}
                             >
-                                <option value="__all__">
-                                    Tous
-                                </option>
+                                Fermer
+                            </button>
 
-                                {availableTypes.map(t => (
-                                    <option
-                                        key={t}
-                                        value={t}
-                                    >
-                                        {getHandler(jeu, t).name}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
+                            <span
+                                style={{
+                                    fontSize: 20,
+                                    fontWeight: 700,
+                                }}
+                            >
+                                {title}
+                            </span>
 
-                        <select
-                            value={LinkToString(selected)}
-                            onChange={(e) => {
-                                setSelected(
-                                    (new Link).fromString(e.target.value)
-                                );
+                        </div>
+
+                        {/* ==================================
+                            SÉLECTION
+                        ================================== */}
+
+                        <div
+                            style={{
+                                padding: 8,
+                                borderBottom:
+                                    "2px solid #ccc",
                             }}
                         >
-                            <option
-                                value={
-                                    `${selectedType ?? availableTypes[0]}#-1`
-                                }
-                            >
-                                Aucun
-                            </option>
 
-                            {options.map(e => (
-                                <option
-                                    key={`${e.type}-${e.id}`}
+                            {availableTypes.length > 1 && (
+
+                                <select
                                     value={
-                                        new Link(
-                                            e.type,
-                                            e.id
-                                        ).toString()
+                                        selectedType ??
+                                        "__all__"
+                                    }
+                                    onChange={
+                                        changeType
                                     }
                                 >
-                                    {e.name}
-                                </option>
-                            ))}
-                        </select>
 
-                        <button
-                            type="button"
-                            onClick={validate}
-                        >
-                            Valider
-                        </button>
-                    </div>
+                                    <option value="__all__">
+                                        Tous
+                                    </option>
 
-                    <div>
-                        <LoadAndDisplay
-                            link={
-                                selected?.__link
-                                    ? selected
-                                    : new Link(
-                                        selectedType ?? availableTypes[0]
+                                    {availableTypes.map(
+                                        t => (
+                                            <option
+                                                key={t}
+                                                value={t}
+                                            >
+                                                {
+                                                    getHandler(
+                                                        jeu,
+                                                        t
+                                                    ).name
+                                                }
+                                            </option>
+                                        )
+                                    )}
+
+                                </select>
+                            )}
+
+                            <select
+                                value={
+                                    LinkToString(
+                                        selected
                                     )
-                            }
-                        />
+                                }
+                                onChange={e => {
+
+                                    setSelected(
+                                        new Link()
+                                            .fromString(
+                                                e.target.value
+                                            )
+                                    );
+
+                                }}
+                            >
+
+                                <option
+                                    value={
+                                        `${
+                                            selectedType ??
+                                            availableTypes[0]
+                                        }#-1`
+                                    }
+                                >
+                                    Aucun
+                                </option>
+
+                                {options.map(
+                                    e => (
+
+                                        <option
+                                            key={
+                                                `${e.type}-${e.id}`
+                                            }
+                                            value={
+                                                new Link(
+                                                    e.type,
+                                                    e.id
+                                                ).toString()
+                                            }
+                                        >
+                                            {e.name}
+                                        </option>
+
+                                    )
+                                )}
+
+                            </select>
+
+                            <button
+                                type="button"
+                                onClick={validate}
+                            >
+                                Valider
+                            </button>
+
+                        </div>
+
+                        {/* ==================================
+                            APERÇU
+                        ================================== */}
+
+                        <div
+                            style={{
+                                padding: 10,
+                                overflow: "auto",
+                                height: 320,
+                            }}
+                        >
+
+                            <LoadAndDisplay
+                                link={
+                                    selected?.__link
+                                        ? selected
+                                        : new Link(
+                                            selectedType ??
+                                            availableTypes[0]
+                                        )
+                                }
+                            />
+
+                        </div>
+
                     </div>
-                </div>
-            </div>
+                </div>,
+
+                document.body
+            )}
         </>
     );
 }
-
-
 /*
  * ============================================================
  * ModalPickerInput

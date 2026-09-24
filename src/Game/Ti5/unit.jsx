@@ -8,8 +8,8 @@ import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"
 import ReactDOMServer from "react-dom/server"
 import { MiniPa, SmallPa } from "../../Component/Size"
-import { borderColor } from "./ti5"
-import { backgroundColor } from "./ti5"
+import { backgroundColorFull, borderColor } from "./ti5Const"
+import { backgroundColor } from "./ti5Const"
 import FormBase from "../../Input/FormBase"
 import { pub } from "../../lib/fetch"
 import { BooleanInput } from "../../Input/BooleanInput"
@@ -264,8 +264,9 @@ function Form({ content, onChange, onSubmit, style }) {
     )
 }
 
-export default { name: "Unité", classe: Ship, form: Form, display: { default: Display, neutral: NeutralUnit, nom: Nom, verso: Verso ,merc:Merc,mercVerso:MercVerso}, print: "grid-cols-3" }
-
+export default { name: "Unité", classe: Ship, form: Form, display: { default: Display, neutral: NeutralUnit, nom: Nom, verso: Verso ,merc:Merc,mercVerso:MercVerso}, print:{
+    numPage:20,padding:10,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+} }
 
 
 

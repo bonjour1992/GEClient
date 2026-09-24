@@ -2,7 +2,7 @@ import { TextInput } from "../../Input/TextInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text } from "../../Component/Text"
-import { backgroundColorFull, borderColor } from "./ti5"
+import { backgroundColorFull, borderColor } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 import { SmallPa } from "../../Component/Size"
@@ -55,9 +55,10 @@ function Display({ content, explication, style = {} }) {
             }}
                 text={content.sousTitre} />
             <Text style={{
-                fontSize: style.fontSize || 10,
+                fontSize: style.fontSize || 11,
                 paddingLeft: 2,
-                paddingBottom: 2
+                paddingBottom: 2,
+                fontWeight:500
             }} text={content.usage} rule={explication} />
 
         </div>
@@ -72,9 +73,9 @@ export function Verso({ content, explication, style }) {
             ...SmallPa,
             ...backgroundColorFull,
             borderRadius: 0,
-            display:"flex",
-            alignItems:"center",
-            justifyContent:"center"
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
         }}
     >
         <MercImage />
@@ -94,4 +95,9 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Mercenaire", classe: Habilite, form: Form, display: { default: Display, verso: Verso } }
+export default {
+    name: "Mercenaire", classe: Habilite, form: Form,
+    display: { default: Display, verso: Verso },
+    print: { bgColor: backgroundColorFull.backgroundColor, numPage: 18, padding: 8, page: "A4 portrait" }
+}
+

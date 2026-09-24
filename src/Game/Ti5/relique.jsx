@@ -1,7 +1,7 @@
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text } from "../../Component/Text"
-import { backgroundColorFull, borderColor } from "./ti5"
+import { backgroundColorFull, borderColor } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 import { SmallPo } from "../../Component/Size"
@@ -123,4 +123,6 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Relique", classe: Habilite, form: Form, display: { default: Display, verso: Verso } }
+export default { name: "Relique", classe: Habilite, form: Form, display: { default: Display, verso: Verso },print:{
+    numPage:18,padding:14,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+} }

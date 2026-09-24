@@ -1,6 +1,6 @@
 import { ElementContent } from "../../lib/datatype"
 import { EditorInput } from "../../Input/EditorInput"
-import { backgroundColor, backgroundColorFull } from "./ti5"
+import { backgroundColor, backgroundColorFull } from "./ti5Const"
 import { bottomBorder } from "../../Component/style"
 import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"
@@ -83,4 +83,6 @@ function Form({ content, onChange, onSubmit,style}) {
 }
 
 
-export default { name: "Objectif militaire", classe: Classe, form: Form, display: {default:Display,verso:Verso}, print: "grid-cols-6" }
+export default { name: "Objectif militaire", classe: Classe, form: Form, display: {default:Display,verso:Verso}, print:{
+    numPage:18,padding:14,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+} }

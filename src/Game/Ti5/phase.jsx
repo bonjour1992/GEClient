@@ -1,7 +1,7 @@
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text } from "../../Component/Text"
-import { backgroundColor, borderColor } from "./ti5"
+import { backgroundColor, borderColor } from "./ti5Const"
 import { bottomBorder, fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 

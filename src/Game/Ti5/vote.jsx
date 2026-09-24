@@ -3,7 +3,7 @@ import { A4Pa } from "../../Component/Size";
 import FormBase from "../../Input/FormBase";
 import { TextInput } from "../../Input/TextInput";
 import { TableInput } from "../../Input/TableInput";
-import { PlayerColor } from "./ti5";
+import { PlayerColor } from "./ti5Const";
 
 
 

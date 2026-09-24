@@ -1,7 +1,7 @@
 import { ElementContent } from "../../lib/datatype"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
-import { backgroundColor } from "./ti5"
+import { backgroundColor, backgroundColorFull } from "./ti5Const"
 import { bottomBorder } from "../../Component/style"
 import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"
@@ -79,4 +79,6 @@ function Form({ content, onChange, onSubmit,style}) {
 }
 
 
-export default { name: "Agenda", classe: Classe, form: Form, display: {default:Display}, print: "grid-cols-6" }
+export default { name: "Agenda", classe: Classe, form: Form, display: {default:Display}, print:{
+    numPage:18,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+} }

@@ -1,7 +1,7 @@
 import { ElementContent } from "../../lib/datatype"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
-import { backgroundColorFull } from "./ti5"
+import { backgroundColorFull } from "./ti5Const"
 import { bottomBorder } from "../../Component/style"
 import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"

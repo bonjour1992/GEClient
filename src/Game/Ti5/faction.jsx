@@ -1,5 +1,5 @@
 import { ElementContent, Link } from "../../lib/datatype.js";
-import { turnNumber } from "./ti5.jsx";
+import { turnNumber } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
 import { ColorInput } from "../../Input/ColorInput.jsx";

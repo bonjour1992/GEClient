@@ -6,7 +6,7 @@ import { BooleanInput } from "../../Input/BooleanInput"
 import { ImagePicker } from "../../Input/ImagePicker.jsx"
 import { ModalPickerInput } from "../../Input/ModalPickerInput"
 import { EditorInput } from "../../Input/EditorInput"
-import { techType, techIcon, planeteIcon } from "./ti5"
+import { techType, techIcon, planeteIcon, backgroundColorFull } from "./ti5Const.js"
 import { Text } from "../../Component/Text"
 import FormBase from "../../Input/FormBase"
 import { SmallPo } from "../../Component/Size"
@@ -63,8 +63,9 @@ class Classe extends ElementContent {
 
 //TODO: native unit color for type of planet
 
-export default { name: "Planete", classe: Classe, form: Form, display: { default: Display, pict: PlanetPict }, print: "grid-cols-6" }
-
+export default { name: "Planete", classe: Classe, form: Form, display: { default: Display, pict: PlanetPict,verso:Verso }, print:{
+    numPage:18,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+} }
 export function PlanetPict({ content, style, context, explication }) {
     return (<div style={{ position: "relative" }} >
         <img src={pub + (content.img || "/404.jpeg")} alt="data.img" style={{
@@ -130,6 +131,16 @@ export function PlanetPict({ content, style, context, explication }) {
         </div>
     </div>)
 }
+
+function Verso({ content, dep, className }) {
+
+    return (<div style={{
+        ...SmallPo,
+        backgroundImage: "url(" + pub + "/ti/bg.png)",
+        color: "white",
+        position: "relative"
+
+    }}></div>)}
 
 function Display({ content, dep, className }) {
 
@@ -300,5 +311,4 @@ function Hexagone(props) {
         </div>
     )
 }
-
 
