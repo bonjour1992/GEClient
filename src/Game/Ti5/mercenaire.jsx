@@ -12,7 +12,8 @@ import { pub } from "../../lib/fetch"
 
 function MercImage() {
     return (
-        <img src={pub + "/ti/icon/merc.png"} height="160px" />
+        <img src={pub + "/ti/icon/merc.png"} style={{height:190,            filter :"brightness(0) saturate(100%) invert(34%) sepia(29%) saturate(1073%) hue-rotate(354deg) brightness(91%) contrast(89%)",
+         }} />
     )
 }
 
@@ -31,22 +32,22 @@ function Display({ content, explication, style = {} }) {
             ...SmallPa,
             ...backgroundColorFull,
             boxSizing: "border-box",
-            ...borderColor,
+            borderColor:"#92571b",
             color: "white",
-            ...fullBorder,
-            ...style,
+            ...fullBorder,            ...style,
+
         }}>
             <Text style={{
                 ...borderColor,
                 borderBottomWidth: style.borderWidth / 2 || 2,
                 paddingLeft: 4,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: "bold",
                 borderBottomStyle: "solid",
                 textAlign: "center"
             }} text={content.name} />
             <Text style={{
-                fontSize: 9,
+                fontSize: 12,
                 paddingLeft: 2,
                 fontWeight: "bold",
                 width: "100%",
@@ -57,8 +58,7 @@ function Display({ content, explication, style = {} }) {
             <Text style={{
                 fontSize: style.fontSize || 11,
                 paddingLeft: 2,
-                paddingBottom: 2,
-                fontWeight:500
+                paddingBottom: 2
             }} text={content.usage} rule={explication} />
 
         </div>

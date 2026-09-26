@@ -9,7 +9,7 @@ import ObjetHandler from "./Objet"
 import LoreHandler from "./Lore"
 import ConditionHandler from "./Condition"
 import CompetenceHandler from "./Competence"
-
+import CharacterHandler from "./Character"
 
 export const Handler = {
 "attribut":AttributHandler,
@@ -22,6 +22,7 @@ export const Handler = {
 "domaine":DomaineHandler,
 "objet":ObjetHandler,
 "lore":LoreHandler,
-"condition":ConditionHandler
+"condition":ConditionHandler,
+"character:":CharacterHandler
 }
 

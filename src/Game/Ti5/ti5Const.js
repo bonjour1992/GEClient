@@ -7,7 +7,7 @@ export const techIcon = new Map([["gen", "/ti/tech/G.png"], ['spa', "/ti/tech/B.
 export const planeteIcon = new Map([["mil", "/ti/icon/mil.png"], ['civ', "/ti/icon/cult.png"], ["sauv", "/ti/icon/sauv.png"]])
 export const turnNumber = 10
 
-export const borderColor = { borderColor: "#343434" }
+export const borderColor = { borderColor: "#69b3c0" }
 export const backgroundColor = { backgroundColor: "#172045BB" }
 export const backgroundColorFull = { backgroundColor: "#172045" }
 export const PlayerColor = {

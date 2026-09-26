@@ -77,10 +77,9 @@ function Nom({ content, style }) {
 }
 
 
-function Merc({ content, explication, style })
-{
+function Merc({ content, explication, style }) {
     return (
-        <Display content={content} explication={explication} style={SmallPa}/>
+        <Display content={content} explication={explication} style={{...SmallPa, borderWidth:6}} />
     )
 }
 
@@ -93,6 +92,7 @@ function Display({ content, explication, style }) {
                 ...style,
                 ...borderColor,
                 ...fullBorder,
+                borderWidth:3,
                 ...backgroundColor,
                 position: "relative",
                 color: "#FFFFCC"
@@ -107,15 +107,16 @@ function Display({ content, explication, style }) {
                 src={pub + "/ti/unit_icon/" + content.type + ".png"} />
             <Text style={{
                 paddingLeft: 4,
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: "bold",
-                ...bottomBorder(4),
+                ...bottomBorder(2),
                 ...borderColor
             }}
                 text={content.name} />
             <Text style={{
                 fontSize: 10,
                 paddingLeft: 2,
+                boxSizing: "border-box",
                 width: "100%",
                 ...bottomBorder(2),
                 ...borderColor
@@ -123,7 +124,7 @@ function Display({ content, explication, style }) {
                 text={content.mot_cle?.reduce((res, e, k, { length }) => {
                     return res + ReactDOMServer.renderToStaticMarkup(<span key={e} >{tag[e] + (k === length - 1 ? "" : ", ")}</span>)
                 }, "")} />
-            <Text style={{ fontSize: 9, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
+            <Text style={{ fontSize: 12, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
             <Stat data={[content.cout, content.move, content.combat, content.capacite, content.PV]}
                 label={["Cout", "Mouvement", "Attaque", "Capacité", "Résistance"]}
                 mult={[content.prod, null, content.combat_touche]}
@@ -173,7 +174,7 @@ function NeutralUnit({ content, explication, style = {}, context = { num: 1 } })
             }}
                 text={content.name} />
             <Text style={{
-                fontSize: style.fontSize || 10,
+                fontSize: style.fontSize || 12,
                 paddingLeft: 2,
                 width: "100%",
                 ...bottomBorder(style.borderWidth / 2 || 2),
@@ -182,7 +183,7 @@ function NeutralUnit({ content, explication, style = {}, context = { num: 1 } })
                 text={content.mot_cle.reduce((res, e, k, { length }) => {
                     return res + ReactDOMServer.renderToStaticMarkup(<span key={e} >{tag[e] + (k === length - 1 ? "" : ", ")}</span>)
                 }, "")} />
-            <Text style={{ fontSize: style.fontSize || 9, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
+            <Text style={{ fontSize: style.fontSize || 12, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
             <Stat data={[context.num, content.move, content.combat, content.PV]}
                 label={["Nombre", "Mouvement", "Attaque", "Résistance"]}
                 mult={[null, null, content.combat_touche]}
@@ -209,12 +210,15 @@ function Stat({ data, label, mult, style = {} }) {
         }}>{data.map((d, i) => {
 
             return (<div key={i} style={{
+                                borderWidth: 1,
+                borderLeft: i === 0 ? 0 : 1,
+                borderRight: i === data.length - 1 ? 0 : 1,
                 ...borderColor,
-                borderWidth: 1,
+
                 borderStyle: d ? "solid" : "none",
+                borderBottom: 0,
                 textAlign: "center",
-                borderBottomLeftRadius: i === 0 ? style.borderRadius || 12 : 0,
-                borderBottomRightRadius: i === data.length - 1 ? style.borderRadius || 12 : 0,
+
                 position: "relative"
             }} >
                 {d ? (<><span style={{
@@ -264,9 +268,11 @@ function Form({ content, onChange, onSubmit, style }) {
     )
 }
 
-export default { name: "Unité", classe: Ship, form: Form, display: { default: Display, neutral: NeutralUnit, nom: Nom, verso: Verso ,merc:Merc,mercVerso:MercVerso}, print:{
-    numPage:20,padding:10,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
-} }
+export default {
+    name: "Unité", classe: Ship, form: Form, display: { default: Display, neutral: NeutralUnit, nom: Nom, verso: Verso, merc: Merc, mercVerso: MercVerso }, print: {
+        numPage: 20, padding: 10, bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+    }
+}
 
 
 

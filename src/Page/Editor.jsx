@@ -58,7 +58,7 @@ export default function Editor({ elem, creer = false }) {
     let split = getHandler(jeu, element.meta.type).editor !== "noSplit" ? { width: "49%", paddingRight: "1%", float: "left" } : {}
     return (<>
         <div>Edition</div>
-        <div style={{ maxWidth: 1600, ...split }}>
+        <div style={{  ...split }}>
             <Form content={element.content} onChange={handleInputChange} onSubmit={save} />
         </div>
         <div style={split}>

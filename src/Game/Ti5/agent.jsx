@@ -36,6 +36,7 @@ function Display({ content, explication, style }) {
                 borderColor: content.color,
                 ...backgroundColor,
                 ...fullBorder,
+                borderWidth:2,
                 borderRadius:8,
                 width: 150,
                 minHeight: 65
@@ -43,13 +44,12 @@ function Display({ content, explication, style }) {
             <Text style={{
                 color: content.color,
                 borderColor: content.color,
-                ...bottomBorder(4),
                 paddingLeft: 4,
                 fontSize: 12,
                 fontWeight: "bold",
                 textAlign: "center"
             }} text={content.name} />
-            <Text style={{ fontSize: 8, paddingLeft: 2, paddingBottom: 2 }} text={content.usage} rule={explication} />
+            <Text style={{ fontSize: 10, paddingLeft: 2, paddingBottom: 2 }} text={content.usage} rule={explication} />
 
         </div>
     )

@@ -2158,7 +2158,7 @@ export function Display({
 }) {
 
     const pageStyle = {
-        ...A4Pa,
+
 
         padding: 0,
         margin: 0,

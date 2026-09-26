@@ -1,9 +1,10 @@
 
 export const fullBorder = {
-    borderWidth: 4,
+    borderWidth: 6,
     borderStyle: "solid",
-    borderRadius: 16,
-};export function bottomBorder(size) {
+};
+
+export function bottomBorder(size) {
     return { borderBottomWidth: size, borderBottomStyle: "solid" }
 }
 

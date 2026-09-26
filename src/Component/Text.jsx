@@ -88,7 +88,11 @@ export function Text({
     })
 
     return (
-        <div style={style}>
+        <div style={{
+            fontFamily: "EB Garamond, sans-serif",
+            fontWeight: 500,
+            ...style
+        }}>
             <span>
                 {formatted}
             </span>
@@ -107,7 +111,7 @@ export function Text({
  * Les éléments React sont construits directement.
  */
 export function Explication({ explication, ajout, afficher }) {
-    const size = 11
+    const size = 12
 
     const remp = useRemp((s) => s.remp)
 
@@ -149,7 +153,7 @@ export function Explication({ explication, ajout, afficher }) {
                 borderRadius: "4px",
                 boxSizing: "border-box",
                 color: "#222",
-                fontFamily: "Arial, sans-serif",
+
             }}
         >
             {(hasExplication || hasRemplacements) && (
@@ -190,7 +194,7 @@ export function Explication({ explication, ajout, afficher }) {
                                 style={{
                                     fontSize: size,
                                 }}
-                                text={`#${toMaj(elem.key,true)}: ${elem.rule?stripTags(elem.rule):""}`}
+                                text={`#${toMaj(elem.key, true)}: ${elem.rule ? stripTags(elem.rule) : ""}`}
                             />
 
                         </div>
@@ -204,7 +208,7 @@ export function Explication({ explication, ajout, afficher }) {
                         style={{
                             margin:
                                 hasExplication ||
-                                hasRemplacements
+                                    hasRemplacements
                                     ? "10px 0 5px 0"
                                     : "0 0 5px 0",
                             fontSize: size * 1.15,
@@ -304,12 +308,10 @@ function renderTextNode(
      * #xxx(2)
      * #xxx(2, xxx)
      */
-    const regex =
-        /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(€)?(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g
-
-    const result = []
-
-    let lastIndex = 0
+const regex =
+    /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(€)?(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g   
+     let result=[]
+let lastIndex = 0
     let match
     let index = 0
 
@@ -319,11 +321,11 @@ function renderTextNode(
          * Texte normal avant le token.
          */
         if (match.index > lastIndex) {
-            result.push(
-                <React.Fragment key={`text-${index++}`}>
-                    {text.slice(lastIndex, match.index)}
-                </React.Fragment>
-            )
+result.push(
+    <React.Fragment key={`text-${index++}`}>
+        {text.slice(lastIndex, match.index).replaceAll("§", "")}
+    </React.Fragment>
+)
         }
 
         /*
@@ -550,13 +552,13 @@ function renderTextNode(
     /*
      * Texte restant.
      */
-    if (lastIndex < text.length) {
-        result.push(
-            <React.Fragment key={`text-${index++}`}>
-                {text.slice(lastIndex)}
-            </React.Fragment>
-        )
-    }
+if (lastIndex < text.length) {
+    result.push(
+        <React.Fragment key={`text-${index++}`}>
+            {text.slice(lastIndex).replaceAll("§", "")}
+        </React.Fragment>
+    )
+}
 
     if (result.length === 0) {
         return text
@@ -654,7 +656,7 @@ function renderRemplacement(
                 text,
                 isMaj(elemCode)
             ) +
-            (num?" " +num:"")
+            (num ? " " + num : "")
 
         if (
             mult &&
