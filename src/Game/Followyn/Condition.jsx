@@ -10,7 +10,7 @@ import { pub } from "../../lib/fetch"
 import { Effet, EffetCarac, EffetForm } from "./Component/effet"
 import { FormJet, Jet, JetCarac } from "./Component/Jet"
 
-const elementColor = "#412a44"
+const elementColor = "#64366a"
 
 class Classe extends aggregation(ElementJDR,JetCarac, TableResolutionCarac, EffetCarac) {
  

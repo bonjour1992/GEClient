@@ -16,8 +16,8 @@ import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
 
 const elementColor = {
-    occupation: "#34495e",
-    occupationProlonge: "#34495e",
+    occupation: "#3e454b",
+    occupationProlonge: "#3e454b",
     reaction: "#843fa1",
     actionPA: "#B22",
     actionTempsReel: "Action en temps réel"

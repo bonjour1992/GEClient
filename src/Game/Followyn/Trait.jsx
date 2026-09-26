@@ -10,7 +10,7 @@ import { aggregation } from "../../lib/datatype"
 import { Contenu, ContenuCarac, ContenuForm } from "./Component/Contenu"
 
 
-const elementColor = "rgb(16, 93, 10)"
+const elementColor = "rgb(133, 101, 14)"
 
 class Classe extends aggregation(ElementJDR, CompCarac, PrerequisCarac, ContenuCarac) {
 

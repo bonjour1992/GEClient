@@ -7,10 +7,11 @@ import { Card } from "./Component/Card"
 import { Description } from "./Component/Description"
 import { ContenuCarac,Contenu,ContenuForm } from "./Component/Contenu"
 import { aggregation } from "../../lib/datatype"
+import { Equipement, EquipementCarac, EquipementForm } from "./Component/Equipement"
 
 const elementColor = "rgb(16, 93, 10)"
 
-class Classe extends aggregation(ElementJDR, ContenuCarac) {
+class Classe extends aggregation(ElementJDR, ContenuCarac,EquipementCarac) {
 
     capacite = ""
     background = ""
@@ -33,6 +34,7 @@ function Display({ content, explication, style }) {
             <Text text={"<span><b>Background:</b></span>" + content.background} />
             <Text text={"<span><b>Capacité:</b></span>" + content.capacite} />
             <Contenu content={content} explication={explication} />
+            <Equipement content={content} explication={explication} />
 
         </Card>
 
@@ -46,6 +48,7 @@ function Form({ content, onChange, onSubmit, style }) {
             <EditorInput value={content} name="background" onChange={onChange} label="Background" />
             <EditorInput value={content} name="capacite" onChange={onChange} label="Capacité" />
             <ContenuForm content={content} onChange={onChange} types={["trait", "habilite", "passif", "action","domaine"]} />
+            <EquipementForm content={content} onChange={onChange} types={["objet"]} />
 
         </FormElementJDR>
     )

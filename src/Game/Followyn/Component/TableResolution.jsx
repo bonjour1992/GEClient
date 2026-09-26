@@ -38,7 +38,7 @@ export function TableResolutionForm({ content, onChange, explication }) {
     function resolutionLine(x) {
         return [
             (<EditorInput onChange={onChange} name={"tableResolutionCond"} value={content} index={x} type="compact" />),
-            (<EnumInput onChange={onChange} name="tableResolutionColor" value={content} index={x} enumClass={resolutionType} />),
+            (<EnumInput onChange={onChange} name="tableResolutionColor" value={content} index={x} aucun="true" enumClass={resolutionType} />),
             (<FreeTagInput onChange={onChange} name="tableResolutionType" index={x} value={content} label="type" tagType={"resolutionType"} />),
             (<NumberInput onChange={onChange} name="tableResolutionPoid" value={content} index={x} />),
             (<EditorInput onChange={onChange} name={"tableResolutionEffet"} value={content} index={x} type="compact" />),

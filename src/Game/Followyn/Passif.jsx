@@ -10,7 +10,7 @@ import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
 import { Effet, EffetCarac, EffetForm } from "./Component/effet"
 
-const elementColor = "#0B0"
+const elementColor = "rgb(64, 77, 41)"
 
 
 

@@ -5,7 +5,7 @@ import { FormElementJDR } from "./Component/FormElementJDR"
 import { Card } from "./Component/Card"
 import { Description } from "./Component/Description"
 
-const elementColor = "#00F"
+const elementColor = "rgb(118, 57, 8)"
 
 class Classe extends ElementJDR {
 

@@ -9,7 +9,7 @@ import { Contenu, ContenuCarac, ContenuForm } from "./Component/Contenu"
 import { MarchandiseCarac, MarchandiseForm, Marchandise } from "./Component/Marchandise"
 
 
-const elementColor = "rgb(16, 93, 10)"
+const elementColor = "rgb(61, 61, 61)"
 
 class Classe extends aggregation(ElementJDR, ContenuCarac,MarchandiseCarac) {
 
