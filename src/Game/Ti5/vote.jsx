@@ -77,12 +77,14 @@ function Display({ content, explication }) {
     // --------------------------------------------------------
     // LABEL
     // --------------------------------------------------------
-function LabelCell({ index }) {
+// data-emplacement : repère de la case pour l'engine de jeu (ligne:colonne)
+function LabelCell({ index, numero }) {
 
     const label = content.label?.[index] || "";
 
     return (
         <div
+            data-emplacement={"vote:" + numero + ":" + index}
             style={{
                 flex: 1,
                 height: "100%",
@@ -115,8 +117,9 @@ function LabelCell({ index }) {
                 {label}
             </div>
 
-            {/* Quart droit */}
+            {/* Quart droit (emplacement à part : « ...:d ») */}
             <div
+                data-emplacement={"vote:" + numero + ":" + index + ":d"}
                 style={{
                     position: "absolute",
                     right: 0,
@@ -204,6 +207,7 @@ function LabelCell({ index }) {
                             <LabelCell
                                 key={index}
                                 index={index}
+                                numero={numero}
                             />
                         )
                     )}

@@ -1,4 +1,5 @@
-import { ElementContent, Link } from "../../lib/datatype.js";
+import { ElementContent, Link, aggregation } from "../../lib/datatype.js";
+import { DepartCarac, DepartForm, Depart } from "./Component/Depart.jsx";
 import { turnNumber } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
@@ -14,7 +15,7 @@ import { NumberInput } from "../../Input/NumberInput.jsx";
 import { bottomBorder } from "../../Component/style.jsx";
 import { A4Pa } from "../../Component/Size.jsx";
 
-class Faction extends ElementContent {
+class Faction extends aggregation(ElementContent, DepartCarac) {
     logo = "/404.jpeg"
     color = "#FFFFFF"
     units = new Array(12).fill(new Link("unit"))
@@ -40,7 +41,7 @@ function Display({ content, style, context, explication }) {
         }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(" + turn.length + ", 1fr)" }}>
             {turn.map((e) => {
-                return (<div key={e} style={{
+                return (<div key={e} data-emplacement={"tour:" + e} style={{
                     borderTop: 0,
                     borderLeft: 6,
                     borderRight: 6,
@@ -65,9 +66,21 @@ function Display({ content, style, context, explication }) {
             flexDirection: "column",
             float: "left"
         }}>
+            {/* data-emplacement / data-filtre : case de l'agent, où l'engine
+                affiche les agents disponibles de ce type. L'apparence ne change pas. */}
             {Array.from((new Faction).agents.keys()).map((i) => {
                 return content.agents &&
-                    <LoadAndDisplay key={i} link={content.agents[i]} style={{ flexGrow: 1, display: content.agents[i].id === -1 ? "none" : "block" }} />
+                    <div key={i}
+                        data-emplacement="agents"
+                        data-filtre={content.agents[i].id}
+                        style={{
+                            flexGrow: 1,
+                            display: content.agents[i].id === -1 ? "none" : "flex",
+                            flexDirection: "column",
+                            position: "relative"
+                        }}>
+                        <LoadAndDisplay link={content.agents[i]} style={{ flexGrow: 1 }} />
+                    </div>
             })}
         </div>
         <div style={{
@@ -153,6 +166,7 @@ export function Verso({ content, style, explication }) {
             })}
             <Separateur />
             <Text text={content.setup} style={{ color: "white", fontSize: 12 }} rule={explication} />
+            <Depart content={content} />
         </div>
         <div style={{
             gridColumn: 2,
@@ -228,6 +242,7 @@ function Form({ content, onChange, onSubmit, style }) {
             <TableInput onChange={onChange} Line={ruleLine} max={5} name="ruleNum" value={content} />
             <h2>Mise en place</h2>
             <EditorInput onChange={onChange} value={content} name="setup" label="Mise en place" />
+            <DepartForm content={content} onChange={onChange} />
             <ModalPickerInput onChange={onChange} value={content} name="system" label="Systeme de depart" type={["system"]} />
             <EditorInput onChange={onChange} value={content} name="lore" label="Lore" />
         </FormBase>

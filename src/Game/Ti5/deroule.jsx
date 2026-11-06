@@ -31,7 +31,12 @@ class deroule extends ElementContent {
     tourNum = 10
 }
 
-function Display({ content, explication }) {
+// context (engine de jeu) :
+//   coteACote : affiche les 3 pages sur une ligne. Le découpage en pages ne
+//               sert qu'à l'impression : c'est un seul plateau ;
+//   engine    : dans une partie, les cartes remplacent les textes de consigne ;
+//   joueurs   : nombre de joueurs, pour le nombre de cases d'initiative.
+function Display({ content, explication, context }) {
     // ============================================================
     // PARAMÈTRES
     // ============================================================
@@ -60,6 +65,20 @@ function Display({ content, explication }) {
     // La case 9 doit avoir exactement la même largeur.
     const largeurBoite = 33.3333;
     const largeurLegende = 66.6667;
+
+    // Cases d'initiative, sous la légende : une par joueur (6 hors partie).
+    // La dernière est celle du chef du sénat.
+    const initiatives = Array.from(
+        { length: Math.max(1, Number(context?.joueurs) || 6) },
+        (_, i) => i + 1
+    );
+
+    // Repères des cases des compteurs pour l'engine de jeu (data-emplacement)
+    const pistes = {
+        "Points": "points",
+        "Infamie": "infamie",
+        "Sièges au conseil": "sieges",
+    };
 
     // ============================================================
     // COMPTEURS
@@ -115,11 +134,17 @@ function Display({ content, explication }) {
         fontFamily: "Arial, sans-serif",
         color: "#000",
         flexShrink: 0,
+
+        // Dans une partie, le plateau n'est pas tenu à la hauteur d'une page :
+        // la ligne « Agenda » s'agrandit pour montrer les cartes en entier.
+        ...(context?.engine
+            ? { height: "auto", minHeight: A4Po.height, overflow: "visible" }
+            : {}),
     };
 
     const containerStyle = {
         display: "flex",
-        flexDirection: "column",
+        flexDirection: context?.coteACote ? "row" : "column",
         margin: 0,
         padding: 0,
         gap: 0,
@@ -153,6 +178,7 @@ function Display({ content, explication }) {
                     {boites.map((numero) => (
                         <div
                             key={numero}
+                            data-emplacement={"boite:" + numero}
                             style={{
                                 flex: 1,
                                 height: hauteurBoites,
@@ -198,18 +224,21 @@ function Display({ content, explication }) {
                     width: largeurLegende + "%",
                     height: hauteurBoites,
                     display: "flex",
-                    alignItems: "center",
-                    padding: "10px 15px",
+                    flexDirection: "column",
+                    gap: 4,
+                    padding: "2px 0 0 10px",
                     boxSizing: "border-box",
                     float: "left",
                 }}
             >
+                {/* Mercenaire et plan de relique sur la même ligne */}
                 <div
                     style={{
                         display: "flex",
-                        flexDirection: "column",
-                        gap: 10,
-                        fontSize: 14,
+                        alignItems: "center",
+                        gap: 18,
+                        fontSize: 13,
+                        flexShrink: 0,
                     }}
                 >
                     <div
@@ -238,6 +267,55 @@ function Display({ content, explication }) {
                         </span>
                     </div>
                 </div>
+
+                {/* Cases d'initiative : la dernière est le chef du sénat */}
+                <div
+                    style={{
+                        display: "flex",
+                        flex: 1,
+                        minHeight: 0,
+                        gap: espaceEntreBoites,
+                    }}
+                >
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: 12,
+                            fontWeight: "bold",
+                            writingMode: "vertical-rl",
+                            transform: "rotate(180deg)",
+                            flexShrink: 0,
+                        }}
+                    >
+                        Initiative
+                    </div>
+
+                    {initiatives.map((numero) => (
+                        <div
+                            key={numero}
+                            data-emplacement={"initiative:" + numero}
+                            style={{
+                                flex: 1,
+                                minWidth: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "3px solid #000",
+                                boxSizing: "border-box",
+                                textAlign: "center",
+                                fontWeight: "bold",
+                                color: "#888",
+                                fontSize: numero === initiatives.length ? 13 : 40,
+                                lineHeight: 1.1,
+                            }}
+                        >
+                            {numero === initiatives.length
+                                ? "Chef du sénat"
+                                : numero}
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
@@ -255,6 +333,7 @@ function Display({ content, explication }) {
             cells.push(
                 <div
                     key={i}
+                    data-emplacement={pistes[title] + ":" + i}
                     style={{
                         flex: isLast ? largeurCaseFinale : 1,
                         height: "100%",
@@ -305,6 +384,33 @@ function Display({ content, explication }) {
                         }}
                     >
                         {title}
+
+                        {/* Dans une partie : « + » pour avancer son marqueur d'une case
+                            (repère data-action lu par l'engine de jeu) */}
+                        {context?.engine && (
+                            <span
+                                data-action={pistes[title]}
+                                title={"Avancer mon marqueur d'une case (" + title.toLowerCase() + ")"}
+                                style={{
+                                    marginLeft: "auto",
+                                    marginRight: 6,
+                                    width: 18,
+                                    height: 18,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid #000",
+                                    borderRadius: 4,
+                                    backgroundColor: "#fff",
+                                    fontSize: 15,
+                                    lineHeight: 1,
+                                    cursor: "pointer",
+                                    userSelect: "none",
+                                }}
+                            >
+                                +
+                            </span>
+                        )}
                     </div>
                 )}
 
@@ -416,9 +522,11 @@ function Display({ content, explication }) {
     // CELLULE
     // ============================================================
 
-    function Cell({ children, style = {} }) {
+    // emplacement : repère de la case pour l'engine de jeu (data-emplacement)
+    function Cell({ children, style = {}, emplacement }) {
         return (
             <td
+                data-emplacement={emplacement}
                 style={{
                     border: `1px solid ${couleurBordure}`,
                     textAlign: "center",
@@ -469,11 +577,14 @@ function Display({ content, explication }) {
 
         return (
             <>
-                <Siege nombreSieges={nombreSieges} />
-                <Siege nombreSieges={nombreSieges2} />
+                {/* Dans une partie (context.engine), la carte « Vote au conseil »
+                    prend la place du texte */}
+                {!context?.engine && <Siege nombreSieges={nombreSieges} />}
+                {!context?.engine && <Siege nombreSieges={nombreSieges2} />}
 
 
-                {nombreMinisteres > 0 && (
+                {/* Dans une partie (context.engine), les agendas tirés prennent la place du texte */}
+                {!context?.engine && nombreMinisteres > 0 && (
                     <div
                         style={{
                             fontWeight: "bold",
@@ -637,8 +748,10 @@ function Display({ content, explication }) {
                                 textAlign: "left",
                                 padding: 8,
                             }}
+                            emplacement={"evenement:" + tour}
                         >
-                            {content.evenement&& content.evenement[tour - 1] && content.evenement[tour - 1] != "none" && (
+                            {/* Dans une partie (context.engine), la carte prend la place du texte */}
+                            {!context?.engine && content.evenement&& content.evenement[tour - 1] && content.evenement[tour - 1] != "none" && (
                                 <div
                                     style={{
                                         fontWeight: "bold",
@@ -680,8 +793,10 @@ function Display({ content, explication }) {
                                 textAlign: "left",
                                 padding: 8,
                             }}
+                            emplacement={"militaire:" + tour}
                         >
-                            {content.militaire && content.militaire[tour - 1] && (
+                            {/* Dans une partie (context.engine), la carte prend la place du texte */}
+                            {!context?.engine && content.militaire && content.militaire[tour - 1] && (
                                 <div
                                     style={{
                                         fontWeight: "bold",
@@ -736,12 +851,15 @@ function Display({ content, explication }) {
                         <Cell
                             key={tour}
                             style={{
-                                height: "100%",
+                                // Dans une partie : la place de 3 agendas de haut
+                                // sur 2 de large (la ligne grandit s'il en faut plus)
+                                height: context?.engine ? 440 : "100%",
                                 minHeight: 0,
                                 verticalAlign: "top",
                                 textAlign: "left",
                                 padding: 7,
                             }}
+                            emplacement={"agenda:" + tour}
                         >
                             <AgendaContent tour={tour} />
                         </Cell>
@@ -939,7 +1057,7 @@ function Form({
 
     function TourLine(x) {
         return [
-            (<TextInput onChange={onChange} index={x} name="recru" value={content} label="Box" />),
+            (<TextInput onChange={onChange} index={x} name="recru" value={content} label="Recrut. (cases, ex. 3,4,5)" />),
             (<NumberInput onChange={onChange} index={x} name="surCout" value={content} label="Surcout" />),
             (<NumberInput onChange={onChange} index={x} name="mecatol" value={content} label="M.Rex" />),
             (<EnumInput onChange={onChange} index={x} name="evenement" value={content} label="Event" enumClass={event} />),

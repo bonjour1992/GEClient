@@ -17,6 +17,7 @@ import neutralFactionHandler from "./neutralFaction"
 import derouleHandler from "./deroule"
 import voteHandler from "./vote"
 import plateauHandler from "./plateau"
+import OutilParties from "./engine/Parties"
 
 
 export const Handler = {
@@ -42,6 +43,7 @@ export const Handler = {
 }
 
 export const Tools = {
+    "partie": { name: "Parties", component: OutilParties }
 }
 
 

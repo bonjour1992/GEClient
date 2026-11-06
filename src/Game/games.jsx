@@ -36,6 +36,8 @@ export const games = {
     "followyn": {
         handlers: HandlerFolowyn,
         tools: {},
+        // Anciens noms de type encore présents dans l'historique des versions
+        aliases: { "character:": "character" },
         name: "Followyn JDR",
         pict: "/Followyn/theme-cover7.png"
     },
@@ -52,7 +54,8 @@ export const games = {
 // ============================================================
 
 export function getHandler(jeu, meta) {
-    return games[jeu].handlers[meta]
+    const game = games[jeu]
+    return game.handlers[meta] ?? game.handlers[game.aliases?.[meta]]
 }
 
 

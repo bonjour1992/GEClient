@@ -25,7 +25,7 @@ export const Handler = {
 "objet":ObjetHandler,
 "lore":LoreHandler,
 "condition":ConditionHandler,
-"character:":CharacterHandler,
+"character":CharacterHandler,
 "blessure":BlessureHandler
 }
 

@@ -1,8 +1,8 @@
 import { useSearch, useUser } from "./store"
 
 
-const server = "http://xorg-compagny.ddns.net:8500/"
-//const server = "http://localhost:3000/"
+// Surchargeable en dev via VITE_API_URL (ex. .env.development.local)
+const server = import.meta.env.VITE_API_URL || "http://xorg-compagny.ddns.net:8500/"
 
 
 export async function fetchAPI(url, method, body, content) {
@@ -215,7 +215,7 @@ export async function getImage() {
 export async function saveImage(blob, path) {
 
     return await fetchAPI(
-        "upload-image?path=" + path,
+        "upload-image?path=" + encodeURIComponent(path),
         "POST",
         blob,
         blob.type
@@ -287,6 +287,15 @@ export async function logout() {
     return await fetchAPI(
         "auth/logout",
         "POST"
+    );
+}
+
+
+export async function getMe() {
+
+    return await fetchAPI(
+        "auth/me",
+        "GET"
     );
 }
 

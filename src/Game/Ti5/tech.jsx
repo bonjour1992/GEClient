@@ -31,6 +31,16 @@ class Tech extends ElementContent {
 }
 
 function Display({ content, context = { unlocked: false }, style, explication }) {
+
+    // Cases de recherche cochées : toutes si la technologie est débloquée,
+    // ou context.progres cases pour une recherche partielle (engine de jeu).
+    const casesFaites = Math.min(
+        content.cout,
+        context.progres !== undefined
+            ? (Number(context.progres) || 0)
+            : (context.unlocked ? content.cout : 0)
+    );
+
     return (<div style={{
         ...SmallPa,
         ...backgroundColor,
@@ -76,7 +86,7 @@ function Display({ content, context = { unlocked: false }, style, explication })
                     textAlign:"center",
                     fontWeight:700
                 }}>
-                    {context.unlocked && e < content.cout && "X"}
+                    {e < casesFaites && "X"}
                 </div>)
             })}
         </div>

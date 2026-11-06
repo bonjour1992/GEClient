@@ -42,7 +42,7 @@ une unité peux etre marqué d'autre élement
 ## Plateau général 
 
 ### Contenu
- Le composant plateau.jsx
+ Le composant deroule.jsx (le déroulé), et non plateau.jsx qui est la carte de l'onglet espace
 
  doit permettre de stocker les lois, traités et régles spéciales en cours 
 

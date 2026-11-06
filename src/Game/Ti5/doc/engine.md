@@ -3,6 +3,10 @@ on ne demande pas a l'engine d'implémenter ou de validé les régles du jeu mai
 
 de maniére non prioritaire on va lui demander de facilité a effectuer les actions correctes sans se limiter a cele ci.
 
+## lancement
+selection plateau
+attribution emplacement de depart
+selection faction 
 
 ## état du jeu
 

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
 import { games } from "../Game/games";
 import { useSearch, useUser } from "../lib/store";
@@ -87,6 +88,20 @@ function Location({ location }) {
                 ""
             ]);
 
+        }
+        else if (part[3] === "tools") {
+
+            // Outil du jeu (/GE/<jeu>/tools/<outil>) : son nom, et non un élément
+            const outil = jeu.tools?.[part[4]];
+
+            fil.push([
+                outil ? outil.name : (part[4] || "Outils"),
+                "/GE/" + part[2] + "/tools/" + (part[4] || "")
+            ]);
+
+            return (
+                <LocationBar fil={fil} />
+            );
         }
         else if (part[3]) {
 
@@ -253,6 +268,19 @@ function User() {
 
     const login = useUser((state) => state.login);
     const logoutStore = useUser((state) => state.logout);
+    const admin = useUser((state) => state.admin);
+    const setAdmin = useUser((state) => state.setAdmin);
+
+    // Rafraîchit le statut admin (sessions ouvertes avant l'ajout du rôle)
+    useEffect(() => {
+        fAPI.getMe()
+            .then(me => {
+                if (me) {
+                    setAdmin(me.data?.admin === true);
+                }
+            })
+            .catch(e => console.error(e));
+    }, [setAdmin]);
 
     async function handleLogout() {
 
@@ -290,11 +318,13 @@ function User() {
                     {login}
                 </span>
 
-                <NavLink
-                    to="/GE/admin"
-                >
-                    Admin
-                </NavLink>
+                {admin && (
+                    <NavLink
+                        to="/GE/admin"
+                    >
+                        Admin
+                    </NavLink>
+                )}
 
                 <button
                     onClick={handleLogout}

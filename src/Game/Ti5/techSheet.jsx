@@ -1,4 +1,5 @@
-import { ElementContent, Link } from "../../lib/datatype.js";
+import { ElementContent, Link, aggregation } from "../../lib/datatype.js";
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien";
 import { backgroundColor, borderColor } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
@@ -15,7 +16,7 @@ import { EnumInput } from "../../Input/EnumInput.jsx";
 import { techType } from "./ti5Const.js";
 import { BooleanInput } from "../../Input/BooleanInput.jsx";
 
-class TechSheet extends ElementContent {
+class TechSheet extends aggregation(ElementContent, TypeLienCarac) {
     logo = "/404.jpeg"
     techType = "spa";
     techs = new Array(18).fill(new Link("tech"))
@@ -34,9 +35,9 @@ function techPoint(content) {
 function Display({ content, explication, style = {} }) {
     const LineNumber = 10
     function TechDisplayeur({ i, style }) {
-        return (<div style={{ width: 225, height: 155, ...style }}>
+        return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: 155, ...style }}>
             {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
-                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
+                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
         </div>)
     }
 
@@ -132,7 +133,7 @@ function SmallDisplay({ content, explication, style = {} }) {
     function TechDisplayeur({ i, style }) {
         return (<div style={{ width: 225, height: 143, ...style }}>
             {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
-                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
+                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
         </div>)
     }
 
@@ -177,6 +178,7 @@ function Form({ content, onChange, onSubmit, style }) {
     if (content.faction === undefined) content.faction = new Link("faction")
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
+            <TypeLienForm content={content} onChange={onChange} />
 
             <div>
                 <ImagePicker onChange={onChange} name={"logo"} value={content} />

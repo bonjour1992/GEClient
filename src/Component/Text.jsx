@@ -20,6 +20,11 @@ import { stripTags } from "../Input/EditorInput"
  *   - #machin                -> remplacement
  *   - #machin(2)             -> remplacement avec nombre
  *   - #machin(2, xxx)        -> remplacement avec multiplicateur
+ *
+ *     Un remplacement qui a une icône (champ « icone » : "hex #f2c200",
+ *     "rond #d4a017") s'affiche, quand il porte un nombre, sous la forme
+ *     de cette icône avec le nombre dedans : #res(2) -> hexagone « 2 ».
+ *     Sans nombre, le mot reste écrit.
  *   - #img[image.png]        -> image
  *   - !quelque chose!        -> suppression
  *
@@ -614,6 +619,30 @@ function renderRemplacement(
     key
 ) {
     /*
+     * -----------------------------------------------------------------------
+     * ICÔNE
+     * -----------------------------------------------------------------------
+     *
+     * #res(2) avec elem.icone -> une icône portant le nombre.
+     */
+    const icone = lireIcone(elem.icone)
+
+    if (icone && num && !mult && elem.after !== true) {
+        return (
+            <IconeRemp
+                key={`remp-${key}-icone`}
+                icone={icone}
+                num={num}
+                nom={
+                    Number(num) > 1
+                        ? (elem.plural && elem.plural !== "repeat" ? elem.plural : (elem.val || "") + "s")
+                        : (elem.val || "")
+                }
+            />
+        )
+    }
+
+    /*
      * #reu& signifie explicitement pluriel.
      *
      * On normalise d'abord &amp; -> &
@@ -775,6 +804,104 @@ function renderRemplacement(
                 onRemp,
                 onLien
             )}
+        </span>
+    )
+}
+
+
+/*
+ * ---------------------------------------------------------------------------
+ * Icône d'un remplacement
+ * ---------------------------------------------------------------------------
+ *
+ * elem.icone : "<forme> <couleur>", forme = hex (hexagone) ou rond.
+ *
+ *   "hex #f2c200"   hexagone jaune
+ *   "rond #d4a017"  rond doré
+ *
+ * L'icône ne décale pas le texte :
+ *
+ *   - sa taille est en em : elle suit la taille du texte ;
+ *   - ses marges verticales sont négatives : sa boîte ne dépasse jamais la
+ *     hauteur d'une ligne, l'interligne ne change pas ;
+ *   - elle est plus étroite que le mot qu'elle remplace : le texte ne peut
+ *     que raccourcir.
+ */
+function lireIcone(texte) {
+    const m = /^\s*(hex|rond)\s+(#[0-9a-fA-F]{3,8})\s*$/.exec(texte || "")
+
+    return m ? { forme: m[1], couleur: m[2] } : null
+}
+
+/*
+ * Vrai si la couleur est sombre (le nombre s'écrit alors en blanc).
+ */
+function estSombre(couleur) {
+    let hex = couleur.slice(1)
+
+    if (hex.length < 6) {
+        hex = hex.slice(0, 3).split("").map(c => c + c).join("")
+    }
+
+    const [r, v, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16))
+
+    return 0.299 * r + 0.587 * v + 0.114 * b < 140
+}
+
+function IconeRemp({ icone, num, nom }) {
+    const sombre = estSombre(icone.couleur)
+
+    return (
+        <span
+            title={`${num} ${nom}`}
+            aria-label={`${num} ${nom}`}
+            style={{
+                display: "inline-block",
+                width: "1.35em",
+                height: "1.35em",
+                margin: "-0.35em 0.04em",
+                // centrée sur la hauteur des minuscules, un peu au-dessus de la ligne de base
+                verticalAlign: "-0.12em",
+                lineHeight: 1,
+            }}
+        >
+            <svg
+                viewBox="0 0 100 100"
+                style={{ display: "block", width: "100%", height: "100%" }}
+            >
+                {icone.forme === "rond"
+                    ? (
+                        <circle
+                            cx="50"
+                            cy="50"
+                            r="45"
+                            fill={icone.couleur}
+                            stroke="#000"
+                            strokeWidth="5"
+                        />
+                    )
+                    : (
+                        <polygon
+                            points="50,4 91,27 91,73 50,96 9,73 9,27"
+                            fill={icone.couleur}
+                            stroke="#000"
+                            strokeWidth="5"
+                            strokeLinejoin="round"
+                        />
+                    )}
+                <text
+                    x="50"
+                    y="52"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={String(num).length > 1 ? 46 : 60}
+                    fontWeight="700"
+                    fontFamily="Arial, sans-serif"
+                    fill={sombre ? "#fff" : "#000"}
+                >
+                    {num}
+                </text>
+            </svg>
         </span>
     )
 }

@@ -1,4 +1,5 @@
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { backgroundColor, backgroundColorFull } from "./ti5Const"
@@ -18,7 +19,7 @@ const typeLoi= {
     trai: "Traité"
 }
 
-class Classe extends ElementContent {
+class Classe extends aggregation(ElementContent, TypeLienCarac) {
     usage = ""
     type = "loi"
 }
@@ -70,6 +71,7 @@ function Form({ content, onChange, onSubmit,style}) {
     return (
         <>
             <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
+                <TypeLienForm content={content} onChange={onChange} />
                 <EnumInput onChange={onChange} name="type" value={content} enumClass={typeLoi} />
                 <EditorInput onChange={onChange} name="usage" value={content} />
 

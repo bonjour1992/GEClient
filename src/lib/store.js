@@ -7,11 +7,19 @@ export const useUser = create(
         (set) => ({
             login: "",
             token: "",
+            admin: false,
 
             setUser: (user, token) => {
                 set({
                     login: user.name,
+                    admin: user.data?.admin === true,
                     token
+                });
+            },
+
+            setAdmin: (admin) => {
+                set({
+                    admin
                 });
             },
 
@@ -24,7 +32,8 @@ export const useUser = create(
             logout: () => {
                 set({
                     login: "",
-                    token: ""
+                    token: "",
+                    admin: false
                 });
             }
         }),

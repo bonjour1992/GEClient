@@ -64,6 +64,7 @@ function Display({ content, style, context, explication }) {
         {content.elems && content.elems.map((e, i) =>
             <Sizer
                 key={i}
+                emplacement={e.id !== -1 ? "planete:" + i : undefined}
                 X={content.elemsX[i]}
                 Y={content.elemsY[i]}
                 size={content.elemsSize[i]} >
@@ -85,8 +86,10 @@ function Display({ content, style, context, explication }) {
     </div>)
 }
 
-function Sizer({ X, Y, size, children }) {
+// data-emplacement : repère de la planète pour l'engine (zone hex:<i>:planete:<k>)
+function Sizer({ X, Y, size, emplacement, children }) {
     return (<div
+        data-emplacement={emplacement}
         style={{
             position: "absolute",
             top: Y + "px",

@@ -17,7 +17,12 @@ export default function Admin() {
 
             const result = await fAPI.getUsers();
 
-            setUsers(result);
+            if (Array.isArray(result)) {
+                setUsers(result);
+            } else {
+                setUsers([]);
+                setError(result?.error || "Impossible de récupérer les utilisateurs.");
+            }
 
         } catch (e) {
 
@@ -40,6 +45,11 @@ export default function Admin() {
         try {
 
             const result = await fAPI.createInvite();
+
+            if (!result?.code) {
+                setError(result?.error || "Impossible de créer le code d'invitation.");
+                return;
+            }
 
             setInvite(result.code);
 

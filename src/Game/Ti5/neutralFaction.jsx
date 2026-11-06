@@ -2,6 +2,7 @@ import { ElementContent, Link } from "../../lib/datatype.js";
 import { turnNumber } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ColorInput } from "../../Input/ColorInput.jsx";
+import { ImagePicker } from "../../Input/ImagePicker.jsx";
 import { TableInput } from "../../Input/TableInput";
 import { Text } from "../../Component/Text.jsx";
 import { imgURL } from "../../lib/styleUtils.js";
@@ -10,6 +11,8 @@ import FormBase from "../../Input/FormBase"
 import { demiA4Pa } from "../../Component/Size.jsx";
 
 class FactionNeutre extends ElementContent {
+    // Icône de la faction neutre (affichée devant son nom)
+    logo = ""
     color = "#FFFFFF"
     units = new Array(3).fill(new Link("unit"))
     rules = new Array(4).fill(new Link("habilite"))
@@ -26,7 +29,7 @@ function Display({ content, style, context, explication }) {
             backgroundImage: imgURL("/ti/bg%20star.jpg"),
             ...demiA4Pa
         }}>
-        <Text text={content.name} style={{ marginLeft: 20, fontSize: 50, fontWeight: 1000 ,color:content.color}} />
+        <Text text={(content.logo ? "#img[" + content.logo + "]" : "") + content.name} style={{ marginLeft: 20, fontSize: 50, fontWeight: 1000 ,color:content.color}} />
 
         <div style={{
             display: "grid",
@@ -69,6 +72,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
 
             <ColorInput onChange={onChange} name={"color"} value={content} />
+            <ImagePicker onChange={onChange} name={"logo"} value={content} />
 
 
             <h2>Unités</h2>

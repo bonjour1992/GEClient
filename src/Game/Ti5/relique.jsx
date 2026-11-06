@@ -1,5 +1,6 @@
 import { EditorInput } from "../../Input/EditorInput"
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { Text } from "../../Component/Text"
 import { backgroundColorFull, borderColor } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
@@ -8,7 +9,7 @@ import { SmallPo } from "../../Component/Size"
 import { pub } from "../../lib/fetch"
 import { NumberInput } from "../../Input/NumberInput"
 
-class Habilite extends ElementContent {
+class Habilite extends aggregation(ElementContent, TypeLienCarac) {
 
     usage = ""
     coutAnc = 0
@@ -110,6 +111,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
+            <TypeLienForm content={content} onChange={onChange} />
 
             <EditorInput onChange={onChange} name="usage" value={content} label="Effet" />
             <NumberInput onChange={onChange} name="point" value={content} label="Point" />
