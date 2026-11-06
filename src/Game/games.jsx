@@ -16,6 +16,7 @@ import {
 
 import { Link } from '../lib/datatype'
 import { useLocation } from 'react-router'
+import { Handler } from './Escalade/Escalade'
 
 
 export const games = {
@@ -37,6 +38,11 @@ export const games = {
         tools: {},
         name: "Followyn JDR",
         pict: "/Followyn/theme-cover7.png"
+    },
+    "escalade":{
+        handlers: Handler,
+        tools:{},
+        name:"Escalade"
     }
 }
 

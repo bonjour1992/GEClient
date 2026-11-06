@@ -10,6 +10,8 @@ import LoreHandler from "./Lore"
 import ConditionHandler from "./Condition"
 import CompetenceHandler from "./Competence"
 import CharacterHandler from "./Character"
+import BlessureHandler from "./Blessure"
+
 
 export const Handler = {
 "attribut":AttributHandler,
@@ -23,6 +25,7 @@ export const Handler = {
 "objet":ObjetHandler,
 "lore":LoreHandler,
 "condition":ConditionHandler,
-"character:":CharacterHandler
+"character:":CharacterHandler,
+"blessure":BlessureHandler
 }
 

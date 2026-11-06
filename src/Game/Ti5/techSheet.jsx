@@ -118,7 +118,7 @@ function Connaissance({ content, LineNumber, explication, style }) {
                         borderBottomRightRadius: i === (LineNumber * (content.connaissanceReq || 8) - 1) ? 12 : 4,
                         lineHeight: (20 - (content.connaissanceReq || 8)) + "px"
                     }} >
-                        {i < techPoint(content) ? <span style={{ fontSize: (20 - (content.connaissanceReq || 8)) + "px", fontWeight: 700, color: "black" }}>X</span> : ""}
+                        {i < techPoint(content) ? <span style={{ lineHeight:0,fontSize: (20 - (content.connaissanceReq || 8)) + "px", fontWeight: 700, color: "black" }}>X</span> : ""}
                     </div>)
                 })}
             </div>

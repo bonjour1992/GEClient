@@ -84,5 +84,5 @@ function Form({ content, onChange, onSubmit,style}) {
 
 
 export default { name: "Objectif militaire", classe: Classe, form: Form, display: {default:Display,verso:Verso}, print:{
-    numPage:18,padding:14,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+    numPage:18,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
 } }

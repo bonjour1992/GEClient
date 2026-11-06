@@ -18,6 +18,7 @@ export const TechColor = {
     mil: { borderColor: "#FF0000", backgroundColor: "#FFCCCC" },
     gen: { borderColor: "#1a5b00", backgroundColor: "#CCFFCC" },
     storm: { borderColor: "#000000", backgroundColor: "#555555" },
+    sig:{borderColor: "#400369", backgroundColor: "#9360ce"}
 }
 
 
@@ -67,8 +68,8 @@ function Display({ content, context = { unlocked: false }, style, explication })
                 return (<div key={i} style={{
                     borderWidth: 2,
                     borderStyle: "solid",
-                    borderBottomLeftRadius: e === 0 ? 12 : 0,
-                    borderBottomRightRadius: e === 14 ? 12 : 0,
+                    borderBottomLeftRadius: e === 0 ? 10 : 0,
+                    borderBottomRightRadius: e === 14 ? 10 : 0,
                     ...TechColor[e < content.cout ? content.techType : "vide"],
                     color:"black",
                     fontSize:12,

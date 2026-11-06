@@ -17,8 +17,6 @@ function MercImage() {
     )
 }
 
-const bColor = "#000000"
-
 class Habilite extends ElementContent {
     sousTitre = ""
     usage = ""
