@@ -65,8 +65,11 @@ function Form({ content, onChange, onSubmit, style }) {
     )
 }
 
-// Verso des événements majeurs : fond rouge (les mineurs gardent le bleu nuit)
-const fondVersoMajeur = { backgroundColor: "#7a0000" }
+// Couleur de l'icône du verso : rouge pour les événements majeurs, or pour les mineurs
+const filtreIcone = {
+    min: "brightness(0) saturate(100%) invert(75%) sepia(100%)    saturate(800%) hue-rotate(5deg) brightness(110%)",
+    maj: "brightness(0) saturate(100%) invert(14%) sepia(99%) saturate(7404%) hue-rotate(4deg) brightness(97%) contrast(118%)",
+}
 
 function Verso({ content, explication, style = {} }) {
 
@@ -74,7 +77,7 @@ function Verso({ content, explication, style = {} }) {
     return (
         <div style={{
             ...PokerPa,
-            ...(content.type === "maj" ? fondVersoMajeur : backgroundColorFull),
+            ...backgroundColorFull,
             color: "white",
             ...style,
             position: "relative",
@@ -83,7 +86,7 @@ function Verso({ content, explication, style = {} }) {
             alignItems: "center",
             justifyContent: "center"
         }}>
-            <img src={pub + "/ti/Color/General Icons/Event.png"} height="120px"  style={{ filter: " brightness(0) saturate(100%) invert(75%) sepia(100%)    saturate(800%) hue-rotate(5deg) brightness(110%)" }}/>
+            <img src={pub + "/ti/Color/General Icons/Event.png"} height="120px"  style={{ filter: filtreIcone[content.type] || filtreIcone.min }}/>
 
         </div>
     )
