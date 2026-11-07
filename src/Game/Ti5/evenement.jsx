@@ -65,13 +65,16 @@ function Form({ content, onChange, onSubmit, style }) {
     )
 }
 
+// Verso des événements majeurs : fond rouge (les mineurs gardent le bleu nuit)
+const fondVersoMajeur = { backgroundColor: "#7a0000" }
+
 function Verso({ content, explication, style = {} }) {
 
 
     return (
         <div style={{
             ...PokerPa,
-            ...backgroundColorFull,
+            ...(content.type === "maj" ? fondVersoMajeur : backgroundColorFull),
             color: "white",
             ...style,
             position: "relative",
