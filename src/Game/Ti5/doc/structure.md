@@ -684,6 +684,11 @@ Table de la faction (`Component/Depart.jsx`, affichée au verso) : élément,
 nombre, destination (`main`, `actif`, `reserve`, `agents`, `espace`, `planete`).
 Chaque ligne crée ses composants dans la zone du joueur correspondante.
 
+### format des événements
+
+Cartes 88 × 63 mm en paysage (`PokerPa`, `Component/Size.jsx`), imprimées par 9
+sur A4 paysage.
+
 ### type de lien
 
 Champ `lienType` (`Component/TypeLien.jsx`) des feuilles de technologie, agendas,

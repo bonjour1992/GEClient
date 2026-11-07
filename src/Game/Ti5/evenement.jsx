@@ -4,7 +4,7 @@ import { Text } from "../../Component/Text"
 import { backgroundColor, backgroundColorFull, borderColor, police } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
-import { PokerPo } from "../../Component/Size"
+import { PokerPa } from "../../Component/Size"
 import { pub } from "../../lib/fetch"
 import { EnumInput } from "../../Input/EnumInput"
 
@@ -25,7 +25,7 @@ function Display({ content, explication, style ={}}) {
 
     return (
         <div style={{
-            ...PokerPo,
+            ...PokerPa,
             ...backgroundColor,
             boxSizing: "border-box",
             ...borderColor,
@@ -70,7 +70,7 @@ function Verso({ content, explication, style = {} }) {
 
     return (
         <div style={{
-            ...PokerPo,
+            ...PokerPa,
             ...backgroundColorFull,
             color: "white",
             ...style,
@@ -89,5 +89,5 @@ function Verso({ content, explication, style = {} }) {
 
 
 export default { name: "Evenement", classe: Habilite, form: Form, display: { default: Display,verso:Verso } ,print:{
-    numPage:9,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 portrait"
+    numPage:9,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
 } }
