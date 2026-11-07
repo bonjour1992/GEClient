@@ -7,6 +7,9 @@ export const SmallPo={width:165,height:256,boxSizing: "border-box",borderRadius:
 
 export const MiniPo={width:155,height:238,boxSizing: "border-box"}
 
+// Carte 63 x 88 mm (format poker), portrait : 3,78 px par mm
+export const PokerPo={width:238,height:333,boxSizing: "border-box",borderRadius: 12}
+
 export const A4Pa={width: 1124, height: 794,boxSizing: "border-box"}
 export const A4Po={width: 794, height: 1124,boxSizing: "border-box"}
 

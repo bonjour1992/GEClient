@@ -84,14 +84,12 @@ function ModalPicker({
     };
 
     const validate = () => {
-        if (
-            !selected ||
-            selected.id === -1
-        ) {
+        if (!selected) {
             close();
             return;
         }
 
+        // « Aucun » (id -1) est transmis aussi : il vide le champ
         onValidate(selected);
         close();
     };
@@ -408,7 +406,7 @@ export function ModalPickerEditorButton({ editor }) {
     return (
         <ModalPicker
             onValidate={(selected) => {
-                if (!editor || cursorPosition.current === null) {
+                if (!editor || cursorPosition.current === null || selected.id === -1) {
                     return;
                 }
 

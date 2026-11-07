@@ -240,6 +240,12 @@ export function lignesDepart(content) {
 // réserves communes. Sans ce champ, un élément est commun.
 const estCommun = contenu => (contenu?.lienType ?? "commun") === "commun";
 
+// Système hors du tirage au hasard (mise en place, « Générer » de l'éditeur,
+// tirage d'un système du plateau) : type de lien autre que « commun ». Sans
+// type de lien, l'ancien champ « special » fait foi.
+export const horsReserveCommune = contenu =>
+    contenu?.lienType ? contenu.lienType !== "commun" : contenu?.special === true;
+
 function melangerListe(liste, alea) {
 
     const resultat = [...liste];
@@ -373,7 +379,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
                 continue;
             }
 
-            const cible = systeme.content?.special === true ? speciales : reserve;
+            const cible = horsReserveCommune(systeme.content) ? speciales : reserve;
 
             for (let k = 0; k < exemplaires(systeme.content?.name); k++) {
                 cible.push(systeme.id);

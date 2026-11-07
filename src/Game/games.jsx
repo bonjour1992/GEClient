@@ -145,38 +145,44 @@ export function Displayeur({
     }, [location]);
 
 
+    // Mises à jour à partir de l'état précédent : plusieurs ajouts dans
+    // un même rendu s'accumulent dans l'ordre où ils sont cités (avec
+    // l'état courant, seul le dernier était gardé à chaque rendu, ce qui
+    // remplissait la liste à l'envers).
     let explicationBuilder = {
 
         addLien: function (elem) {
 
             elem.id &&
-            ajout.lien.filter(
-                (e) => e.id === elem.id
-            ).length === 0 &&
-            setAjout({
-                remp: ajout.remp,
-                lien: [
-                    ...ajout.lien,
-                    new Link(
-                        elem.type,
-                        elem.id
-                    )
-                ]
-            })
+            setAjout(prev =>
+                prev.lien.some((e) => e.id === elem.id)
+                    ? prev
+                    : {
+                        remp: prev.remp,
+                        lien: [
+                            ...prev.lien,
+                            new Link(
+                                elem.type,
+                                elem.id
+                            )
+                        ]
+                    })
         },
 
 
         addRemp: function (elemCode) {
 
             elemCode &&
-            ajout.remp.indexOf(elemCode) === -1 &&
-            setAjout({
-                lien: ajout.lien,
-                remp: [
-                    ...ajout.remp,
-                    elemCode
-                ]
-            })
+            setAjout(prev =>
+                prev.remp.includes(elemCode)
+                    ? prev
+                    : {
+                        lien: prev.lien,
+                        remp: [
+                            ...prev.remp,
+                            elemCode
+                        ]
+                    })
         }
     }
 

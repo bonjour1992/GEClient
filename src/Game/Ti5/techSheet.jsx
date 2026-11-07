@@ -131,7 +131,7 @@ function SmallDisplay({ content, explication, style = {} }) {
     const LineNumber = 7
 
     function TechDisplayeur({ i, style }) {
-        return (<div style={{ width: 225, height: 143, ...style }}>
+        return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: 143, ...style }}>
             {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
                 <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
         </div>)

@@ -17,6 +17,7 @@ import neutralFactionHandler from "./neutralFaction"
 import derouleHandler from "./deroule"
 import voteHandler from "./vote"
 import plateauHandler from "./plateau"
+import tokenHandler from "./token"
 import OutilParties from "./engine/Parties"
 
 
@@ -39,7 +40,8 @@ export const Handler = {
     "neutral": neutralFactionHandler,
     "deroule": derouleHandler,
     "vote": voteHandler,
-    "plateau":plateauHandler
+    "plateau":plateauHandler,
+    "token": tokenHandler
 }
 
 export const Tools = {

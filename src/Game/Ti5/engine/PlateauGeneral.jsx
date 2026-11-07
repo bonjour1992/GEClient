@@ -10,6 +10,7 @@ import {
     TREVE,
     casesRecrutement,
     actionsPiste,
+    horsReserveCommune,
 } from "./miseEnPlace";
 import { useElement, useElements } from "./sync";
 
@@ -131,7 +132,7 @@ export function Des({ nu }) {
     const systemes = useElements(tuiles.map(t => t.id));
 
     const candidats = tuiles.filter(t =>
-        systemes[t.id] && !systemes[t.id].special && systemes[t.id].anomaly !== "sup");
+        systemes[t.id] && !horsReserveCommune(systemes[t.id]) && systemes[t.id].anomaly !== "sup");
 
     // Dernier tirage d'un système : lisible tant que le plateau n'a pas changé
     const tirage = dernier && (dernier.coup.commentaire || "").startsWith(TIRAGE_SYSTEME);

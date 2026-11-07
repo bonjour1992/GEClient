@@ -5,6 +5,7 @@ import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { useSearch, getFromType } from "../../lib/store";
 import { getElement } from "../../lib/fetch";
 import { Link } from "../../lib/datatype";
+import { horsReserveCommune } from "./engine/miseEnPlace";
 import {
     nombreCases,
     distanceIndex,
@@ -198,7 +199,7 @@ export function Form({
 
                 const element = await getElement(systeme.id);
 
-                if (!element || element.content?.special === true) {
+                if (!element || horsReserveCommune(element.content)) {
                     continue;
                 }
 

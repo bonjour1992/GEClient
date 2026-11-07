@@ -1,4 +1,5 @@
-import { ElementContent, Link } from "../../lib/datatype"
+import { ElementContent, Link, aggregation } from "../../lib/datatype"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { NumberInput } from "../../Input/NumberInput"
 import { ModalPickerInput } from "../../Input/ModalPickerInput"
@@ -6,7 +7,6 @@ import { RangeInput } from "../../Input/RangeInput"
 import FormBase from "../../Input/FormBase"
 import { pub } from "../../lib/fetch"
 import { LoadAndDisplay } from "../../Component/LoadAndDisplay"
-import { BooleanInput } from "../../Input/BooleanInput"
 
 export const systemSize = {
     width: 339,
@@ -37,7 +37,9 @@ const anomalyPict = new Map([["ast", "/ti/system/asteroide.png"],
 
 ])
 
-class Classe extends ElementContent {
+// Type de lien : un système qui n'est pas « commun » est exclu du tirage au
+// hasard (remplace l'ancien booléen « special »).
+class Classe extends aggregation(ElementContent, TypeLienCarac) {
     anomaly = ""
     elems = new Array(3).fill(new Link("planet"))
     elemsX = new Array(3).fill(100)
@@ -45,7 +47,6 @@ class Classe extends ElementContent {
     elemsSize = new Array(3).fill(120)
     nativeUnit = new Link("unit")
     unitNum = 1
-    special = false
 }
 
 function Display({ content, style, context, explication }) {
@@ -104,7 +105,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-            <BooleanInput onChange={onChange} name="special" value={content} label="Special(exclure de la génération)?" />
+            <TypeLienForm content={content} onChange={onChange} />
             <EnumInput onChange={onChange} name="anomaly" value={content} enumClass={anomaly} aucun={true} />
             {[0, 1, 2].map(e => <div key={e}>
                 <ModalPickerInput onChange={onChange} label={"Element " + (e + 1)} name={"elems"} index={e} value={content} type={["planet"]} />

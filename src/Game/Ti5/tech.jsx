@@ -18,7 +18,8 @@ export const TechColor = {
     mil: { borderColor: "#FF0000", backgroundColor: "#FFCCCC" },
     gen: { borderColor: "#1a5b00", backgroundColor: "#CCFFCC" },
     storm: { borderColor: "#000000", backgroundColor: "#555555" },
-    sig:{borderColor: "#400369", backgroundColor: "#9360ce"}
+    sig:{borderColor: "#400369", backgroundColor: "#9360ce"},
+    rupt: { borderColor: "#7a0000", backgroundColor: "#d64545" }
 }
 
 

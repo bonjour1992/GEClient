@@ -1,4 +1,5 @@
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { TagInput } from "../../Input/TagInput"
 import { NumberInput } from "../../Input/NumberInput"
@@ -8,13 +9,10 @@ import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"
 import ReactDOMServer from "react-dom/server"
 import { MiniPa, SmallPa } from "../../Component/Size"
-import { backgroundColorFull, borderColor } from "./ti5Const"
+import { backgroundColorFull, borderColor, police } from "./ti5Const"
 import { backgroundColor } from "./ti5Const"
 import FormBase from "../../Input/FormBase"
 import { pub } from "../../lib/fetch"
-import { BooleanInput } from "../../Input/BooleanInput"
-import { ModalPickerInput } from "../../Input/ModalPickerInput"
-import { Link } from "../../lib/datatype"
 import { LoadAndDisplay } from "../../Component/LoadAndDisplay"
 import { Verso as MercVerso } from "./mercenaire"
 //TODO: gestion image  
@@ -54,7 +52,7 @@ const tag = {
 }
 
 
-class Ship extends ElementContent {
+class Ship extends aggregation(ElementContent, TypeLienCarac) {
     type = "inf"
     habilite = ""
     move
@@ -65,8 +63,13 @@ class Ship extends ElementContent {
     capacite
     PV = 1
     mot_cle = []
-    merc = false
-    faction = new Link("faction")
+}
+
+// Faction dont le logo est au verso : lien de type « faction »
+// (ancien champ « faction » pour les unités pas encore migrées).
+function factionDuVerso(content) {
+    if (content.lienType) return content.lienType === "faction" ? content.lienElement : null;
+    return content.faction;
 }
 
 
@@ -107,7 +110,7 @@ function Display({ content, explication, style }) {
                 src={pub + "/ti/unit_icon/" + content.type + ".png"} />
             <Text style={{
                 paddingLeft: 4,
-                fontSize: 16,
+                fontSize: police.titre,
                 fontWeight: "bold",
                 ...bottomBorder(2),
                 ...borderColor
@@ -124,7 +127,7 @@ function Display({ content, explication, style }) {
                 text={content.mot_cle?.reduce((res, e, k, { length }) => {
                     return res + ReactDOMServer.renderToStaticMarkup(<span key={e} >{tag[e] + (k === length - 1 ? "" : ", ")}</span>)
                 }, "")} />
-            <Text style={{ fontSize: 12, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
+            <Text style={{ fontSize: police.texte, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
             <Stat data={[content.cout, content.move, content.combat, content.capacite, content.PV]}
                 label={["Cout", "Mouvement", "Attaque", "Capacité", "Résistance"]}
                 mult={[content.prod, null, content.combat_touche]}
@@ -134,6 +137,7 @@ function Display({ content, explication, style }) {
 }
 
 function Verso({ content, explication, style }) {
+    const faction = factionDuVerso(content);
     return (<div
         style={{
             ...MiniPa,
@@ -142,7 +146,7 @@ function Verso({ content, explication, style }) {
             lineHeight: MiniPa.height + "px"
         }}
     >
-        {(content.faction && content.faction.id !== -1) ? <LoadAndDisplay link={content.faction} displayeur={"logo"} style={{
+        {(faction && faction.id !== -1) ? <LoadAndDisplay link={faction} displayeur={"logo"} style={{
             fontSize: 50,
             verticalAlign: "middle"
         }} /> : ""}
@@ -167,7 +171,7 @@ function NeutralUnit({ content, explication, style = {}, context = { num: 1 } })
             }}>
             <Text style={{
                 paddingLeft: 4,
-                fontSize: style.fontSize * 1.25 || 15,
+                fontSize: style.fontSize * 1.25 || police.titre,
                 fontWeight: "bold",
                 ...bottomBorder(style.borderWidth || 4),
                 ...borderColor
@@ -183,7 +187,7 @@ function NeutralUnit({ content, explication, style = {}, context = { num: 1 } })
                 text={content.mot_cle.reduce((res, e, k, { length }) => {
                     return res + ReactDOMServer.renderToStaticMarkup(<span key={e} >{tag[e] + (k === length - 1 ? "" : ", ")}</span>)
                 }, "")} />
-            <Text style={{ fontSize: style.fontSize || 12, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
+            <Text style={{ fontSize: style.fontSize || police.texte, paddingLeft: 2, lineHeight: 1.2 }} text={content.habilite} rule={explication} />
             <Stat data={[context.num, content.move, content.combat, content.PV]}
                 label={["Nombre", "Mouvement", "Attaque", "Résistance"]}
                 mult={[null, null, content.combat_touche]}
@@ -260,8 +264,7 @@ function Form({ content, onChange, onSubmit, style }) {
             <NumberInput onChange={onChange} name="PV" value={content} min={0} max={9} label="Résistance" />
             <br />
             <p>Verso</p>
-            <BooleanInput onChange={onChange} name="merc" value={content} label="Mercenaire" />
-            <ModalPickerInput onChange={onChange} name="faction" value={content} type={["faction"]} label="Faction" />
+            <TypeLienForm content={content} onChange={onChange} />
         </FormBase>
 
 

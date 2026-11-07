@@ -2,7 +2,7 @@ import { ElementContent, aggregation } from "../../lib/datatype"
 import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
-import { backgroundColor, backgroundColorFull } from "./ti5Const"
+import { backgroundColor, backgroundColorFull, police } from "./ti5Const"
 import { bottomBorder } from "../../Component/style"
 import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"
@@ -45,7 +45,7 @@ function Display({ content, style, explication }) {
                 ...bottomBorder(4),
                 paddingLeft: 4,
                 paddingRight: 4,
-                fontSize: 12,
+                fontSize: police.titre,
                 fontWeight: "bold",
                 textAlign: "center"
             }} text={content.name} />
@@ -59,7 +59,7 @@ function Display({ content, style, explication }) {
                  textAlign: "center"
             }}
                 text={typeLoi[content.type]} />
-            <Text style={{ fontSize: 10, paddingLeft: 2, paddingBottom: 2 }} text={content.usage} rule={explication} />
+            <Text style={{ fontSize: police.texte, paddingLeft: 2, paddingBottom: 2 }} text={content.usage} rule={explication} />
 
         </div>
 

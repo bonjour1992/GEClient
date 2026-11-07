@@ -71,7 +71,10 @@ function Feuille({ composant, base }) {
         return null;
     }
 
-    const Display = getHandler(jeu, "techsheet").display.default;
+    // Feuille « small » (ex. Signal, Tempête) : seules les cases 8 à 15 sont utilisées
+    const small = liens.every((lien, k) => (k >= 8 && k <= 15) || !lien || lien.id === -1);
+    const affichages = getHandler(jeu, "techsheet").display;
+    const Display = small && affichages.small ? affichages.small : affichages.default;
 
     const affiche = {
         ...contenu,

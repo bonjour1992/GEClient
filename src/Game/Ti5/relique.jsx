@@ -2,7 +2,7 @@ import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent, aggregation } from "../../lib/datatype"
 import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { Text } from "../../Component/Text"
-import { backgroundColorFull, borderColor } from "./ti5Const"
+import { backgroundColorFull, borderColor, police } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 import { SmallPo } from "../../Component/Size"
@@ -38,7 +38,7 @@ function Display({ content, explication, style = {} }) {
                 ...borderColor,
                 borderBottomWidth: style.borderWidth / 2 || 2,
                 paddingLeft: 4,
-                fontSize: 12,
+                fontSize: police.titreRelique,
                 fontWeight: "bold",
                 borderBottomStyle: "solid",
                 textAlign: "center",
@@ -62,7 +62,7 @@ function Display({ content, explication, style = {} }) {
                 {content.point}
             </div>
             <Text style={{
-                fontSize: style.fontSize || 10,
+                fontSize: style.fontSize || police.texte,
                 paddingLeft: 2,
                 paddingBottom: 2
             }} text={content.usage} rule={explication} />

@@ -1,4 +1,5 @@
-import { ElementContent, Link } from "../../lib/datatype"
+import { ElementContent, Link, aggregation } from "../../lib/datatype"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { TagInput } from "../../Input/TagInput"
 import { NumberInput } from "../../Input/NumberInput"
@@ -42,7 +43,9 @@ const stationType = {
     spe:"spécial"
 }
 
-class Classe extends ElementContent {
+// Type de lien en plus de homePlanet (planète natale : notion de jeu, gardée
+// en double avec le lien « faction »).
+class Classe extends aggregation(ElementContent, TypeLienCarac) {
     img = ""
     planetType = ""
     stationType = ""
@@ -209,6 +212,7 @@ function Form({ content, onChange, onSubmit, style }) {
                 <ModalPickerInput onChange={onChange} name={"homePlanet"} value={content} type={["faction"]} label="Systéme natal"/>
 
                 <br />
+                <TypeLienForm content={content} onChange={onChange} />
             </FormBase>
         </>
     )

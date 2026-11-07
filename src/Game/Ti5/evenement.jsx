@@ -1,10 +1,10 @@
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent } from "../../lib/datatype"
 import { Text } from "../../Component/Text"
-import { backgroundColor, backgroundColorFull, borderColor } from "./ti5Const"
+import { backgroundColor, backgroundColorFull, borderColor, police } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
-import { SmallPo } from "../../Component/Size"
+import { PokerPo } from "../../Component/Size"
 import { pub } from "../../lib/fetch"
 import { EnumInput } from "../../Input/EnumInput"
 
@@ -25,7 +25,7 @@ function Display({ content, explication, style ={}}) {
 
     return (
         <div style={{
-            ...SmallPo,
+            ...PokerPo,
             ...backgroundColor,
             boxSizing: "border-box",
             ...borderColor,
@@ -37,13 +37,13 @@ function Display({ content, explication, style ={}}) {
                 ...borderColor,
                 borderBottomWidth: style.borderWidth/2||2,
                 paddingLeft: 4,
-                fontSize: 12,
+                fontSize: police.titre,
                 fontWeight: "bold",
                 borderBottomStyle: "solid",
                 textAlign: "center"
             }} text={content.name} />
             <Text style={{
-                fontSize: style.fontSize||10,
+                fontSize: style.fontSize || police.texte,
                 paddingLeft: 2,
                 paddingBottom: 2
             }} text={content.usage} rule={explication} />
@@ -70,7 +70,7 @@ function Verso({ content, explication, style = {} }) {
 
     return (
         <div style={{
-            ...SmallPo,
+            ...PokerPo,
             ...backgroundColorFull,
             color: "white",
             ...style,
@@ -89,5 +89,5 @@ function Verso({ content, explication, style = {} }) {
 
 
 export default { name: "Evenement", classe: Habilite, form: Form, display: { default: Display,verso:Verso } ,print:{
-    numPage:18,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
+    numPage:9,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 portrait"
 } }

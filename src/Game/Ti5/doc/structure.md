@@ -266,7 +266,7 @@ Chaque joueur reçoit une version filtrée d'un coup :
 
 1. Carte : une tuile système par case `select` du plateau, avec sa rotation. Les
    cases `hasard` reçoivent un système tiré au sort, comme le bouton « Générer »
-   de l'éditeur (systèmes spéciaux exclus).
+   de l'éditeur (systèmes dont le type de lien n'est pas `commun` exclus).
 2. Natals : les cases `natal` sont attribuées aux joueurs dans l'ordre des sièges ;
    le système de la faction (`faction.system`) y est posé.
    Chaque système posé amène ses unités natives (`nativeUnit` × `unitNum` du
@@ -687,8 +687,12 @@ Chaque ligne crée ses composants dans la zone du joueur correspondante.
 ### type de lien
 
 Champ `lienType` (`Component/TypeLien.jsx`) des feuilles de technologie, agendas,
-promesses, reliques et mercenaires : `commun`, `faction`, `neutre`, `evenement`
-(avec `lienElement`) ou `special` (lié à rien). Un élément qui n'est pas commun
+promesses, reliques, mercenaires, unités, systèmes et planètes : `commun`, `faction`, `neutre`, `evenement`,
+`mercenaire` (avec `lienElement`) ou `special` (lié à rien). Pour une unité, il
+remplace les anciens champs `merc` et `faction` : le verso montre le logo de la
+faction liée. Pour un système, il remplace l'ancien booléen `special` : un
+système non commun est exclu du tirage au hasard (`horsReserveCommune`,
+`engine/miseEnPlace.js`). Une planète garde `homePlanet` en plus du lien. Un élément qui n'est pas commun
 est écarté des pioches et
 de la réserve de promesses ; une feuille de technologie liée à une faction ne
 va qu'à cette faction. Sans ce champ, un élément est commun. Non affiché.

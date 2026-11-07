@@ -25,6 +25,7 @@ export const typeLien = {
     faction: "Lié à une faction",
     neutre: "Lié à une faction neutre",
     evenement: "Lié à un événement",
+    mercenaire: "Lié à un mercenaire",
     // Lié à rien, mais écarté de la réserve commune
     special: "Spécial (hors réserve commune)",
 };
@@ -34,6 +35,7 @@ const typeElementLie = {
     faction: "faction",
     neutre: "neutral",
     evenement: "evenement",
+    mercenaire: "mercenaire",
 };
 
 export class TypeLienCarac {
