@@ -872,7 +872,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const systeme = useElement(id);
 
-    // Combats : ce lieu s'ajoute aux combats de l'onglet Combat, pour toute
+    // Combats : ce lieu s'ajoute aux combats de l'onglet Conflit, pour toute
     // la table. Envoyé tout de suite, comme toute action.
     //   "<i>" combat spatial, "<i>c" canons spatiaux,
     //   "<i>p<k>" combat terrestre, "<i>p<k>b" bombardement

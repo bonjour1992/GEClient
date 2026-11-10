@@ -1,4 +1,4 @@
-# combats (onglet Combat)
+# combats (onglet Conflit)
 
 L'engine ne juge pas les règles : il affiche, lance les dés et laisse les
 joueurs répartir les dégâts. Code : `engine/Combat.jsx`.

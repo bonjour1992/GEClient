@@ -61,6 +61,7 @@ import { Transaction, Transactions, transactionsEnAttente } from "./Transaction"
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
 import { Combat, combatsEnCours, aDesUnites, COULEUR_COMBAT } from "./Combat";
+import { passagesEnCours } from "./Blocage";
 import { EnvoyerVers, MontrerA } from "./Envoi";
 import { Notes } from "./Notes";
 import { quiVoit } from "./etat";
@@ -75,7 +76,7 @@ import { quiVoit } from "./etat";
 
 const ONGLETS = [
     ["espace", "Espace"],
-    ["combat", "Combat"],
+    ["combat", "Conflit"],
     ["joueur", "Plateau joueur"],
     ["tech", "Technologie"],
     ["general", "Plateau général"],
@@ -177,7 +178,7 @@ export function Partie({ id }) {
     // Nombre de propositions à piocher (phase de proposition)
     const [nbPropositions, setNbPropositions] = useState(1);
 
-    // Combat affiché dans l'onglet Combat (case du système)
+    // Combat affiché dans l'onglet Conflit (case du système)
     const [combatVu, setCombatVu] = useState(null);
 
     // En-tête et bandeau « À faire » repliables (gardé dans le navigateur)
@@ -303,18 +304,20 @@ export function Partie({ id }) {
         aviser: setAvis,
         scriptsDesactives,
 
-        // Change d'onglet (un système envoyé au combat ouvre l'onglet Combat),
+        // Change d'onglet (un système envoyé au combat ouvre l'onglet Conflit),
         // et combat affiché dans cet onglet (case du système)
         allerA: setOnglet,
         combatVu,
         setCombatVu,
     };
 
-    // Combats en cours : l'onglet Combat est mis en avant, d'une couleur
-    // différente selon que j'y ai des unités ou non
+    // Combats et blocages de déplacement en cours : l'onglet Conflit est mis
+    // en avant, d'une couleur différente selon que j'y ai des unités ou non
     const combats = combatsEnCours(etat);
-    const combatEnCours = combats.length > 0;
-    const combatAvecMoi = combats.some(n => aDesUnites(index, n, moi));
+    const passages = passagesEnCours(etat);
+    const combatEnCours = combats.length + passages.length > 0;
+    const combatAvecMoi = combats.some(n => aDesUnites(index, n, moi)) ||
+        passages.some(p => p.mover === moi || aDesUnites(index, String(p.numero), moi));
 
     // Encaissement des faveurs : l'onglet Faveurs n'apparaît qu'à la phase
     // d'événement d'un tour qui en prévoit
@@ -352,7 +355,7 @@ export function Partie({ id }) {
 
     if (etat.tour > 0 && etat.phase) {
         if (/combat|canon|bombard/i.test(etat.phase) && combatEnCours) {
-            blocage = `${combats.length} combat(s) encore en cours : les terminer (onglet Combat)`;
+            blocage = `${combats.length} combat(s) encore en cours : les terminer (onglet Conflit)`;
         } else if (faveurs.attendu) {
             blocage = "Les faveurs de ce tour ne sont pas encaissées (onglet Faveurs)";
         }
@@ -1241,7 +1244,7 @@ export function Partie({ id }) {
                                         border: onglet === cle ? "3px solid #ff9800" : "1px solid #555",
                                         borderRadius: 5,
                                         // Messages non lus : l'onglet Chat est mis en avant ;
-                                        // combat en cours : l'onglet Combat
+                                        // combat ou blocage en cours : l'onglet Conflit
                                         backgroundColor:
                                             (cle === "chat" && messagesNonLus) ? "#ffe082"
                                                 : (cle === "combat" && combatEnCours)
@@ -1252,7 +1255,7 @@ export function Partie({ id }) {
                                                             : undefined,
                                     }}
                                 >
-                                    {libelle}{cle === "combat" && combatEnCours ? ` (${combats.length})` : ""}
+                                    {libelle}{cle === "combat" && combatEnCours ? ` (${combats.length + passages.length})` : ""}
                                     {cle === "transactions" && transactionsEnCours.length > 0
                                         ? ` (${transactionsEnCours.length})`
                                         : ""}

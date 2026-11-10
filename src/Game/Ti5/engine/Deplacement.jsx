@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, nomElement } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
+import {
+    TRAJET, DEPART, useCarte, sorteEtape, sorteJet, campsAdverses, rangArret, passagesEnCours, Passage,
+} from "./Blocage";
 
 // ============================================================
 // DÉPLACEMENT ASSISTÉ (onglet Espace, phase de déplacement)
@@ -23,13 +26,15 @@ import { MARQUEUR } from "./miseEnPlace";
 //      case en case). Deux cases se suivent si elles sont voisines ou
 //      si elles ont un trou de ver de la même catégorie (carte du
 //      système ou token posé) ;
-//   5. le blocage, case par case : chaque vaisseau peut s'arrêter sur
-//      une case du trajet. Rupture gravitationnelle quittée par un
-//      bord et trou de ver oméga : un jet par vaisseau ;
-//   6. « Déplacer » : rouge gris si quelque chose cloche (mouvement
+//   5. « Partir » : rouge gris si quelque chose cloche (mouvement
 //      dépassé, agents manquants, trajet qui ne mène pas au système
-//      activé…) ; le coût du trajet est alors écrit en rouge au journal.
-//      Un système où des vaisseaux se sont arrêtés est activé à son tour.
+//      activé…) ; le coût du trajet est alors écrit en rouge au journal ;
+//   6. le blocage, case par case (Blocage.jsx) : les vaisseaux vont
+//      d'un coup jusqu'à la première case à risque — unités militaires
+//      spatiales d'un autre camp, rupture gravitationnelle, trou de ver
+//      oméga — ou jusqu'à l'arrivée. Sur une case à risque, le
+//      déplacement se poursuit dans le cadre « Déplacements en cours »
+//      (ici et dans l'onglet Conflit).
 //
 // useDeplacement est appelé par Espace.jsx, qui affiche le panneau,
 // transmet les clics sur les cases et dessine le trajet (decor).
@@ -67,14 +72,11 @@ const ANOMALIES = {
 
 const NOMS_TROU = { alpha: "alpha", beta: "bêta", gamma: "gamma", delta: "delta", omega: "oméga" };
 
-// Catégorie d'un trou de ver, d'après son image (/ti/icon/wormhole/alpha.png)
-const typeTrou = image => /wormhole\/(\w+)\./.exec(image || "")?.[1] || null;
-
 const styleMini = { fontSize: 12, padding: "1px 6px" };
 
-export function useDeplacement({ tuiles, systemes }) {
+export function useDeplacement({ tuiles }) {
 
-    const { etat, index, envoyer, joueur, moi, search, signaler, aviser, nomDe } = useEngine();
+    const { etat, index, envoyer, joueur, moi, search, aviser, nomDe } = useEngine();
 
     const enPhase = /d[ée]placement/i.test(etat.phase);
 
@@ -85,32 +87,20 @@ export function useDeplacement({ tuiles, systemes }) {
     const [choisis, setChoisis] = useState([]);     // vaisseaux qui partent
     const [charges, setCharges] = useState([]);     // unités transportables à charger
     const [trajet, setTrajet] = useState([]);       // cases traversées, après le départ
-    const [arrets, setArrets] = useState({});       // vaisseau -> case où il s'arrête
-    const [jets, setJets] = useState(null);         // { cle, parVaisseau }
 
     const actif = joueur && ouvert && (enPhase || depart !== null);
 
     // --------------------------------------------------------
-    // CARTE : trous de ver, anomalies, systèmes activés
+    // CARTE : trous de ver, anomalies, unités des cases du trajet
+    // (Blocage.jsx), systèmes activés
     // --------------------------------------------------------
 
-    const idsPlanetes = [...new Set(Object.values(tuiles).flatMap(t =>
-        (systemes[t.ref.id]?.elems || []).map(lien => Number(lien?.id)).filter(id => id > 0)))];
+    const carte = useCarte(actif && depart !== null ? [depart, ...trajet] : []);
 
-    const planetes = useElements(actif ? idsPlanetes : []);
+    const anomalie = carte.anomalie;
 
-    const tokens = Object.values(etat.composants)
-        .filter(c => !c.cache && c.ref?.type === "token" && /^hex:\d+$/.test(c.zone || ""));
-
-    const contenusTokens = useElements(actif ? [...new Set(tokens.map(c => c.ref.id))] : []);
-
-    // Catégories de trou de ver d'une case : celles de sa tuile et des tokens posés dessus
-    const trous = i => new Set([
-        ...(systemes[tuiles[i]?.ref.id]?.elems || []).map(lien => typeTrou(planetes[lien?.id]?.img)),
-        ...tokens.filter(c => c.zone === "hex:" + i).map(c => typeTrou(contenusTokens[c.ref.id]?.img)),
-    ].filter(Boolean));
-
-    const anomalie = i => systemes[tuiles[i]?.ref.id]?.anomaly || "";
+    // Mes vaisseaux en route (déplacement commencé, arrêté sur une case à risque)
+    const enRoute = passagesEnCours(etat).filter(p => p.mover === moi);
 
     // Mes systèmes activés (mon marqueur de faction dans l'espace du système), le dernier en dernier
     const mesMarqueurs = Object.values(etat.composants)
@@ -135,7 +125,8 @@ export function useDeplacement({ tuiles, systemes }) {
 
     const aMot = (c, mot) => !!contenus[c.ref.id]?.mot_cle?.includes(mot);
 
-    const vaisseaux = miennes.filter(c => c.zone === zoneDepart && !c.sur && aMot(c, "ship"));
+    // (un vaisseau déjà en route ne repart pas)
+    const vaisseaux = miennes.filter(c => c.zone === zoneDepart && !c.sur && aMot(c, "ship") && !c.marques?.[TRAJET]);
     const selection = vaisseaux.filter(c => choisis.includes(c.id));
 
     // Unités transportables du système qui ne sont pas déjà dans un vaisseau qui part
@@ -197,61 +188,30 @@ export function useDeplacement({ tuiles, systemes }) {
     // Étapes : { de, a, sorte } — "bord" (cases voisines), "trou:<catégorie>", ou "saut"
     const etapes = trajet.map((a, k) => {
         const de = k === 0 ? depart : trajet[k - 1];
-        const commun = [...trous(de)].find(t => trous(a).has(t));
 
-        return { de, a, sorte: distanceCases(de, a) === 1 ? "bord" : (commun ? "trou:" + commun : "saut") };
+        return { de, a, sorte: sorteEtape(carte, de, a) };
     });
 
     const arrivee = trajet.length ? trajet[trajet.length - 1] : null;
 
-    // Jets à faire, dans l'ordre du trajet : rupture quittée par un bord, trou de ver oméga
-    const evenements = etapes
-        .map((e, k) => (e.sorte === "bord" && anomalie(e.de) === "rift"
-            ? { k, sorte: "rift", ou: e.de }
-            : (e.sorte === "trou:omega" ? { k, sorte: "omega", ou: e.de } : null)))
-        .filter(Boolean);
+    // Risques de blocage, case par case : chaque case que l'on quitte (le
+    // départ, puis chaque case avant l'arrivée)
+    //   { ou, camps: unités militaires spatiales d'un autre camp, jet: "rift", "omega" ou null }
+    const risques = etapes
+        .map(e => ({ ou: e.de, camps: campsAdverses(carte, e.de, moi), jet: sorteJet(carte, e.de, e.a) }))
+        .filter(r => r.camps.length > 0 || r.jet);
 
-    const cleJets = [depart, trajet.join(">"), selection.map(c => c.id).join(",")].join("|");
-    const tirages = jets?.cle === cleJets ? jets.parVaisseau : null;
+    // Mouvement d'un vaisseau : chaque rupture gravitationnelle franchie donne 1 de plus
+    const ruptures = risques.filter(r => r.jet === "rift").length;
+    const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures;
 
-    // Où s'arrête un vaisseau : rang dans le trajet (-1 : il reste au départ ; dernier rang : il arrive)
-    const rangArret = v => {
-
-        // (un arrêt choisi sur une case qui n'est plus sur le trajet est oublié)
-        const manuel = arrets[v.id];
-        const valide = manuel !== undefined && (manuel === depart || trajet.slice(0, -1).includes(manuel));
-        const rangManuel = !valide ? trajet.length - 1 : (manuel === depart ? -1 : trajet.indexOf(manuel));
-
-        return Math.min(rangManuel, tirages?.[v.id]?.arret ?? trajet.length - 1);
-    };
-
-    const caseArret = v => (rangArret(v) < 0 ? depart : trajet[rangArret(v)]);
-    const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + (tirages?.[v.id]?.bonus || 0);
-
-    // Autres unités d'une case : celles d'un autre joueur, ou neutres
-    const presence = i => {
-
-        const autres = (index.parZone.get("hex:" + i) || [])
-            .filter(c => c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio) !== moi);
-
-        const parCamp = new Map();
-
-        for (const c of autres) {
-            const camp = c.marques?.possession ?? c.proprio ?? null;
-            parCamp.set(camp, (parCamp.get(camp) || 0) + 1);
-        }
-
-        return [...parCamp].map(([camp, n]) => `${n} ${camp === null ? "neutre" + (n > 1 ? "s" : "") : "de " + nomDe(camp)}`).join(", ");
-    };
-
-    // Cases où un vaisseau peut être bloqué ou arrêté : le départ, puis chaque case avant l'arrivée
-    const casesArret = depart === null ? [] : [depart, ...trajet.slice(0, -1)];
+    const nomCamp = camp => (camp ? nomDe(camp) : "neutres");
 
     // --------------------------------------------------------
     // CE QUI CLOCHE (le bouton devient rouge gris, le coup reste possible)
     // --------------------------------------------------------
 
-    const partent = selection.filter(v => rangArret(v) >= 0);
+    const partent = selection;
 
     const obstacles = [
         !enPhase && "ce n'est pas la phase de déplacement",
@@ -266,13 +226,13 @@ export function useDeplacement({ tuiles, systemes }) {
             .map(i => `${nomCase(i)} : une nébuleuse met fin au mouvement de qui y entre`),
         depart !== null && anomalie(depart) === "neb" && etapes.length > 1 && etapes[0].sorte === "bord" &&
             "quitter une nébuleuse par un bord met fin au mouvement à la case suivante",
-        ...partent.filter(v => rangArret(v) + 1 > mouvement(v))
-            .map(v => `${nom(v)} dépasse son mouvement (${mouvement(v)} pour ${rangArret(v) + 1} case${rangArret(v) > 0 ? "s" : ""})`),
+        ...partent.filter(v => trajet.length > mouvement(v))
+            .map(v => `${nom(v)} dépasse son mouvement (${mouvement(v)}${ruptures ? ", ruptures franchies comprises," : ""} pour ${trajet.length} case${trajet.length > 1 ? "s" : ""})`),
         ...besoins.filter(b => b.dispo.length < b.cout)
             .map(b => `il faut ${b.cout} ${b.cout > 1 ? b.pluriel : b.nom}, ${b.dispo.length} disponible(s) : ` +
                 (b.dispo.length ? `seuls ceux-là seront ${depuisActive ? "dépensés" : "utilisés"}` : "aucun agent ne sera pris")),
         sansPlace > 0 && `${sansPlace} unité(s) chargée(s) au-delà de la capacité des vaisseaux`,
-        evenements.length > 0 && !tirages && "les jets de rupture gravitationnelle ou de trou de ver oméga ne sont pas lancés",
+        !carte.pret && "la carte du trajet n'est pas encore chargée (les risques de blocage ne sont pas connus)",
     ];
 
     // --------------------------------------------------------
@@ -284,67 +244,18 @@ export function useDeplacement({ tuiles, systemes }) {
         setChoisis([]);
         setCharges([]);
         setTrajet([]);
-        setArrets({});
-        setJets(null);
         setMode(nouveauDepart === null ? null : "trajet");
     }
 
-    // Un jet de 10 par vaisseau et par événement (le serveur lance les dés)
-    async function lancerJets() {
-
-        const r = await envoyer(
-            [{ type: "des", n: evenements.length * selection.length, faces: 10 }],
-            `Déplacement : jets de ${[...new Set(evenements.map(e => (e.sorte === "rift" ? "rupture gravitationnelle" : "trou de ver oméga")))].join(" et de ")}`
-        );
-
-        const des = [...(r?.coups || [])]
-            .sort((a, b) => b.n - a.n)
-            .find(c => c.auteur === moi)?.actions.find(a => a.type === "des")?.resultats;
-
-        if (!Array.isArray(des) || des.length !== evenements.length * selection.length) {
-            signaler("Déplacement : les jets n'ont pas pu être lus. Réessayez.");
-            return;
-        }
-
-        const parVaisseau = {};
-
-        selection.forEach((v, s) => {
-
-            const bilan = { arret: trajet.length - 1, bonus: 0, touches: 0, detail: [] };
-
-            evenements.forEach((e, k) => {
-
-                const de = des[k * selection.length + s];
-
-                // Déjà arrêté avant cette étape : le jet ne compte pas
-                if (bilan.arret < e.k) {
-                    return;
-                }
-
-                if (de <= 3) {
-                    bilan.arret = e.k - 1;
-                    bilan.detail.push(`${de} : bloqué ${nomCase(e.ou)}`);
-                } else if (e.sorte === "rift") {
-                    bilan.bonus++;
-                    bilan.detail.push(`${de} : rupture franchie, +1 mouvement`);
-                } else if (de >= 9) {
-                    bilan.touches++;
-                    bilan.detail.push(`${de} : passe, 1 touche`);
-                } else {
-                    bilan.detail.push(`${de} : passe`);
-                }
-            });
-
-            parVaisseau[v.id] = bilan;
-        });
-
-        setJets({ cle: cleJets, parVaisseau });
-    }
-
-    function deplacer(commentaire) {
+    // Départ : agents, chargement, puis les vaisseaux vont jusqu'à la première
+    // case à risque (ils y gardent leur trajet restant : Blocage.jsx prend la
+    // suite), ou jusqu'à l'arrivée s'il n'y en a pas
+    function partir(commentaire) {
 
         const uses = `joueur:${moi}:agentsUses`;
-        const arretes = [...new Set(partent.map(caseArret).filter(i => i !== destination && i !== depart && !activees.includes(i)))];
+
+        const k = rangArret(carte, moi, depart, trajet, false);
+        const reste = trajet.slice(k + 1);
 
         envoyer([
             // Agents : utilisés, ou dépensés si le système de départ est déjà activé
@@ -352,24 +263,17 @@ export function useDeplacement({ tuiles, systemes }) {
                 ? { type: "supprimer", c: agent.id }
                 : { type: "deplacer", c: agent.id, vers: uses }))),
             // Chargement, avant le départ : les unités suivent leur vaisseau
-            ...chargement.filter(x => partent.includes(x.vaisseau))
-                .map(x => ({ type: "deplacer", c: x.unite.id, sur: x.vaisseau.id })),
-            ...partent.map(v => ({ type: "deplacer", c: v.id, vers: "hex:" + caseArret(v), de: zoneDepart })),
-            // Touches du trou de ver oméga
-            ...partent.filter(v => tirages?.[v.id]?.touches).map(v => ({
-                type: "marquer",
-                c: v.id,
-                marque: "degat",
-                valeur: (Number(v.marques?.degat) || 0) + tirages[v.id].touches,
-            })),
-            // Un système où des vaisseaux se sont arrêtés est activé à son tour
-            ...arretes.map(i => ({ type: "creer", jeton: MARQUEUR, zone: "hex:" + i, proprio: moi })),
+            ...chargement.map(x => ({ type: "deplacer", c: x.unite.id, sur: x.vaisseau.id })),
+            ...partent.flatMap(v => [
+                k >= 0 && { type: "deplacer", c: v.id, vers: "hex:" + trajet[k], de: zoneDepart },
+                reste.length > 0 && { type: "marquer", c: v.id, marque: TRAJET, valeur: reste.join(">") },
+                reste.length > 0 && { type: "marquer", c: v.id, marque: DEPART, valeur: "c" + depart },
+            ]),
         ], commentaire);
 
-        if (arretes.length) {
-            aviser(`Des vaisseaux se sont arrêtés ${arretes.map(nomCase).join(", ")} : système activé. ` +
-                `Faites-y vos déplacements, puis revenez à ${nomCase(destination)} (boutons « Systèmes activés »).`);
-            setCible(arretes[0]);
+        if (reste.length) {
+            aviser(`Risque de blocage ${nomCase(k < 0 ? depart : trajet[k])} : le déplacement s'y poursuit, ` +
+                "dans le cadre « Déplacements en cours » (ici, et dans l'onglet Conflit).");
         }
 
         reinitialiser();
@@ -455,7 +359,7 @@ export function useDeplacement({ tuiles, systemes }) {
     const basculer = (liste, setListe, id) =>
         setListe(liste.includes(id) ? liste.filter(x => x !== id) : [...liste, id]);
 
-    const panneau = joueur && (enPhase || depart !== null) && (
+    const panneau = joueur && (enPhase || depart !== null || enRoute.length > 0) && (
         <div
             data-panneau-deplacement
             style={{
@@ -504,6 +408,9 @@ export function useDeplacement({ tuiles, systemes }) {
                     )}
                 </>)}
             </div>
+
+            {/* Mes vaisseaux en route, arrêtés sur une case à risque (aussi dans l'onglet Conflit) */}
+            {enRoute.map(p => <Passage key={p.cle} passage={p} />)}
 
             {ouvert && depart !== null && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 6 }}>
@@ -581,47 +488,21 @@ export function useDeplacement({ tuiles, systemes }) {
                         </span>
                     </div>
 
-                    {/* BLOCAGE ET ARRÊTS */}
+                    {/* RISQUES DE BLOCAGE, case par case */}
                     {selection.length > 0 && trajet.length > 0 && (
-                        <div data-arrets>
-                            <b>Blocage, case par case</b> : {casesArret.filter(i => presence(i)).length === 0
-                                ? <i>aucune autre unité sur le trajet.</i>
-                                : casesArret.filter(i => presence(i)).map(i => (
-                                    <span key={i} style={{ marginRight: 10, color: "#a15c00" }}>{nomCase(i)} : {presence(i)}</span>
+                        <div data-risques>
+                            <b>Risques de blocage</b> : {risques.length === 0
+                                ? <i>aucun, les vaisseaux iront d'un coup à l'arrivée.</i>
+                                : risques.map((r, k) => (
+                                    <span key={k} style={{ marginRight: 10, color: "#a15c00" }}>
+                                        {nomCase(r.ou)} : {[
+                                            ...r.camps.map(a => `${a.controle} unité(s) militaire(s) ${a.camp ? "de " : ""}${nomCamp(a.camp)}`),
+                                            r.jet === "rift" && "rupture gravitationnelle (jets)",
+                                            r.jet === "omega" && "trou de ver oméga (jets)",
+                                        ].filter(Boolean).join(", ")}
+                                    </span>
                                 ))}
-
-                            {evenements.length > 0 && (
-                                <span style={{ marginLeft: 8 }}>
-                                    <button type="button" data-action="jets-deplacement" style={{ ...styleMini, fontWeight: "bold" }} onClick={lancerJets}>
-                                        {tirages ? "Relancer les jets" : "Lancer les jets"} ({evenements.map(e => (e.sorte === "rift" ? "rupture" : "oméga") + " " + nomCase(e.ou)).join(", ")})
-                                    </button>
-                                </span>
-                            )}
-
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 14px", marginTop: 2 }}>
-                                {selection.map(v => (
-                                    <label key={v.id}>
-                                        {nom(v)} :{" "}
-                                        <select
-                                            value={arrets[v.id] ?? ""}
-                                            onChange={e => setArrets({ ...arrets, [v.id]: e.target.value === "" ? undefined : Number(e.target.value) })}
-                                        >
-                                            <option value="">va jusqu'au bout</option>
-                                            {casesArret.map((i, k) => (
-                                                <option key={k} value={i}>
-                                                    {i === depart ? "reste au départ (bloqué)" : `s'arrête ${nomCase(i)}`}{presence(i) ? " ⚠" : ""}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {tirages?.[v.id]?.detail.length > 0 && (
-                                            <span style={{ color: "#6a1b9a" }}> jets : {tirages[v.id].detail.join(" ; ")}</span>
-                                        )}
-                                        {rangArret(v) >= 0 && rangArret(v) + 1 > mouvement(v) && (
-                                            <b style={{ color: "#b71c1c" }}> mouvement dépassé</b>
-                                        )}
-                                    </label>
-                                ))}
-                            </div>
+                            {risques.length > 0 && <i> Les vaisseaux s'arrêteront à chacune de ces cases, le temps de résoudre le blocage.</i>}
                         </div>
                     )}
 
@@ -632,11 +513,11 @@ export function useDeplacement({ tuiles, systemes }) {
                             nom={`Déplacement ${nomCase(depart)} → ${arrivee === null ? "?" : nomCase(arrivee)} : ` +
                                 `${partent.length} vaisseau${partent.length > 1 ? "x" : ""}, trajet de ${trajet.length}`}
                             obstacles={obstacles}
-                            faire={deplacer}
-                            title="Utilise les agents, charge les unités et déplace les vaisseaux en un seul coup"
+                            faire={partir}
+                            title="Utilise les agents, charge les unités et fait partir les vaisseaux : jusqu'à la première case à risque de blocage, ou jusqu'à l'arrivée"
                             style={{ padding: "3px 14px" }}
                         >
-                            Déplacer {partent.length} vaisseau{partent.length > 1 ? "x" : ""}
+                            {risques.length ? "Faire partir" : "Déplacer"} {partent.length} vaisseau{partent.length > 1 ? "x" : ""}
                         </BoutonRegle>
                         {obstacles.filter(Boolean).length > 0 && partent.length > 0 && trajet.length > 0 && (
                             <span style={{ marginLeft: 8, color: "#b71c1c" }}>{obstacles.filter(Boolean).join(" ; ")}</span>

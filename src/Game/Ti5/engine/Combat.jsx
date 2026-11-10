@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useEngine, nomElement, nomCase, distanceCases, DORE } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
+import { Blocages } from "./Blocage";
 
 // ============================================================
-// ONGLET COMBAT (combat spatial)
+// ONGLET CONFLIT : les combats, et les blocages de déplacement
+// (Blocage.jsx) au-dessus
 //
 // Plusieurs combats peuvent être en cours : le compteur
 // combat:<i> vaut 1 pour chaque système (case i) où l'on se bat,
@@ -172,6 +174,7 @@ export function Combat() {
     if (!combats.length) {
         return (
             <div style={{ padding: 8, color: "#444" }}>
+                <Blocages />
                 Aucun combat en cours. Dans l'onglet Espace, ouvrir la fiche d'un système :
                 « Combat spatial » ou « Canons spatiaux » pour le système, « Combat terrestre »
                 ou « Bombardement » à côté d'une planète.
@@ -186,6 +189,8 @@ export function Combat() {
 
     return (
         <div>
+            <Blocages />
+
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                 {combats.map((n, k) => {
                     const avecMoi = aDesUnites(index, n, moi);

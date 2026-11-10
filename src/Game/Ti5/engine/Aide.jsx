@@ -66,7 +66,7 @@ const MODE_EMPLOI = [
     ]],
     ["Onglets", [
         "Espace : la carte. Clic sur un système : ses unités par emplacement, prendre possession d'une planète ou la revendiquer, réparer (1 ressource par dégât), ouvrir un combat, et les actions de la phase.",
-        "Combat : un sous-onglet par combat (spatial, canons, terrestre, bombardement). Cocher ses unités, « Engager » ou « Cibler », « Prêt au combat » ; glisser chaque dégât rouge sur l'unité touchée.",
+        "Conflit : un sous-onglet par combat (spatial, canons, terrestre, bombardement). Cocher ses unités, « Engager » ou « Cibler », « Prêt au combat » ; glisser chaque dégât rouge sur l'unité touchée. Au-dessus, les déplacements en cours arrêtés sur une case à risque : chaque camp qui y a des unités militaires choisit de s'abstenir, d'aider à passer ou de bloquer.",
         "Plateau joueur : feuille de faction, réserve, faveurs, fragments, éléments actifs ; « Entretien » au ravitaillement, une fois par tour. Les boutons de joueur montrent le plateau des autres.",
         "Technologie : clic sur une technologie = une case de recherche de plus, Ctrl + clic = une de moins, Maj + clic = utilisée ce tour. On peut y poser un agent.",
         "Plateau général : le déroulé (un « + » en tête des pistes avance votre marqueur), le recrutement, les réserves, les sacs et les pioches.",

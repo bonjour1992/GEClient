@@ -458,21 +458,40 @@ et l'envoie en un coup. Le glisser-déposer des vaisseaux reste possible.
    `data-sans-defilement`). Deux cases se suivent si elles sont voisines
    (`distanceCases`) ou si elles partagent un trou de ver de la même catégorie,
    lu sur la tuile ou sur un token posé (`typeTrou`, d'après l'image).
-5. Blocage, case par case : les autres unités de chaque case du trajet sont
-   listées ; chaque vaisseau peut s'arrêter sur une case, ou rester au départ.
-   Rupture gravitationnelle quittée par un bord, trou de ver oméga : « Lancer
-   les jets » (un dé de 10 par vaisseau, lancé par le serveur) arrête,
-   avantage ou touche le vaisseau selon la règle.
-6. « Déplacer » (`BoutonRegle`) : rouge gris si le trajet ne mène pas au
-   système activé, saute entre deux cases, traverse une supernova ou une
-   nébuleuse, dépasse le mouvement d'un vaisseau, manque d'agents ou de
-   capacité, ou si les jets ne sont pas lancés. Le journal porte le coût du
-   trajet. Un système où des vaisseaux se sont arrêtés est activé à son tour
-   et devient la destination.
+5. « Déplacer » / « Faire partir » (`BoutonRegle`) : rouge gris si le trajet
+   ne mène pas au système activé, saute entre deux cases, traverse une
+   supernova ou une nébuleuse, dépasse le mouvement d'un vaisseau (chaque
+   rupture franchie donne 1 de plus), manque d'agents ou de capacité. Le
+   journal porte le coût du trajet. Les risques de blocage du trajet sont
+   listés avant le départ.
+6. Blocage, case par case (`engine/Blocage.jsx`). Les vaisseaux vont d'un coup
+   jusqu'à la première case à risque, ou jusqu'à l'arrivée (`rangArret`). Sur
+   une case à risque ils gardent leur trajet restant (marque `trajet`,
+   « 13>20 » ; `deplDe` : case de départ) : `passagesEnCours(etat)` retrouve
+   ces groupes, affichés par `Passage` dans le panneau du joueur et, pour
+   toute la table, en tête de l'onglet Conflit (`Blocages`). Avant de quitter
+   une case :
+   - unités militaires spatiales d'un autre camp (`campsAdverses` : unités de
+     l'espace de la case à mot-clé `mil`, hors unités portées) : chaque camp
+     choisit de s'abstenir, d'aider à passer ou de bloquer (compteur
+     `blocage:<case>:<joueur qui se déplace>:<camp>` = 1, 2 ou 3 ; camp 0 :
+     les neutres, qui bloquent sauf si un joueur en décide autrement). Le
+     contrôle d'un camp vaut 1 par unité militaire spatiale. Surplus =
+     contrôle de ceux qui bloquent − contrôle de ceux qui aident (les unités
+     militaires du joueur déjà sur place aident d'office). Le joueur arrête
+     autant de vaisseaux, les militaires d'abord, puis les autres ; la marque
+     `passe` (« c13 ») retient que c'est résolu ;
+   - rupture gravitationnelle quittée par un bord, trou de ver oméga
+     (`sorteJet`) : un dé de 10 par vaisseau, lancé par le serveur et gardé
+     dans sa marque `jetDepl` ; 3 ou moins le bloque, oméga 9 ou plus : il
+     passe avec une touche. Le joueur peut arrêter d'autres vaisseaux.
+
+   Un système où des vaisseaux s'arrêtent en chemin est activé (marqueur).
+   « Abandonner » retire les marques : les vaisseaux restent où ils sont.
 
 Non gérés : les hyperlanes (comptées comme des cases ordinaires), les champs
-d'astéroïdes, le vaisseau amiral de Creuss comme trou de ver, la règle exacte
-du blocage (c'est le joueur qui dit quel vaisseau s'arrête).
+d'astéroïdes, le vaisseau amiral de Creuss comme trou de ver, un contrôle
+autre que 1 par unité.
 
 ### technologie posée sur une feuille
 
@@ -593,7 +612,7 @@ de tokens du plateau général en fournit à volonté (sans propriétaire).
 
 Une unité qui n'est pas dans les unités de la faction de son joueur
 (mercenaire, unité créée par une relique, unité spéciale) a un liseré doré,
-sur la carte comme dans l'onglet Combat.
+sur la carte comme dans l'onglet Conflit.
 
 ### pistes du déroulé
 

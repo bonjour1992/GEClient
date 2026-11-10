@@ -169,3 +169,23 @@ Trois catégories (README) : **D** données en base · **P** outil de partie ·
   30 noms (champ exemplaires seul désormais) ; partie de test : mêmes comptes qu'avant
   (53 tuiles en pioche, 55 agendas, 21 reliques, 49 mercenaires, 13 promesses). Reste
   ouvert : préfixes de texte (!arborec!…), proposition à valider.
+- 2026-11-10 (soir) : préfixes de texte retirés (72 noms ; migrate-prefixes.mjs), listes
+  « nom — faction » (champ `lie` de la recherche du serveur, lib/store.js `nomDeListe`),
+  planètes à nom masqué (`nomCache`). Ce plan et le tableau d'implémentabilité sont
+  désormais dans le dépôt client (doc/). Corrections (migrate-corrections-soir.mjs) :
+  scientifique de base #907 (créé par Loïc) repris par toutes les factions sauf le
+  Nomade (#2, lié au Nomade) et Arborec (#426) ; Creuss : plus d'habilité « Matière
+  instable », Dock #908 et Système de défense #909 à 5, Forge du vide à 3 ; icônes
+  dédiées /ti/token/signal.svg et /ti/tech/I.svg (infiltration : feuille, token, type
+  de technologie). Un script de mise en place par événement (agendas dans les lois à
+  venir) ; sélecteur de l'éditeur en liste filtrable aux noms de la recherche
+  (Component/NomElement.jsx) ; agents au-dessus de la main. Déployé, poussé (136fbb3).
+- 2026-11-10 (nuit) : blocage du déplacement refait, case par case (engine/Blocage.jsx),
+  directement sur main à la demande de Loïc ; onglet Combat renommé Conflit. Choix faits
+  sans consigne : les neutres bloquent par défaut (tout joueur peut changer leur choix) ;
+  les unités militaires du joueur déjà sur la case aident d'office ; l'évaluation
+  commence à la case de départ et ne se fait pas à l'arrivée ; une rupture franchie
+  donne toujours +1 mouvement ; un camp qui n'a pas répondu compte comme une abstention
+  si le joueur passe outre (bouton rouge gris). Aucun changement côté serveur.
+  Reste ouvert : hyperlanes, astéroïdes, contrôle autre que 1 par unité, « Porte de
+  Creuss » visible dans la réserve de tuiles spéciales de toutes les parties.
