@@ -555,6 +555,60 @@ possession si le contrôle pour dépasse le contrôle contre (`BoutonRegle`), ou
 renonce. `actionsPossession` est la prise de possession elle-même, partagée
 avec la fiche d'un système.
 
+### mécaniques du chantier « toutes les technologies »
+
+Écrites pour les technologies jusqu'à la 419 (plan : `doc/plan-demandes.md`),
+elles valent pour tous les joueurs, avec ou sans script.
+
+- **Production** (`engine/Production.jsx`) : phase de production, Ctrl + clic
+  sur une de mes unités à `#prod(quantité, types)` — `lireProduction`,
+  `ouvrirProduction` (appelé par `cliquer`, `Partie.jsx`). Un marqueur
+  d'activation est posé sur l'unité ; `production` (contexte) devient
+  `{ source, nom, numero, max, types, fait, reduction }` ; bandeau
+  `ProductionEnCours` au-dessus de l'espace ; `ReserveProductible` cercle de
+  rouge ce qui n'est pas productible (`estProductible`) ; `payerProduction`
+  (`Interaction.jsx`) compte, paie et demande confirmation hors types ou au-delà
+  de la quantité. `#prod(#clog, …)` : `capaciteLogistique(joueur)` du contexte
+  (3, plus 1 par logisticien posé sur « Logistique améliorée »), qui est aussi
+  la taille d'une flotte au déplacement.
+- **Capture** : une unité capturée est une unité d'un autre joueur dans mes
+  éléments actifs (Grappin de capture). Glissée sur la carte pendant une
+  production, elle me donne mon unité du même type, sans coût, et retourne
+  dans la réserve de son joueur (`Plan`, `Interaction.jsx`). Médecine met de
+  même une de mes unités biologiques détruites dans mes éléments actifs.
+- **Livraison commerciale** (`engine/Livraison.jsx`) : bouton de la fiche d'une
+  unité à `#livr(n)` quand une autre faction a une unité à `#comp` dans le
+  système ; `livrer` donne le commerce et réduit mes dettes envers elle (jetons
+  « Dette » de mes cases de tour portant son marqueur), et sert aussi à « Art
+  du commerce ».
+- **Canons spatiaux** (`Combat.jsx`) : un canon ne tire que s'il a été choisi
+  dans « Mes canons spatiaux à portée » (`canonsEnAttente`, marque `canon` ;
+  un amiral est usé, un marqueur d'activation posé). `capacite` lit
+  `#can(6,2)` et la notation à étoiles « 6** ».
+- **Combat résolu** (`engine/CombatResolu.jsx`) : « Terminer le combat » met le
+  compteur `combat:<lieu>` à 2 ; le combat reste dans l'onglet jusqu'à la fin
+  de la phase (`changerPhase` le remet à 0). `combatsActifs` ne rend que les
+  combats ouverts. Une unité retirée d'un combat porte la marque `detruitA`
+  (« <lieu>:<tour> »).
+- **Valeur de contrôle** (`effets.js`, `controleDe`) : `#con(n)` du texte,
+  sinon 1 ; `estDeplacementFurtif` pour `#deplfurtif`.
+- **Conflit de domination** (`Controle.jsx`, `Domination`) : compteurs
+  `domination:<case>` (ouvert), `domination:<case>:<camp>` (camp soutenu, −1 :
+  abstention), `dominant:<case>` et `dominant:<case>:tour` (résultat du tour).
+- **Drain spatial** (`Blocage.jsx`) : stade « drain » du cadre de blocage,
+  entre les unités et les jets (`carte.drain`, compteur
+  `blocage:<case>:<joueur>:drain:<camp>` : 1 exige, 2 laisse passer ; marque
+  `drainOk` sur les vaisseaux).
+- **Connexion** (`Interaction.jsx`) : `agentDisponible` rend un négociant quand
+  l'agent demandé manque ; `payerConnexion`, appelé à chaque envoi de coup,
+  demande confirmation et ajoute 2 commerce.
+- **Archéologie** (`engine/Archeologie.jsx`) : zone `joueur:<u>:fouille`,
+  `ChoixFouille` (volet de droite), `PiocherPlan` (bandeau de la science).
+
+Attention au compilateur React (babel) : une fonction fléchée qui lit sans
+garde une valeur peut-être nulle (`agent.id`) fait lire cette valeur dès le
+rendu ; écrire `agent?.id`.
+
 ### notifications du navigateur
 
 `engine/Notifications.jsx` : case « 🔔 Notifications » de l'en-tête (choix gardé

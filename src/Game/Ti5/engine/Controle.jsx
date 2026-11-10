@@ -91,11 +91,13 @@ export function Controles() {
     const { etat } = useEngine();
 
     const conflits = controlesEnCours(etat);
+    const dominations = dominationsEnCours(etat);
 
-    return conflits.length > 0 && (
+    return conflits.length + dominations.length > 0 && (
         <div data-controles style={{ marginBottom: 10 }}>
             <b style={{ fontSize: 15 }}>Conflits de contrôle</b>
             {conflits.map(c => <Controle key={c.cle} conflit={c} />)}
+            {dominations.map(d => <Domination key={d.cle} conflit={d} />)}
         </div>
     );
 }
@@ -276,6 +278,182 @@ function Controle({ conflit }) {
                 <div style={{ marginTop: 4, color: "#555" }}>
                     Les camps présents choisissent ; {nomCamp(demandeur)} prend ensuite possession, ou renonce.
                 </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================================
+// CONFLIT DE DOMINATION (script Exploitation du vide)
+//
+// Test de domination d'un système : chaque camp qui y a des unités
+// militaires dans l'espace les fait participer à la domination du
+// camp de son choix (le sien par défaut ; les neutres, la leur). Le
+// camp qui réunit, seul, le plus de contrôle domine le système.
+//
+// Compteurs :
+//   domination:<case>           joueur qui a ouvert le conflit (0 : clos)
+//   domination:<case>:<camp>    camp soutenu (−1 : s'abstient)
+//   dominant:<case>             camp qui domine, une fois le conflit clos
+//   dominant:<case>:tour        tour de ce résultat
+//
+// L'entretien d'un joueur qui a « Exploitation du vide » compte ses
+// systèmes vides dominés : sans autre unité, ou dont il a gagné le
+// conflit ce tour (useExploitationDuVide, PlateauJoueur.jsx).
+// ============================================================
+
+export function dominationsEnCours(etat) {
+    return Object.keys(etat.compteurs)
+        .map(id => /^domination:(\d+)$/.exec(id))
+        .filter(m => m && etat.compteurs[m[0]])
+        .map(m => ({ cle: m[0], numero: Number(m[1]), demandeur: Number(etat.compteurs[m[0]]) }));
+}
+
+// Systèmes vides (sans planète) où le joueur a des unités dans l'espace :
+//   gain       ressources de l'entretien (1 par système dominé, 3 pour une nébuleuse)
+//   aResoudre  cases disputées dont le conflit de domination n'est pas résolu ce tour
+export function useExploitationDuVide(userId) {
+
+    const { etat, index, aScript } = useEngine();
+
+    const actif = aScript(userId, "exploitation-du-vide");
+    const tuile = n => (index.parZone.get("hex:" + n) || []).find(c => c.ref?.type === "system");
+
+    const cases = !actif ? [] : [...new Set(Object.values(etat.composants)
+        .filter(c => c.ref?.type === "unit" && campDe(c) === userId && /^hex:\d+$/.test(c.zone || ""))
+        .map(c => Number(c.zone.slice(4))))];
+
+    const systemes = useElements(cases.map(n => tuile(n)?.ref.id).filter(Boolean));
+
+    const systeme = n => systemes[tuile(n)?.ref.id];
+    const vides = cases.filter(n => systeme(n) && !(systeme(n).elems || []).some(lien => lien?.id > 0));
+
+    const dispute = n => (index.parZone.get("hex:" + n) || []).some(c => c.ref?.type === "unit" && campDe(c) !== userId);
+
+    // Camp qui domine d'après un conflit clos ce tour, ou null
+    const resultat = n => (Number(etat.compteurs[`dominant:${n}:tour`]) === etat.tour
+        ? Number(etat.compteurs[`dominant:${n}`]) || 0
+        : null);
+
+    const domines = vides.filter(n => !dispute(n) || resultat(n) === userId);
+
+    return {
+        gain: domines.reduce((s, n) => s + (systeme(n).anomaly === "neb" ? 3 : 1), 0),
+        aResoudre: vides.filter(n => dispute(n) && resultat(n) === null),
+    };
+}
+
+function Domination({ conflit }) {
+
+    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aScript } = useEngine();
+
+    const { cle, numero, demandeur } = conflit;
+
+    const unites = (index.parZone.get("hex:" + numero) || []).filter(c => !c.cache && c.ref?.type === "unit" && !c.sur);
+    const contenus = useElements([...new Set(unites.map(c => c.ref.id))]);
+
+    const parCamp = new Map();
+
+    for (const c of unites.filter(x => contenus[x.ref.id]?.mot_cle?.includes("mil"))) {
+        parCamp.set(campDe(c), (parCamp.get(campDe(c)) || 0) + controleDe(contenus[c.ref.id], campDe(c), aScript));
+    }
+
+    const camps = [...parCamp].map(([camp, controle]) => ({ camp, controle }));
+    const cleChoix = camp => `${cle}:${camp}`;
+
+    // Camp soutenu : le sien par défaut ; −1 : s'abstient (les neutres soutiennent les neutres)
+    const soutien = camp => (camp === NEUTRE ? NEUTRE : (Number(etat.compteurs[cleChoix(camp)]) || camp));
+
+    const totaux = new Map();
+
+    for (const c of camps) {
+        if (soutien(c.camp) >= 0) {
+            totaux.set(soutien(c.camp), (totaux.get(soutien(c.camp)) || 0) + c.controle);
+        }
+    }
+
+    const classes = [...totaux].sort((a, b) => b[1] - a[1]);
+    const gagnant = classes.length && (classes.length === 1 || classes[0][1] > classes[1][1]) ? classes[0][0] : null;
+
+    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+
+    const pastille = camp => (
+        <span
+            style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                marginRight: 4,
+                borderRadius: "50%",
+                border: "1px solid #000",
+                backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
+            }}
+        />
+    );
+
+    return (
+        <div
+            data-domination={cle}
+            style={{
+                marginTop: 6,
+                padding: "6px 10px",
+                border: "2px solid #6a1b9a",
+                borderRadius: 8,
+                backgroundColor: "#f3e5f5",
+                color: "#000",
+                fontFamily: "Arial, sans-serif",
+                fontSize: 13,
+            }}
+        >
+            <div>
+                <b>Domination du système {nomCase(numero)}</b> — conflit ouvert par {nomCamp(demandeur)} (Exploitation du vide).
+            </div>
+
+            {camps.map(c => (
+                <div key={c.camp} data-camp={c.camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
+                    <span>{pastille(c.camp)}<b>{nomCamp(c.camp)}</b> : contrôle {c.controle}, soutient</span>
+
+                    {joueur && c.camp === moi
+                        ? (
+                            <select
+                                value={soutien(c.camp)}
+                                onChange={e => envoyer(
+                                    [{ type: "compteur", id: cleChoix(c.camp), valeur: Number(e.target.value) }],
+                                    `Domination ${nomCase(numero)} : ${nomCamp(c.camp)} ` +
+                                        (Number(e.target.value) < 0 ? "s'abstient" : `soutient ${nomCamp(Number(e.target.value))}`)
+                                )}
+                            >
+                                {camps.filter(x => x.camp !== NEUTRE).map(x => <option key={x.camp} value={x.camp}>{nomCamp(x.camp)}</option>)}
+                                <option value={-1}>personne (s'abstient)</option>
+                            </select>
+                        )
+                        : <b>{soutien(c.camp) < 0 ? "personne (s'abstient)" : nomCamp(soutien(c.camp))}</b>}
+                </div>
+            ))}
+
+            <div data-bilan-domination style={{ marginTop: 4 }}>
+                {classes.map(([camp, total]) => `${nomCamp(camp)} : ${total}`).join(" ; ") || "Aucune unité militaire."}{" — "}
+                {gagnant !== null
+                    ? <b style={{ color: "#1b5e20" }}>{nomCamp(gagnant)} domine le système.</b>
+                    : <b style={{ color: "#b71c1c" }}>Personne ne domine le système.</b>}
+            </div>
+
+            {joueur && (
+                <BoutonRegle
+                    data-action="clore-domination"
+                    nom={`Clore le conflit de domination ${nomCase(numero)} : ${gagnant !== null ? nomCamp(gagnant) + " domine" : "personne ne domine"}`}
+                    faire={commentaire => envoyer([
+                        { type: "compteur", id: `dominant:${numero}`, valeur: gagnant ?? 0 },
+                        // (0 : personne, ou les neutres ; le tour dit que le conflit est résolu)
+                        { type: "compteur", id: `dominant:${numero}:tour`, valeur: etat.tour },
+                        ...camps.filter(c => etat.compteurs[cleChoix(c.camp)]).map(c => ({ type: "compteur", id: cleChoix(c.camp), valeur: 0 })),
+                        { type: "compteur", id: cle, valeur: 0 },
+                    ], commentaire)}
+                    title="Enregistre qui domine le système pour ce tour et clôt le conflit"
+                    style={{ marginTop: 4, padding: "3px 14px" }}
+                >
+                    Clore le conflit
+                </BoutonRegle>
             )}
         </div>
     );

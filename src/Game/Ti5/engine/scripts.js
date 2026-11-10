@@ -541,6 +541,20 @@ export const SCRIPTS = [
     effet("grappin-de-capture", 250, 1794335054876, "Grappin de capture", "nouveau",
         "Conflit : cadre d'un combat résolu",
         "Use un logisticien : un vaisseau adverse détruit pendant ce combat (ni soleil de guerre ni vaisseau amiral) arrive capturé dans vos éléments actifs."),
+
+    // ---- lot E ----
+
+    effet("archeologie", 209, 1789973452831, "Archéologie", "modifie",
+        "Fiche d'un système : « Fouiller la ruine » ; bandeau de la phase de science : « Archéologie : piocher un plan »",
+        "Une fouille rapporte deux fragments, dont vous gardez un (en haut du volet de droite). Nouveau bouton : la technologie et un scientifique sont utilisés, un plan de relique est pioché."),
+
+    effet("exploitation-du-vide", 232, 1790236251002, "Exploitation du vide", "modifie",
+        "Plateau joueur : « Entretien » ; Conflit : conflits de domination",
+        "L'entretien rapporte 1 ressource par système vide que vous dominez (3 pour une nébuleuse). Un système vide où d'autres ont des unités demande un conflit de domination : tant qu'il n'est pas résolu, « Entretien » est rouge gris."),
+
+    effet("drain-spatial", 246, 1794343420982, "Drain spatial", "nouveau",
+        "Conflit : cadre de blocage d'un déplacement",
+        "Quand des vaisseaux vont entrer dans un système où vous avez un vaisseau amiral, un soleil de guerre ou un système de défense : vous exigez 1 ressource par vaisseau, ou vous laissez passer ; le joueur paie, ou ses vaisseaux restent sur la case précédente."),
 ];
 
 // Script d'effet de technologie : sa description seule (son code est là où il agit)

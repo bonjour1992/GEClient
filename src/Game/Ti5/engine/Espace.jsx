@@ -26,6 +26,7 @@ import { cleCombat, combatsActifs, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
 import { ProductionEnCours } from "./Production";
+import { zoneFouille } from "./Archeologie";
 import { actionsPossession, cleControle, controlesEnCours } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
@@ -1016,7 +1017,12 @@ function FicheSysteme({ numero, id, fermer }) {
     function fouiller(k, ruine, type, commentaire) {
 
         const fragment = FRAGMENTS[type];
-        const vers = `joueur:${moi}:fragments`;
+
+        // Script Archéologie : deux fragments — celui de la ruine et un second tiré
+        // du sac —, posés à part : le joueur en garde un (Archeologie.jsx)
+        const sac = (index.parZone.get(SAC_FRAGMENTS) || []).length;
+        const archeologie = aScript(moi, "archeologie") && sac >= (fragment ? 1 : 2);
+        const vers = archeologie ? zoneFouille(moi) : `joueur:${moi}:fragments`;
 
         // (rien à tirer d'un sac vide : là, l'action est impossible)
         if (!fragment && !(index.parZone.get(SAC_FRAGMENTS) || []).length) {
@@ -1030,7 +1036,13 @@ function FicheSysteme({ numero, id, fermer }) {
             fragment
                 ? { type: "creer", jeton: fragment[0], zone: vers }
                 : { type: "piocher", de: SAC_FRAGMENTS, vers },
+            archeologie && { type: "piocher", de: SAC_FRAGMENTS, vers },
         ], commentaire);
+
+        if (archeologie) {
+            aviser("Archéologie : deux fragments trouvés, gardez-en un (en haut du volet de droite).");
+            fermer();
+        }
     }
 
     // Phase de production, mobiliser : use un logisticien, dépense les

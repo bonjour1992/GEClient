@@ -1,6 +1,6 @@
 # Implémentabilité des règles TI5 dans l'outil de partie
 
-Pour chaque technologie, habilité, unité et mot-clé d'unité : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 11 novembre 2026).
+Pour chaque technologie, habilité et unité : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 11 novembre 2026).
 
 Colonnes :
 
@@ -19,10 +19,10 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 93 | 26 | 2 | 65 | 9 | 11 | 11 |
+| Technologies | 93 | 60 | 0 | 33 | 19 | 19 | 28 |
 | Habilités | 46 | 1 | 1 | 44 | 0 | 1 | 1 |
-| Unités | 102 | 29 | 73 | 0 | 0 | 0 | 0 |
-| **Total** | **241** | **56** | **76** | **109** | **9** | **12** | **12** |
+| Unités | 102 | 29 | 73 | 0 | 5 | 0 | 0 |
+| **Total** | **241** | **90** | **74** | **77** | **24** | **20** | **29** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -35,7 +35,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 141 | Diversité | **oui** | bouton existant modifié | « Entretien » : +1 influence par planète possédée. | — |
 | 180 | Bâtiment résistant | **oui** | automatique | Conflit, bombardement : −1 aux tireurs sur une planète que vous possédez, −2 si vous y avez une structure. | — |
 | 181 | Troupe d'élite | **oui** | automatique | Conflit, combat terrestre : +1 à vos infanteries. | — |
-| 182 | Bombe bactériologique | non | nouveau bouton (prévu) | — | Bouton après bombardement : détruit deux infanteries biologiques identiques par infanterie touchée. (moyenne) |
+| 182 | Bombe bactériologique | **oui** | automatique | Conflit, bombardement : vos dégâts sont verts ; une infanterie biologique qu'ils détruisent en entraîne deux autres, identiques, de la planète (dégât encaissé ou glissé). | — |
 | 183 | Bio stimulant | **oui** | bouton existant modifié | Tout bouton qui dépense un agent (trêve, déplacement depuis un système activé, relique, Ctrl + clic sur un agent) : une fenêtre propose de l'utiliser et de payer 2 ressources à la place. | — |
 | 184 | Manipulation mentale | **oui** | nouveau bouton | Fiche d'un système, à côté de chaque planète : « Manipulation mentale » use un diplomate et pose une infanterie (une de vos unités dans le système ou un système voisin). | — |
 | 185 | Récupération | **oui** | bouton existant modifié | Conflit : « Terminer le combat » reçoit une case « Récupération », cochée d'office ; +1 ressource par unité détruite pendant le combat ; rouge gris si deux factions l'ont cochée. | Coalition et partage des ressources : à la main. |
@@ -44,9 +44,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 188 | Capsule de transport | **oui** | automatique | Capacité des vaisseaux (avertissement d'embarquement, chargement du déplacement assisté) : +1, +2 pour un transporteur. | — |
 | 189 | Capsule de secours | **oui** | nouveau bouton | Conflit : cadre « Sauvetage » d'un combat — un jet par infanterie d'un vaisseau détruit (6 ou moins sur un dé de 10), puis un bouton par arrivée possible. | Accord du propriétaire du dock : non géré, comme demandé. |
 | 190 | Écoles militaires | **oui** | bouton existant modifié | Recrutement (Ctrl + clic) : amiraux à −1. Fiche d'un système : « Combat spatial » donne +1 au premier combat que vous ouvrez dans le tour. | — |
-| 191 | Logistique améliorée | **partiel** | bouton existant modifié | Recrutement (Ctrl + clic) : logisticiens à −1. | Bouton détruisant un logisticien posé sur la carte ; capacité logistique non suivie. |
-| 192 | PC | non | automatique (prévu) | — | Bonus +1 à l'écran de combat si dock ou vaisseau amiral dans le système. (moyenne) |
-| 193 | IA industrielle | non | automatique (prévu) | — | Réduction de 2 en production sur planète militaire ; limite de production non suivie. (moyenne) |
+| 191 | Logistique améliorée | **oui** | bouton existant modifié + automatique | Recrutement (Ctrl + clic) : logisticiens à −1. Capacité logistique : 3, plus 1 par logisticien posé sur la technologie (onglet Technologie) — taille d'une flotte au déplacement, production d'un dock. | — |
+| 192 | PC | **oui** | automatique | Conflit, combat spatial : +1 si le système contient votre vaisseau amiral ou un de vos docks. | — |
+| 193 | IA industrielle | **oui** | automatique | Production ouverte avec un dock (Ctrl + clic) : 2 unités de plus ; sur une planète militaire, le coût total baisse de 2. | — |
 | 194 | Arme amplifiée | **oui** | nouveau bouton + automatique | Plateau joueur, « Actions de mes technologies » : « Arme amplifiée » pose un scientifique sur un type de vaisseau de votre feuille. Conflit, combat spatial : +2 à ces vaisseaux. | — |
 | 195 | Réparation improvisée | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux endommagés : « Réparation improvisée » use un logisticien et répare (1 ressource par dégât). | Vaisseau « non bloqué » : non vérifié. |
 | 196 | Système de visée | **oui** | automatique | Conflit, canons spatiaux et bombardement : +1 à vos tireurs. | — |
@@ -59,38 +59,38 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 206 | Réparation | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : « Réparation » use un diplomate, la faction choisie reçoit une dette de 3 à payer dans 3 tours. | Le bouton ne vérifie pas qu'une planète vient d'être prise. |
 | 207 | Brevet | **oui** | automatique | Onglet Technologie : quand un autre joueur coche une case d'une technologie que vous possédez, +1 commerce (une fois par tour, par faction et par technologie), avec un message. | — |
 | 208 | Trading | **oui** | automatique | « Phase suivante » à la fin de la phase de vote : un négociant posé (à la main) sur votre plateau de vote est votre prédiction ; +2 commerce si sa case est première de sa loi. | — |
-| 209 | Archéologie | non | nouveau bouton (prévu) | — | Boutons : pioche 2 fragments, en garde un ; use un scientifique, pioche un plan. (moyenne) |
-| 210 | Université | non | nouveau bouton (prévu) | — | Bouton : use un agent choisi, ajoute un agent du même type au tour suivant. (moyenne) |
-| 211 | Pillage | non | nouveau bouton (prévu) | — | Bouton : retire 2 commerce à une faction choisie et vous les donne. (moyenne) |
-| 212 | Propagande | non | nouveau bouton (prévu) | — | Bouton : détruit un diplomate ; l'infamie évitée reste gérée à la main. (facile) |
-| 213 | Réseau de commerce | non | nouveau bouton (prévu) | — | Deux boutons de conversion : 1 influence en 1 ressource, et l'inverse. (facile) |
-| 214 | Extorsion | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, dette de 3 pour une faction choisie, durée 3 tours. (moyenne) |
-| 216 | Science intégrée | **partiel** | bouton existant modifié | Recrutement (Ctrl + clic) : scientifiques à −1. | Bouton : use un scientifique, +4 cases de recherche à une faction choisie. |
-| 217 | Rayon tracteur | non | automatique (prévu) | — | Effet permanent sur la valeur de contrôle, que l'outil ne calcule pas. (difficile) |
-| 218 | Exploration | non | nouveau bouton (prévu) | — | Bouton : use un scientifique et un logisticien, pioche une tuile, emplacement choisi. (moyenne) |
-| 231 | Cartographie de l'espace | non | automatique (prévu) | — | Malus −1 à l'écran de combat si le système contient une anomalie. (moyenne) |
-| 232 | Exploitation du vide | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : ressources selon les systèmes vides dominés (domination à déterminer). (moyenne) |
-| 233 | Moteur à gravité | non | nouveau bouton + automatique (prévu) | — | Bouton : use un ou deux scientifiques ; le bonus de vitesse reste manuel. (facile) |
-| 234 | Stratégie de saut | non | automatique (prévu) | — | À brancher sur le déplacement assisté (trous de ver). (difficile) |
-| 235 | Canon longue portée | non | automatique (prévu) | — | Portée des canons non gérée : l'outil n'a pas de notion de distance. (difficile) |
-| 236 | Camouflage | non | automatique (prévu) | — | Effet permanent de furtivité, à brancher sur le déplacement assisté. (difficile) |
-| 237 | Micro-téléporteur | non | nouveau bouton (prévu) | — | Bouton : use un logisticien ; déplace des pions choisis entre deux planètes à structure. (moyenne) |
-| 238 | Stargate | non | automatique (prévu) | — | À brancher sur le déplacement assisté (trous de ver). (difficile) |
-| 239 | Moteur FTL | non | automatique (prévu) | — | À brancher sur le déplacement assisté. (difficile) |
-| 242 | Médecine | non | nouveau bouton + automatique (prévu) | — | Boutons : jet de capture à la destruction ; use un logisticien, replace les capturées. (moyenne) |
-| 244 | Bouclier amplifié | non | automatique (prévu) | — | Effet permanent : résistance majorée de trois unités (modificateur de caractéristique à créer). (moyenne) |
-| 245 | Cuve de clonage | non | nouveau bouton (prévu) | — | Bouton : use un scientifique, mobilisation gratuite avec une infanterie de plus, planète choisie. (moyenne) |
-| 246 | Drain Spatial | non | automatique (prévu) | — | Réaction au déplacement d'un autre joueur : à brancher sur le déplacement assisté. (difficile) |
-| 247 | Réseau d'ingérence | non | nouveau bouton (prévu) | — | Bouton : use un scientifique, +2 votes au décompte. (facile) |
-| 248 | Laser longue portée | non | automatique (prévu) | — | Portée non gérée ; ajouter `#can(6,3)` au vaisseau amiral reste faisable. (difficile) |
-| 250 | Grappin de capture | non | nouveau bouton (prévu) | — | Bouton de fin de combat : use un logisticien, capture un vaisseau détruit choisi. (moyenne) |
-| 251 | Argumentation véhémente | non | nouveau bouton (prévu) | — | Bouton : use un politicien, −1 influence, +2 votes au décompte. (facile) |
-| 252 | Stratégie dominante | non | automatique (prévu) | — | Bonus +1 des unités à frappe en premier ; malus de ciblage non géré. (moyenne) |
-| 253 | Avantage aérien | non | automatique (prévu) | — | Effet permanent : donner la frappe en premier aux infanteries dans l'écran de combat. (moyenne) |
-| 269 | Commerce profitable | non | bouton existant modifié (prévu) | — | Suppose une action « livraison » à créer ; un script y ajouterait +1. (moyenne) |
-| 270 | Connexion | non | nouveau bouton + automatique (prévu) | — | Effet permanent : tout bouton usant un agent devrait accepter un négociant payé 2 commerce. (difficile) |
-| 273 | Exploitation de masse | non | bouton existant modifié (prévu) | — | Variante du bouton « Esclaves » : +2 ressources ; même ajout pour « Camp de travail ». (facile) |
-| 274 | Enrôlement | non | nouveau bouton (prévu) | — | Bouton : use un logisticien, pose 2 esclaves sur une planète choisie ; recapture manuelle. (moyenne) |
+| 209 | Archéologie | **oui** | bouton existant modifié + nouveau bouton | Fiche d'un système : « Fouiller la ruine » rapporte deux fragments, dont vous gardez un (choix en haut du volet de droite). Bandeau de la phase de science : « Archéologie : piocher un plan » use la technologie et un scientifique. | — |
+| 210 | Université | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : « Université » use la technologie et l'agent choisi ; un agent du même type vous attend sur la case du tour suivant. | — |
+| 211 | Pillage | **oui** | bouton existant modifié | Fiche d'un système : « Prendre possession » d'une planète d'une autre faction (et le conflit de contrôle) lui vole 2 commerce. | — |
+| 212 | Propagande | **oui** | bouton existant modifié | Plateau général : le « + » de la piste d'infamie ouvre une fenêtre — dépenser un diplomate pour ne pas gagner le point. | — |
+| 213 | Réseau de commerce | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : deux boutons de conversion, influence en ressources et l'inverse. | Les paiements eux-mêmes ne prennent pas l'autre ressource d'office. |
+| 214 | Extorsion | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : « Extorsion » use un diplomate, dette de 3 pour la faction choisie, à payer dans 3 tours. | — |
+| 216 | Science intégrée | **oui** | bouton existant modifié | Recrutement (Ctrl + clic) : scientifiques à −1. Livraison commerciale : une fenêtre propose d'user un scientifique, la faction livrée gagne 4 cases de recherche d'une technologie que vous possédez. | Les 4 cases se cochent à la main chez la faction livrée. |
+| 217 | Rayon tracteur | **oui** | automatique | Conflit : dans le blocage d'un déplacement et les conflits de contrôle et de domination, vos vaisseaux à plus de 1 de résistance comptent 1 de contrôle de plus. | — |
+| 218 | Exploration | **oui** | bouton existant modifié | Onglet Espace, phase de science : l'exploration (Ctrl + clic sur un emplacement vide) est réservée à qui a la technologie ; la ligne « explorer » est retirée des scientifiques. | — |
+| 231 | Cartographie de l'espace | **oui** | automatique | Conflit, combat spatial et canons : −1 aux attaques contre vos vaisseaux dans un système à anomalie. | — |
+| 232 | Exploitation du vide | **oui** | bouton existant modifié + nouveau bouton | « Entretien » : +1 ressource par système vide dominé (+3 pour une nébuleuse). Un système vide disputé ouvre un conflit de domination (onglet Conflit) ; « Entretien » est rouge gris tant qu'il n'est pas résolu. | — |
+| 233 | Moteur à gravité | **oui** | bouton existant modifié | Déplacement assisté : case « Moteur à gravité » — +1 mouvement, des scientifiques sont utilisés au départ. | — |
+| 234 | Stratégie de saut | **oui** | automatique | Déplacement assisté puis Conflit : des vaisseaux arrivés par un trou de ver ont, ce tour, la frappe en premier et +1 au combat spatial. | — |
+| 235 | Canon longue portée | **oui** | automatique | Conflit, canons spatiaux : la portée de vos canons passe à 2 (liste « Mes canons spatiaux à portée »). | — |
+| 236 | Camouflage | **oui** | automatique | Blocage d'un déplacement : vos vaisseaux ne sont pas arrêtés par des unités. Conflit, combat spatial : tant qu'ils n'ont engagé personne, un engagement de faction ne les atteint pas (il faut les cibler). | — |
+| 237 | Micro-téléporteur | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : « Micro-téléporteur » use un logisticien. | Le déplacement des unités se fait à la main (structures non vérifiées). |
+| 238 | Stargate | **oui** | automatique | Déplacement assisté : chaque système où vous avez un dock a un trou de ver alpha. | — |
+| 239 | Moteur FTL | **oui** | automatique | Déplacement assisté : +1 mouvement à tous vos vaisseaux. | — |
+| 242 | Médecine | **oui** | bouton existant modifié | Conflit : avant « Retirer » une de vos unités biologiques détruites, « Médecine : jet » (5 ou moins) permet de la capturer — elle va dans vos éléments actifs. | La remise en jeu (use un logisticien, planète à structure) se fait à la main. |
+| 244 | Bouclier amplifié | **oui** | automatique | Résistance : +2 pour votre vaisseau amiral et vos systèmes de défense, +1 pour vos boucliers mobiles (en vert dans Conflit). | — |
+| 245 | Cuve de clonage | **oui** | nouveau bouton | Fiche d'un système, à côté de « Mobiliser » : « Cuve de clonage » use aussi un scientifique — une infanterie de plus, tout gratuit. | — |
+| 246 | Drain Spatial | **oui** | nouveau bouton | Conflit, cadre de blocage : avant d'entrer dans un système où vous avez un vaisseau amiral, un soleil de guerre ou un système de défense, vous exigez 1 ressource par vaisseau ou laissez passer ; le joueur paie ou s'arrête. | — |
+| 247 | Réseau d'ingérence | **oui** | automatique | Onglet Vote : un de vos scientifiques posé sur votre plateau de vote vaut 2 voix. | — |
+| 248 | Laser longue portée | **oui** | automatique | Conflit, canons spatiaux : votre vaisseau amiral a un canon (6, 3 dés) ; un canon tire une case plus loin si un scientifique est aussi utilisé. | — |
+| 250 | Grappin de capture | **oui** | nouveau bouton | Conflit : un combat terminé reste affiché, résolu, jusqu'à la fin de la phase ; « Grappin de capture » y use un logisticien et capture un vaisseau adverse détruit. | « Si vous contrôlez le système » : non vérifié. |
+| 251 | Argumentation véhémente | **oui** | nouveau bouton | Onglet Vote : « Argumentation véhémente » use un politicien (qui ne reste pas sur le plateau) et 1 influence ; 2 voix s'ajoutent tout de suite au décompte. | — |
+| 252 | Stratégie dominante | **oui** | automatique | Conflit, combat spatial : +1 à vos unités à frappe en premier ; cibler un de vos vaisseaux coûte −4. | — |
+| 253 | Avantage aérien | **oui** | automatique | Conflit, combat terrestre : vos infanteries ont la frappe en premier. | — |
+| 269 | Commerce profitable | **oui** | automatique | Livraison commerciale : +1 à vos livraisons, +1 commerce quand vous en recevez une. | — |
+| 270 | Connexion | **oui** | bouton existant modifié | Tout bouton qui utilise un agent : sans l'agent demandé, une fenêtre propose un négociant à sa place pour 2 commerce. | Pas pour les agents du déplacement assisté. |
+| 273 | Exploitation de masse | non | — | — | Dépend de l'action « Esclaves » de Kabal (habilité 157), qui n'existe pas dans l'outil : non fait. |
+| 274 | Enrôlement | non | — | — | Dépend des esclaves de Kabal (habilité 157), qui n'existent pas dans l'outil : non fait. |
 | 399 | Adaptation des réacteurs | non | automatique (prévu) | — | À brancher sur le déplacement assisté. (difficile) |
 | 400 | Adaptation de la visée | non | automatique (prévu) | — | Annule le malus de tempête à l'écran de combat, une fois celui-ci scripté. (moyenne) |
 | 402 | Vaccin | non | nouveau bouton (prévu) | — | Bouton : +4 points ; faveur si personne n'a découvert le vaccin avant. (moyenne) |
@@ -183,14 +183,14 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 8 | Croiseur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 9 | Transporteur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 10 | Destroyeur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 11 | Frégate marchande | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un négociant, détruit la frégate, livraison de 3 à une faction choisie. (moyenne) |
+| 11 | Frégate marchande | **partiel** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. | Pillage. |
 | 12 | Infanterie | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 13 | Mech | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 14 | Dock | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Limite de production 3, réparation et comptoir : à contrôler selon le système du dock. (moyenne) |
-| 15 | Système de défense | oui | — | Canon noté « 6\*\* » : vérifier que l'outil lit bien cette notation. | — |
+| 14 | Dock | **partiel** | nouveau bouton | Phase de production : Ctrl + clic sur le dock ouvre une production comptée (capacité logistique du joueur, vaisseaux et mechs ; le reste de la réserve est cerclé de rouge). | Réparation et comptoir non contrôlés selon le système du dock. |
+| 15 | Système de défense | **oui** | nouveau bouton | Conflit, canons spatiaux : listé dans « Mes canons spatiaux à portée » (notation « 6** » lue : 6, 2 dés) ; le choisir use un amiral et pose un marqueur d'activation. | — |
 | 16 | Usine | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement : +2 ressources par usine possédée. (facile) |
 | 17 | Soleil de guerre | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Message orange si produit sans la technologie « Soleil de guerre ». (facile) |
-| 20 | Frégate marchande (Conglomérat mercantile d'Hacan) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un négociant, détruit la frégate, livraison de 3 à une faction choisie. (moyenne) |
+| 20 | Frégate marchande (Conglomérat mercantile d'Hacan) | **partiel** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. | Pillage. |
 | 21 | Soleil d'or (Conglomérat mercantile d'Hacan) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −2 commerce au déplacement ; comptoir et pillage supposent des actions à créer. (moyenne) |
 | 22 | Mecha d'archéologie (Conglomérat mercantile d'Hacan) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Variante d'une action « fouille » à créer, sans user de scientifique. (moyenne) |
 | 23 | Statue en or (Conglomérat mercantile d'Hacan) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement : +1 point par statue ; pillage non géré. (facile) |
@@ -223,7 +223,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 461 | Cuirassé (Omni-esprit d'Arborec) | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 462 | Croiseur (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 463 | Destroyeur (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 464 | Fruit de vie (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : détruit le fruit, livraison de 5 à une faction choisie. (moyenne) |
+| 464 | Fruit de vie (Omni-esprit d'Arborec) | **partiel** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (5) » si une autre faction a un comptoir dans le système. | — |
 | 465 | Arbre père (Omni-esprit d'Arborec) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement : crée un « Fruit de vie » dans le système de l'arbre. (moyenne) |
 | 466 | Épineux géant (Omni-esprit d'Arborec) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Autoriser ses attaques dans l'écran de combat pendant le bombardement. (moyenne) |
 | 467 | Arbre mère (Omni-esprit d'Arborec) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement : crée des « Letani » jusqu'au niveau de connaissance génétique. (moyenne) |
@@ -290,18 +290,18 @@ Deux sortes : les **capacités** écrites dans le texte d'une unité (`#furtif`,
 
 | Mot-clé | Règle | Unités | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---:|---|---|---|---|
-| `#bomb` bombardement | Attaque contre les forces terrestres. | 12 | **partiel** | automatique | Conflit, « Bombardement » : les unités de l'espace qui ont `#bomb(valeur, dés)` tirent sur la planète. | Notation à étoiles (« 5\*\* ») non lue : seule `#bomb(5,2)` l'est. (facile) |
-| `#can` canon spatial | Attaque à distance, portée 1 par défaut. | 11 | **partiel** | automatique | Conflit, « Canons spatiaux » : les unités du système et des systèmes voisins qui ont `#can(valeur, dés)` tirent sur les vaisseaux. | Notation à étoiles (« 6\*\* ») non lue ; portée autre que 1. (facile, moyenne) |
+| `#bomb` bombardement | Attaque contre les forces terrestres. | 12 | **oui** | automatique | Conflit, « Bombardement » : les unités de l'espace qui ont `#bomb(valeur, dés)` ou la notation à étoiles (« 5\*\* » : 5, 2 dés) tirent sur la planète. | — |
+| `#can` canon spatial | Attaque à distance, portée 1 par défaut. | 11 | **oui** | nouveau bouton | Conflit, « Canons spatiaux » : chaque joueur voit ses canons à portée avec leur distance (`#can(valeur, dés)` ou « 6\*\* ») ; en choisir un use un amiral et pose un marqueur d'activation. Portée 2 avec Canon longue portée. | « portée 0 » écrite sur une unité : non lue. (facile) |
 | `#fpre` frappe en premier | L'unité attaque avant les autres. | 6 | **oui** | automatique | Conflit : phases 1 et 2 du combat (frappe en premier, puis ses dégâts) avant les autres attaques. | — |
 | `#prec` précis | Pas de malus en ciblant une unité. | 6 | **oui** | automatique | Conflit : « Cibler » ne coûte pas −2 à cette unité. | — |
-| `#con` contrôle | Valeur de contrôle de l'unité (1 par défaut). | 16 | **partiel** | automatique | Blocage d'un déplacement et conflit de contrôle : chaque unité militaire vaut 1. | Lire la valeur écrite sur l'unité (`#con(3)`) ; test de domination. (moyenne) |
-| `#furtif` furtif | Tant qu'ils n'ont engagé personne, ces vaisseaux doivent être ciblés. | 7 | non | automatique (prévu) | — | Conflit : interdire l'engagement de faction contre une unité furtive qui n'a rien engagé. (moyenne) |
-| `#deplfurtif` déplacement furtif | Ne peut pas être bloqué par des vaisseaux adverses en se déplaçant. | 4 | non | automatique (prévu) | — | Cadre de blocage : ne pas compter ces vaisseaux dans ceux à arrêter. (facile) |
+| `#con` contrôle | Valeur de contrôle de l'unité (1 par défaut). | 16 | **oui** | automatique | Blocage d'un déplacement, conflits de contrôle et de domination : chaque unité militaire vaut la valeur écrite (`#con(3)`), sinon 1 ; +1 avec Rayon tracteur. | Test de domination hors Exploitation du vide. (moyenne) |
+| `#furtif` furtif | Tant qu'ils n'ont engagé personne, ces vaisseaux doivent être ciblés. | 7 | **oui** | automatique | Conflit, combat spatial : un engagement de faction n'atteint pas une unité furtive qui n'a rien engagé ; il faut la cibler. | — |
+| `#deplfurtif` déplacement furtif | Ne peut pas être bloqué par des vaisseaux adverses en se déplaçant. | 4 | **oui** | automatique | Cadre de blocage : ces vaisseaux ne comptent pas parmi ceux à arrêter ; un groupe entièrement furtif ne s'arrête pas pour des unités. | — |
 | `#pill` pillage | Qui détruit l'unité gagne le commerce indiqué. | 16 | non | automatique (prévu) | — | Conflit : à « Retirer », donner le commerce au camp qui a détruit l'unité (à désigner s'ils sont plusieurs). (moyenne) |
-| `#comp` comptoir commercial | Permet de recevoir une livraison. | 11 | non | bouton existant modifié (prévu) | — | Vérifié par une action « livraison » qui reste à créer. (moyenne) |
-| `#livr` livraison commerciale | L'unité, non bloquée, livre du commerce à une faction qui a un comptoir dans le système. | 6 | **partiel** | nouveau bouton | Seule la livraison d'« Art du commerce » existe (plateau joueur). | Bouton de livraison sur la fiche de l'unité : commerce donné, dettes réduites. (moyenne) |
+| `#comp` comptoir commercial | Permet de recevoir une livraison. | 11 | **oui** | automatique | Livraison commerciale : seules les factions qui ont une unité à comptoir dans le système peuvent être livrées. | — |
+| `#livr` livraison commerciale | L'unité, non bloquée, livre du commerce à une faction qui a un comptoir dans le système. | 6 | **oui** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (n) » — choix de la faction s'il y a plusieurs comptoirs, commerce donné, dettes réduites, négociant utilisé et unité dépensée selon son texte. | « Non bloquée » : non vérifié. |
 | `#rep` réparation | Permet de réparer : 1 ressource par point de résistance. | 4 | **partiel** | — | Fiche d'un système : « Réparer » paie 1 ressource par dégât. | Le bouton ne vérifie pas qu'une unité à réparation est dans le système. (facile) |
-| `#prod` production | Produit des unités en payant leur coût (type et quantité indiqués). | 5 | **partiel** | — | Case « Production » de la réserve : glisser une unité retire son coût des ressources. | Type, quantité et lieu de production non vérifiés. (moyenne) |
+| `#prod` production | Produit des unités en payant leur coût (type et quantité indiqués). | 5 | **oui** | nouveau bouton | Phase de production : Ctrl + clic sur l'unité ouvre une production (marqueur d'activation, bandeau « n / quantité », réserve cerclée de rouge pour ce qu'elle ne produit pas, « Terminer »). `#prod(#clog, …)` : la capacité logistique. | Lieu où l'unité produite est posée : non vérifié. |
 | `#raid` raid | Bombardement qui capture les infanteries. | 2 | non | automatique (prévu) | — | Conflit, bombardement : infanterie touchée capturée au lieu d'être détruite. (moyenne) |
 | `#tvd`, `#tvo` trous de ver | L'unité compte comme un trou de ver (delta), ou les ignore (oméga). | 4 | **partiel** | automatique | Déplacement assisté : trous de ver des tuiles et des tokens ; jet du trou de ver oméga. | Une unité qui vaut trou de ver (Hil Colish) ; la Nef de la rupture qui ignore l'oméga. (moyenne) |
 | `#use`, `#spend`, `#dep`, `#act`, `#destroy` | Symboles : utiliser, dépenser, placer, activer, destruction. | — | — | — | Symboles de rédaction, sans effet propre. | — |

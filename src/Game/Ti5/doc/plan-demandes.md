@@ -244,8 +244,20 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   tirer = amiral usé + marqueur d'activation ; 235 et 248 pour la portée) ; conflit résolu gardé
   jusqu'à la fin de la phase, avec 250 Grappin de capture ; 182 Bombe bactériologique (dégâts
   verts) ; 242 Médecine.
-- ☐ Lot E — 232 Exploitation du vide (conflit de domination par système vide disputé, entretien
+- ☑ Lot E — 232 Exploitation du vide (conflit de domination par système vide disputé, entretien
   bloqué tant qu'ils ne sont pas résolus) ; 246 Drain spatial dans le cadre de blocage ; 209
   Archéologie (fouille : 2 fragments, en garder un ; bouton pour piocher un plan).
 - Non faits, et pourquoi : 273 Exploitation de masse et 274 Enrôlement (ils modifient l'action
   « Esclaves » de Kabal, qui n'existe pas dans l'outil).
+- 2026-11-11 (nuit) : les cinq lots sont faits, testés en partie de test, déployés et
+  poussés (commits 4643439, 9797111, b802511, 62904f8, puis le lot E). Choix faits sans
+  consigne : une unité capturée = une unité d'un autre joueur dans mes éléments actifs ;
+  « supprimer » une unité la renvoie dans la réserve de son joueur (comportement
+  existant), donc une frégate « dépensée » y retourne ; conflit de domination : chaque
+  camp soutient le sien par défaut, les neutres le leur ; Drain spatial : 1 ressource par
+  vaisseau et par joueur qui l'exige ; Archéologie : le second fragment est tiré du sac ;
+  Connexion ne vaut pas pour les agents du déplacement assisté ; Réseau de commerce : deux
+  boutons de conversion (les paiements ne prennent pas l'autre ressource d'office).
+  Non testés un par un à l'écran : dégâts verts de la Bombe bactériologique, Stargate,
+  Stratégie de saut, Camouflage au combat, Canon et Laser longue portée, Cuve de clonage,
+  Réseau d'ingérence, Pillage, paiement du Drain spatial par le joueur qui se déplace.

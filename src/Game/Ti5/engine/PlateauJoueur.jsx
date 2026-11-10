@@ -5,6 +5,7 @@ import { useElement, useElements } from "./sync";
 import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite } from "./miseEnPlace";
 import { ActionsTechnologies } from "./ActionsTechnologies";
 import { ReserveProductible } from "./Production";
+import { useExploitationDuVide } from "./Controle";
 
 // ============================================================
 // ONGLET PLATEAU JOUEUR
@@ -240,7 +241,11 @@ export function PlateauJoueur({ vu }) {
         0
     );
 
-    const ressources = somme("res");
+    // Script Exploitation du vide : 1 ressource par système vide dominé (3 pour une
+    // nébuleuse) ; un système vide disputé demande un conflit de domination (Controle.jsx)
+    const vide = useExploitationDuVide(u);
+
+    const ressources = somme("res") + vide.gain;
 
     // Scripts d'entretien. Diversité : +1 influence par planète. Culture
     // courtisane : +1 influence par alliance en jeu chez moi (promesse de
@@ -328,6 +333,8 @@ export function PlateauJoueur({ vu }) {
                         obstacles={[
                             !/ravitaill/i.test(etat.phase) && "ce n'est pas la phase de ravitaillement",
                             entretienFait && "l'entretien de ce tour est déjà fait",
+                            vide.aResoudre.length > 0 &&
+                                `Exploitation du vide : ${vide.aResoudre.length} système(s) vide(s) disputé(s), conflit(s) de domination à résoudre (onglet Conflit)`,
                         ]}
                         faire={entretien}
                         title={"Ajoute les ressources et l'influence de vos planètes, récupère vos agents usés, rend vos technologies disponibles" +
@@ -337,11 +344,27 @@ export function PlateauJoueur({ vu }) {
                         style={{ padding: "4px 10px" }}
                     >
                         {(entretienFait ? "✔ Entretien fait ce tour — " : "Entretien : ") +
-                            `+${ressources} ressources, +${influence} influence` +
+                            `+${ressources} ressources${vide.gain ? ` (dont ${vide.gain} : Exploitation du vide)` : ""}, +${influence} influence` +
                             bonusInfluence.map(([n, nom]) => ` (dont ${n} : ${nom})`).join("") + ", " +
                             `${agentsUses.length} agent(s), ${techsUtilisees.length} technologie(s)` +
                             (possedeNatale ? ", +1 faveur" : "")}
                     </BoutonRegle>
+                )}
+
+                {/* Script Exploitation du vide : ouvrir les conflits de domination qui manquent */}
+                {joueur && u === moi && vide.aResoudre.some(n => !etat.compteurs[`domination:${n}`]) && (
+                    <button
+                        type="button"
+                        data-action="ouvrir-dominations"
+                        title="Exploitation du vide : d'autres factions ont des unités dans ces systèmes vides ; un conflit de domination s'ouvre pour chacun (onglet Conflit)"
+                        onClick={() => envoyer(
+                            vide.aResoudre.filter(n => !etat.compteurs[`domination:${n}`])
+                                .map(n => ({ type: "compteur", id: `domination:${n}`, valeur: moi })),
+                            "Exploitation du vide : conflits de domination ouverts"
+                        )}
+                    >
+                        Exploitation du vide : ouvrir {vide.aResoudre.filter(n => !etat.compteurs[`domination:${n}`]).length} conflit(s) de domination
+                    </button>
                 )}
             </div>
 

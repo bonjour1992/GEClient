@@ -41,6 +41,7 @@ export const TRAJET = "trajet";     // cases qu'il lui reste à parcourir : « 1
 export const DEPART = "deplDe";     // « c12 » : la case d'où il est parti
 const PASSE = "passe";              // « c13 » : le blocage par unités de cette case est résolu
 const JET = "jetDepl";              // son jet (rupture, trou de ver oméga) sur cette case
+const DRAIN = "drainOk";            // « c13 » : le Drain spatial de la case suivante est réglé
 
 const NEUTRE = 0;
 
@@ -140,6 +141,15 @@ export function useCarte(cases, mover) {
             ...tokens(i).map(c => typeTrou(contenusTokens[c.ref.id]?.img)),
             mover && aScript(mover, "stargate") && aUnDock(i) && "alpha",
         ].filter(Boolean)),
+        // Script Drain spatial : joueurs qui l'ont, autres que celui qui se déplace, et
+        // qui ont un vaisseau amiral, un soleil de guerre ou un système de défense
+        // dans le système (espace ou planètes)
+        drain: i => [...new Set([...index.parZone]
+            .filter(([zone]) => zone === "hex:" + i || zone.startsWith(`hex:${i}:`))
+            .flatMap(([, contenu]) => contenu
+                .filter(c => c.ref?.type === "unit" && ["fs", "sun", "pds"].includes(contenuEnCache(c.ref.id)?.type))
+                .map(campDe))
+            .filter(camp => camp > 0 && camp !== mover && aScript(camp, "drain-spatial")))],
         // Contrôle d'une unité (effets.js : #con, Rayon tracteur)
         controle: c => controleDe(contenus[c.ref.id], campDe(c), aScript),
         // Unités militaires spatiales de la case
@@ -200,7 +210,8 @@ export function campsAdverses(carte, numero, mover) {
 // adverses ne les arrêtent pas.
 export function rangArret(carte, mover, ici, trajet, resolu, furtifs = false) {
 
-    const risque = (de, a) => (!furtifs && campsAdverses(carte, de, mover).length > 0) || !!sorteJet(carte, de, a);
+    const risque = (de, a) => (!furtifs && campsAdverses(carte, de, mover).length > 0) || !!sorteJet(carte, de, a) ||
+        carte.drain(a).length > 0;
 
     if (!resolu && risque(ici, trajet[0])) {
         return -1;
@@ -271,9 +282,17 @@ export function Passage({ passage }) {
     const adverses = exposes.length ? campsAdverses(carte, numero, mover) : [];
     const jet = sorteJet(carte, numero, suivante);
 
+    // Script Drain spatial : avant d'entrer dans la case suivante, chaque joueur qui
+    // l'a (et y a un vaisseau amiral, un soleil de guerre ou un système de défense)
+    // peut exiger 1 ressource par vaisseau — sinon le vaisseau reste ici
+    const draineurs = carte.drain(suivante);
+    const cleDrain = camp => `blocage:${numero}:${mover}:drain:${camp}`;
+    const choixDrain = camp => Number(etat.compteurs[cleDrain(camp)]) || 0;
+
     const stade = !carte.pret ? "charge"
         : (adverses.length > 0 && vaisseaux.some(v => v.marques?.[PASSE] !== "c" + numero) ? "unites"
-            : (jet ? (vaisseaux.every(v => v.marques?.[JET]) ? "jets" : "lancer") : "libre"));
+            : (draineurs.length > 0 && vaisseaux.some(v => v.marques?.[DRAIN] !== "c" + numero) ? "drain"
+                : (jet ? (vaisseaux.every(v => v.marques?.[JET]) ? "jets" : "lancer") : "libre")));
 
     // --------------------------------------------------------
     // BLOCAGE PAR DES UNITÉS
@@ -340,7 +359,17 @@ export function Passage({ passage }) {
     const arretes = vaisseaux.filter(v => stoppes.includes(v.id) || bloqueParJet(v));
     const continuent = vaisseaux.filter(v => !arretes.includes(v));
 
-    const obstacles = stade === "unites" ? [
+    // Drain spatial : 1 ressource par vaisseau qui continue, pour chaque joueur qui l'exige
+    const coutDrain = stade === "drain"
+        ? draineurs.filter(camp => choixDrain(camp) === 1).length * continuent.length
+        : 0;
+
+    const mesRessources = Number(etat.compteurs[`joueur:${mover}:res`]) || 0;
+
+    const obstacles = stade === "drain" ? [
+        ...draineurs.filter(camp => !choixDrain(camp)).map(camp => `${nomCamp(camp)} n'a pas encore dit s'il exige le Drain spatial (compté comme un passage libre)`),
+        coutDrain > mesRessources && `Drain spatial : ${coutDrain} ressource(s) à payer, ${nomCamp(mover)} en a ${mesRessources}`,
+    ] : stade === "unites" ? [
         ...adverses.filter(a => !choixDe(a.camp)).map(a => `${nomCamp(a.camp)} n'a pas encore choisi (compté comme une abstention)`),
         arretes.filter(estMilitaire).length < milRequis &&
             `le surplus de blocage est de ${aBloquer} : il faut arrêter ${milRequis} vaisseau(x) militaire(s) d'abord`,
@@ -349,7 +378,7 @@ export function Passage({ passage }) {
     ] : [];
 
     // Retire les marques de déplacement d'un vaisseau
-    const liberer = v => [TRAJET, DEPART, PASSE, JET]
+    const liberer = v => [TRAJET, DEPART, PASSE, JET, DRAIN]
         .filter(marque => v.marques?.[marque] !== undefined)
         .map(marque => ({ type: "marquer", c: v.id, marque, valeur: null }));
 
@@ -370,7 +399,7 @@ export function Passage({ passage }) {
             ...(reste.length
                 ? [{ type: "marquer", c: v.id, marque: TRAJET, valeur: reste.join(">") }]
                 : liberer(v).filter(a => a.marque === TRAJET || a.marque === DEPART)),
-            ...liberer(v).filter(a => a.marque === PASSE || a.marque === JET),
+            ...liberer(v).filter(a => a.marque === PASSE || a.marque === JET || a.marque === DRAIN),
         ]);
     }
 
@@ -392,7 +421,9 @@ export function Passage({ passage }) {
 
         // Après un blocage par unités, s'il reste un jet à faire, les
         // vaisseaux qui passent restent sur la case le temps du jet
-        const resteUnJet = stade === "unites" && !!jet;
+        // (de même s'il reste un Drain spatial à régler, ou un jet après lui)
+        const encoreIci = stade === "unites" ? (draineurs.length > 0 || !!jet) : (stade === "drain" && !!jet);
+        const acquis = stade === "unites" ? PASSE : DRAIN;
 
         envoyer([
             ...arretes.flatMap(liberer),
@@ -406,8 +437,11 @@ export function Passage({ passage }) {
                 marque: "degat",
                 valeur: (Number(v.marques?.degat) || 0) + 1,
             })),
-            ...(resteUnJet
-                ? continuent.map(v => ({ type: "marquer", c: v.id, marque: PASSE, valeur: "c" + numero }))
+            coutDrain > 0 && { type: "compteur", id: `joueur:${mover}:res`, delta: -coutDrain },
+            ...draineurs.filter(camp => stade === "drain" && choixDrain(camp))
+                .map(camp => ({ type: "compteur", id: cleDrain(camp), valeur: 0 })),
+            ...(encoreIci
+                ? continuent.map(v => ({ type: "marquer", c: v.id, marque: acquis, valeur: "c" + numero }))
                 : avancer(continuent)),
         ], commentaire);
 
@@ -458,6 +492,7 @@ export function Passage({ passage }) {
     const titreStade = {
         charge: "chargement…",
         unites: "blocage par des unités",
+        drain: "Drain spatial",
         lancer: jet === "rift" ? "rupture gravitationnelle : jets à lancer" : "trou de ver oméga : jets à lancer",
         jets: jet === "rift" ? "rupture gravitationnelle" : "trou de ver oméga",
         libre: "aucun blocage",
@@ -553,6 +588,39 @@ export function Passage({ passage }) {
                 </div>
             )}
 
+            {/* DRAIN SPATIAL : chaque joueur qui l'a dit s'il l'exige */}
+            {stade === "drain" && (
+                <div data-drain-spatial style={{ marginTop: 4 }}>
+                    {draineurs.map(camp => (
+                        <div key={camp} data-camp={camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
+                            <span>{pastille(camp)}<b>{nomCamp(camp)}</b> a le Drain spatial sur {nomCase(suivante)} :</span>
+                            {joueur && camp === moi
+                                ? [[1, "Exiger 1 ressource par vaisseau"], [2, "Laisser passer"]].map(([valeur, libelle]) => (
+                                    <button
+                                        key={valeur}
+                                        type="button"
+                                        data-choix={valeur}
+                                        onClick={() => envoyer(
+                                            [{ type: "compteur", id: cleDrain(camp), valeur }],
+                                            `Drain spatial ${nomCase(suivante)} : ${nomCamp(camp)} ${valeur === 1 ? "exige 1 ressource par vaisseau" : "laisse passer"}`
+                                        )}
+                                        style={{ ...styleMini, fontWeight: choixDrain(camp) === valeur ? "bold" : "normal", backgroundColor: choixDrain(camp) === valeur ? "#ffb74d" : undefined }}
+                                    >
+                                        {libelle}
+                                    </button>
+                                ))
+                                : <b style={{ color: choixDrain(camp) ? "#000" : "#b71c1c" }}>
+                                    {choixDrain(camp) === 1 ? "exige 1 ressource par vaisseau" : (choixDrain(camp) === 2 ? "laisse passer" : "n'a pas encore choisi")}
+                                </b>}
+                        </div>
+                    ))}
+                    <div style={{ marginTop: 4 }}>
+                        Chaque vaisseau qui continue coûte 1 ressource par joueur qui l'exige :{" "}
+                        <b>{coutDrain} ressource(s)</b> pour {continuent.length} vaisseau(x). Sinon, cochez ceux qui restent ici.
+                    </div>
+                </div>
+            )}
+
             {/* LES VAISSEAUX : résultat du jet, et qui s'arrête ici */}
             {stade !== "charge" && (
                 <div data-vaisseaux-passage style={{ display: "flex", flexWrap: "wrap", gap: "2px 14px", marginTop: 4 }}>
@@ -629,7 +697,9 @@ export function Passage({ passage }) {
                 <div style={{ marginTop: 4, color: "#555" }}>
                     {stade === "unites"
                         ? `Les camps présents choisissent ; ${nomCamp(mover)} applique ensuite le blocage.`
-                        : `En attente de ${nomCamp(mover)}.`}
+                        : (stade === "drain"
+                            ? `Les joueurs qui ont le Drain spatial choisissent ; ${nomCamp(mover)} paie ou s'arrête.`
+                            : `En attente de ${nomCamp(mover)}.`)}
                 </div>
             )}
         </div>
