@@ -1,5 +1,19 @@
 import { useEffect, useState } from "react";
 import * as fAPI from "../lib/fetch.js";
+import { useUser } from "../lib/store";
+
+// Statuts d'un utilisateur : [valeur, libellé]. « admin » = GEuser.data.admin
+const STATUTS = [
+    ["utilisateur", "Utilisateur"],
+    ["admin", "Administrateur"],
+];
+
+const statutDe = user => (user.data?.admin === true ? "admin" : "utilisateur");
+
+const styleCase = {
+    border: "1px solid black",
+    padding: 5
+};
 
 export default function Admin() {
 
@@ -7,6 +21,45 @@ export default function Admin() {
     const [invite, setInvite] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    // Statut en cours d'enregistrement : id de l'utilisateur
+    const [enCours, setEnCours] = useState(null);
+
+    const moi = useUser(state => state.login);
+
+    async function changerStatut(user, statut) {
+
+        if (statut === statutDe(user)) {
+            return;
+        }
+
+        if (!window.confirm(`Passer ${user.login} au statut « ${STATUTS.find(s => s[0] === statut)[1]} » ?`)) {
+            return;
+        }
+
+        setError("");
+        setEnCours(user.id);
+
+        try {
+
+            const result = await fAPI.setStatut(user.id, statut);
+
+            if (result?.error || !result) {
+                setError(result?.error || "Impossible de changer le statut.");
+            } else {
+                // Le statut affiché suit celui enregistré
+                setUsers(liste => liste.map(u => (u.id === user.id
+                    ? { ...u, data: { ...u.data, admin: statut === "admin" ? true : undefined } }
+                    : u)));
+            }
+
+        } catch (e) {
+
+            console.error(e);
+            setError("Impossible de changer le statut.");
+        }
+
+        setEnCours(null);
+    }
 
     async function loadUsers() {
 
@@ -134,6 +187,10 @@ export default function Admin() {
                                     Login
                                 </th>
 
+                                <th style={styleCase}>
+                                    Statut
+                                </th>
+
                             </tr>
                         </thead>
 
@@ -159,6 +216,28 @@ export default function Admin() {
                                         }}
                                     >
                                         {user.login}
+                                    </td>
+
+                                    <td style={styleCase}>
+                                        <select
+                                            value={statutDe(user)}
+                                            disabled={enCours === user.id || (user.login === moi && statutDe(user) === "admin")}
+                                            title={user.login === moi
+                                                ? "Vous ne pouvez pas retirer votre propre statut d'administrateur"
+                                                : "Changer le statut"}
+                                            aria-label={"Statut de " + user.login}
+                                            onChange={e => changerStatut(user, e.target.value)}
+                                        >
+                                            {STATUTS.map(([valeur, libelle]) => (
+                                                <option key={valeur} value={valeur}>{libelle}</option>
+                                            ))}
+                                        </select>
+                                        {user.data?.bot === true && (
+                                            <span style={{ marginLeft: 6, color: "#666" }}>(bot)</span>
+                                        )}
+                                        {enCours === user.id && (
+                                            <span style={{ marginLeft: 6, color: "#666" }}>enregistrement…</span>
+                                        )}
                                     </td>
 
                                 </tr>

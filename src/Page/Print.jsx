@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { getHandler } from "../Game/games";
 import { getFromType, useSearch } from "../lib/store";
+import { getElement } from "../lib/fetch";
 import { LoadAndDisplay } from "../Component/LoadAndDisplay";
 import { Link } from "../lib/datatype";
 import { A3Pa, A3Po, A4Pa, A4Po } from "../Component/Size";
@@ -71,18 +72,31 @@ export default function Print() {
         });
     }
 
-function printAll() {
-    const res = new Map();
+    // Tous les éléments du type, chacun en autant d'exemplaires que le dit
+    // son champ « exemplaires » (à défaut, l'ancien préfixe !N! de son nom).
+    // Le champ n'est pas dans la liste de recherche : on charge les contenus.
+    async function printAll() {
+        const liste = getFromType(search, type);
 
-    getFromType(search, type).forEach((e) => {
-        const match = e.name.match(/^!(\d+)!/);
-        const quantity = match ? parseInt(match[1], 10) : 1;
+        const contenus = await Promise.all(
+            liste.map((e) => getElement(e.id).then((r) => r?.content).catch(() => null))
+        );
 
-        res.set(e.id, quantity);
-    });
+        const res = new Map();
 
-    setPrint(res);
-}
+        liste.forEach((e, k) => {
+            const match = e.name.match(/^!(\d+)!/);
+
+            res.set(
+                e.id,
+                match
+                    ? parseInt(match[1], 10)
+                    : Math.max(1, Math.floor(Number(contenus[k]?.exemplaires)) || 1)
+            );
+        });
+
+        setPrint(res);
+    }
 
     const elements = Array.from(print.entries()).flatMap(([id, count]) =>
         Array.from({ length: count || 0 }, (_, j) => (

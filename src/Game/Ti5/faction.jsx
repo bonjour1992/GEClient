@@ -1,6 +1,8 @@
+import { useMemo } from "react";
 import { ElementContent, Link, aggregation } from "../../lib/datatype.js";
 import { DepartCarac, DepartForm, Depart } from "./Component/Depart.jsx";
-import { turnNumber } from "./ti5Const.js";
+import { turnNumber, borderColor } from "./ti5Const.js";
+import { pub } from "../../lib/fetch";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
 import { ColorInput } from "../../Input/ColorInput.jsx";
@@ -15,9 +17,25 @@ import { NumberInput } from "../../Input/NumberInput.jsx";
 import { bottomBorder } from "../../Component/style.jsx";
 import { A4Pa } from "../../Component/Size.jsx";
 
+// Couleur secondaire d'une faction qui n'en a pas choisi : celle des bordures du jeu
+const COULEUR_SECONDAIRE = borderColor.borderColor
+
+// Couleurs transmises aux unités et habilités de la feuille (prop context)
+const couleursDe = content => ({
+    couleur: content.color,
+    couleur2: content.color2 || COULEUR_SECONDAIRE,
+})
+
 class Faction extends aggregation(ElementContent, DepartCarac) {
     logo = "/404.jpeg"
+    // Couleur principale : nom de la faction, nom et statistiques de ses
+    // unités, nom de ses habilités
     color = "#FFFFFF"
+    // Couleur secondaire : bordures (unités, habilités, compteur de tours),
+    // lignes de séparation du verso. Vide : les couleurs habituelles du jeu.
+    color2 = ""
+    // Illustration de la faction (verso)
+    picture = ""
     units = new Array(12).fill(new Link("unit"))
     agents = new Array(7).fill(new Link("agent"))
     rules = new Array(5).fill(new Link("habilite"))
@@ -33,6 +51,8 @@ class Faction extends aggregation(ElementContent, DepartCarac) {
 function Display({ content, style, context, explication }) {
     let turn = Array.from(Array(turnNumber - 1)).map((e, i) => i + 2)
 
+    // (même référence d'un rendu à l'autre : les unités ne se rechargent pas)
+    const couleurs = useMemo(() => couleursDe(content), [content.color, content.color2])
 
     return (<div
         style={{
@@ -48,7 +68,8 @@ function Display({ content, style, context, explication }) {
                     borderBottom: 12,
                     height: 60,
                     borderStyle: "solid",
-                    borderColor: "#999999",
+                    // (gris tant que la faction n'a pas choisi de couleur secondaire)
+                    borderColor: content.color2 || "#999999",
                     textAlign: "center"
                 }}
                 >
@@ -92,9 +113,13 @@ function Display({ content, style, context, explication }) {
             paddingTop: 5
         }}
         >
+            {/* data-emplacement : l'engine y affiche les éléments posés sur
+                l'unité (agents, ressources, cartes). L'apparence ne change pas. */}
             {Array.from((new Faction).units.keys()).map((i) => {
                 return content.units &&
-                    <LoadAndDisplay key={i} link={content.units[i]} style={{ width: 230, visibility: content.units[i].id === -1 ? "hidden" : "visible" }} />
+                    <div key={i} data-emplacement={content.units[i].id === -1 ? undefined : "unite:" + i} style={{ position: "relative", display: "flex" }}>
+                        <LoadAndDisplay link={content.units[i]} context={couleurs} style={{ width: 230, visibility: content.units[i].id === -1 ? "hidden" : "visible" }} />
+                    </div>
             })}
         </div>
         <div style={{
@@ -109,7 +134,9 @@ function Display({ content, style, context, explication }) {
         }}>
             {Array.from((new Faction).rules.keys()).map((i) => {
                 return content.rules &&
-                    <LoadAndDisplay key={i} link={content.rules[i]} style={{ width: 220, display: content.rules[i].id === -1 ? "none" : "block" }} />
+                    <div key={i} data-emplacement={content.rules[i].id === -1 ? undefined : "habilite:" + i} style={{ position: "relative", display: content.rules[i].id === -1 ? "none" : "block" }}>
+                        <LoadAndDisplay link={content.rules[i]} context={couleurs} style={{ width: 220, display: "block" }} />
+                    </div>
             })}
         </div>
     </div>)
@@ -131,7 +158,7 @@ export function FactionLogo({ content, style }) {
 export function Verso({ content, style, explication }) {
 
     function Separateur() {
-        return (<div style={{ width: "102%", height: 0, borderColor: "white", ...bottomBorder(2), margin: "5px -3px" }}></div>)
+        return (<div style={{ width: "102%", height: 0, ...bottomBorder(2), borderColor: content.color2 || "white", margin: "5px -3px" }}></div>)
     }
 
     return (<div
@@ -171,8 +198,18 @@ export function Verso({ content, style, explication }) {
         <div style={{
             gridColumn: 2,
             gridRow: 1,
+            padding: 5,
+            minHeight: 0,
         }}>
-            Image
+            {/* Illustration de la faction, à gauche de son système de départ */}
+            {content.picture && (
+                <img
+                    data-faction-picture
+                    src={encodeURI(pub + content.picture)}
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                />
+            )}
         </div>
         <div style={{
             gridColumn: 3,
@@ -223,8 +260,13 @@ function Form({ content, onChange, onSubmit, style }) {
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
 
-            <ImagePicker onChange={onChange} name={"logo"} value={content} />
-            <ColorInput onChange={onChange} name={"color"} value={content} />
+            <ImagePicker onChange={onChange} name={"logo"} value={content} label="Logo" />
+            <ImagePicker onChange={onChange} name={"picture"} value={content} label="Illustration (verso)" />
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+                <ColorInput onChange={onChange} name={"color"} value={content} label="Couleur principale (noms, statistiques)" />
+                <ColorInput onChange={onChange} name={"color2"} value={content} label="Couleur secondaire (bordures, séparations)" />
+            </div>
 
             <h2>Agents</h2>
             <TableInput onChange={onChange} Line={agentLine} max={7} name="agentNum" value={content} />

@@ -4,9 +4,24 @@ import { getHandler } from "../../games";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
-import { useElement, contenuEnCache } from "./sync";
-import { MARQUEUR, FAVEUR, DETTE, ACTIVATION, TREVE, estFragment, typeUnite as typeDeUnite } from "./miseEnPlace";
+import { useElement, useElements, contenuEnCache } from "./sync";
+import {
+    MARQUEUR,
+    FAVEUR,
+    DETTE,
+    ACTIVATION,
+    TREVE,
+    RESSOURCES,
+    LIBRE,
+    COULEUR_LIBRE,
+    estFragment,
+    ressourceDe,
+    typeUnite as typeDeUnite,
+    estUniteMercenaire,
+} from "./miseEnPlace";
 import { joueurDeMain, estPioche } from "./etat";
+import { distanceIndex } from "../hexSpirale";
+import { ICONE_MERCENAIRE } from "../Component/Nom";
 
 // ============================================================
 // COUCHE D'INTERACTION DE L'ENGINE
@@ -49,6 +64,93 @@ export const STYLE_INDISPONIBLE = {
     border: "1px solid #b08a8a",
     borderRadius: 3,
 };
+
+// ============================================================
+// BOUTONS : TROIS SORTES
+//
+//   gris        action simple, sans règle du jeu (« Envoyer vers… »,
+//               « Fermer ») : le bouton ordinaire du navigateur ;
+//   vert        effet du jeu, utilisable : bonne phase, conditions
+//               remplies, ressources et agents disponibles ;
+//   rouge gris  le même effet, qui ne devrait pas être fait : il reste
+//               utilisable, après une confirmation qui dit pourquoi.
+//
+// Le coup d'un effet du jeu porte un commentaire marqué (✔ ou ⚠) :
+// le journal l'affiche en vert ou en rouge (Journal.jsx, lireRegle).
+// Vaut aussi pour les effets déclenchés par un clic ou un Ctrl + clic
+// (confirmerRegle).
+// ============================================================
+
+export const STYLE_REGLE = {
+    backgroundColor: "#c8e6c9",
+    color: "#1b5e20",
+    border: "1px solid #2e7d32",
+    borderRadius: 3,
+    fontWeight: "bold",
+};
+
+const MARQUE_REGLE = "✔ ";
+const MARQUE_HORS_REGLE = "⚠ ";
+
+// Commentaire d'un coup -> { hors } si c'est un effet du jeu, sinon null
+export function lireRegle(commentaire) {
+
+    const texte = String(commentaire || "");
+
+    return texte.startsWith(MARQUE_REGLE)
+        ? { hors: false }
+        : (texte.startsWith(MARQUE_HORS_REGLE) ? { hors: true } : null);
+}
+
+// Effet du jeu sur le point d'être fait. obstacles : raisons pour lesquelles
+// il ne devrait pas l'être (les valeurs fausses sont ignorées). S'il y en a,
+// une confirmation les rappelle. Retourne le commentaire du coup (à passer à
+// envoyer), ou null si le joueur renonce.
+export function confirmerRegle(nom, obstacles = []) {
+
+    const raisons = obstacles.filter(Boolean);
+
+    if (!raisons.length) {
+        return MARQUE_REGLE + nom;
+    }
+
+    return window.confirm(`${nom} ?\n\nNormalement impossible :\n- ${raisons.join("\n- ")}\n\nLe faire quand même ?`)
+        ? `${MARQUE_HORS_REGLE}${nom} (${raisons.join(" ; ")})`.slice(0, 200)
+        : null;
+}
+
+// Bouton d'un effet du jeu : vert, ou rouge gris s'il y a des obstacles.
+// faire(commentaire) reçoit le commentaire à donner au coup.
+export function BoutonRegle({ nom, obstacles = [], faire, children, style, title, ...reste }) {
+
+    const raisons = obstacles.filter(Boolean);
+
+    return (
+        <button
+            type="button"
+            data-regle={raisons.length ? "hors" : "ok"}
+            title={raisons.length
+                ? `Ne devrait pas être fait : ${raisons.join(" ; ")} (reste utilisable, après confirmation)`
+                : title}
+            onClick={() => {
+                const commentaire = confirmerRegle(nom || String(children), raisons);
+
+                if (commentaire) {
+                    faire(commentaire);
+                }
+            }}
+            style={{
+                ...(raisons.length ? STYLE_INDISPONIBLE : STYLE_REGLE),
+                // (désactivé : l'action n'existe pas ici, par exemple après le dernier tour)
+                ...(reste.disabled ? { opacity: 0.5, cursor: "default" } : {}),
+                ...style,
+            }}
+            {...reste}
+        >
+            {children}
+        </button>
+    );
+}
 
 // ============================================================
 // BLOCS REPLIABLES (volet de droite, en-tête)
@@ -176,6 +278,12 @@ export function indexer(etat) {
 }
 
 // Nom affiché d'un élément : le préfixe !...! des noms n'est pas affiché
+// Mercenaire : une carte mercenaire, ou une unité mercenaire (marque « dos »
+// posée à la mise en place, ou type de lien « mercenaire » de son contenu)
+export const estMercenaire = c => c?.ref?.type === "mercenaire" ||
+    (c?.ref?.type === "unit" &&
+        (c.marques?.dos === "mercenaire" || estUniteMercenaire(contenuEnCache(c.ref.id))));
+
 export function nomElement(search, ref) {
     const element = search.find(e => e.id === ref.id);
 
@@ -190,6 +298,32 @@ export function couleurJoueur(joueur) {
     return PlayerColor[joueur?.couleur] || joueur?.couleur || "#666";
 }
 
+// ============================================================
+// SYSTÈMES SECONDAIRES
+//
+// Des systèmes à part du plan central (on y accède par des trous
+// de ver) : un second groupe de cases, sous la carte de l'onglet
+// Espace. Ce sont des zones hex:<i> comme les autres, d'indice
+// 1000 et plus : tout ce qui vaut pour un système vaut pour eux
+// (fiche, planètes, unités, combats). L'indice dans leur groupe
+// est i - 1000, et deux cases ne sont voisines que dans le même
+// groupe.
+// ============================================================
+
+export const DECALAGE_SECONDAIRE = 1000;
+
+export const estSecondaire = numero => Number(numero) >= DECALAGE_SECONDAIRE;
+
+// « case 12 », « secondaire 3 »
+export const nomCase = numero => (estSecondaire(numero)
+    ? `secondaire ${Number(numero) - DECALAGE_SECONDAIRE + 1}`
+    : `case ${Number(numero) + 1}`);
+
+// Distance entre deux cases, en pas d'hexagone ; infinie d'un groupe à l'autre
+export const distanceCases = (a, b) => (estSecondaire(a) !== estSecondaire(b)
+    ? Infinity
+    : distanceIndex(Number(a) % DECALAGE_SECONDAIRE, Number(b) % DECALAGE_SECONDAIRE));
+
 // Nom lisible d'une zone, pour le journal et les menus
 export function nomZone(zone, nomDe) {
 
@@ -202,7 +336,7 @@ export function nomZone(zone, nomDe) {
     switch (parties[0]) {
 
         case "hex":
-            return `case ${Number(parties[1]) + 1}` +
+            return nomCase(parties[1]) +
                 (parties[2] === "planete" ? `, planète ${Number(parties[3]) + 1}` : "");
 
         case "joueur": {
@@ -230,8 +364,19 @@ export function nomZone(zone, nomDe) {
                 return `tour ${parties[3]} de ${qui}`;
             }
 
+            // Emplacements de la feuille de faction (unités, habilités)
+            if (parties[2] === "unite" || parties[2] === "habilite") {
+                return `${parties[2] === "unite" ? "unité" : "habilité"} ${Number(parties[3]) + 1} de ${qui}`;
+            }
+
             return `${noms[reste] || reste} de ${qui}`;
         }
+
+        // Feuille d'une faction neutre (unités, habilités)
+        case "neutre":
+            return ["unite", "habilite"].includes(parties[2])
+                ? `${parties[2] === "unite" ? "unité" : "habilité"} ${Number(parties[3]) + 1} de la faction neutre`
+                : "faction neutre : " + parties.slice(2).join(":");
 
         case "pioche":
             if (parties[1] === "system") {
@@ -258,6 +403,8 @@ export function nomZone(zone, nomDe) {
                 tuiles: "tuiles piochées",
                 systemes: "réserve de tuiles spéciales",
                 table: "table",
+                libre: "zone libre",
+                neutres: "unités neutres",
             };
 
             if (parties[1] === "boite") {
@@ -420,6 +567,35 @@ const ICONES_FRAGMENT = {
     "Fragment spatial": "/ti/relic/relicSpa.png",
 };
 
+// Icône d'une ressource (« res », « inf », « commerce ») portant un nombre :
+// hexagone ou rond de la couleur des remplacements #res, #inf, #com
+export function IconeRessource({ ressource, n, cote = 22 }) {
+
+    const [, couleur, forme] = RESSOURCES[ressource] || [null, "#999", "rond"];
+    const clair = ressource !== "inf";
+
+    return (
+        <svg viewBox="0 0 24 24" width={cote} height={cote} aria-hidden="true" style={{ display: "block", flexShrink: 0 }}>
+            {forme === "hex"
+                ? <polygon points="12,1 22,6.5 22,17.5 12,23 2,17.5 2,6.5" fill={couleur} stroke="#000" strokeWidth="1.2" />
+                : <circle cx="12" cy="12" r="10.5" fill={couleur} stroke="#000" strokeWidth="1.2" />}
+            {n !== undefined && n !== null && (
+                <text
+                    x="12"
+                    y="16.5"
+                    textAnchor="middle"
+                    fontSize={String(n).length > 1 ? 11 : 13}
+                    fontWeight="bold"
+                    fontFamily="Arial, sans-serif"
+                    fill={clair ? "#000" : "#fff"}
+                >
+                    {n}
+                </text>
+            )}
+        </svg>
+    );
+}
+
 // Agent disponible (non usé) du joueur dont le nom contient `nom`, ou null
 export function agentDisponible({ index, moi, search }, nom) {
     return (index.parZone.get(`joueur:${moi}:agents`) || [])
@@ -445,6 +621,90 @@ function couleurCube(c, agent) {
     return null;
 }
 
+// Miniatures d'unité : copies des images de public/ti/unit_icon recadrées
+// sur la silhouette (public/ti/unit_mini, mêmes noms). Largeur et hauteur de
+// chaque copie, en pixels : la miniature garde l'échelle de l'image d'origine
+// (un croiseur reste plus long qu'une frégate), sans marge autour.
+const MINIS = {
+    com: [240, 176], cruiser: [585, 187], dest: [355, 185], dn: [589, 218], dock: [251, 206],
+    fs: [434, 151], inf: [212, 235], mech: [199, 213], mon: [278, 267], pds: [209, 222],
+    sun: [650, 321], trans: [561, 194],
+    // (image d'origine plus petite que les autres : ramenée à leur échelle)
+    fact: [81 * 2.6, 96 * 2.6],
+};
+
+// Taille d'affichage de la miniature d'un type d'unité, ou null s'il n'en a pas
+export function tailleMini(type, petit) {
+
+    const taille = MINIS[type];
+
+    if (!taille) {
+        return null;
+    }
+
+    // Échelle de l'image d'origine (750 px de large), puis une hauteur minimale lisible
+    const echelle = Math.max(petit ? 0.06 : 0.073, (petit ? 12 : 15) / taille[1]);
+
+    return { width: Math.round(taille[0] * echelle), height: Math.round(taille[1] * echelle) };
+}
+
+// Contour blanc net d'une silhouette d'unité (un pixel de chaque côté) :
+// elle se détache du fond sombre de l'espace
+const CONTOUR_BLANC = "drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)";
+
+// Marqueur de trêve : le token « Trêve » des données du jeu (reconnu à son
+// nom, comme les agents), ou l'ancien jeton `trêve` des parties en cours
+const RE_TREVE = /^tr[eê]ve$/i;
+
+export const tokenTreve = search =>
+    search.find(e => e.type === "token" && RE_TREVE.test((e.name || "").replace(/^!([^!]*)!/, "").trim())) || null;
+
+export const estTreve = (c, search) => !!c && !c.cache && (c.ref
+    ? c.ref.type === "token" && c.ref.id === tokenTreve(search)?.id
+    : c.jeton === TREVE);
+
+// Token (type « token » des données du jeu) en miniature : sa forme (rond
+// ou triangle), sa couleur de fond et son image, sur un côté de `cote` px.
+// bord : couleur du joueur qui l'a posé (liseré d'un token rond)
+export function MiniToken({ contenu, cote = 22, bord }) {
+
+    const triangle = contenu?.forme === "triangle";
+
+    return (
+        <span
+            style={{
+                display: "inline-flex",
+                alignItems: triangle ? "flex-end" : "center",
+                justifyContent: "center",
+                flex: "none",
+                width: cote,
+                height: triangle ? cote * Math.sqrt(3) / 2 : cote,
+                boxSizing: "border-box",
+                overflow: "hidden",
+                backgroundColor: contenu?.couleur || "#fff",
+                ...(triangle
+                    ? { clipPath: "polygon(50% 0, 100% 100%, 0 100%)", filter: "drop-shadow(0 0 1px #000)" }
+                    : { borderRadius: "50%", border: bord ? "2px solid " + bord : "1px solid #444" }),
+            }}
+        >
+            {contenu?.img && (
+                <img
+                    src={encodeURI(pub + contenu.img)}
+                    alt=""
+                    draggable={false}
+                    style={{
+                        width: triangle ? "50%" : "88%",
+                        height: triangle ? "50%" : "88%",
+                        marginBottom: triangle ? "8%" : 0,
+                        objectFit: "contain",
+                        pointerEvents: "none",
+                    }}
+                />
+            )}
+        </span>
+    );
+}
+
 function Pion({ groupe, petit }) {
 
     const { search, jeu, couleurDe, nomDe, factionDe, index, jouer, joueur, ouvrirCachee } = useEngine();
@@ -462,8 +722,16 @@ function Pion({ groupe, petit }) {
 
     let idContenu = -1;
 
-    if (typeRef === "agent" || typeRef === "unit") {
+    // Faveur obtenue d'une faction neutre : sans propriétaire, elle porte
+    // l'identifiant de la faction neutre (marques.neutre)
+    const neutre = faveur && (c.proprio === null || c.proprio === undefined)
+        ? Number(c.marques?.neutre) || null
+        : null;
+
+    if (typeRef === "agent" || typeRef === "unit" || typeRef === "token") {
         idContenu = c.ref.id;
+    } else if (neutre) {
+        idContenu = neutre;
     } else if (marqueur) {
         idContenu = factionDe(c.proprio) ?? -1;
     }
@@ -577,7 +845,9 @@ function Pion({ groupe, petit }) {
 
         // Une faveur est un triangle, un marqueur un carré
         const cote = faveur ? (petit ? 20 : 28) : (petit ? 16 : 22);
-        const titre = (faveur ? "Faveur de " : "Marqueur de ") + nomDe(c.proprio);
+        const titre = (faveur ? "Faveur de " : "Marqueur de ") +
+            (neutre ? (contenu?.name || "faction neutre") : nomDe(c.proprio));
+        const fond = neutre ? contenu?.color || "#9e9e9e" : couleurDe(c.proprio) || "#888";
 
         return (
             <span
@@ -601,7 +871,7 @@ function Pion({ groupe, petit }) {
                         width: cote,
                         height: cote,
                         boxSizing: "border-box",
-                        backgroundColor: couleurDe(c.proprio) || "#888",
+                        backgroundColor: fond,
                         ...(faveur
                             ? {
                                 clipPath: "polygon(50% 0%, 100% 100%, 0% 100%)",
@@ -671,6 +941,82 @@ function Pion({ groupe, petit }) {
         );
     }
 
+    // Marqueur libre : une étiquette de sa couleur portant son texte
+    // (raccourci sur la carte ; le texte entier en info-bulle)
+    if (!c.ref && c.jeton === LIBRE) {
+
+        const texte = String(c.marques?.texte ?? "");
+        const fond = c.marques?.couleur || COULEUR_LIBRE;
+        const sombre = /^#([0-9a-f]{6})$/i.test(fond) &&
+            parseInt(fond.slice(1, 3), 16) * 0.3 + parseInt(fond.slice(3, 5), 16) * 0.59 + parseInt(fond.slice(5, 7), 16) * 0.11 < 128;
+
+        return (
+            <span
+                data-composant={c.id}
+                data-groupe={groupe.map(x => x.id).join(",")}
+                data-nom={texte || "Marqueur libre"}
+                title={(texte || "Marqueur libre (sans texte)") +
+                    (c.proprio ? ` — ${nomDe(c.proprio)}` : "") + " — clic : modifier"}
+                style={{
+                    ...stylePion,
+                    ...taille,
+                    display: "inline-block",
+                    maxWidth: petit ? 70 : 170,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    backgroundColor: fond,
+                    color: sombre ? "#fff" : "#000",
+                    borderColor: couleurDe(c.proprio) || "#444",
+                    borderRadius: 4,
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                }}
+            >
+                {texte || "✎"}
+                {n > 1 && <b> ×{n}</b>}
+            </span>
+        );
+    }
+
+    // Jeton de ressource, d'influence ou de commerce : son icône portant le montant
+    const ressource = ressourceDe(c);
+
+    if (ressource) {
+
+        const montant = Number(c.marques?.montant) || 0;
+        const titre = `${nom} : ${montant}` + (c.proprio ? ` (${nomDe(c.proprio)})` : "");
+
+        return (
+            <span
+                data-composant={c.id}
+                data-groupe={groupe.map(x => x.id).join(",")}
+                data-nom={`${nom} ${montant}`}
+                title={titre + (n > 1 ? ` ×${n}` : "")}
+                style={{ ...stylePion, padding: 0, border: "none", backgroundColor: "transparent", gap: 1 }}
+            >
+                <IconeRessource ressource={ressource} n={montant} cote={petit ? 18 : 24} />
+                {n > 1 && <b style={badge}>×{n}</b>}
+            </span>
+        );
+    }
+
+    // Token (données du jeu) : sa forme en miniature, suivie du nom hors de la carte
+    if (typeRef === "token") {
+        return (
+            <span
+                data-composant={c.id}
+                data-groupe={groupe.map(x => x.id).join(",")}
+                data-nom={nom}
+                title={nom + (n > 1 ? ` ×${n}` : "") + (c.proprio ? ` — ${nomDe(c.proprio)}` : "")}
+                style={{ ...stylePion, padding: "0 3px", border: "none", backgroundColor: "transparent", gap: 4 }}
+            >
+                <MiniToken contenu={contenu} cote={petit ? 18 : 24} bord={couleurDe(c.proprio)} />
+                {!petit && <span style={{ fontSize: 11 }}>{nom}</span>}
+                {n > 1 && <b style={badge}>{n}</b>}
+            </span>
+        );
+    }
+
     // Marqueur d'activation : un carré noir neutre (« R » sur une ruine).
     // Fragment de relique : l'icône de son type.
     const activation = !c.ref && c.jeton === ACTIVATION;
@@ -724,7 +1070,6 @@ function Pion({ groupe, petit }) {
                         style={{ width: cote, height: cote, objectFit: "contain", pointerEvents: "none" }}
                     />
                 )}
-                {!activation && !petit && <span style={{ fontSize: 11 }}>{nom.replace(/^Fragment /, "")}</span>}
                 {n > 1 && <b style={badge}>{n}</b>}
             </span>
         );
@@ -735,7 +1080,10 @@ function Pion({ groupe, petit }) {
     // la silhouette seule ; ailleurs, suivie du nom.
     if (typeUnite) {
 
-        const icone = `url("${pub}/ti/unit_icon/${typeUnite}.png")`;
+        // Miniature recadrée au plus juste (unit_mini) ; à défaut, l'image
+        // d'origine, agrandie dans un cadre fixe
+        const mini = tailleMini(typeUnite, petit);
+        const icone = `url("${pub}/ti/${mini ? "unit_mini" : "unit_icon"}/${typeUnite}.png")`;
 
         return (
             <span
@@ -768,7 +1116,7 @@ function Pion({ groupe, petit }) {
                             boxSizing: "border-box",
                             borderRadius: "50%",
                             backgroundColor: couleurDe(c.marques?.possession ?? c.proprio) || "#c8c8c8",
-                            border: horsFiche ? "2px solid " + DORE : "1.5px solid #fff",
+                            border: horsFiche ? "2px solid " + DORE : "2px solid #fff",
                             outline: "1px solid #000",
                         }}
                     />
@@ -776,13 +1124,13 @@ function Pion({ groupe, petit }) {
                 <span
                     style={{
                         display: "inline-block",
-                        width: petit ? 36 : 44,
-                        height: petit ? 24 : 29,
+                        width: mini ? mini.width : (petit ? 36 : 44),
+                        height: mini ? mini.height : (petit ? 24 : 29),
                         backgroundColor: couleurDe(c.marques?.possession ?? c.proprio) || "#c8c8c8",
                         WebkitMaskImage: icone,
                         maskImage: icone,
-                        WebkitMaskSize: "125%",
-                        maskSize: "125%",
+                        WebkitMaskSize: mini ? "100% 100%" : "125%",
+                        maskSize: mini ? "100% 100%" : "125%",
                         WebkitMaskRepeat: "no-repeat",
                         maskRepeat: "no-repeat",
                         WebkitMaskPosition: "center",
@@ -791,10 +1139,12 @@ function Pion({ groupe, petit }) {
                         // (doré pour une unité hors fiche de faction)
                         filter: horsFiche
                             ? `drop-shadow(0 0 1px ${DORE}) drop-shadow(0 0 1px ${DORE}) drop-shadow(0 0 2px ${DORE})`
-                            : "drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)",
+                            : CONTOUR_BLANC,
                     }}
                 />
                 )}
+                {/* Hors de la carte : le logo de la faction à laquelle l'unité est liée, puis son nom */}
+                {!petit && <LogoFaction id={c.ref.id} />}
                 {!petit && <span style={{ fontSize: 11 }}>{nom}</span>}
                 {degat > 0 && <b style={{ ...badge, color: "#c00" }}>✹{degat}</b>}
                 {n > 1 && <b style={badge}>{n}</b>}
@@ -821,6 +1171,7 @@ function Pion({ groupe, petit }) {
             }}
         >
             {c.face === "cache" && "🂠 "}
+            {c.ref && <LogoFaction id={c.ref.id} cote={petit ? 10 : 14} />}
             {dette ? `Dette ${Number(c.marques?.montant) || 0}` : nom}
             {c.face === "verso" && " ↺"}
             {degat > 0 && <b style={{ color: "#c00" }}>✹{degat}</b>}
@@ -830,6 +1181,49 @@ function Pion({ groupe, petit }) {
                 ? grouper(portes, index).map(g => <Pion key={g[0].id} groupe={g} petit />)
                 : <Portes liste={portes} />}
         </span>
+    );
+}
+
+// Logo de la faction (ou faction neutre) à laquelle un élément est lié (type
+// de lien, Component/TypeLien.jsx), devant son nom quand il est affiché en
+// nom dans un cadre (pion, source). Rien pour un élément commun.
+const TYPES_LIEN_FACTION = ["faction", "neutre"];
+
+function LogoFaction({ id, cote = 14 }) {
+
+    const contenu = useElement(id ?? -1);
+
+    const lie = TYPES_LIEN_FACTION.includes(contenu?.lienType) && Number(contenu.lienElement?.id) > 0
+        ? Number(contenu.lienElement.id)
+        : -1;
+
+    const faction = useElement(lie);
+
+    const style = { width: cote, height: cote, objectFit: "contain", flexShrink: 0, pointerEvents: "none" };
+
+    // Mêmes icônes que l'affichage « nom » des données (Component/Nom.jsx) :
+    // lié à un mercenaire, l'icône des mercenaires ; une feuille de
+    // technologie, son propre logo
+    if (contenu?.lienType === "mercenaire") {
+        return <img src={encodeURI(pub + ICONE_MERCENAIRE)} alt="" title="Mercenaire" draggable={false} style={style} />;
+    }
+
+    if (contenu?.techs && contenu.logo && contenu.logo !== "/404.jpeg") {
+        return <img src={encodeURI(pub + contenu.logo)} alt="" draggable={false} style={style} />;
+    }
+
+    if (!faction?.logo || faction.logo === "/404.jpeg") {
+        return null;
+    }
+
+    return (
+        <img
+            src={encodeURI(pub + faction.logo)}
+            alt=""
+            title={faction.name}
+            draggable={false}
+            style={style}
+        />
     );
 }
 
@@ -866,14 +1260,21 @@ function Portes({ liste }) {
 
 // Dos d'une carte qu'on ne voit pas : le verso de son type. Dans une zone
 // publique (case du déroulé), un Ctrl + clic la retourne face visible.
-function Dos({ type, zoom, zone }) {
+// verso : champs du contenu dont dépend le dos (filtrerEtat, etat.js), par
+// exemple { type: "maj" } pour un événement majeur
+export function Dos({ type, zoom, zone, verso }) {
 
     const { jeu, jouer, joueur, ouvrirCachee } = useEngine();
 
     const handler = getHandler(jeu, type);
     const Verso = handler.display.verso;
 
-    const contenu = useMemo(() => new handler.classe(), [handler]);
+    const cleVerso = JSON.stringify(verso || {});
+
+    const contenu = useMemo(
+        () => Object.assign(new handler.classe(), JSON.parse(cleVerso)),
+        [handler, cleVerso]
+    );
 
     const revelable = joueur && joueurDeMain(zone) === null && !estPioche(zone);
 
@@ -944,34 +1345,50 @@ export function Source({ lien, jeton, neutre, libelle, couleur }) {
                     borderColor: neutre ? "#000" : couleurDe(moi) || "#666",
                 }}
             >
-                <span
-                    style={{
-                        display: "inline-block",
-                        width: 14,
-                        height: 14,
-                        boxSizing: "border-box",
-                        borderRadius: 3,
-                        backgroundColor: couleur || (neutre ? "#000" : couleurDe(moi) || "#888"),
-                        border: "1.5px solid " + (couleur ? couleurDe(moi) || "#2e7d32" : "#fff"),
-                        outline: "1px solid #000",
-                    }}
-                />
+                {/* Fragment de relique : l'icône de son type */}
+                {estFragment({ jeton }) ? (
+                    <img
+                        src={encodeURI(pub + ICONES_FRAGMENT[jeton])}
+                        alt=""
+                        draggable={false}
+                        style={{ width: 18, height: 18, objectFit: "contain", pointerEvents: "none" }}
+                    />
+                ) : (
+                    <span
+                        style={{
+                            display: "inline-block",
+                            width: 14,
+                            height: 14,
+                            boxSizing: "border-box",
+                            borderRadius: 3,
+                            backgroundColor: couleur || (neutre ? "#000" : couleurDe(moi) || "#888"),
+                            border: "1.5px solid " + (couleur ? couleurDe(moi) || "#2e7d32" : "#fff"),
+                            outline: "1px solid #000",
+                        }}
+                    />
+                )}
                 ∞ {nom}
             </span>
         );
     }
 
+    // neutre : l'unité créée n'a pas de propriétaire (réserve des unités neutres)
+    const teinte = neutre ? "#9e9e9e" : couleurDe(moi);
+
     return (
         <span
-            data-source={JSON.stringify({ type: lien.type || "unit", id: lien.id })}
+            data-source={JSON.stringify({ type: lien.type || "unit", id: lien.id, ...(neutre ? { neutre: true } : {}) })}
             data-nom={nom}
-            title={nom + " : illimité. Glisser vers la carte pour en poser une."}
+            title={(lien.type || "unit") === "unit"
+                ? nom + (neutre ? " (neutre)" : "") + " : illimité. Glisser pour en poser une."
+                : nom + " : illimité. Glisser pour en poser un."}
             style={{
                 ...stylePion,
                 borderStyle: "dashed",
-                borderColor: couleurDe(moi) || "#666",
+                borderColor: teinte || "#666",
             }}
         >
+            {lien.type === "token" && <MiniToken contenu={contenu} cote={18} />}
             {typeDeUnite(contenu) === "inf" && (
                 <span
                     style={{
@@ -980,12 +1397,13 @@ export function Source({ lien, jeton, neutre, libelle, couleur }) {
                         height: 13,
                         boxSizing: "border-box",
                         borderRadius: "50%",
-                        backgroundColor: couleurDe(moi) || "#c8c8c8",
+                        backgroundColor: teinte || "#c8c8c8",
                         border: "1.5px solid #fff",
                         outline: "1px solid #000",
                     }}
                 />
             )}
+            <LogoFaction id={lien.id} />
             ∞ {nom}
         </span>
     );
@@ -999,6 +1417,10 @@ function Carte({ c, zoom }) {
 
     const nom = nomElement(search, c.ref);
     const verso = c.face === "verso" && getHandler(jeu, c.ref.type)?.display?.verso;
+
+    // Unité mercenaire : affichage « merc » (son verso : « mercVerso »)
+    const merc = c.ref.type === "unit" && estMercenaire(c);
+    const displayeur = merc ? (c.face === "verso" ? "mercVerso" : "merc") : verso ? "verso" : undefined;
 
     // Ce qui est posé sur la carte : marqueurs de faction, cube de mercenaire
     const portes = index.parPorteur.get(c.id) || [];
@@ -1022,7 +1444,7 @@ function Carte({ c, zoom }) {
             }}
         >
             <span style={{ display: "block", pointerEvents: "none" }}>
-                <LoadAndDisplay link={c.ref} displayeur={verso ? "verso" : undefined} />
+                <LoadAndDisplay link={c.ref} displayeur={displayeur} />
             </span>
 
             {/* Pions posés sur la carte, à taille constante quel que soit le zoom */}
@@ -1063,8 +1485,13 @@ export function Cartes({ zone, zoom = 1, separes }) {
     // Carte cachée dont le type a un verso : on montre son dos
     const aUnDos = c => c.cache && !!getHandler(jeu, c.dos)?.display?.verso;
 
-    // Agents et unités restent des pions (cubes, silhouettes)
-    const estCarte = c => !c.cache && c.ref && c.ref.type !== "agent" && c.ref.type !== "unit";
+    // Contenu des unités, pour reconnaître une unité mercenaire
+    useElements(liste.filter(c => !c.cache && c.ref?.type === "unit").map(c => c.ref.id));
+
+    // Agents et unités restent des pions (cubes, silhouettes) ; une unité
+    // mercenaire est une carte, hors de la carte du jeu
+    const estCarte = c => !c.cache && c.ref && c.ref.type !== "agent" && c.ref.type !== "token" &&
+        (c.ref.type !== "unit" || estMercenaire(c));
 
     const visibles = liste.filter(estCarte);
     const dos = liste.filter(aUnDos);
@@ -1078,7 +1505,7 @@ export function Cartes({ zone, zoom = 1, separes }) {
             ))}
 
             {dos.map(c => (
-                <Dos key={c.id} type={c.dos} zoom={echelle} zone={zone} />
+                <Dos key={c.id} type={c.dos} zoom={echelle} zone={zone} verso={c.verso} />
             ))}
 
             {pions.map(g => (
@@ -1155,7 +1582,10 @@ export function Zone({ zone, titre, filtre, style, cartes, repli, children }) {
 //   cartes(zone)        retourne un zoom pour afficher les cartes en entier
 //   separes(zone)       vrai pour afficher un pion par composant
 //   extra(zone)         élément ajouté avant les pions (marqueur de possession)
-export function Emplacements({ prefixe, stylePions, petit, cartes, separes, extra, children, style }) {
+//   filtrePions(zone)   retourne un filtre des composants à afficher en pions
+//                       (une technologie posée sur une feuille s'affiche déjà
+//                       comme une technologie imprimée)
+export function Emplacements({ prefixe, stylePions, petit, cartes, separes, extra, filtrePions, children, style }) {
 
     const racine = useRef(null);
     // Emplacements trouvés : [{ noeud, zone, filtre }]
@@ -1229,7 +1659,7 @@ export function Emplacements({ prefixe, stylePions, petit, cartes, separes, extr
                                     separes={!!separes?.(zone)}
                                     filtre={filtreId
                                         ? c => String(c.ref?.id) === filtreId
-                                        : undefined}
+                                        : filtrePions?.(zone)}
                                 />
                             )}
                     </span>,
@@ -1337,12 +1767,71 @@ export function Defilable({ children, style }) {
 
 const SEUIL_GLISSER = 5;
 
+// Zones dont on range les éléments à la main (glisser l'un sur l'autre)
+const ZONE_ORDONNABLE = /^(joueur:\d+:(main|actif)|general:table)$/;
+
+// Marqueur libre, et carte qui peut en porter un (pas un agent ni une unité
+// sur la carte du jeu ; une unité mercenaire est une carte)
+const estLibre = c => !!c && !c.ref && c.jeton === LIBRE;
+const estCarteCible = c => !!c?.ref && !c.cache && c.ref.type !== "agent" && c.ref.type !== "token" &&
+    (c.ref.type !== "unit" || estMercenaire(c));
+
 export function Plan({ children, style }) {
 
-    const { etat, jouer, ouvrirFiche, joueur, moi, cliquer, production, signaler } = useEngine();
+    const { etat, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, signaler, search } = useEngine();
 
     const appui = useRef(null);
     const [glisser, setGlisser] = useState(null);
+
+    // Message non bloquant : après un embarquement, dit si le vaisseau porte
+    // plus d'unités que sa capacité (l'embarquement est fait quand même).
+    // embarques : composants qu'on vient d'y poser ; crees : unités qu'on vient d'y créer
+    function signalerCapacite(idPorteur, embarques = [], crees = 0) {
+
+        const vaisseau = etat.composants[idPorteur];
+        const contenu = vaisseau?.ref?.type === "unit" ? contenuEnCache(vaisseau.ref.id) : null;
+
+        if (!contenu?.mot_cle?.includes("ship")) {
+            return;
+        }
+
+        const estUnite = c => c?.ref?.type === "unit";
+
+        const deja = Object.values(etat.composants)
+            .filter(c => c.sur === idPorteur && estUnite(c) && !embarques.includes(c.id)).length;
+
+        const portees = deja + embarques.filter(id => estUnite(etat.composants[id])).length + crees;
+        const capacite = Number(contenu.capacite) || 0;
+
+        if (portees > capacite) {
+            signaler?.(`Attention : ${nomElement(search, vaisseau.ref)} porte ${portees} unité${portees > 1 ? "s" : ""} ` +
+                `pour une capacité de ${capacite}. (L'embarquement est fait : à vous de corriger si besoin.)`);
+        }
+    }
+
+    // Pile de pioche survolée pendant un glisser (data-pile) : elle reçoit
+    // data-survol, qui fait apparaître ses trois zones de dépôt, et la zone
+    // visée (data-position) reçoit data-actif
+    const survol = useRef({ pile: null, position: null });
+
+    function marquerSurvol(cible) {
+
+        const s = survol.current;
+        const pile = cible?.closest?.("[data-pile]") || null;
+        const position = pile ? cible.closest("[data-position]") : null;
+
+        if (s.pile !== pile) {
+            s.pile?.removeAttribute("data-survol");
+            pile?.setAttribute("data-survol", "");
+            s.pile = pile;
+        }
+
+        if (s.position !== position) {
+            s.position?.removeAttribute("data-actif");
+            position?.setAttribute("data-actif", "");
+            s.position = position;
+        }
+    }
 
     // Case « Production » cochée : poser ces unités coûte leur coût en
     // ressources. Retourne les actions de paiement ([] s'il n'y a rien à
@@ -1370,6 +1859,49 @@ export function Plan({ children, style }) {
         }
 
         return [{ type: "compteur", id: compteur, delta: -cout }];
+    }
+
+    // Icône d'un compteur glissée (volet de droite) : un jeton portant
+    // `n` est créé là où elle est déposée — sur un élément, ou dans une
+    // zone. C'est un simple marqueur : le compteur ne change pas.
+    function poserRessource({ ressource, n }, cible) {
+
+        const [jeton] = RESSOURCES[ressource] || [];
+        const montant = Math.max(1, Math.floor(Number(n) || 1));
+
+        if (!jeton) {
+            return;
+        }
+
+        const pionCible = cible.closest("[data-composant]");
+        const zone = pionCible ? null : trouverZone(cible);
+
+        if (!pionCible && !zone) {
+            return;
+        }
+
+        jouer({
+            type: "creer",
+            jeton,
+            proprio: moi,
+            marques: { montant },
+            ...(pionCible ? { sur: pionCible.dataset.composant } : { zone }),
+        });
+    }
+
+    // Crée un marqueur libre, puis ouvre sa fenêtre : son identifiant n'est
+    // connu qu'avec la réponse du serveur (le composant qui n'existait pas)
+    async function creerLibre(actions) {
+
+        const avant = new Set(Object.keys(etat.composants));
+        const r = await envoyer(actions, "");
+
+        const nouveau = Object.values(r?.etat?.composants || {})
+            .find(c => !c.ref && c.jeton === LIBRE && c.proprio === moi && !avant.has(c.id));
+
+        if (nouveau) {
+            ouvrirLibre?.(nouveau.id);
+        }
     }
 
     function onPointerDown(event) {
@@ -1420,8 +1952,19 @@ export function Plan({ children, style }) {
             x: event.clientX,
             y: event.clientY,
             nom: a.nom,
-            n: event.ctrlKey && !a.source ? a.ids.length : 1,
+            // Ctrl : tout le groupe, ou toute la pile glissée
+            n: !event.ctrlKey ? 1
+                : a.source?.pioche ? Object.values(etat.composants).filter(c => c.zone === a.source.pioche && !c.sur).length
+                : a.source ? 1 : a.ids.length,
         });
+
+        // Un pion, ou le dessus d'une autre pile, glissé au-dessus d'une pile
+        if ((!a.source || a.source.pioche) && !a.degat) {
+            const cible = document.elementFromPoint(event.clientX, event.clientY);
+            const autrePile = cible?.closest?.("[data-pile]")?.dataset.pile !== a.source?.pioche;
+
+            marquerSurvol(autrePile ? cible : null);
+        }
     }
 
     function onPointerUp(event) {
@@ -1451,6 +1994,9 @@ export function Plan({ children, style }) {
         setGlisser(null);
 
         const cible = document.elementFromPoint(event.clientX, event.clientY);
+
+        // Lu sous les zones de dépôt d'une pile, qui disparaissent ensuite
+        marquerSurvol(null);
 
         if (!cible) {
             return;
@@ -1487,8 +2033,46 @@ export function Plan({ children, style }) {
             return;
         }
 
+        // Dessus d'une pioche (plateau général) : la carte du dessus est
+        // piochée vers la zone où elle est déposée
+        // Ctrl : toute la pile est versée, dans son ordre. Sur une autre pile
+        // (data-position) : ajoutée en haut, en bas, ou mélangée.
+        if (a.source?.pioche) {
+            const de = a.source.pioche;
+            const zone = trouverZone(cible);
+
+            if (!zone || zone === de) {
+                return;
+            }
+
+            const position = cible.closest("[data-position]")?.dataset.position;
+
+            if (!event.ctrlKey && !position) {
+                jouer({ type: "piocher", de, vers: zone });
+                return;
+            }
+
+            jouer([
+                {
+                    type: "verser",
+                    de,
+                    vers: zone,
+                    ...(event.ctrlKey ? {} : { n: 1 }),
+                    ...(position === "dessous" ? { dessous: true } : {}),
+                },
+                ...(position === "melanger" ? [{ type: "melanger", zone }] : []),
+            ]);
+
+            return;
+        }
+
         // Source d'une unité illimitée (ou d'un jeton : marqueur de faction,
         // marqueur d'activation) : en crée un là où elle est déposée
+        if (a.source?.ressource) {
+            poserRessource(a.source, cible);
+            return;
+        }
+
         if (a.source) {
 
             const pionCible = cible.closest("[data-composant]");
@@ -1496,32 +2080,57 @@ export function Plan({ children, style }) {
 
             const embarque = pionCible && (
                 event.shiftKey ||
+                // Marqueur libre déposé sur une carte : il s'y attache
+                (jeton === LIBRE && estCarteCible(etat.composants[pionCible.dataset.composant])) ||
                 (!jeton && contenuEnCache(a.source.id)?.mot_cle?.includes("transportable") &&
                     aMotCle(etat.composants[pionCible.dataset.composant], "ship"))
             );
 
             const zone = trouverZone(cible);
 
+            // Une source neutre (réserve des unités neutres) crée sans propriétaire ;
+            // un agent de la réserve infinie appartient au joueur dont il rejoint
+            // une zone (il se regroupe ainsi avec ses autres agents)
+            const proprioAgent = Number(/^joueur:(\d+):/.exec(zone || "")?.[1]) || undefined;
+
             const creation = jeton
                 ? { type: "creer", jeton, proprio: a.source.neutre ? undefined : moi }
-                : { type: "creer", ref: a.source, proprio: moi };
+                : {
+                    type: "creer",
+                    ref: { type: a.source.type, id: a.source.id },
+                    proprio: a.source.type === "agent" ? proprioAgent : a.source.neutre ? undefined : moi,
+                };
 
-            // Seule une unité terrestre se pose sur une planète
-            if (!jeton && !embarque && estPlanete(zone) && !estTerrestre(contenuEnCache(a.source.id))) {
+            // Seule une unité terrestre se pose sur une planète (un agent, lui, s'y pose)
+            if (!jeton && (a.source.type || "unit") === "unit" && !embarque && estPlanete(zone) &&
+                !estTerrestre(contenuEnCache(a.source.id))) {
                 signaler?.(`${a.nom || "Cette unité"} n'est pas une unité terrestre : elle ne peut pas être posée sur une planète.`);
                 return;
             }
 
-            const paiement = jeton ? [] : payerProduction([a.source]);
+            const paiement = jeton || a.source.neutre ? [] : payerProduction([a.source]);
 
             if (!paiement) {
                 return;
             }
 
+            // Marqueur libre : sa fenêtre (texte, couleur) s'ouvre dès sa création
+            const poser = jeton === LIBRE
+                ? actions => creerLibre(actions)
+                : actions => jouer(actions);
+
+            if (jeton === LIBRE) {
+                creation.marques = { couleur: COULEUR_LIBRE };
+            }
+
             if (embarque) {
-                jouer([...paiement, { ...creation, sur: pionCible.dataset.composant }]);
+                poser([...paiement, { ...creation, sur: pionCible.dataset.composant }]);
+
+                if (!jeton && (a.source.type || "unit") === "unit") {
+                    signalerCapacite(pionCible.dataset.composant, [], 1);
+                }
             } else if (zone) {
-                jouer([...paiement, { ...creation, zone }]);
+                poser([...paiement, { ...creation, zone }]);
             }
 
             return;
@@ -1532,8 +2141,12 @@ export function Plan({ children, style }) {
 
         // Embarquement : une unité transportable déposée sur un vaisseau,
         // ou n'importe quel pion déposé sur un autre avec la touche Maj.
+        // Un jeton de ressource se pose toujours sur l'élément visé.
         const porteur = pionCible && (
             event.shiftKey ||
+            !!ressourceDe(etat.composants[a.id]) ||
+            // Marqueur libre déposé sur une carte : il s'y attache
+            (estLibre(etat.composants[a.id]) && estCarteCible(etat.composants[pionCible.dataset.composant])) ||
             (aMotCle(etat.composants[a.id], "transportable") &&
                 aMotCle(etat.composants[pionCible.dataset.composant], "ship"))
         ) ? pionCible : null;
@@ -1556,6 +2169,9 @@ export function Plan({ children, style }) {
                 }
 
                 jouer([...paiement, ...ids.map(c => ({ type: "deplacer", c, sur: porteur.dataset.composant }))]);
+
+                // Prévient, sans rien empêcher, si le vaisseau dépasse sa capacité
+                signalerCapacite(porteur.dataset.composant, ids);
             }
 
             return;
@@ -1567,11 +2183,28 @@ export function Plan({ children, style }) {
             return;
         }
 
-        // Déposé là où il est déjà : rien à faire
+        // Rangement : déposé sur une autre carte d'une main, d'éléments actifs
+        // ou de la table, le composant se range juste avant elle (moitié
+        // gauche de la carte visée) ou juste après (moitié droite)
+        const repere = pionCible && ZONE_ORDONNABLE.test(zone) && !ids.includes(pionCible.dataset.composant) &&
+            etat.composants[pionCible.dataset.composant]?.zone === zone &&
+            !etat.composants[pionCible.dataset.composant]?.sur
+            ? pionCible
+            : null;
+
+        const cadre = repere?.getBoundingClientRect();
+        const cote = repere && (event.clientX < cadre.x + cadre.width / 2 ? "avant" : "apres");
+
+        // Déposé là où il est déjà : rien à faire (sauf rangement)
         const aDeplacer = ids.filter(id => {
             const c = etat.composants[id];
-            return c && (c.zone !== zone || c.sur);
+            return c && (repere || c.zone !== zone || c.sur);
         });
+
+        // (rangés après le repère un par un, ils se suivraient à l'envers)
+        if (cote === "apres") {
+            aDeplacer.reverse();
+        }
 
         // Seule une unité terrestre se pose sur une planète
         if (estPlanete(zone)) {
@@ -1600,12 +2233,27 @@ export function Plan({ children, style }) {
             return;
         }
 
-        jouer([...paiement, ...aDeplacer.map(c => ({ type: "deplacer", c, vers: zone }))]);
+        // Pile d'une pioche : ajouté en haut, en bas (dessous), ou mélangé
+        // data-position : zones de dépôt d'une pile (pioche, zone libre)
+        const position = cible.closest("[data-position]")?.dataset.position;
+
+        jouer([
+            ...paiement,
+            ...aDeplacer.map(c => ({
+                type: "deplacer",
+                c,
+                vers: zone,
+                ...(position === "dessous" ? { dessous: true } : {}),
+                ...(repere ? { [cote]: repere.dataset.composant } : {}),
+            })),
+            ...(position === "melanger" && aDeplacer.length ? [{ type: "melanger", zone }] : []),
+        ]);
     }
 
     function onPointerCancel() {
         appui.current = null;
         setGlisser(null);
+        marquerSurvol(null);
     }
 
     return (

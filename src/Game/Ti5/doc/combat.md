@@ -55,18 +55,27 @@ Saisie : cocher ses unités, puis « Engager » (en-tête d'un bloc de cibles) o
 « Cibler » (ligne d'une cible). Les cibles spécifiques passent avant les
 factions. Chaque entrée a ↑ et ×.
 
-## prêt au combat, en deux temps
+## quatre phases
+
+Affichées en tête du combat (`PHASES_COMBAT`, `data-phase-combat`), la phase
+en cours en gras :
+
+1. frappe en premier (unités `#fpre`) ;
+2. dégâts de la frappe en premier ;
+3. autres attaques ;
+4. dégâts.
 
 Chaque joueur présent se dit « Prêt au combat ». Quand tous le sont, toutes les
-attaques partent en un seul coup, celles des neutres comprises :
+attaques de la phase partent en un seul coup, celles des neutres comprises :
 
-| étape | sens |
-|---|---|
-| 0 | engagements ; au « prêt » de tous, la frappe préventive part |
-| 1 | frappe préventive lancée : on répartit les dégâts ; au « prêt » de tous, les autres attaques partent |
-| 2 | tout est lancé |
+| étape (compteur) | phase affichée | sens |
+|---|---|---|
+| 0 | 1 (ou 3 sans frappe en premier) | engagements ; au « prêt » de tous, la frappe en premier part |
+| 1 | 2 | frappe en premier lancée : chacun encaisse ; au « prêt » de tous, les autres attaques partent |
+| 2 | 4 | tout est lancé : chacun encaisse |
 
-Sans unité à frappe préventive, on passe de 0 à 2. Une unité détruite ne tire
+Sans unité à frappe en premier, on passe de 0 à 2 (les phases 1 et 2 sont
+barrées). Une unité détruite ne tire
 pas. Si deux joueurs se disent prêts en même temps, un bouton « Lancer les
 attaques » apparaît pour tous (un double clic ne relance pas les dés). Un
 combat ne compte qu'une salve : il n'y a pas de nouvelle manche ; pour
@@ -76,14 +85,32 @@ recommencer, terminer le combat et le rouvrir depuis la fiche du système.
 
 - Le serveur lance les dés à 10 faces (action `des` avec `c` et `marque`) ; le
   résultat reste sur l'unité.
-- Un dé touche s'il est supérieur ou égal à l'attaque, + 2 avec une cible
-  spécifique. Vert = touche. Ctrl + clic inverse un dé.
-- Chaque dé qui touche porte un dégât rouge, qu'on glisse sur une unité
-  (`data-degat`, géré par `Plan`) : elle prend 1 dégât.
+- Un dé touche s'il est inférieur ou égal à la valeur de combat (5 : touche
+  sur 5 ou moins), − 2 avec une cible spécifique. Vert = touche. Ctrl + clic
+  inverse un dé.
+- Bonus / malus manuels, par unité qui tire (boutons − / +) : `ajust`
+  s'ajoute à la valeur de combat, `ajustN` au nombre d'attaques (1 dé au
+  moins). Effacés avec le combat.
+- **Qui encaisse** : les dégâts d'un tireur (dés qui touchent, pas encore
+  attribués) vont à son premier engagement qui a encore une unité debout
+  (`cibleActuelle`). Le surplus passe donc à l'engagement suivant ; sans
+  engagement restant, il est perdu. La ligne des dés le dit (« → à encaisser
+  par : … »).
+- **Le joueur visé répartit** : chacune de ses unités visées et debout a un
+  bouton « ✹ Encaisser 1 » (`encaisser`) ; l'en-tête de son camp dit combien
+  il lui en reste. Le dé est marqué attribué et l'unité prend 1 dégât, dans
+  le même coup (`si` : refusé si un autre vient de le faire).
+- **Neutres** : appliqués d'office (`degatsNeutres`), à l'unité qui a le moins
+  de résistance restante d'abord, une unité étant achevée avant la suivante.
+  C'est le navigateur d'un seul joueur qui l'envoie (le premier du combat dans
+  l'ordre d'initiative) ; les autres ont le bouton « Appliquer aux neutres »
+  si rien n'est parti.
+- À la main, toujours possible : chaque dé qui touche porte un dégât rouge,
+  qu'on glisse sur une unité (`data-degat`, géré par `Plan`).
 
 Marques sur l'unité, propres à chaque sorte de combat (suffixe `C`, `T`, `B`
 pour canons, terrestre, bombardement) : `engage`, `des` (« 7,3 »), `desF` (dés
-inversés), `desA` (dégâts attribués).
+inversés), `desA` (dégâts attribués), `ajust`, `ajustN` (ajustements manuels).
 
 ## neutres
 
@@ -97,16 +124,16 @@ Engagement calculé, recalculé à chaque changement :
 ## ce que l'engine ne fait pas
 
 - vérifier l'ordre d'initiative des annonces ni la stabilité des engagements ;
-- répartir les dégâts selon la règle : les joueurs glissent les dégâts ;
+- choisir à la place d'un joueur quelle unité encaisse : c'est lui qui répartit ;
 - appliquer les malus autres que le −2 (nébuleuse, unités à malus) ni le
   blocage des canons et des bombardements : Ctrl + clic sur les dés ;
 - la portée des canons au-delà de 1, et la furtivité pour les neutres.
 
 ## choix faits sans réponse, à confirmer
 
-1. Dé à 10 faces ; touche si supérieur ou égal à l'attaque ; le multiplicateur
-   (« 5** », « 7*4 ») est le nombre de dés.
-2. Cible spécifique : il faut faire attaque + 2.
+1. Dé à 10 faces ; touche si inférieur ou égal à l'attaque (tranché le
+   2026-11-10) ; le multiplicateur (« 5** », « 7*4 ») est le nombre de dés.
+2. Cible spécifique : il faut faire attaque − 2 ou moins.
 3. `#bomb(a,n)` et `#can(a,n)` : `a` est le seuil, `n` le nombre de dés.
 4. Canons : tirent ceux du système et des systèmes voisins, planètes comprises.
 5. Combat terrestre : toutes les unités de la planète sont des cibles ; seules

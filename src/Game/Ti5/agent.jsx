@@ -1,4 +1,7 @@
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, Link, aggregation } from "../../lib/datatype"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { ModalPickerInput } from "../../Input/ModalPickerInput"
+import { Nom as NomCommun } from "./Component/Nom"
 import { EditorInput } from "../../Input/EditorInput"
 import { ColorInput } from "../../Input/ColorInput"
 import { backgroundColor, police } from "./ti5Const"
@@ -10,16 +13,24 @@ import FormBase from "../../Input/FormBase"
 
 
 
-class Classe extends ElementContent {
+// Type de lien : commun (réserve commune : sac d'agents, réserve infinie du
+// plateau général) ou lié à une faction
+class Classe extends aggregation(ElementContent, TypeLienCarac) {
 
     usage = ""
     color = "#000000"
+
+    // Agent de base que cet agent de faction remplace (le Généticien
+    // d'Arborec réimplémente le Logisticien) : au recrutement, une faction
+    // qui l'a sur sa feuille reçoit cet agent à la place de l'agent de base.
+    reimplemente = new Link("agent")
 }
 
+// Le nom de l'agent, à sa couleur, précédé du logo de sa faction s'il y est lié
 function Nom({ content, explication, style={} })
 {
     return (
-        <Text text={content.name} style={{...style,color: content.color}} />
+        <NomCommun content={content} style={{...style,color: content.color}} />
     )
 }
 
@@ -59,7 +70,14 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-
+            <TypeLienForm content={content} onChange={onChange} />
+            <ModalPickerInput
+                onChange={onChange}
+                name="reimplemente"
+                value={content}
+                label="Réimplémente (agent de base)"
+                type={["agent"]}
+            />
             <EditorInput onChange={onChange} name="usage" value={content} label="Usage" />
             <ColorInput onChange={onChange} name="color" value={content} />
         </FormBase>

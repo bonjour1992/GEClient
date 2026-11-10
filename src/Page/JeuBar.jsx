@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { Outlet, useParams, useNavigate, Link } from "react-router";
 import { Trash2 } from "lucide-react";
 import { useRemp, useSearch } from "../lib/store"
-import { games } from "../Game/games";
+import { games, getHandler } from "../Game/games";
+import { getElement } from "../lib/fetch";
+import { nameAff } from "../Component/Text";
 
 let jeu
 
@@ -25,65 +28,106 @@ export default function HeaderBar() {
 }
 
 
+// ============================================================
+// RECHERCHE
+//
+// Recherche par nom, sans accents ni majuscules, dans tous les
+// éléments du jeu. Les résultats s'affichent sous le champ, avec
+// l'affichage « nom » de leur type (nom précédé de ses icônes)
+// et le nom du type. Entrée ouvre le résultat surligné, les
+// flèches le changent, Échap ferme.
+// ============================================================
+
+const MAX_RESULTATS = 12;
+
+const simplifier = texte =>
+    nameAff(texte || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+// Un résultat : l'affichage « nom » du type une fois le contenu chargé ; le
+// nom seul en attendant, ou si le type n'a pas cet affichage
+function Resultat({ element }) {
+
+    const Nom = getHandler(jeu, element.type)?.display?.nom;
+    const [contenu, setContenu] = useState(null);
+
+    useEffect(() => {
+
+        let annule = false;
+
+        if (Nom) {
+            getElement(element.id)
+                .then(r => !annule && setContenu(r?.content || null))
+                .catch(() => { });
+        }
+
+        return () => {
+            annule = true;
+        };
+    }, [element.id, Nom]);
+
+    return Nom && contenu
+        ? <Nom content={contenu} />
+        : <span>{nameAff(element.name || "")}</span>;
+}
+
 function Search({ search }) {
 
     const navigate = useNavigate()
 
-    function searchClick(e) {
+    const [texte, setTexte] = useState("")
+    const [ouvert, setOuvert] = useState(false)
+    const [actif, setActif] = useState(0)
 
-        let r = search.filter(
-            i =>
-                i.name + ":" + i.type + "(" + i.id + ")" ===
-                e.target.value
-        )
+    // Les résultats ne sont cherchés (et leurs contenus chargés) qu'une fois la frappe posée
+    const [cherche, setCherche] = useState("")
 
-        console.log(r)
+    useEffect(() => {
+        const minuterie = setTimeout(() => setCherche(simplifier(texte.trim())), 200)
+        return () => clearTimeout(minuterie)
+    }, [texte])
 
-        if (r.length)
-            navigate(
-                "/GE/" +
-                jeu +
-                "/" +
-                r[0].type +
-                "/" +
-                r[0].id
-            )
-    }
+    // Ceux dont le nom commence par le texte d'abord, puis par ordre alphabétique
+    const trouves = cherche.length < 2
+        ? []
+        : search
+            .map(e => ({ e, nom: simplifier(e.name) }))
+            .filter(x => x.nom.includes(cherche))
+            .sort((a, b) =>
+                (b.nom.startsWith(cherche) - a.nom.startsWith(cherche)) || a.nom.localeCompare(b.nom))
+            .map(x => x.e)
 
+    const affiches = trouves.slice(0, MAX_RESULTATS)
 
-    function searchEnter(e) {
+    function ouvrir(element) {
 
-        if (e.key === "Enter") {
-
-            let res
-            let continu = true
-
-            search2.content.forEach((v, k) => {
-
-                if (
-                    continu &&
-                    k.toLocaleLowerCase().indexOf(
-                        e.target.value.toLocaleLowerCase()
-                    ) !== -1
-                ) {
-                    res = v
-                    continu = false
-                }
-
-            })
-
-            if (res !== "")
-                window.location.assign(res)
-
-            e.preventDefault()
+        if (!element) {
+            return
         }
 
+        setTexte("")
+        setOuvert(false)
+        navigate("/GE/" + jeu + "/" + element.type + "/" + element.id)
     }
 
+    function touche(e) {
+
+        if (e.key === "Enter") {
+            e.preventDefault()
+            ouvrir(affiches[actif] || affiches[0])
+        } else if (e.key === "ArrowDown") {
+            e.preventDefault()
+            setActif(a => Math.min(a + 1, affiches.length - 1))
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault()
+            setActif(a => Math.max(a - 1, 0))
+        } else if (e.key === "Escape") {
+            setOuvert(false)
+        }
+    }
 
     return (
         <div
-            className="no-print"
+            className="no-print ge-bar-search"
             style={{
                 zIndex: 50,
                 backgroundColor: "white",
@@ -102,11 +146,19 @@ function Search({ search }) {
             </span>
 
             <input
-                onChange={searchClick}
-                onKeyDown={searchEnter}
+                value={texte}
+                onChange={e => {
+                    setTexte(e.target.value)
+                    setOuvert(true)
+                    setActif(0)
+                }}
+                onFocus={() => setOuvert(true)}
+                // (laisse le temps au clic sur un résultat d'arriver)
+                onBlur={() => setTimeout(() => setOuvert(false), 150)}
+                onKeyDown={touche}
                 id="search"
-                list="searchitem"
-                type="text"
+                type="search"
+                autoComplete="off"
                 placeholder="rechercher"
                 style={{
                     fontSize: 20,
@@ -114,27 +166,63 @@ function Search({ search }) {
                 }}
             />
 
-            <datalist id="searchitem">
+            {ouvert && cherche.length >= 2 && (
+                <div
+                    data-resultats-recherche
+                    style={{
+                        position: "fixed",
+                        top: 40,
+                        left: "40%",
+                        width: "min(420px, 60vw)",
+                        maxHeight: "70vh",
+                        overflowY: "auto",
+                        backgroundColor: "white",
+                        border: "2px solid #1565c0",
+                        borderTop: "none",
+                        borderRadius: "0 0 8px 8px",
+                        boxShadow: "0 4px 10px #0004",
+                        fontFamily: "Arial, sans-serif",
+                        fontSize: 14,
+                    }}
+                >
+                    {affiches.length === 0 && (
+                        <div style={{ padding: "6px 10px", color: "#666" }}>Aucun résultat.</div>
+                    )}
 
-                {search.map((e, i) => {
+                    {affiches.map((element, k) => (
+                        <div
+                            key={element.id}
+                            // (mousedown : avant que le champ ne perde le focus)
+                            onMouseDown={e => {
+                                e.preventDefault()
+                                ouvrir(element)
+                            }}
+                            onMouseEnter={() => setActif(k)}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "4px 10px",
+                                cursor: "pointer",
+                                backgroundColor: k === actif ? "#e3f2fd" : undefined,
+                            }}
+                        >
+                            <span style={{ flex: 1, minWidth: 0 }}>
+                                <Resultat element={element} />
+                            </span>
+                            <span style={{ flex: "none", fontSize: 11, color: "#666" }}>
+                                {getHandler(jeu, element.type)?.name || element.type}
+                            </span>
+                        </div>
+                    ))}
 
-                    return (
-                        <option
-                            value={
-                                e.name +
-                                ":" +
-                                e.type +
-                                "(" +
-                                e.id +
-                                ")"
-                            }
-                            key={i}
-                        />
-                    )
-
-                })}
-
-            </datalist>
+                    {trouves.length > affiches.length && (
+                        <div style={{ padding: "4px 10px", fontSize: 12, color: "#666", borderTop: "1px solid #ddd" }}>
+                            {trouves.length - affiches.length} autre(s) : préciser la recherche.
+                        </div>
+                    )}
+                </div>
+            )}
 
         </div>
     )
@@ -181,7 +269,7 @@ function Add() {
 
     return (
         <div
-            className="no-print"
+            className="no-print ge-bar-add"
             style={{
                 zIndex: 50,
                 backgroundColor: "white",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fetchAPI } from "../../../lib/fetch";
-import { useEngine, nomElement, nomType, nomZone } from "./Interaction";
+import { useEngine, nomElement, nomType, nomZone, nomCase, lireRegle } from "./Interaction";
 
 // ============================================================
 // JOURNAL : historique des coups
@@ -91,7 +91,7 @@ export function decrire(action, { search, jeu, nomDe }) {
     // Action résumée (on ne voit pas le composant) : seuls le type, les zones
     // et le dos des composants sont connus. Hors déplacement et pioche, on
     // dit seulement qu'un composant caché a été modifié.
-    if (action.cache && !["deplacer", "piocher"].includes(action.type)) {
+    if (action.cache && !["deplacer", "piocher", "verser"].includes(action.type)) {
         return `${noms || "composant caché"} : modifié` +
             (action.de ? ` (${zone(action.de)})` : "");
     }
@@ -107,6 +107,11 @@ export function decrire(action, { search, jeu, nomDe }) {
         case "piocher":
             return `pioche dans ${zone(action.de)} → ${zone(action.vers)} : ${noms}`;
 
+        // Une pile entière : le nombre d'éléments plutôt que la liste
+        case "verser":
+            return `verse ${zone(action.de)} → ${action.dessous ? "dessous de " : ""}${zone(action.vers)} : ` +
+                (composants.length > 5 ? `${composants.length} éléments` : noms);
+
         case "consulter":
             return `consulte ${noms} (${zone(action.zone)})`;
 
@@ -115,6 +120,13 @@ export function decrire(action, { search, jeu, nomDe }) {
 
         case "melanger":
             return `mélange ${zone(action.zone)}`;
+
+        // (le composant porte déjà son nouvel élément)
+        case "remplacer":
+            return `devient ${noms}`;
+
+        case "reinitialiserVotes":
+            return "remet à zéro le vote (plateaux vidés et cachés, ajustements effacés)";
 
         // Choix scellé des faveurs : seul son auteur en voit la ligne
         case "engager":
@@ -146,14 +158,14 @@ export function decrire(action, { search, jeu, nomDe }) {
                 // Lieu : "41" spatial, "41c" canons, "41p0" terrestre, "41p0b" bombardement
                 const m = /^(\d+)(?:p(\d+))?([bc])?$/.exec(morceaux[1]);
 
-                const lieu = !m ? "" : `, case ${Number(m[1]) + 1}` +
+                const lieu = !m ? "" : `, ${nomCase(m[1])}` +
                     (m[2] !== undefined ? `, planète ${Number(m[2]) + 1}` : "") +
                     (m[3] === "b" ? " (bombardement)" : m[3] === "c" ? " (canons)" : "");
 
                 if (morceaux[2] === "etape") {
                     return ([
                         "combat : retour aux engagements",
-                        "combat : frappe préventive lancée",
+                        "combat : frappe en premier lancée",
                         "combat : attaques lancées",
                     ][action.valeur] || "combat : étape " + action.valeur) + lieu;
                 }
@@ -236,8 +248,20 @@ function Coup({ coup, max }) {
         minute: "2-digit",
     });
 
+    // Effet du jeu (bouton vert, ou rouge gris : Interaction.jsx, BoutonRegle) :
+    // la ligne est verte s'il était faisable, rouge s'il a été fait hors conditions
+    const regle = lireRegle(coup.commentaire);
+
     return (
-        <div style={{ padding: "5px 0", borderBottom: "1px solid #ddd" }}>
+        <div
+            data-regle={regle?.hors ? "hors" : (regle ? "ok" : undefined)}
+            style={{
+                padding: "5px 0 5px 6px",
+                borderBottom: "1px solid #ddd",
+                borderLeft: "4px solid " + (regle ? (regle.hors ? "#c62828" : "#2e7d32") : "transparent"),
+                backgroundColor: regle ? (regle.hors ? "#fdecea" : "#edf7ee") : undefined,
+            }}
+        >
             <div>
                 {/* Le nom reste noir (lisible quelle que soit la couleur du
                     joueur) ; la couleur est portée par la pastille */}
@@ -254,7 +278,17 @@ function Coup({ coup, max }) {
                 />
                 <b>{coup.n}. {ctx.nomDe(coup.auteur)}</b>
                 <span style={{ color: "#777", marginLeft: 8 }}>{heure}</span>
-                {coup.commentaire && <i style={{ marginLeft: 8 }}>« {coup.commentaire} »</i>}
+                {coup.commentaire && (
+                    <i
+                        style={{
+                            marginLeft: 8,
+                            color: regle ? (regle.hors ? "#b71c1c" : "#1b5e20") : undefined,
+                            fontWeight: regle ? "bold" : undefined,
+                        }}
+                    >
+                        « {coup.commentaire} »
+                    </i>
+                )}
             </div>
 
             {(max ? coup.actions.slice(0, max) : coup.actions).map((action, i) => (

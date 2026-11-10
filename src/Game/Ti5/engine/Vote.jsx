@@ -238,6 +238,24 @@ function Decompte({ lois }) {
                     <input type="checkbox" checked={toutes} onChange={e => setToutes(e.target.checked)} />{" "}
                     toutes les colonnes (pour ajuster)
                 </label>
+
+                {/* Remise à zéro du vote, pour tous (aussi faite à chaque nouveau tour) */}
+                {joueur && (
+                    <button
+                        type="button"
+                        data-action="reinitialiser-votes"
+                        title="Tous les plateaux de vote sont vidés et cachés (agents des carrés : agents usés ; le reste : retiré du jeu), les ajustements manuels effacés. Fait aussi à chaque nouveau tour."
+                        style={{ marginLeft: "auto" }}
+                        onClick={() => window.confirm(
+                            "Réinitialiser le décompte des votes pour tous les joueurs ?\n" +
+                            "Tous les plateaux de vote sont vidés et cachés : les agents des carrés de droite " +
+                            "(utilisés) vont dans les agents usés, ceux des cases (dépensés) sont retirés du jeu. " +
+                            "Les ajustements manuels sont effacés."
+                        ) && envoyer([{ type: "reinitialiserVotes" }], "Vote : décompte réinitialisé")}
+                    >
+                        Réinitialiser le décompte
+                    </button>
+                )}
             </div>
 
             {caches.length > 0 && (

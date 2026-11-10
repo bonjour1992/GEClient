@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useEngine } from "./Interaction";
+import { useEngine, nomElement } from "./Interaction";
 import { useElement } from "./sync";
-import { FAVEUR } from "./miseEnPlace";
+import { FAVEUR, emetteurFaveur } from "./miseEnPlace";
 
 // ============================================================
 // ONGLET FAVEURS : encaisser les faveurs (phase d'événement)
@@ -40,7 +40,7 @@ export function faveursDuTour(etat, deroule) {
 
 export function Faveurs() {
 
-    const { etat, index, envoyer, joueur, moi, partie, nomDe, couleurDe } = useEngine();
+    const { etat, index, envoyer, joueur, moi, partie, nomDe, couleurDe, search } = useEngine();
 
     const deroule = useElement(etat.references?.deroule);
     const { prevus, faits, attendu } = faveursDuTour(etat, deroule);
@@ -60,14 +60,21 @@ export function Faveurs() {
     // Mon choix scellé (le serveur ne l'envoie qu'à moi)
     const engagees = etat.secrets?.[moi]?.faveurs || [];
 
-    // Mes faveurs par faction qui les a émises
-    const parFaction = [...new Set(mesFaveurs.map(c => c.proprio))];
+    // Mes faveurs par faction qui les a émises : un joueur, ou une faction
+    // neutre (« neutre:<id> », faveur obtenue d'une faction neutre)
+    const parFaction = [...new Set(mesFaveurs.map(emetteurFaveur))];
+
+    const nomEmetteur = u => (/^neutre:\d+$/.test(String(u))
+        ? nomElement(search, { type: "neutral", id: Number(String(u).split(":")[1]) })
+        : nomDe(u));
+
+    const couleurEmetteur = u => (typeof u === "number" ? couleurDe(u) : null);
 
     function valider() {
 
         // Une faveur de chaque faction choisie
         const faveurs = choix
-            .map(u => mesFaveurs.find(c => c.proprio === u))
+            .map(u => mesFaveurs.find(c => emetteurFaveur(c) === u))
             .filter(Boolean)
             .map(c => c.id);
 
@@ -145,13 +152,13 @@ export function Faveurs() {
                                         style={{
                                             padding: "0 8px",
                                             borderRadius: 8,
-                                            border: "2px solid " + (couleurDe(u) || "#888"),
+                                            border: "2px solid " + (couleurEmetteur(u) || "#888"),
                                         }}
                                     >
-                                        une faveur de {nomDe(u)}
+                                        une faveur de {nomEmetteur(u)}
                                     </span>
                                     <span style={{ color: "#666" }}>
-                                        {" "}(vous en avez {mesFaveurs.filter(c => c.proprio === u).length})
+                                        {" "}(vous en avez {mesFaveurs.filter(c => emetteurFaveur(c) === u).length})
                                     </span>
                                 </label>
                             ))}

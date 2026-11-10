@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { useEngine, nomElement, DORE } from "./Interaction";
+import { useEffect, useRef, useState } from "react";
+import { useEngine, nomElement, nomCase, distanceCases, DORE } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
-import { distanceIndex } from "../hexSpirale";
 
 // ============================================================
 // ONGLET COMBAT (combat spatial)
@@ -38,7 +37,7 @@ import { distanceIndex } from "../hexSpirale";
 //   "41p0b"   bombardement de la planète
 //
 // Compteurs : combat:<lieu> (1 = en cours),
-//   combat:<lieu>:etape     0 engagements, 1 frappe préventive lancée, 2 tout lancé
+//   combat:<lieu>:etape     0 engagements, 1 frappe en premier lancée, 2 tout lancé
 //   combat:<lieu>:pret:<u>  le joueur u est prêt
 export const cleCombat = lieu => "combat:" + lieu;
 
@@ -116,8 +115,10 @@ const liste = valeur => String(valeur ?? "").split(",").filter(x => x !== "");
 // combat spatial et dans un bombardement sans que les deux se mélangent.
 const SUFFIXE = { spatial: "", canons: "C", terrestre: "T", bombardement: "B" };
 
+// ajust, ajustN : bonus ou malus manuel à la valeur de combat et au nombre
+// d'attaques de l'unité, pour ce combat.
 const marquesDe = sorte => Object.fromEntries(
-    ["engage", "des", "desF", "desA"].map(m => [m, m + SUFFIXE[sorte]]));
+    ["engage", "des", "desF", "desA", "ajust", "ajustN"].map(m => [m, m + SUFFIXE[sorte]]));
 
 const lireIndices = (c, marque) => liste(c.marques?.[marque]).map(Number);
 
@@ -130,6 +131,14 @@ const marquer = (id, marque, valeurs) => ({
 
 const styleBouton = { fontSize: 12, padding: "1px 6px" };
 
+// Les quatre phases d'un combat (voir « prêt au combat », plus bas)
+const PHASES_COMBAT = [
+    "Frappe en premier",
+    "Dégâts de la frappe en premier",
+    "Autres attaques",
+    "Dégâts",
+];
+
 // Libellés selon la sorte de combat
 const NOM_ATTAQUE = { spatial: "att.", terrestre: "att.", bombardement: "bomb.", canons: "canon" };
 const NOM_TIREURS = { spatial: "Tirent", terrestre: "Tirent", bombardement: "Bombardent", canons: "Canons" };
@@ -137,7 +146,7 @@ const NOM_TIREURS = { spatial: "Tirent", terrestre: "Tirent", bombardement: "Bom
 // D'où tire une unité à distance : « case 12 », « case 12, planète 1 »
 const nomLieu = zone => {
     const m = /^hex:(\d+)(?::planete:(\d+))?$/.exec(zone);
-    return m ? `case ${Number(m[1]) + 1}` + (m[2] !== undefined ? `, planète ${Number(m[2]) + 1}` : "") : zone;
+    return m ? nomCase(m[1]) + (m[2] !== undefined ? `, planète ${Number(m[2]) + 1}` : "") : zone;
 };
 
 // ============================================================
@@ -197,7 +206,7 @@ export function Combat() {
                                 backgroundColor: avecMoi ? COULEUR_COMBAT.avecMoi : COULEUR_COMBAT.sansMoi,
                             }}
                         >
-                            {SORTES[l.sorte]} — {nom}, case {l.numero + 1}
+                            {SORTES[l.sorte]} — {nom}, {nomCase(l.numero)}
                             {l.planete !== null ? `, planète ${l.planete + 1}` : ""}
                             {avecMoi ? " ⚔" : ""}
                         </button>
@@ -255,7 +264,7 @@ function CombatSysteme({ lieu }) {
         for (const z of index.parZone.keys()) {
             const m = /^hex:(\d+)(:planete:\d+)?$/.exec(z);
 
-            if (m && distanceIndex(numero, Number(m[1])) <= 1) {
+            if (m && distanceCases(numero, Number(m[1])) <= 1) {
                 aDistance.push(...unitesDe(z));
             }
         }
@@ -491,8 +500,21 @@ function CombatSysteme({ lieu }) {
     // DÉS
     // --------------------------------------------------------
 
+    // Une valeur de combat de 5 touche sur un dé de 5 ou moins.
+    // Ajustements manuels (effets que l'engine ne connaît pas) : ils
+    // s'ajoutent à la valeur de combat et au nombre d'attaques.
+    const ajust = v => Number(v.c.marques?.[M.ajust]) || 0;
+    const ajustN = v => Number(v.c.marques?.[M.ajustN]) || 0;
+
     const attaque = v => v.att;
-    const nombreDes = v => v.nb;
+    const nombreDes = v => Math.max(1, v.nb + ajustN(v));
+
+    const ajuster = (v, marque, delta) => jouer({
+        type: "marquer",
+        c: v.id,
+        marque,
+        valeur: (Number(v.c.marques?.[marque]) || 0) + delta,
+    });
 
     // L'unité a-t-elle cette capacité (#fpre, #prec, #indes) ? Elle doit
     // ouvrir une ligne de son texte ou suivre une virgule : un texte qui ne
@@ -507,7 +529,8 @@ function CombatSysteme({ lieu }) {
     const malus = v =>
         (engagement(v).some(e => e.startsWith("@")) && !aCapacite(v, "prec") ? 2 : 0);
 
-    const seuil = v => attaque(v) + malus(v);
+    // Le dé touche s'il fait le seuil ou moins
+    const seuil = v => attaque(v) - malus(v) + ajust(v);
 
     const estDetruit = v => {
         const resistance = Number(v.u.PV) || 0;
@@ -516,6 +539,161 @@ function CombatSysteme({ lieu }) {
 
     // Unités détruites à retirer du jeu (bouton « Retirer tous les détruits »)
     const aRetirer = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes"));
+
+    // --------------------------------------------------------
+    // DÉGÂTS À ENCAISSER
+    //
+    // Les dégâts d'un tireur (ses dés qui touchent, pas encore
+    // attribués) vont à son premier engagement qui a encore une unité
+    // debout : le surplus passe ainsi à l'engagement suivant, et il est
+    // perdu s'il n'y en a plus. C'est le joueur visé qui les répartit
+    // entre ses unités ; ceux des neutres sont appliqués d'office.
+    // --------------------------------------------------------
+
+    const debout = x => !estDetruit(x);
+
+    // Unités visées par un engagement
+    const ciblesDe = code => {
+
+        if (code.startsWith("@")) {
+            return [parId[code.slice(1)]].filter(Boolean);
+        }
+
+        const militaire = code === "n" || code[0] === "j";
+        const camp = code === "n" || code === "N" ? NEUTRE : Number(code.slice(1));
+
+        return vaisseaux.filter(x => x.cible && x.camp === camp && x.militaire === militaire);
+    };
+
+    const cibleActuelle = v => engagement(v).find(code => ciblesDe(code).some(debout)) ?? null;
+
+    // Dés d'un tireur qui touchent et dont le dégât n'est pas attribué
+    const touchesLibres = v => {
+        const inverses = lireIndices(v.c, M.desF);
+        const attribues = lireIndices(v.c, M.desA);
+
+        return lireDes(v.c)
+            .map((valeur, k) => ((valeur <= seuil(v)) !== inverses.includes(k) && !attribues.includes(k) ? k : -1))
+            .filter(k => k >= 0);
+    };
+
+    // Dégâts en attente, par engagement visé : { "j3": [{ v, k }] } ; perdus : sans cible
+    const enAttente = {};
+    let perdus = 0;
+
+    for (const v of vaisseaux) {
+
+        const touches = touchesLibres(v);
+
+        if (!touches.length) {
+            continue;
+        }
+
+        const code = cibleActuelle(v);
+
+        if (code) {
+            (enAttente[code] ||= []).push(...touches.map(k => ({ v, k })));
+        } else {
+            perdus += touches.length;
+        }
+    }
+
+    // Dégâts que cette unité peut encaisser : ceux qui la ciblent, puis ceux de son groupe
+    const aEncaisser = x => (x.cible && debout(x)
+        ? [...(enAttente["@" + x.id] || []), ...(enAttente[codeCamp(x.camp, x.militaire)] || [])]
+        : []);
+
+    // Résistance qu'il reste à une unité (sans résistance : elle encaisse tout)
+    const reste = x => (Number(x.u.PV) > 0 ? Number(x.u.PV) - (Number(x.c.marques?.degat) || 0) : Infinity);
+
+    const aRepartir = camp => Object.entries(enAttente)
+        .filter(([code]) => ciblesDe(code)[0]?.camp === camp)
+        .reduce((n, [, liste]) => n + liste.length, 0);
+
+    // Actions : ces dégâts ({ v, k }) sont attribués, et chaque unité prend les siens
+    // (si : refusé si un autre vient d'appliquer les mêmes)
+    function attribution(couples) {
+
+        const parTireur = new Map();
+        const parCible = new Map();
+
+        for (const { x, v, k } of couples) {
+            parTireur.set(v.id, [...(parTireur.get(v.id) || lireIndices(v.c, M.desA)), k]);
+            parCible.set(x.id, (parCible.get(x.id) || 0) + 1);
+        }
+
+        return [
+            ...[...parTireur].map(([id, indices]) => ({
+                ...marquer(id, M.desA, indices),
+                si: parId[id].c.marques?.[M.desA] ?? 0,
+            })),
+            ...[...parCible].map(([id, n]) => {
+                const degat = Number(parId[id].c.marques?.degat) || 0;
+                return { type: "marquer", c: id, marque: "degat", valeur: degat + n, si: degat };
+            }),
+        ];
+    }
+
+    // Mon unité encaisse un des dégâts qui la visent
+    function encaisser(x) {
+
+        const [du] = aEncaisser(x);
+
+        if (du) {
+            jouer(attribution([{ x, ...du }]));
+        }
+    }
+
+    // Neutres : les dégâts vont d'abord à l'unité qui a le moins de résistance,
+    // et une unité est achevée avant de passer à la suivante. (Le surplus
+    // d'un engagement n'est pas réparti ici : il passera au suivant une fois
+    // ces dégâts appliqués.)
+    const degatsNeutres = [];
+    const resteNeutre = new Map();
+
+    for (const [code, liste] of Object.entries(enAttente)) {
+
+        const cibles = ciblesDe(code)
+            .filter(x => x.camp === NEUTRE && debout(x))
+            .sort((a, b) => reste(a) - reste(b) || (Number(a.u.PV) || 0) - (Number(b.u.PV) || 0) || a.id.localeCompare(b.id));
+
+        let i = 0;
+
+        for (const du of liste) {
+
+            while (cibles[i] && (resteNeutre.get(cibles[i].id) ?? reste(cibles[i])) <= 0) {
+                i++;
+            }
+
+            if (!cibles[i]) {
+                break;
+            }
+
+            const x = cibles[i];
+
+            resteNeutre.set(x.id, (resteNeutre.get(x.id) ?? reste(x)) - 1);
+            degatsNeutres.push({ x, ...du });
+        }
+    }
+
+    const appliquerAuxNeutres = () => envoyer(
+        attribution(degatsNeutres),
+        `Combat : ${degatsNeutres.length} dégât(s) appliqué(s) aux neutres`
+    );
+
+    // Application d'office : par le navigateur d'un seul joueur (le premier
+    // du combat dans l'ordre d'initiative, sinon le premier de la partie),
+    // pour qu'elle ne parte pas plusieurs fois. Les autres ont un bouton.
+    const responsable = campsJoueurs[0] ?? partie.joueurs[0]?.userId;
+    const signature = degatsNeutres.map(d => `${d.v.id}:${d.k}>${d.x.id}`).join(",");
+    const dejaEnvoye = useRef("");
+
+    useEffect(() => {
+        if (joueur && moi === responsable && signature && dejaEnvoye.current !== signature) {
+            dejaEnvoye.current = signature;
+            appliquerAuxNeutres();
+        }
+    });
 
     // Ceux qui tirent : les militaires engagés et pas détruits, de toutes
     // les factions et des neutres
@@ -539,13 +717,13 @@ function CombatSysteme({ lieu }) {
     // (compteur combat:pret:<u>). Quand tous le sont, toutes les
     // attaques partent, en deux temps (compteur combat:etape) :
     //
-    //   0  engagements        -> la frappe préventive part (1)
-    //   1  frappe préventive  -> les autres attaques partent (2)
+    //   0  engagements        -> la frappe en premier part (1)
+    //   1  frappe en premier  -> les autres attaques partent (2)
     //   2  tout est lancé
     //
-    // Sans vaisseau à frappe préventive, on passe de 0 à 2. Entre les
+    // Sans vaisseau à frappe en premier, on passe de 0 à 2. Entre les
     // deux temps, les joueurs répartissent les dégâts : un vaisseau
-    // détruit par la frappe préventive ne tire pas.
+    // détruit par la frappe en premier ne tire pas.
     // --------------------------------------------------------
 
     const etape = Number(etat.compteurs[ETAPE]) || 0;
@@ -556,6 +734,13 @@ function CombatSysteme({ lieu }) {
     const enPreventive = etape === 0 && preventifs.length > 0;
     const prochains = enPreventive ? preventifs : autres;
 
+    // Phase affichée (1 à 4, PHASES_COMBAT). Avant un lancement, c'est la
+    // phase d'attaque qui va partir ; après, celle des dégâts.
+    const phaseCombat = etape === 0 ? (enPreventive ? 1 : 3) : etape * 2;
+
+    // Aucune unité du combat n'a la frappe en premier : les phases 1 et 2 n'ont pas lieu
+    const sansPreventive = !vaisseaux.some(v => v.tire && attaque(v) > 0 && aFrappePreventive(v));
+
     // Toutes les attaques de l'étape, et plus personne n'est prêt
     const lancement = () => [
         ...campsJoueurs.filter(estPret).map(u => ({ type: "compteur", id: PRET + u, valeur: 0 })),
@@ -565,7 +750,7 @@ function CombatSysteme({ lieu }) {
         ...jets(prochains),
     ];
 
-    const titreLancement = enPreventive ? "Combat : frappe préventive" : "Combat : attaques";
+    const titreLancement = enPreventive ? "Combat : frappe en premier" : "Combat : attaques";
 
     function basculerPret() {
 
@@ -592,7 +777,7 @@ function CombatSysteme({ lieu }) {
     }
 
     const avecMarques = vaisseaux.filter(v =>
-        [M.engage, M.des, M.desF, M.desA].some(m => v.c.marques?.[m] !== undefined));
+        Object.values(M).some(m => v.c.marques?.[m] !== undefined));
 
     const effacer = marques => avecMarques.flatMap(v =>
         marques.filter(m => v.c.marques?.[m] !== undefined).map(m => marquer(v.id, m, [])));
@@ -605,7 +790,7 @@ function CombatSysteme({ lieu }) {
         etape > 0 && { type: "compteur", id: ETAPE, valeur: 0 },
     ].filter(Boolean);
 
-    // Un combat ne compte qu'une salve (frappe préventive puis attaques) : il
+    // Un combat ne compte qu'une salve (frappe en premier puis attaques) : il
     // n'y a pas de nouvelle manche. Pour recommencer, terminer le combat et
     // le rouvrir depuis la fiche du système.
 
@@ -618,7 +803,7 @@ function CombatSysteme({ lieu }) {
         }
 
         envoyer([
-            ...effacer([M.engage, M.des, M.desF, M.desA]),
+            ...effacer([M.engage, M.des, M.desF, M.desA, M.ajust, M.ajustN]),
             ...remiseEtape,
             { type: "compteur", id: COMBAT, valeur: 0 },
         ], "Combat terminé");
@@ -694,10 +879,42 @@ function CombatSysteme({ lieu }) {
                         {v.tire && !v.cible && v.c.zone !== "hex:" + numero && ` · ${nomLieu(v.c.zone)}`}
                     </span>
 
+                    {/* Bonus / malus manuels : valeur de combat, nombre d'attaques */}
+                    {v.tire && attaque(v) > 0 && [
+                        [M.ajust, "valeur", "à la valeur de combat (touche sur la valeur ou moins)"],
+                        [M.ajustN, "attaques", "au nombre d'attaques"],
+                    ].map(([marque, nom, titre]) => {
+                        const n = Number(v.c.marques?.[marque]) || 0;
+
+                        return (joueur || n !== 0) && (
+                            <span
+                                key={marque}
+                                data-ajustement={marque}
+                                title={"Bonus ou malus manuel " + titre}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 2,
+                                    fontSize: 11,
+                                    color: n ? "#a15c00" : "#666",
+                                    fontWeight: n ? "bold" : "normal",
+                                }}
+                            >
+                                {joueur && (
+                                    <button type="button" style={{ ...styleBouton, padding: "0 4px" }} onClick={() => ajuster(v, marque, -1)}>−</button>
+                                )}
+                                {nom} {n > 0 ? "+" : ""}{n}
+                                {joueur && (
+                                    <button type="button" style={{ ...styleBouton, padding: "0 4px" }} onClick={() => ajuster(v, marque, 1)}>+</button>
+                                )}
+                            </span>
+                        );
+                    })}
+
                     {degat > 0 && <b style={{ color: "#c00" }}>✹{degat}</b>}
 
                     {aFrappePreventive(v) && (
-                        <span style={{ fontSize: 11, color: "#6a1b9a" }}>frappe préventive</span>
+                        <span style={{ fontSize: 11, color: "#6a1b9a" }}>frappe en premier</span>
                     )}
 
                     {detruit && (
@@ -723,6 +940,19 @@ function CombatSysteme({ lieu }) {
                             onClick={() => engager("@" + v.id)}
                         >
                             Cibler
+                        </button>
+                    )}
+
+                    {/* Mon unité est visée par des dégâts : je choisis qu'elle en prenne un */}
+                    {joueur && aMoi && aEncaisser(v).length > 0 && (
+                        <button
+                            type="button"
+                            data-action="encaisser"
+                            title="Cette unité prend un des dégâts qui la visent (à vous de les répartir entre vos unités visées)"
+                            onClick={() => encaisser(v)}
+                            style={{ ...styleBouton, backgroundColor: "#c62828", color: "#fff", fontWeight: "bold" }}
+                        >
+                            ✹ Encaisser 1 (sur {aEncaisser(v).length})
                         </button>
                     )}
                 </div>
@@ -778,11 +1008,11 @@ function CombatSysteme({ lieu }) {
                 {des.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5, marginTop: 3 }}>
                         <span style={{ fontSize: 12, color: "#666" }}>
-                            dés (touche à {seuil(v)}+) :
+                            dés (touche sur {seuil(v)} ou moins) :
                         </span>
 
                         {des.map((valeur, k) => {
-                            const touche = (valeur >= seuil(v)) !== inverses.includes(k);
+                            const touche = (valeur <= seuil(v)) !== inverses.includes(k);
 
                             return (
                                 <span key={k} style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
@@ -841,6 +1071,15 @@ function CombatSysteme({ lieu }) {
                                 </span>
                             );
                         })}
+
+                        {/* Où vont ses dégâts restants : son premier engagement encore debout */}
+                        {touchesLibres(v).length > 0 && (
+                            <span data-destination={cibleActuelle(v) || "perdu"} style={{ fontSize: 12, color: "#a15c00" }}>
+                                {cibleActuelle(v)
+                                    ? `→ à encaisser par : ${libelle(cibleActuelle(v))}`
+                                    : "→ perdus (plus aucune cible engagée debout)"}
+                            </span>
+                        )}
                     </div>
                 )}
             </div>
@@ -870,24 +1109,46 @@ function CombatSysteme({ lieu }) {
                 <b style={{ fontSize: 16 }}>
                     {SORTES[sorte]} —{" "}
                     {planete !== null && `${(laPlanete?.name || "planète " + (planete + 1)).replace(/^!([^!]*)!/, "")}, `}
-                    {(systeme?.name || "système").replace(/^!([^!]*)!/, "")}, case {numero + 1}
+                    {(systeme?.name || "système").replace(/^!([^!]*)!/, "")}, {nomCase(numero)}
                 </b>
 
-                {/* Où en est le combat, et ce que lancera le prochain « prêt » */}
+                {/* Les quatre phases du combat : celle en cours est en gras. Les
+                    attaques d'une phase partent quand tout le monde est prêt. */}
+                <span data-phase-combat={phaseCombat} style={{ display: "inline-flex", flexWrap: "wrap", gap: 4 }}>
+                    {PHASES_COMBAT.map((nom, k) => (
+                        <span
+                            key={nom}
+                            style={{
+                                padding: "1px 8px",
+                                borderRadius: 10,
+                                border: "1px solid " + (k + 1 === phaseCombat ? "#b71c1c" : "#bbb"),
+                                backgroundColor: k + 1 === phaseCombat ? "#ffcdd2" : (k + 1 < phaseCombat ? "#e0e0e0" : "#fff"),
+                                color: k + 1 < phaseCombat ? "#777" : "#000",
+                                fontWeight: k + 1 === phaseCombat ? "bold" : "normal",
+                                // Sans unité à frappe en premier, ses deux phases sont sautées
+                                textDecoration: k < 2 && sansPreventive ? "line-through" : undefined,
+                                fontSize: 13,
+                            }}
+                        >
+                            {k + 1}. {nom}
+                        </span>
+                    ))}
+                </span>
+
                 <span>
-                    {etape === 0 && "Engagements."}
-                    {etape === 1 && "Frappe préventive lancée : répartir les dégâts."}
-                    {etape === 2 && "Toutes les attaques sont lancées : répartir les dégâts."}
+                    {etape === 0 && "Engagements, puis « Prêt au combat »."}
+                    {etape > 0 && "Chacun encaisse les dégâts qu'il reçoit."}
                     {etape < 2 && (
                         <>
                             {" "}Quand tout le monde est prêt :{" "}
                             <b>
-                                {enPreventive ? "frappe préventive" : (etape === 1 ? "autres attaques" : "attaques")}
+                                {enPreventive ? "frappe en premier" : "autres attaques"}
                                 {" "}({prochains.length} unité{prochains.length > 1 ? "s" : ""})
                             </b>
                             .
                         </>
                     )}
+                    {perdus > 0 && <span style={{ color: "#a15c00" }}> {perdus} dégât(s) perdu(s), sans cible.</span>}
                 </span>
 
                 {jeCombats && etape < 2 && (
@@ -944,8 +1205,10 @@ function CombatSysteme({ lieu }) {
 
             <div style={{ fontSize: 13, color: "#444", marginBottom: 6 }}>
                 Cocher ses unités qui tirent, puis « Engager » une faction ou « Cibler » une unité
-                précise (−2 pour toucher), puis « Prêt au combat ». Un dé vert touche ; Ctrl + clic
-                l'inverse. Glisser le dégât rouge sur l'unité touchée.
+                précise (−2 pour toucher), puis « Prêt au combat ». Un dé vert touche (valeur de combat
+                ou moins) ; Ctrl + clic l'inverse. Chacun répartit les dégâts qu'il reçoit : « ✹ Encaisser »
+                sur ses unités visées ; le surplus passe à l'engagement suivant du tireur. Les neutres
+                encaissent d'office. Le dégât rouge d'un dé se glisse toujours à la main sur une unité.
             </div>
 
             {vaisseaux.length === 0 && (
@@ -972,6 +1235,26 @@ function CombatSysteme({ lieu }) {
                             <b style={{ marginLeft: 8, fontSize: 12, color: estPret(camp) ? "#2e7d32" : "#a15c00" }}>
                                 {estPret(camp) ? "✔ prêt" : "pas encore prêt"}
                             </b>
+                        )}
+
+                        {/* Dégâts que ce camp doit encore répartir entre ses unités */}
+                        {aRepartir(camp) > 0 && (
+                            <b data-a-encaisser={camp} style={{ marginLeft: 8, fontSize: 12, color: "#c62828" }}>
+                                ✹ {aRepartir(camp)} dégât{aRepartir(camp) > 1 ? "s" : ""} à encaisser
+                            </b>
+                        )}
+
+                        {/* Neutres : appliqués d'office ; le bouton sert si rien n'est parti */}
+                        {camp === NEUTRE && joueur && degatsNeutres.length > 0 && (
+                            <button
+                                type="button"
+                                data-action="degats-neutres"
+                                style={{ ...styleBouton, marginLeft: 8 }}
+                                title="Les dégâts vont d'abord à l'unité neutre la moins résistante ; une unité est achevée avant la suivante"
+                                onClick={appliquerAuxNeutres}
+                            >
+                                Appliquer aux neutres ({degatsNeutres.length})
+                            </button>
                         )}
 
                         {/* Tireurs à distance (bombardiers, canons) : ils ne sont pas des

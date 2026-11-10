@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
 import { useEngine, Zone, Emplacements } from "./Interaction";
 import { useElement, useElements } from "./sync";
@@ -38,15 +38,53 @@ const stylePions = () => ({
 const estFeuille = c => c.ref?.type === "techsheet";
 const pasFeuille = c => !estFeuille(c);
 
+// Feuille « small » (ex. Signal, Tempête) : seules les cases 8 à 15 sont
+// utilisées. Retourne l'affichage à utiliser pour cette feuille.
+export function affichageFeuille(jeu, contenu) {
+
+    const liens = contenu?.techs || [];
+    const small = liens.every((lien, k) => (k >= 8 && k <= 15) || !lien || lien.id === -1);
+    const affichages = getHandler(jeu, "techsheet").display;
+
+    return small && affichages.small ? affichages.small : affichages.default;
+}
+
 function Feuille({ composant, base }) {
 
-    const { etat, jouer, joueur, jeu } = useEngine();
+    const { etat, index, jouer, joueur, jeu, ouvrirFiche } = useEngine();
 
     const contenu = useElement(composant.ref.id);
     const racine = useRef(null);
 
+    // --------------------------------------------------------
+    // TECHNOLOGIE POSÉE
+    //
+    // Une technologie (composant de type « tech ») déposée sur une case
+    // vide de la feuille y prend la place d'une technologie imprimée :
+    // même affichage, mêmes cases de recherche, « utilisée ce tour ».
+    // Elle n'est donc pas montrée en pion ; un petit bouton ouvre sa
+    // fiche (l'envoyer ailleurs, la retirer).
+    // --------------------------------------------------------
+
+    const zoneCase = k => `${base}:tech:${composant.id}:case:${k}`;
+    const estTech = c => !c.cache && c.ref?.type === "tech";
+
+    const imprimes = contenu?.techs || [];
+
+    const posee = k => (imprimes[k]?.id > 0
+        ? null
+        : (index.parZone.get(zoneCase(k)) || []).find(estTech) || null);
+
+    const signaturePosees = imprimes.map((lien, k) => posee(k)?.ref.id || 0).join(",");
+
+    // Liens de la feuille, technologies posées comprises (mêmes références
+    // d'un rendu à l'autre : les cartes ne se rechargent pas)
+    const liens = useMemo(
+        () => imprimes.map((lien, k) => (posee(k) ? { type: "tech", id: posee(k).ref.id, __link: true } : lien)),
+        [contenu, signaturePosees]
+    );
+
     // Coût de chaque technologie de la feuille
-    const liens = contenu?.techs || [];
     const techs = useElements(liens.map(lien => lien?.id));
     const cout = k => Number(techs[liens[k]?.id]?.cout) || 1;
 
@@ -72,12 +110,11 @@ function Feuille({ composant, base }) {
     }
 
     // Feuille « small » (ex. Signal, Tempête) : seules les cases 8 à 15 sont utilisées
-    const small = liens.every((lien, k) => (k >= 8 && k <= 15) || !lien || lien.id === -1);
-    const affichages = getHandler(jeu, "techsheet").display;
-    const Display = small && affichages.small ? affichages.small : affichages.default;
+    const Display = affichageFeuille(jeu, contenu);
 
     const affiche = {
         ...contenu,
+        techs: liens,
         progres: liens.map((lien, k) => progres(k)),
         // Obtenue : toutes ses cases de recherche sont cochées
         unlocked: liens.map((lien, k) => progres(k) >= cout(k)),
@@ -116,7 +153,30 @@ function Feuille({ composant, base }) {
         <div ref={racine} onClick={onClick} style={{ width: "max-content" }}>
             {/* Chaque technologie (data-emplacement "case:<k>") reçoit des
                 éléments : zone joueur:<u>:tech:<feuille>:case:<k> */}
-            <Emplacements prefixe={`${base}:tech:${composant.id}`} stylePions={stylePions}>
+            <Emplacements
+                prefixe={`${base}:tech:${composant.id}`}
+                stylePions={stylePions}
+                // La technologie posée s'affiche déjà comme une technologie imprimée
+                filtrePions={zone => c => c.id !== posee(Number(zone.split(":").pop()))?.id}
+                extra={zone => {
+                    const c = posee(Number(zone.split(":").pop()));
+
+                    return c && joueur && (
+                        <button
+                            type="button"
+                            data-tech-posee={c.id}
+                            title="Technologie posée sur cette case : ouvrir sa fiche (l'envoyer ailleurs, la retirer)"
+                            onClick={event => {
+                                event.stopPropagation();
+                                ouvrirFiche(c.id);
+                            }}
+                            style={{ fontSize: 11, padding: "0 4px", marginRight: 4 }}
+                        >
+                            ⚙ posée
+                        </button>
+                    );
+                }}
+            >
                 <Display content={affiche} />
             </Emplacements>
         </div>

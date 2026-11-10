@@ -1,5 +1,6 @@
 import { EditorInput } from "../../Input/EditorInput"
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
+import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { Text } from "../../Component/Text"
 import { backgroundColor, backgroundColorFull, borderColor, police } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
@@ -14,7 +15,7 @@ const typeEvenement = {
 }
 
 
-class Habilite extends ElementContent {
+class Habilite extends aggregation(ElementContent, ExemplairesCarac) {
 
     usage = ""
     type="min"
@@ -58,6 +59,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
+            <ExemplairesForm content={content} onChange={onChange} />
             <EnumInput onChange={onChange} name="type" value={content} enumClass={typeEvenement} />
             <EditorInput onChange={onChange} name="usage" value={content} />
 

@@ -1,4 +1,5 @@
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
+import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { EditorInput } from "../../Input/EditorInput"
 import { backgroundColor, backgroundColorFull, police } from "./ti5Const"
 import { bottomBorder } from "../../Component/style"
@@ -13,7 +14,7 @@ const bColor="#990000"
 
 
 
-class Classe extends ElementContent {
+class Classe extends aggregation(ElementContent, ExemplairesCarac) {
     usage = ""
 }
 
@@ -75,6 +76,7 @@ function Form({ content, onChange, onSubmit,style}) {
     return (
         <>
             <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
+                <ExemplairesForm content={content} onChange={onChange} />
                 <EditorInput onChange={onChange} name="usage" value={content} />
 
             </FormBase>

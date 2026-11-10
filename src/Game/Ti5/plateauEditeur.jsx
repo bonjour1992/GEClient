@@ -5,7 +5,7 @@ import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { useSearch, getFromType } from "../../lib/store";
 import { getElement } from "../../lib/fetch";
 import { Link } from "../../lib/datatype";
-import { horsReserveCommune } from "./engine/miseEnPlace";
+import { horsReserveCommune, exemplaires } from "./engine/miseEnPlace";
 import {
     nombreCases,
     distanceIndex,
@@ -180,7 +180,7 @@ export function Form({
     }
 
     // Tire au hasard un système pour chaque case "hasard".
-    // Un nom commençant par !N! donne N exemplaires du système.
+    // Un système en N exemplaires (son champ « exemplaires ») y est N fois.
     // Les systèmes spéciaux ne sont pas tirés.
     async function generer() {
 
@@ -203,10 +203,10 @@ export function Form({
                     continue;
                 }
 
-                const match = (element.content?.name || "").match(/^!(\d+)!/);
-                const exemplaires = match ? Number(match[1]) : 1;
+                // (champ « exemplaires » du système, ou ancien préfixe !N! de son nom)
+                const nombre = exemplaires(element.content);
 
-                for (let i = 0; i < exemplaires; i++) {
+                for (let i = 0; i < nombre; i++) {
                     disponibles.push(element);
                 }
             }

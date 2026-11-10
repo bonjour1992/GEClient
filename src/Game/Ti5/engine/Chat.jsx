@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useEngine } from "./Interaction";
+import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
+import { useEngine, nomElement } from "./Interaction";
 
 // ============================================================
 // ONGLET CHAT
@@ -27,6 +28,61 @@ export function conversationDe(message, moi) {
 }
 
 const heure = date => new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+// Texte d'un message : un lien |123| (carte montrée par « Montrer à… »)
+// devient un bouton au nom de la carte, qui l'affiche en entier
+function TexteMessage({ texte }) {
+
+    const { search } = useEngine();
+
+    const [ouverts, setOuverts] = useState([]);
+
+    const morceaux = String(texte).split(/\|(\d+)\|/);
+
+    const liens = morceaux
+        .filter((x, i) => i % 2 === 1)
+        .map(Number)
+        .map(id => ({ id, element: search.find(e => e.id === id) }))
+        .filter(x => x.element);
+
+    return (
+        <>
+            {morceaux.map((morceau, i) => {
+
+                if (i % 2 === 0) {
+                    return <span key={i}>{morceau}</span>;
+                }
+
+                const id = Number(morceau);
+                const element = search.find(e => e.id === id);
+
+                if (!element) {
+                    return <span key={i}>|{morceau}|</span>;
+                }
+
+                const ouvert = ouverts.includes(id);
+
+                return (
+                    <button
+                        key={i}
+                        type="button"
+                        aria-expanded={ouvert}
+                        onClick={() => setOuverts(o => (ouvert ? o.filter(x => x !== id) : [...o, id]))}
+                        style={{ padding: "0 6px", borderRadius: 6, fontWeight: "bold" }}
+                    >
+                        🂠 {nomElement(search, { type: element.type, id })} {ouvert ? "▾" : "▸"}
+                    </button>
+                );
+            })}
+
+            {liens.filter(x => ouverts.includes(x.id)).map(x => (
+                <div key={x.id} style={{ marginTop: 4, whiteSpace: "normal" }}>
+                    <LoadAndDisplay link={{ type: x.element.type, id: x.id }} />
+                </div>
+            ))}
+        </>
+    );
+}
 
 export function Chat({ messages, ecrire, lu, marquerLu }) {
 
@@ -146,7 +202,7 @@ export function Chat({ messages, ecrire, lu, marquerLu }) {
                         <span style={{ color: "#666", fontSize: 12 }}>{heure(m.date)} </span>
                         <b>{m.nom}</b>
                         {" : "}
-                        {m.texte}
+                        <TexteMessage texte={m.texte} />
                     </div>
                 ))}
 

@@ -178,6 +178,31 @@ export const FRAGMENTS = {
 
 export const estFragment = c => !c?.ref && Object.values(FRAGMENTS).some(f => f[0] === c?.jeton);
 
+// Marqueur libre : jeton portant un texte (marques.texte, 120 caractères au
+// plus) et une couleur (marques.couleur), posé où l'on veut
+export const LIBRE = "libre";
+export const COULEUR_LIBRE = "#fff59d";
+
+// Jetons de ressource, d'influence et de commerce : glissés depuis les
+// compteurs du joueur (volet de droite), ils retirent leur montant
+// (marques.montant) du compteur et se posent sur un élément ou dans une zone.
+// compteur -> [jeton, couleur, forme de l'icône]
+export const RESSOURCES = {
+    res: ["Ressource", "#f2c200", "hex"],
+    inf: ["Influence", "#3b6fd6", "hex"],
+    commerce: ["Commerce", "#d4a017", "rond"],
+};
+
+// Compteur (« res », « inf », « commerce ») d'un jeton de ressource, ou null
+export const ressourceDe = c =>
+    (!c?.ref && Object.keys(RESSOURCES).find(cle => RESSOURCES[cle][0] === c?.jeton)) || null;
+
+// Qui a émis une faveur : le joueur (proprio), ou la faction neutre
+// (marques.neutre) pour une faveur obtenue d'une faction neutre.
+// Même règle que l'encaissement (etat.js) : une faveur par émetteur.
+export const emetteurFaveur = f =>
+    f?.proprio ?? (f?.marques?.neutre ? "neutre:" + f.marques.neutre : null);
+
 // Cases du haut du déroulé à remplir, lues dans la ligne « Recrutement »
 // d'un tour : "3,4,5", "3 4 5" ou "3-5" -> [3, 4, 5]
 export function casesRecrutement(texte) {
@@ -197,11 +222,12 @@ export function casesRecrutement(texte) {
     return cases.filter(n => n >= 3 && n <= 9);
 }
 
-// Un nom qui commence par !N! donne N exemplaires (même convention que
-// la génération des systèmes du plateau). Sinon un seul.
-export function exemplaires(nom) {
-    const m = /^!(\d+)!/.exec(nom || "");
-    return m ? Number(m[1]) : 1;
+// Nombre d'exemplaires d'un élément (tuile système, carte) : son champ
+// « exemplaires » (Component/Exemplaires.jsx). L'ancien préfixe !N! du nom
+// reste compris tant qu'un élément le porte. Sinon un seul.
+export function exemplaires(contenu) {
+    const m = /^!(\d+)!/.exec(contenu?.name || "");
+    return m ? Number(m[1]) : Math.max(1, Math.floor(Number(contenu?.exemplaires)) || 1);
 }
 
 const lienValide = lien => lien && Number.isInteger(lien.id) && lien.id > 0;
@@ -239,6 +265,13 @@ export function lignesDepart(content) {
 // (lié à une faction, une faction neutre ou un événement) est écarté des
 // réserves communes. Sans ce champ, un élément est commun.
 const estCommun = contenu => (contenu?.lienType ?? "commun") === "commun";
+
+// Unité mercenaire : type de lien « Lié à un mercenaire » et « Lié à » vide
+// (aucun élément). Elle est traitée comme une carte mercenaire (pioche,
+// recrutement, transactions). Une unité liée à une carte mercenaire précise
+// n'en est pas une.
+export const estUniteMercenaire = contenu => contenu?.lienType === "mercenaire" &&
+    !(Number(contenu.lienElement?.id) > 0);
 
 // Système hors du tirage au hasard (mise en place, « Générer » de l'éditeur,
 // tirage d'un système du plateau) : type de lien autre que « commun ». Sans
@@ -375,13 +408,13 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
             // (sauf une tuile en plusieurs exemplaires, comme « !30!vide », le
             // système natal de Winnu : elle reste dans la pioche)
-            if (natauxDesFactions.has(systeme.id) && exemplaires(systeme.content?.name) === 1) {
+            if (natauxDesFactions.has(systeme.id) && exemplaires(systeme.content) === 1) {
                 continue;
             }
 
             const cible = horsReserveCommune(systeme.content) ? speciales : reserve;
 
-            for (let k = 0; k < exemplaires(systeme.content?.name); k++) {
+            for (let k = 0; k < exemplaires(systeme.content); k++) {
                 cible.push(systeme.id);
             }
         }
@@ -432,10 +465,8 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
     const feuilles = await lister("techsheet");
 
-    // Les places (cases natales) sont tirées au sort
-    const places = melangerListe(natals, alea);
-
-    for (const [siege, joueur] of partie.joueurs.entries()) {
+    // (les cases natales restent vides : chaque joueur y pose son système)
+    for (const joueur of partie.joueurs) {
 
         const u = joueur.userId;
         const faction = await charger(joueur.faction);
@@ -448,36 +479,30 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
             continue;
         }
 
-        // Système natal, sur la case "natal" tirée au sort pour ce joueur
-        let hex = null;
-        let planeteDepart = null;
+        // Système natal : sa tuile commence dans les éléments actifs du
+        // joueur, avec ses unités de départ. Le bouton « Mise en place » du
+        // tour 0 (engine/MiseEnPlaceJoueur.jsx) la pose sur une case natale
+        // libre (ou la laisse où le joueur l'a posée lui-même), puis y pose
+        // les unités : vaisseaux dans l'espace, unités terrestres sur la
+        // planète de départ.
+        const actifs = `joueur:${u}:actif`;
 
-        if (places[siege] !== undefined && lienValide(faction.system)) {
+        if (lienValide(faction.system)) {
 
-            hex = "hex:" + places[siege];
-
-            const systeme = await poserSysteme(faction.system.id, places[siege], u);
-            const planetes = await planetesDe(systeme);
-
-            // Planète de départ : celle de la faction, sinon la première
-            planeteDepart =
-                planetes.find(p => p.contenu?.homePlanet?.id === joueur.faction) ||
-                planetes[0] ||
-                null;
+            ajouter(etat, { ref: { type: "system", id: faction.system.id }, zone: actifs, proprio: u });
 
             // Le joueur contrôle les planètes de son système natal
-            for (const planete of planetes) {
+            for (const planete of await planetesDe(await lire(faction.system.id))) {
                 ajouter(etat, {
                     ref: { type: "planet", id: planete.id },
-                    zone: `joueur:${u}:actif`,
+                    zone: actifs,
                     proprio: u,
                 });
             }
         }
 
-        // Unités de départ (unitNum) : les vaisseaux dans l'espace du système
-        // natal, les autres sur la planète de départ. Sans système natal,
-        // elles vont dans la réserve.
+        // Unités de départ (unitNum) : dans les éléments actifs, en attendant
+        // la mise en place.
         // La réserve reçoit le reste des figurines du joueur : la limite du
         // type de l'unité, moins celles de départ. Rien pour un type illimité.
         for (const [i, lien] of (faction.units || []).entries()) {
@@ -488,24 +513,15 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
             const n = Number(faction.unitNum?.[i]) || 0;
             const unite = await lire(lien.id);
-            const vaisseau = unite?.mot_cle?.includes("ship");
             const limite = LIMITES_UNITES[typeUnite(unite)];
             const reserve = `joueur:${u}:reserve`;
-
-            let zone = reserve;
-
-            if (hex) {
-                zone = vaisseau || !planeteDepart
-                    ? hex
-                    : `${hex}:planete:${planeteDepart.k}`;
-            }
 
             const total = limite === undefined ? n : Math.max(n, limite);
 
             for (let k = 0; k < total; k++) {
                 ajouter(etat, {
                     ref: { type: lien.type || "unit", id: lien.id },
-                    zone: k < n ? zone : reserve,
+                    zone: k < n ? actifs : reserve,
                     proprio: u,
                 });
             }
@@ -565,10 +581,9 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
                 actif: `joueur:${u}:actif`,
                 reserve: `joueur:${u}:reserve`,
                 agents: `joueur:${u}:agents`,
-                espace: hex || `joueur:${u}:reserve`,
-                planete: hex && planeteDepart
-                    ? `${hex}:planete:${planeteDepart.k}`
-                    : (hex || `joueur:${u}:reserve`),
+                // (espace, planète : posés par la mise en place du joueur, avec ses unités)
+                espace: actifs,
+                planete: actifs,
                 tech: `joueur:${u}:tech`,
             }[ligne.zone];
 
@@ -615,14 +630,25 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
         const cartes = [];
 
         for (const carte of await lister(type)) {
-            for (let k = 0; estCommun(carte.content) && k < exemplaires(carte.content?.name); k++) {
-                cartes.push(carte.id);
+            for (let k = 0; estCommun(carte.content) && k < exemplaires(carte.content); k++) {
+                cartes.push({ ref: { type, id: carte.id } });
+            }
+        }
+
+        // Unités mercenaires (type de lien « mercenaire ») : ce sont des
+        // mercenaires, dans la même pioche ; cachées, elles montrent le dos
+        // d'une carte mercenaire (marque « dos », dosDe d'etat.js)
+        if (type === "mercenaire") {
+            for (const unite of await lister("unit")) {
+                if (estUniteMercenaire(unite.content)) {
+                    cartes.push({ ref: { type: "unit", id: unite.id }, marques: { dos: "mercenaire" } });
+                }
             }
         }
 
         // Mélangées avant d'être créées : l'identifiant ne dit rien de la carte
-        for (const id of melangerListe(cartes, alea)) {
-            ajouter(etat, { ref: { type, id }, zone });
+        for (const carte of melangerListe(cartes, alea)) {
+            ajouter(etat, { ...carte, zone });
         }
 
         if (composantsDeZone(etat, zone).length) {
@@ -632,7 +658,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
     // Promesses : une réserve commune, visible de tous
     for (const carte of await lister("Promesse")) {
-        for (let k = 0; estCommun(carte.content) && k < exemplaires(carte.content?.name); k++) {
+        for (let k = 0; estCommun(carte.content) && k < exemplaires(carte.content); k++) {
             ajouter(etat, { ref: { type: "Promesse", id: carte.id }, zone: "general:promesses" });
         }
     }
@@ -654,8 +680,12 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
         }
     }
 
+    // Type de lien de l'agent (« commun » : réserve commune) ; sans ce champ,
+    // un agent est commun s'il est cité par au moins deux factions
     const agentsBase = (await lister("agent"))
-        .filter(agent => utilisations.get(agent.id) >= 2)
+        .filter(agent => agent.content?.lienType
+            ? estCommun(agent.content)
+            : utilisations.get(agent.id) >= 2)
         .map(agent => agent.id);
 
     // Sert aussi à la réserve infinie d'agents du plateau général

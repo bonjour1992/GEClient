@@ -4,7 +4,10 @@ import { useSearch, getFromType } from "../../../lib/store";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { Text } from "../../../Component/Text";
 import { getHandler } from "../../games";
-import { usePartie, useElement, useElements } from "./sync";
+import { usePartie, useElement, useElements, chargerContenu } from "./sync";
+import { SCRIPTS_DESACTIVES, scriptsDeRecrutement } from "./scripts";
+import { MiseEnPlaceJoueur } from "./MiseEnPlaceJoueur";
+import { ScriptsCarte } from "./ScriptsCarte";
 import {
     TYPES_PIOCHE,
     SAC,
@@ -13,8 +16,14 @@ import {
     ACTIVATION,
     TREVE,
     FRAGMENTS,
+    RESSOURCES,
+    LIMITES_UNITES,
+    LIBRE,
+    COULEUR_LIBRE,
     phasesDuTour,
     actionsPoints,
+    ressourceDe,
+    typeUnite,
 } from "./miseEnPlace";
 import { turnNumber } from "../ti5Const";
 import {
@@ -26,6 +35,7 @@ import {
     indexer,
     couleurJoueur,
     nomElement,
+    estMercenaire,
     nomZone,
     aMotCle,
     agentDisponible,
@@ -35,6 +45,9 @@ import {
     COULEUR_A_FAIRE,
     COULEUR_NEUTRE,
     STYLE_INDISPONIBLE,
+    estTreve,
+    BoutonRegle,
+    confirmerRegle,
 } from "./Interaction";
 import { Preparation } from "./Preparation";
 import { Espace } from "./Espace";
@@ -48,6 +61,9 @@ import { Transaction, Transactions, transactionsEnAttente } from "./Transaction"
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
 import { Combat, combatsEnCours, aDesUnites, COULEUR_COMBAT } from "./Combat";
+import { EnvoyerVers, MontrerA } from "./Envoi";
+import { Notes } from "./Notes";
+import { quiVoit } from "./etat";
 
 // ============================================================
 // ÉCRAN D'UNE PARTIE
@@ -66,6 +82,7 @@ const ONGLETS = [
     ["vote", "Vote"],
     ["transactions", "Transactions"],
     ["chat", "Chat"],
+    ["notes", "Notes"],
     ["journal", "Journal"],
     ["aide", "Aide"],
 ];
@@ -148,6 +165,9 @@ export function Partie({ id }) {
     // Zone d'une carte face cachée sur laquelle on a cliqué
     const [cachee, setCachee] = useState(null);
 
+    // Marqueur libre dont la fenêtre est ouverte (texte, couleur)
+    const [libre, setLibre] = useState(null);
+
     // Fenêtre de transaction (phase de diplomatie)
     const [transaction, setTransaction] = useState(false);
 
@@ -208,6 +228,17 @@ export function Partie({ id }) {
 
     const index = useMemo(() => indexer(p.etat), [p.etat]);
 
+    // Scripts de règles (scripts.js) : message orange du dernier script qui a
+    // joué, et liste des scripts désactivés pour toutes les parties (élément
+    // « reglage » du jeu, réglé dans l'outil « Scripts de règles »)
+    const [avis, setAvis] = useState("");
+
+    const reglage = useElement(
+        search.find(e => e.type === "reglage" && e.name === SCRIPTS_DESACTIVES)?.id ?? -1
+    );
+
+    const scriptsDesactives = Array.isArray(reglage?.desactives) ? reglage.desactives : [];
+
     // Déroulé (surcoût du recrutement) et phases du jeu (numéro dans le tour)
     const deroule = useElement(p.etat?.references?.deroule);
     const elementsPhase = getFromType(search, ["phase"]);
@@ -254,14 +285,23 @@ export function Partie({ id }) {
         cliquer: (id, event) => cliquer(id, event),
         ouvrirCachee: setCachee,
 
+        // Fenêtre d'un marqueur libre (texte, couleur), et message privé du chat
+        ouvrirLibre: setLibre,
+        ecrire: p.ecrire,
+
         // Envoie tout de suite ces actions (avec celles en attente) en un coup commenté
-        envoyer: (actions, commentaire) => p.envoyer(commentaire, actions),
+        envoyer: (actions, commentaire, surRefus) => p.envoyer(commentaire, actions, surRefus),
         couleurDe: userId => (trouver(userId) ? couleurJoueur(trouver(userId)) : null),
 
         // Production (case de la réserve) et message d'erreur de l'en-tête
         production,
         setProduction,
         signaler: p.setErreur,
+
+        // Scripts de règles : message orange (un script a modifié une action),
+        // et scripts désactivés
+        aviser: setAvis,
+        scriptsDesactives,
 
         // Change d'onglet (un système envoyé au combat ouvre l'onglet Combat),
         // et combat affiché dans cet onglet (case du système)
@@ -442,15 +482,16 @@ export function Partie({ id }) {
 
     // Marqueurs de trêve, où qu'ils soient
     const retraitTreves = Object.values(etat.composants)
-        .filter(c => !c.ref && c.jeton === TREVE)
+        .filter(c => estTreve(c, search) && c.zone !== "horsJeu")
         .map(c => ({ type: "supprimer", c: c.id }));
 
-    function changerPhase(pas) {
+    // commentaire : celui d'un effet du jeu (BoutonRegle), pour le journal
+    function changerPhase(pas, commentaire = "") {
         const phase = phases[iPhase + pas];
 
         // Nouvelle phase : plus personne n'a passé, le premier de l'ordre joue
         if (phase) {
-            p.jouer([
+            p.envoyer(commentaire, [
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse] : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
@@ -485,12 +526,14 @@ export function Partie({ id }) {
     }
 
     // Tour suivant : on repart de la première phase
-    function nouveauTour() {
-        p.jouer([
+    function nouveauTour(commentaire = "") {
+        p.envoyer(commentaire, [
             ...retraitMarqueurs,
             ...retraitUse,
             ...remiseDesPasses,
             ...figerOrdre,
+            // Le vote du tour qui s'achève est remis à zéro (etat.js)
+            { type: "reinitialiserVotes" },
             {
                 type: "partie",
                 tour: etat.tour + 1,
@@ -521,15 +564,22 @@ export function Partie({ id }) {
             const compteur = `joueur:${moi}:proposition`;
             const politique = agentDisponible(ctx, "politique");
 
-            if (Number(etat.compteurs[compteur]) === etat.tour) {
-                p.setErreur("Vous avez déjà proposé un agenda ce tour.");
-            } else if (etat.tour >= turnNumber) {
+            // (pas de tour suivant : là, l'action est impossible)
+            if (etat.tour >= turnNumber) {
                 p.setErreur("Il n'y a pas de tour suivant.");
-            } else if (!politique) {
-                p.setErreur("Vous n'avez pas de politique disponible.");
-            } else {
-                p.jouer([
-                    { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
+                return true;
+            }
+
+            // Effet du jeu : hors conditions, une confirmation dit pourquoi
+            // (sans politique disponible, aucun n'est usé)
+            const commentaire = confirmerRegle(`Proposer ${nomElement(search, c.ref)}`, [
+                Number(etat.compteurs[compteur]) === etat.tour && "vous avez déjà proposé un agenda ce tour",
+                !politique && "vous n'avez pas de politique disponible (aucun ne sera usé)",
+            ]);
+
+            if (commentaire) {
+                p.envoyer(commentaire, [
+                    politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
                     { type: "deplacer", c: id, vers: `general:agenda:${etat.tour + 1}` },
                     { type: "compteur", id: compteur, valeur: etat.tour },
                 ]);
@@ -542,6 +592,12 @@ export function Partie({ id }) {
             return false;
         }
 
+        // Marqueur libre : un clic rouvre sa fenêtre (texte, couleur)
+        if (!c.ref && c.jeton === LIBRE) {
+            setLibre(id);
+            return true;
+        }
+
         // Ce qui s'achète au recrutement : [supplément de coût, destination].
         // Un agent rejoint mes agents ; un mercenaire coûte 2 de plus et va
         // dans mes éléments actifs ; un plan de relique va dans ma main.
@@ -551,10 +607,12 @@ export function Partie({ id }) {
             relique: [0, `joueur:${moi}:main`],
         };
 
-        // Clic sur le cube posé sur une carte mercenaire : c'est la carte qu'on achète
+        // Clic sur le cube posé sur une carte mercenaire : c'est la carte qu'on achète.
+        // Une unité mercenaire s'achète comme une carte mercenaire.
         const porteur = c.sur ? etat.composants[c.sur] : null;
-        const achete = !c.ref && porteur?.ref?.type === "mercenaire" ? porteur : c;
-        const achat = achats[achete.ref?.type];
+        const achete = !c.ref && estMercenaire(porteur) ? porteur : c;
+        const typeAchat = estMercenaire(achete) ? "mercenaire" : achete.ref?.type;
+        const achat = achats[typeAchat];
 
         if (!achat) {
             return false;
@@ -578,7 +636,7 @@ export function Partie({ id }) {
         }
 
         // Le surcoût du tour ne vaut que pour les mercenaires
-        const surcout = achete.ref.type === "mercenaire"
+        const surcout = typeAchat === "mercenaire"
             ? Number(deroule?.surCout?.[etat.tour - 1]) || 0
             : 0;
 
@@ -587,16 +645,84 @@ export function Partie({ id }) {
         const influence = Number(etat.compteurs[compteur]) || 0;
         const nom = nomElement(search, achete.ref);
 
-        if (influence < cout) {
-            p.setErreur(`Influence insuffisante : ${nom} coûte ${cout}, vous avez ${influence}.`);
-            return true;
-        }
+        // Effet du jeu déclenché par un Ctrl + clic : hors conditions (influence
+        // insuffisante, agent que ma faction ne peut pas avoir), une
+        // confirmation dit pourquoi, et l'achat reste possible.
+        // prix : le coût, une fois passé par les scripts de règles ; messages : ce qu'ils ont fait
+        const acheter = (devient, obstacles = [], prix = cout, messages = []) => {
 
-        p.jouer([
-            { type: "compteur", id: compteur, delta: -cout },
-            // (de : refusé si un autre joueur vient de l'acheter)
-            { type: "deplacer", c: achete.id, vers: achat[1], de: achete.zone },
-        ]);
+            const commentaire = confirmerRegle(`Recruter ${nom} (${prix} influence)`, [
+                influence < prix && `influence insuffisante : ${nom} coûte ${prix}, vous avez ${influence}`,
+                ...obstacles,
+            ]);
+
+            if (!commentaire) {
+                return;
+            }
+
+            // Un script a modifié l'action : on le dit, en orange
+            setAvis(messages.length ? `${messages.join(" ; ")} (coût : ${cout} → ${prix}).` : "");
+
+            p.envoyer(commentaire, [
+                { type: "compteur", id: compteur, delta: -prix },
+                // (de : refusé si un autre joueur vient de l'acheter ; une unité
+                // mercenaire devient la mienne : elle se pose ensuite sur la carte)
+                {
+                    type: "deplacer",
+                    c: achete.id,
+                    vers: achat[1],
+                    de: achete.zone,
+                    ...(achete.ref.type === "unit" ? { proprio: moi } : {}),
+                },
+                // Agent de base : il devient celui de ma faction
+                devient && { type: "remplacer", c: achete.id, ref: { type: "agent", id: devient } },
+            ]);
+        };
+
+        (async () => {
+
+            const idFaction = ctx.factionDe(moi);
+
+            // SCRIPTS DE RÈGLES (scripts.js) : ceux dont je possède la carte
+            // (technologie débloquée, habilité de ma faction) modifient le coût
+            const scripts = await scriptsDeRecrutement(etat, moi, idFaction, chargerContenu, scriptsDesactives);
+
+            const effets = scripts
+                .map(s => s.recrutement({ type: typeAchat, nom, nomDeBase: nom, cout, surcout }))
+                .filter(Boolean);
+
+            const prix = Math.max(0, cout + effets.reduce((total, e) => total + (Number(e.cout) || 0), 0));
+            const messages = effets.map(e => e.message).filter(Boolean);
+
+            if (achete.ref.type !== "agent") {
+                acheter(undefined, [], prix, messages);
+                return;
+            }
+
+            // Un agent de base (commun) recruté devient l'agent de base de ma
+            // faction : celui-là même s'il est sur ma feuille, sinon l'agent de
+            // ma feuille qui le réimplémente (Arborec : un logisticien devient un
+            // généticien). Ni l'un ni l'autre : recrutement normalement impossible.
+            // Un agent qui n'est pas de base est recruté tel quel.
+            const [agent, faction] = await Promise.all([
+                chargerContenu(achete.ref.id),
+                idFaction > 0 ? chargerContenu(idFaction) : null,
+            ]);
+
+            const miens = (faction?.agents || []).map(lien => Number(lien?.id)).filter(id => id > 0);
+
+            if (agent?.lienType !== "commun" || !miens.length || miens.includes(achete.ref.id)) {
+                acheter(undefined, [], prix, messages);
+                return;
+            }
+
+            const contenus = await Promise.all(miens.map(chargerContenu));
+            const remplacant = miens.find((id, k) => Number(contenus[k]?.reimplemente?.id) === achete.ref.id);
+
+            acheter(remplacant, [
+                !remplacant && `votre faction n'a ni ${nom} ni un agent qui le réimplémente (il serait recruté tel quel)`,
+            ], prix, messages);
+        })();
 
         return true;
     }
@@ -740,23 +866,21 @@ export function Partie({ id }) {
 
                     {/* À la dernière phase du tour seulement (et au tour 0) */}
                     {(!enteteReduit || (dernierePhase && !dernierTour)) && (
-                        <button
-                            type="button"
-                            disabled={!estJoueur || !!blocage || !dernierePhase || dernierTour}
-                            onClick={() => confirmerAvance() && nouveauTour()}
+                        <BoutonRegle
+                            nom="Nouveau tour"
+                            disabled={!estJoueur || dernierTour}
+                            obstacles={[
+                                !dernierePhase && "ce n'est pas la dernière phase du tour (avant : « Phase suivante »)",
+                                blocage,
+                                attente,
+                            ]}
+                            faire={nouveauTour}
                             title={dernierTour
                                 ? `Le tour ${turnNumber} est le dernier`
-                                : (!dernierePhase
-                                    ? "Disponible à la dernière phase du tour (avant : « Phase suivante »)"
-                                    : (blocage || (attente && attente + " (le bouton reste utilisable)") ||
-                                        "Passe au tour suivant et revient à la première phase"))}
-                            style={{
-                                fontWeight: dernierePhase && !dernierTour ? "bold" : "normal",
-                                ...(attente && !blocage && dernierePhase && !dernierTour ? STYLE_INDISPONIBLE : {}),
-                            }}
+                                : "Passe au tour suivant et revient à la première phase"}
                         >
                             Nouveau tour
-                        </button>
+                        </BoutonRegle>
                     )}
 
                     <span>
@@ -774,21 +898,18 @@ export function Partie({ id }) {
                             </button>
                         )}
                         <b style={{ margin: "0 6px" }}>{etat.phase || "—"}</b>
-                        <button
-                            type="button"
-                            disabled={!estJoueur || !phases[iPhase + 1] || !!blocage}
-                            onClick={() => confirmerAvance() && changerPhase(1)}
-                            title={blocage || (attente && attente + " (le bouton reste utilisable)") ||
-                                "Tout le monde a passé : phase suivante"}
-                            style={{
-                                fontWeight: phases[iPhase + 1] ? "bold" : "normal",
-                                // Rouge gris tant que tout le monde n'a pas passé : indisponible
-                                // en principe, mais on peut quand même avancer
-                                ...(attente && !blocage && phases[iPhase + 1] ? STYLE_INDISPONIBLE : {}),
-                            }}
+                        {/* Rouge gris tant qu'un combat est ouvert, que des faveurs restent à
+                            encaisser ou que tout le monde n'a pas passé : on peut quand
+                            même avancer, après confirmation */}
+                        <BoutonRegle
+                            nom="Phase suivante"
+                            disabled={!estJoueur || !phases[iPhase + 1]}
+                            obstacles={[blocage, attente]}
+                            faire={commentaire => changerPhase(1, commentaire)}
+                            title="Tout le monde a passé : phase suivante"
                         >
                             Phase suivante ▶
-                        </button>
+                        </BoutonRegle>
                     </span>
 
                     {/* Correction manuelle : « Joueur suivant » et « Passer » sont
@@ -926,6 +1047,36 @@ export function Partie({ id }) {
                     </div>
                 )}
 
+                {/* Un script de règles vient de modifier une action : en orange,
+                    sous l'éventuel message d'erreur */}
+                {avis && (
+                    <div
+                        role="status"
+                        data-avis-script
+                        style={{
+                            position: "fixed",
+                            top: p.erreur ? 52 : 8,
+                            left: "50%",
+                            transform: "translateX(-50%)",
+                            zIndex: 9500,
+                            maxWidth: "90vw",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            padding: "6px 12px",
+                            backgroundColor: "#ffe0b2",
+                            color: "#5d3200",
+                            border: "2px solid #ef6c00",
+                            borderRadius: 8,
+                            boxShadow: "0 2px 8px #0006",
+                            fontWeight: "bold",
+                        }}
+                    >
+                        {avis}
+                        <button type="button" title="Fermer ce message" onClick={() => setAvis("")}>×</button>
+                    </div>
+                )}
+
                 {/* ============================================
                     QUE FAIRE À CETTE PHASE (jeu en ligne)
                 ============================================ */}
@@ -938,12 +1089,15 @@ export function Partie({ id }) {
 
                         {!aideReduite && (<>
                             <div style={{ fontSize: 13 }}>
-                                Appliquez la mise en place de votre faction, puis cliquez sur
-                                « Nouveau tour » quand tout le monde est prêt.
+                                Votre système natal et vos unités de départ sont dans vos éléments actifs.
+                                « Mise en place de ma faction » pose le système sur une case natale libre
+                                (ou le laisse où vous l'avez glissé) et vos unités dessus. Puis « Nouveau
+                                tour » quand tout le monde est prêt.
                             </div>
                             {maFaction?.setup && (
                                 <Text text={maFaction.setup} style={{ fontSize: 13, color: "#000" }} />
                             )}
+                            <MiseEnPlaceJoueur />
                         </>)}
                     </div>
                 )}
@@ -1000,8 +1154,8 @@ export function Partie({ id }) {
                         {/* Phase de déclaration de trêve */}
                         {enTreve && estJoueur && (
                             <div style={{ marginTop: 4, fontSize: 13 }}>
-                                <b>Déclarer une trêve :</b> Ctrl + clic sur un système y pose votre
-                                marqueur de trêve et détruit un de vos diplomates. Les marqueurs de trêve
+                                <b>Déclarer une trêve :</b> clic sur un système, puis « Déclarer une trêve » :
+                                votre marqueur de trêve y est posé et un de vos diplomates détruit. Les marqueurs de trêve
                                 précédents ont été retirés en arrivant à cette phase.
                             </div>
                         )}
@@ -1155,6 +1309,7 @@ export function Partie({ id }) {
                             {onglet === "chat" && (
                                 <Chat messages={p.chat} ecrire={p.ecrire} lu={chatLu} marquerLu={marquerLu} />
                             )}
+                            {onglet === "notes" && <Notes />}
                             {onglet === "journal" && <Journal />}
                             {onglet === "aide" && <Aide />}
                         </Barriere>
@@ -1228,6 +1383,15 @@ export function Partie({ id }) {
                                 </Barriere>
                             </Repli>
 
+                            {/* Marqueur libre : glisser pour le poser, sa fenêtre
+                                (texte, couleur) s'ouvre tout de suite ; un clic
+                                dessus la rouvre */}
+                            <Repli cle="libre" titre="Marqueur libre" style={{ backgroundColor: "#fff" }}>
+                                <div>
+                                    <Source jeton={LIBRE} libelle="Marqueur libre" couleur={COULEUR_LIBRE} />
+                                </div>
+                            </Repli>
+
                             <Repli cle="coups" titre="Derniers coups" style={{ backgroundColor: "#fff" }}>
                                 <Barriere nom="les derniers coups">
                                     <Journal limite={4} />
@@ -1239,6 +1403,7 @@ export function Partie({ id }) {
 
                 {fiche && <Fiche id={fiche} fermer={() => setFiche(null)} />}
                 {cachee && <FicheCachee zone={cachee} fermer={() => setCachee(null)} />}
+                {libre && <FicheLibre id={libre} fermer={() => setLibre(null)} />}
                 {transaction && <Transaction fermer={() => setTransaction(false)} />}
                 {aChoisir.length > 0 && <ChoixProposition cartes={aChoisir} choisir={choisirProposition} />}
             </div>
@@ -1438,7 +1603,13 @@ function FicheCachee({ zone, fermer }) {
 
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     {vues.map((c, i) => (
-                        <LoadAndDisplay key={i} link={c.ref} />
+                        <div key={i}>
+                            <LoadAndDisplay link={c.ref} />
+                            {/* La carte consultée peut être montrée à un autre joueur */}
+                            <div style={{ marginTop: 4 }}>
+                                <MontrerA lien={c.ref} />
+                            </div>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -1526,16 +1697,140 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
     );
 }
 // ============================================================
-// FICHE D'UN COMPOSANT (ouverte par un clic sur un pion)
+// MARQUEUR LIBRE : texte et couleur
+//
+// Ouverte dès qu'on pose un marqueur libre (glissé depuis le
+// volet de droite), puis par un clic dessus.
 // ============================================================
 
-const DESTINATIONS_GENERALES = [
-    ["general:table", "Table"],
-    ["general:lois", "Lois"],
-    ["general:traites", "Traités"],
-    ["general:regles", "Règles spéciales"],
-    ["general:objectifs", "Objectifs"],
-];
+const COULEURS_LIBRES = ["#fff59d", "#ffcc80", "#ef9a9a", "#ce93d8", "#90caf9", "#a5d6a7", "#ffffff", "#424242"];
+
+// Couleur foncée (texte en blanc dessus)
+const estSombre = fond => /^#([0-9a-f]{6})$/i.test(fond) &&
+    parseInt(fond.slice(1, 3), 16) * 0.3 + parseInt(fond.slice(3, 5), 16) * 0.59 + parseInt(fond.slice(5, 7), 16) * 0.11 < 128;
+
+function FicheLibre({ id, fermer }) {
+
+    const { etat, jouer, nomDe } = useEngine();
+
+    const c = etat.composants[id];
+
+    const [texte, setTexte] = useState(() => String(c?.marques?.texte ?? ""));
+    const [couleur, setCouleur] = useState(() => c?.marques?.couleur || COULEUR_LIBRE);
+
+    if (!c || c.cache) {
+        return null;
+    }
+
+    function enregistrer(event) {
+
+        event?.preventDefault();
+
+        jouer([
+            { type: "marquer", c: c.id, marque: "texte", valeur: texte.trim() || null },
+            { type: "marquer", c: c.id, marque: "couleur", valeur: couleur },
+        ]);
+
+        fermer();
+    }
+
+    return (
+        <div
+            onClick={fermer}
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 9000,
+                backgroundColor: "#0008",
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                paddingTop: 80,
+            }}
+        >
+            <form
+                role="dialog"
+                aria-label="Marqueur libre"
+                onSubmit={enregistrer}
+                onClick={event => event.stopPropagation()}
+                style={{
+                    width: "min(420px, 92vw)",
+                    padding: 12,
+                    backgroundColor: "#fff",
+                    color: "#000",
+                    border: "4px solid #444",
+                    borderRadius: 12,
+                    fontFamily: "Arial, sans-serif",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                }}
+            >
+                <div style={styleBarre}>
+                    <b style={{ fontSize: 16 }}>Marqueur libre</b>
+                    <span style={{ color: "#666" }}>
+                        {nomZone(c.zone, nomDe)}{c.proprio ? ` · posé par ${nomDe(c.proprio)}` : ""}
+                    </span>
+                </div>
+
+                <label style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    Texte ({texte.length}/120)
+                    <textarea
+                        autoFocus
+                        rows={3}
+                        maxLength={120}
+                        value={texte}
+                        onChange={e => setTexte(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && !e.shiftKey && enregistrer(e)}
+                        style={{ resize: "vertical", padding: 4 }}
+                    />
+                </label>
+
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 5 }}>
+                    Couleur
+                    {COULEURS_LIBRES.map(teinte => (
+                        <button
+                            key={teinte}
+                            type="button"
+                            title={teinte}
+                            aria-label={"Couleur " + teinte}
+                            aria-pressed={couleur === teinte}
+                            onClick={() => setCouleur(teinte)}
+                            style={{
+                                width: 22,
+                                height: 22,
+                                padding: 0,
+                                backgroundColor: teinte,
+                                border: couleur === teinte ? "3px solid #000" : "1px solid #888",
+                                borderRadius: 4,
+                            }}
+                        />
+                    ))}
+                    <input type="color" value={couleur} onChange={e => setCouleur(e.target.value)} title="Autre couleur" />
+                </div>
+
+                <div style={styleBarre}>
+                    <button type="submit" style={{ fontWeight: "bold", padding: "4px 14px" }}>Enregistrer</button>
+                    <button type="button" onClick={fermer}>Annuler</button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            jouer({ type: "supprimer", c: c.id });
+                            fermer();
+                        }}
+                        style={{ marginLeft: "auto" }}
+                    >
+                        Retirer le marqueur
+                    </button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
+// ============================================================
+// FICHE D'UN COMPOSANT (ouverte par un clic sur un pion)
+// ============================================================
 
 function Fiche({ id, fermer }) {
 
@@ -1576,24 +1871,9 @@ function Fiche({ id, fermer }) {
 
     const verso = c.face === "verso" && c.ref && getHandler(jeu, type)?.display?.verso;
 
-    const destinations = [
-        [`joueur:${moi}:main`, "Ma main"],
-        [`joueur:${moi}:reserve`, "Ma réserve"],
-        [`joueur:${moi}:actif`, "Mes éléments actifs"],
-        [`joueur:${moi}:agents`, "Mes agents"],
-        [`joueur:${moi}:agentsUses`, "Mes agents usés"],
-        ...partie.joueurs
-            .filter(j => j.userId !== moi)
-            .map(j => [`joueur:${j.userId}:main`, "Main de " + j.nom]),
-        ...DESTINATIONS_GENERALES,
-        ...(TYPES_PIOCHE.includes(type)
-            ? [["defausse:" + type, "Défausse"], ["pioche:" + type, "Dessus de la pioche"]]
-            : []),
-        // Agents et cubes retournent dans le sac
-        ...(type === "agent" || !c.ref
-            ? [[SAC, "Sac d'agents"], ["general:agents", "Réserve d'agents"]]
-            : []),
-    ];
+    // Carte que je suis seul à voir (ma main, carte cachée à moi) : je peux
+    // la montrer à un autre joueur par le chat privé
+    const vueParMoiSeul = !!c.ref && type !== "unit" && quiVoit(c, etat) === moi;
 
     // Vaisseaux de la même case, sur lesquels l'unité peut embarquer
     const hex = /^hex:\d+/.exec(c.zone)?.[0];
@@ -1796,8 +2076,8 @@ function Fiche({ id, fermer }) {
                         </label>
                         )}
 
-                        {/* Dette : son montant se diminue au fil des paiements */}
-                        {!c.ref && c.jeton === DETTE && (
+                        {/* Dette, jeton de ressource : montant modifiable */}
+                        {!c.ref && (c.jeton === DETTE || ressourceDe(c)) && (
                             <span>
                                 Montant{" "}
                                 <button
@@ -1828,12 +2108,13 @@ function Fiche({ id, fermer }) {
                             </button>
                         )}
 
-                        <select value="" onChange={e => e.target.value && deplacer(e.target.value)}>
-                            <option value="">Envoyer vers…</option>
-                            {destinations.map(([zone, libelle]) => (
-                                <option key={zone} value={zone}>{libelle}</option>
-                            ))}
-                        </select>
+                        {/* Fenêtre des destinations (Envoi.jsx) */}
+                        <EnvoyerVers c={c} apres={fermer} />
+
+                        {/* Boutons des scripts de règles rattachés à cette carte */}
+                        <ScriptsCarte c={c} fermer={fermer} />
+
+                        {vueParMoiSeul && <MontrerA lien={c.ref} />}
 
                         {!c.sur && porteurs.length > 0 && (
                             <select
@@ -1859,6 +2140,8 @@ function Fiche({ id, fermer }) {
                             <button type="button" onClick={() => deplacer(c.zone)}>Débarquer</button>
                         )}
 
+                        {/* Une unité d'un joueur retourne dans sa réserve (sync.js,
+                            retourEnReserve) ; le reste sort du jeu */}
                         <button
                             type="button"
                             onClick={() => {
@@ -1866,14 +2149,38 @@ function Fiche({ id, fermer }) {
                                 fermer();
                             }}
                         >
-                            Retirer du jeu
+                            {type === "unit" && Number.isInteger(c.proprio) && LIMITES_UNITES[typeUnite(contenu)] !== undefined
+                                ? `Retirer (retour dans la réserve de ${nomDe(c.proprio)})`
+                                : "Retirer du jeu"}
                         </button>
                     </div>
                 )}
 
                 {portes.length > 0 && (
                     <div style={{ marginBottom: 8 }}>
-                        Porte : {portes.map(x => (x.ref ? nomElement(search, x.ref) : x.jeton || "?")).join(", ")}
+                        Porte : {portes.map((x, i) => (
+                            <span key={x.id}>
+                                {i > 0 && ", "}
+                                {/* Marqueur libre : son texte entier, sur sa couleur */}
+                                {!x.ref && x.jeton === LIBRE ? (
+                                    <span
+                                        data-libre={x.id}
+                                        style={{
+                                            display: "inline-block",
+                                            padding: "1px 6px",
+                                            borderRadius: 4,
+                                            border: "1px solid #444",
+                                            backgroundColor: x.marques?.couleur || COULEUR_LIBRE,
+                                            color: estSombre(x.marques?.couleur || COULEUR_LIBRE) ? "#fff" : "#000",
+                                            fontWeight: "bold",
+                                            whiteSpace: "pre-wrap",
+                                        }}
+                                    >
+                                        {String(x.marques?.texte ?? "") || "Marqueur libre (sans texte)"}
+                                    </span>
+                                ) : (x.ref ? nomElement(search, x.ref) : x.jeton || "?")}
+                            </span>
+                        ))}
                     </div>
                 )}
 
@@ -1914,6 +2221,17 @@ function Fiche({ id, fermer }) {
                                                 })}
                                             >
                                                 Dans mes éléments actifs
+                                            </button>
+                                            <button
+                                                type="button"
+                                                title="Pose la carte sur la table du plateau général, sans propriétaire"
+                                                onClick={() => jouer({
+                                                    type: "creer",
+                                                    ref: lien,
+                                                    zone: "general:table",
+                                                })}
+                                            >
+                                                Mettre en jeu
                                             </button>
                                         </div>
                                     )}

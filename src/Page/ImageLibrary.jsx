@@ -192,6 +192,69 @@ export function FolderGrid({
 }
 
 
+// ============================================================
+// VIGNETTES
+//
+// La grille n'affiche pas les images d'origine (jusqu'à plusieurs
+// Mo chacune) mais leur vignette de 240 px : public/_vignettes/
+// <chemin de l'image>.png. Une image sans vignette (SVG, image
+// légère, image ajoutée à la main sur le serveur) s'affiche telle
+// quelle. Seules les images de plus de 200 Ko ont une vignette,
+// créée à leur ajout (uploadImage).
+// ============================================================
+
+export const DOSSIER_VIGNETTES = "_vignettes";
+const TAILLE_VIGNETTE = 240;
+const POIDS_MINIMAL = 200 * 1024;
+
+const cheminVignette = chemin => `${DOSSIER_VIGNETTES}/${chemin}.png`;
+
+function Vignette({ chemin, nom }) {
+
+    // SVG : déjà léger, pas de vignette
+    const [origine, setOrigine] = useState(/\.svg$/i.test(chemin));
+
+    return (
+        <img
+            src={encodeURI(pub + "/" + (origine ? chemin : cheminVignette(chemin)))}
+            alt={nom}
+            // (seules les images visibles sont chargées)
+            loading="lazy"
+            decoding="async"
+            onError={() => setOrigine(true)}
+            style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain"
+            }}
+        />
+    );
+}
+
+// Vignette PNG d'un fichier image, ou null (SVG, image légère ou illisible)
+async function creerVignette(file) {
+
+    if (/svg/i.test(file.type) || file.size <= POIDS_MINIMAL) {
+        return null;
+    }
+
+    try {
+        const image = await createImageBitmap(file);
+        const echelle = Math.min(1, TAILLE_VIGNETTE / Math.max(image.width, image.height));
+        const toile = document.createElement("canvas");
+
+        toile.width = Math.max(1, Math.round(image.width * echelle));
+        toile.height = Math.max(1, Math.round(image.height * echelle));
+        toile.getContext("2d").drawImage(image, 0, 0, toile.width, toile.height);
+
+        return await new Promise(resolve => toile.toBlob(resolve, "image/png"));
+    } catch (error) {
+        console.error("Vignette impossible :", error);
+        return null;
+    }
+}
+
+
 export function ImageGrid({
     files,
     selected,
@@ -238,20 +301,9 @@ export function ImageGrid({
                             backgroundColor: "#f5f5f5",
                             overflow: "hidden"
                         }}>
-                            <img
-                                src={
-                                    pub +
-                                    "/" +
-                                    normalizePath(
-                                        file.relativePath
-                                    )
-                                }
-                                alt={file.name}
-                                style={{
-                                    maxWidth: "100%",
-                                    maxHeight: "100%",
-                                    objectFit: "contain"
-                                }}
+                            <Vignette
+                                chemin={normalizePath(file.relativePath)}
+                                nom={file.name}
                             />
                         </div>
 
@@ -298,7 +350,13 @@ export function ImageLibrary({
 
     async function loadImages() {
         try {
-            setImage(await getImage());
+            const arbre = await getImage();
+
+            // Le dossier des vignettes n'est pas un dossier d'images à parcourir
+            setImage({
+                ...arbre,
+                children: (arbre?.children || []).filter(e => e.name !== DOSSIER_VIGNETTES)
+            });
         } catch (error) {
             console.error(
                 "Erreur lors du chargement des images :",
@@ -381,6 +439,13 @@ export function ImageLibrary({
                 : file.name;
 
             await saveImage(file, path);
+
+            // Sa vignette, pour la grille (sans elle, l'image s'affiche telle quelle)
+            const vignette = await creerVignette(file);
+
+            if (vignette) {
+                await saveImage(vignette, cheminVignette(path));
+            }
 
             await loadImages();
 

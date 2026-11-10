@@ -10,9 +10,22 @@
 // ============================================================
 
 // Actions que seul le serveur exécute (hasard, création d'identifiants)
-export const ACTIONS_SERVEUR = ["piocher", "melanger", "des", "reveler", "consulter", "encaisser", "engager"];
+export const ACTIONS_SERVEUR = ["piocher", "verser", "melanger", "des", "reveler", "consulter", "encaisser", "engager", "donnerCarte", "reinitialiserVotes"];
+
+// Zone libre du plateau général : une pile comme une pioche (on pioche sa
+// carte du dessus), mais dont le contenu reste visible sauf si elle est cachée
+export const ZONE_PILE_LIBRE = "general:libre";
+const estPile = zone => estPioche(zone) || zone === ZONE_PILE_LIBRE;
 
 export const FACES = ["recto", "verso", "cache"];
+
+// Refus de « donnerCarte » : celui qui doit donner la carte ne l'a ni en
+// main ni en jeu (la transaction est alors annulée, Transaction.jsx)
+// Dos d'un composant caché : la marque « dos » s'il en a une (unité
+// mercenaire : « mercenaire », comme les cartes de sa pioche), sinon son type
+export const dosDe = c => (typeof c.marques?.dos === "string" && c.marques.dos) || c.ref?.type || "jeton";
+
+export const ERREUR_CARTE_ABSENTE = "la carte à donner n'est ni en main ni en jeu chez celui qui la donne";
 
 const ZONE_VALIDE =
     /^(hex:\d+(:planete:\d+)?|carte:[\w-]+:\d+|joueur:\d+:[\w:-]+|neutre:\d+:[\w:-]+|pioche:[\w-]+|defausse:[\w-]+|general:[\w:-]+|horsJeu)$/;
@@ -208,7 +221,12 @@ export function voit(c, userId, etat) {
 // Ce qu'un joueur a le droit de recevoir : les composants qu'il ne voit pas
 // sont remplacés par des composants anonymes (zone et dos seulement), avec
 // un identifiant qui ne permet pas de les suivre d'une zone à l'autre.
-export function filtrerEtat(etat, userId) {
+//
+// versoDe (facultatif, fourni par le serveur) : c -> champs du contenu dont
+// dépend son verso, visibles de tous sur une carte face cachée (icône rouge
+// d'un événement majeur). Pas dans une pioche : on n'y sait pas laquelle est
+// dessus, et ce serait dire le contenu de la pioche carte par carte.
+export function filtrerEtat(etat, userId, versoDe) {
 
     const composants = {};
     const caches = [];
@@ -224,7 +242,7 @@ export function filtrerEtat(etat, userId) {
         // rien du tout, pas même le nombre d'éléments posés.
     }
 
-    const dos = c => c.ref?.type || "jeton";
+    const dos = dosDe;
 
     caches.sort((a, b) =>
         a.zone.localeCompare(b.zone) || dos(a).localeCompare(dos(b))
@@ -233,7 +251,19 @@ export function filtrerEtat(etat, userId) {
     const alias = {};
     caches.forEach((c, k) => { alias[c.id] = "x" + k; });
 
+    // Dessus de chaque pile cachée (pioche, zone libre cachée) : marqué
+    // `dessus`, pour en montrer le dos (une pile peut mêler plusieurs dos)
+    const dessus = new Map();
+
     for (const c of caches) {
+        if (estPile(c.zone) && !c.sur && (!dessus.has(c.zone) || (c.ordre || 0) > (dessus.get(c.zone).ordre || 0))) {
+            dessus.set(c.zone, c);
+        }
+    }
+
+    for (const c of caches) {
+        const verso = versoDe && !estPioche(c.zone) ? versoDe(c) : null;
+
         composants[alias[c.id]] = {
             id: alias[c.id],
             zone: c.zone,
@@ -241,6 +271,8 @@ export function filtrerEtat(etat, userId) {
             proprio: c.proprio,
             cache: true,
             dos: dos(c),
+            ...(verso ? { verso } : {}),
+            ...(dessus.get(c.zone) === c ? { dessus: true } : {}),
         };
     }
 
@@ -408,6 +440,16 @@ export function appliquer(etat, action, ctx = {}) {
                 return refus("zone invalide");
             }
 
+            // proprio : l'auteur prend le composant à son compte (achat d'une
+            // unité mercenaire). On ne le donne pas à un autre joueur.
+            if (action.proprio !== undefined) {
+                if (action.proprio !== ctx.auteur) {
+                    return refus("propriétaire invalide");
+                }
+
+                c.proprio = action.proprio;
+            }
+
             poser(etat, c, zone, sur);
 
             // dessous : le composant passe sous tous ceux de la zone
@@ -417,6 +459,26 @@ export function appliquer(etat, action, ctx = {}) {
 
                 if (autres.length) {
                     c.ordre = Math.min(...autres.map(x => x.ordre || 0)) - 1;
+                }
+            }
+
+            // avant / apres : le composant se range juste avant ou juste après
+            // cet autre composant de la zone d'arrivée (on range sa main, ses
+            // éléments actifs, la table)
+            const idRepere = action.avant ?? action.apres;
+
+            if (typeof idRepere === "string" && !sur) {
+                const autres = composantsDeZone(etat, zone).filter(x => x.id !== c.id);
+                const i = autres.findIndex(x => x.id === idRepere);
+
+                if (i >= 0) {
+                    const bas = autres[action.avant !== undefined ? i - 1 : i]?.ordre;
+                    const haut = autres[action.avant !== undefined ? i : i + 1]?.ordre;
+
+                    // (après le dernier : il y est déjà)
+                    if (haut !== undefined) {
+                        c.ordre = bas === undefined ? haut - 1 : (bas + haut) / 2;
+                    }
                 }
             }
 
@@ -430,7 +492,7 @@ export function appliquer(etat, action, ctx = {}) {
                 return refus("zone invalide");
             }
 
-            const pioche = estPioche(action.de);
+            const pioche = estPile(action.de);
 
             if (!pioche && joueurDeMain(action.de) === null) {
                 return refus("on ne pioche que dans une pioche ou une main");
@@ -484,6 +546,49 @@ export function appliquer(etat, action, ctx = {}) {
             }
 
             return { ok: true, composants: pris };
+        }
+
+        // ----------------------------------------------------
+        // Verse les n cartes du dessus d'une pile (pioche, zone libre) dans
+        // une zone, toutes si n est absent, en gardant leur ordre : posées
+        // sur le dessus, ou sous tout le reste avec dessous. Comme piocher,
+        // les cartes n'ont pas à être visibles de l'auteur.
+        case "verser": {
+            if (!zoneValide(action.de) || !zoneValide(action.vers) || action.de === action.vers) {
+                return refus("zone invalide");
+            }
+
+            if (!estPile(action.de)) {
+                return refus("on ne verse qu'une pioche ou la zone libre");
+            }
+
+            const tas = composantsDeZone(etat, action.de);
+
+            if (!tas.length) {
+                return refus("zone vide");
+            }
+
+            const versees = action.n === undefined
+                ? tas
+                : tas.slice(-Math.min(entier(action.n, 1, tas.length, 1), tas.length));
+
+            const restants = composantsDeZone(etat, action.vers);
+
+            for (const c of versees) {
+                poser(etat, c, action.vers, null);
+            }
+
+            // dessous : la pile versée passe sous les composants déjà là, dans
+            // son ordre (sa carte du bas devient la carte du bas)
+            if (action.dessous === true && restants.length) {
+                const bas = Math.min(...restants.map(x => x.ordre || 0));
+
+                versees.forEach((c, i) => {
+                    c.ordre = bas - versees.length + i;
+                });
+            }
+
+            return { ok: true, composants: versees.map(c => c.id) };
         }
 
         // ----------------------------------------------------
@@ -816,8 +921,12 @@ export function appliquer(etat, action, ctx = {}) {
 
                 for (const f of [...choisies, ...composantsDeZone(etat, `joueur:${u}:secret:faveurs`)]) {
 
+                    // Émetteur : le joueur, ou la faction neutre (marques.neutre)
+                    // d'une faveur obtenue d'une faction neutre
+                    const emetteur = f.proprio ?? (f.marques?.neutre ? "neutre:" + f.marques.neutre : null);
+
                     // Une seule faveur par faction : les autres reviennent
-                    if (f.ref || f.jeton !== "faveur" || factions.has(f.proprio)) {
+                    if (f.ref || f.jeton !== "faveur" || factions.has(emetteur)) {
                         if (f.zone !== `joueur:${u}:faveurs`) {
                             poser(etat, f, `joueur:${u}:faveurs`, null);
                         }
@@ -825,7 +934,7 @@ export function appliquer(etat, action, ctx = {}) {
                         continue;
                     }
 
-                    factions.add(f.proprio);
+                    factions.add(emetteur);
                     depensees.push(f);
                     n++;
                 }
@@ -866,6 +975,79 @@ export function appliquer(etat, action, ctx = {}) {
         }
 
         // ----------------------------------------------------
+        // Carte donnée par une transaction (ligne « carte ») : le serveur,
+        // seul à voir toutes les mains, cherche la carte chez celui qui la
+        // donne, d'abord dans sa main, puis en jeu (ses zones, ou une carte
+        // dont il est le propriétaire). De sa main, elle va dans la main du
+        // receveur ; d'ailleurs, dans ses éléments actifs. Introuvable :
+        // l'action est refusée, et avec elle tout le coup (la transaction
+        // n'est pas appliquée, aucun diplomate n'est utilisé).
+        //
+        // Réservée à une faction de la transaction, quand l'autre l'a validée.
+        case "donnerCarte": {
+            const ligne = typeof action.ligne === "string" && Object.hasOwn(etat.composants, action.ligne)
+                ? etat.composants[action.ligne]
+                : null;
+
+            const m = ligne?.marques;
+
+            if (!ligne || ligne.ref || ligne.jeton !== "ligne de transaction" ||
+                ligne.zone !== "general:transactions" || m?.sorte !== "carte") {
+                return refus("ligne de transaction introuvable");
+            }
+
+            const entete = Object.values(etat.composants).find(c =>
+                !c.ref && c.jeton === "transaction" && c.zone === "general:transactions" &&
+                c.marques?.tx === m.tx);
+
+            if (!entete) {
+                return refus("transaction introuvable");
+            }
+
+            const f1 = Number(entete.marques.f1);
+            const f2 = Number(entete.marques.f2);
+
+            if (ctx.auteur !== f1 && ctx.auteur !== f2) {
+                return refus("réservé aux factions de la transaction");
+            }
+
+            if (!(ctx.auteur === f1 ? entete.marques.ok2 : entete.marques.ok1)) {
+                return refus("l'autre faction n'a pas validé la transaction");
+            }
+
+            const de = Number(m.de);
+            const a = Number(m.a);
+
+            if (![f1, f2].includes(de) || ![f1, f2].includes(a) || de === a) {
+                return refus("ligne de transaction invalide");
+            }
+
+            const memeCarte = c => c.ref && c.ref.type === m.carteType && c.ref.id === Number(m.carteId);
+            const main = `joueur:${de}:main`;
+
+            const enJeu = c =>
+                (c.zone.startsWith(`joueur:${de}:`) && !/:(main|choix)$/.test(c.zone)) ||
+                (c.proprio === de && !/^(pioche:|defausse:|horsJeu$|joueur:)/.test(c.zone));
+
+            const cartes = Object.values(etat.composants).filter(memeCarte);
+            const c = cartes.find(x => x.zone === main) || cartes.find(enJeu);
+
+            if (!c) {
+                return refus(ERREUR_CARTE_ABSENTE);
+            }
+
+            const depuisMain = c.zone === main;
+
+            if (c.proprio !== null && c.proprio !== undefined) {
+                c.proprio = a;
+            }
+
+            poser(etat, c, depuisMain ? `joueur:${a}:main` : `joueur:${a}:actif`, null);
+
+            return { ok: true, composants: [c.id] };
+        }
+
+        // ----------------------------------------------------
         case "supprimer": {
             const c = manipulable(etat, action.c, ctx);
 
@@ -876,6 +1058,59 @@ export function appliquer(etat, action, ctx = {}) {
             poser(etat, c, "horsJeu", null);
 
             return { ok: true, composants: [c.id] };
+        }
+
+        // ----------------------------------------------------
+        // Le composant devient un autre élément du jeu, sans changer de place
+        // (un agent de base recruté devient celui de la faction qui le recrute)
+        case "remplacer": {
+            const c = manipulable(etat, action.c, ctx);
+
+            if (typeof c === "string") {
+                return refus(c);
+            }
+
+            const ref = action.ref;
+
+            if (!c.ref || !ref || typeof ref !== "object" || !typeValide(ref.type) ||
+                !Number.isInteger(ref.id) || ref.id < 1 || ref.id > 1e9) {
+                return refus("élément invalide");
+            }
+
+            c.ref = { type: ref.type, id: ref.id };
+
+            return { ok: true, composants: [c.id] };
+        }
+
+        // ----------------------------------------------------
+        // Remet à zéro le vote du tour, pour tous les joueurs : sur chaque
+        // plateau de vote (même caché : seul le serveur les connaît tous),
+        // les agents des carrés de droite (zone « ...:d », utilisés) vont dans
+        // les agents usés de leur joueur, le reste est retiré du jeu ; les
+        // plateaux sont cachés, plus personne n'est « prêt », et les
+        // ajustements manuels et départages du tour sont effacés.
+        case "reinitialiserVotes": {
+            const deplaces = [];
+
+            for (const c of Object.values(etat.composants)) {
+
+                const m = /^joueur:(\d+):vote:\d+:\d+(:d)?$/.exec(c.zone);
+
+                if (!m || c.sur) {
+                    continue;
+                }
+
+                poser(etat, c, m[2] && c.ref?.type === "agent" ? `joueur:${m[1]}:agentsUses` : "horsJeu", null);
+                deplaces.push(c.id);
+            }
+
+            for (const id of Object.keys(etat.compteurs)) {
+                if (/^joueur:\d+:(voteRevele|votePret)$/.test(id) || id.startsWith(`vote:${etat.tour}:`)) {
+                    delete etat.compteurs[id];
+                }
+            }
+
+            return { ok: true, composants: deplaces };
         }
 
         // ----------------------------------------------------

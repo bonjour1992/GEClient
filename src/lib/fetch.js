@@ -309,6 +309,17 @@ export async function getUsers() {
 }
 
 
+// Statut d'un utilisateur : "admin" ou "utilisateur" (réservé aux admins)
+export async function setStatut(id, statut) {
+
+    return await fetchAPI(
+        `auth/users/${id}/statut`,
+        "PUT",
+        { statut }
+    );
+}
+
+
 export async function createInvite() {
 
     return await fetchAPI(

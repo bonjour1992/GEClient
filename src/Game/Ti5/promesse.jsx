@@ -1,5 +1,6 @@
 import { ElementContent, aggregation } from "../../lib/datatype"
 import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { backgroundColorFull, police } from "./ti5Const"
@@ -19,7 +20,7 @@ const typePromesse = {
 }
 
 
-class Classe extends aggregation(ElementContent, TypeLienCarac) {
+class Classe extends aggregation(ElementContent, TypeLienCarac, ExemplairesCarac) {
     usage = ""
     type = "alli"
 }
@@ -98,6 +99,7 @@ function Form({ content, onChange, onSubmit, style }) {
         <>
             <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
                 <TypeLienForm content={content} onChange={onChange} />
+                <ExemplairesForm content={content} onChange={onChange} />
                 <EnumInput onChange={onChange} name="type" value={content} enumClass={typePromesse} />
                 <EditorInput onChange={onChange} name="usage" value={content} />
 

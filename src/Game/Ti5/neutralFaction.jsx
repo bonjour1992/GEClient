@@ -1,4 +1,5 @@
-import { ElementContent, Link } from "../../lib/datatype.js";
+import { ElementContent, Link, aggregation } from "../../lib/datatype.js";
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien";
 import { turnNumber } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ColorInput } from "../../Input/ColorInput.jsx";
@@ -10,7 +11,8 @@ import { LoadAndDisplay } from "../../Component/LoadAndDisplay.jsx";
 import FormBase from "../../Input/FormBase"
 import { demiA4Pa } from "../../Component/Size.jsx";
 
-class FactionNeutre extends ElementContent {
+// Type de lien : une faction neutre peut être liée à un événement, une faction...
+class FactionNeutre extends aggregation(ElementContent, TypeLienCarac) {
     // Icône de la faction neutre (affichée devant son nom)
     logo = ""
     color = "#FFFFFF"
@@ -43,14 +45,20 @@ function Display({ content, style, context, explication }) {
         }}
         >
 
+            {/* data-emplacement : l'engine y affiche les éléments posés sur
+                l'habilité ou l'unité. L'apparence ne change pas. */}
             {Array.from((new FactionNeutre).rules.keys()).map((i) => {
                 return content.rules &&
-                    <LoadAndDisplay key={i} link={content.rules[i]} style={{ width: i===3?400:230, gridRow:i===3?" 1 / 3":1, height:i===3?315:155, visibility: content.rules[i].id === -1 ? "hidden" : "visible"  }} />
+                    <div key={i} data-emplacement={content.rules[i]?.id > 0 ? "habilite:" + i : undefined} style={{ position: "relative", display: "flex", gridRow: i === 3 ? " 1 / 3" : 1 }}>
+                        <LoadAndDisplay link={content.rules[i]} style={{ width: i===3?400:230, height:i===3?315:155, visibility: content.rules[i].id === -1 ? "hidden" : "visible"  }} />
+                    </div>
             })}
 
             {Array.from((new FactionNeutre).units.keys()).map((i) => {
                 return content.units &&
-                    <LoadAndDisplay key={i} link={content.units[i]} style={{ width: 230, visibility: content.units[i].id === -1 ? "hidden" : "visible" }} />
+                    <div key={i} data-emplacement={content.units[i]?.id > 0 ? "unite:" + i : undefined} style={{ position: "relative", display: "flex" }}>
+                        <LoadAndDisplay link={content.units[i]} style={{ width: 230, visibility: content.units[i].id === -1 ? "hidden" : "visible" }} />
+                    </div>
             })}
         </div>
     </div>)
@@ -70,6 +78,7 @@ function Form({ content, onChange, onSubmit, style }) {
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
 
+            <TypeLienForm content={content} onChange={onChange} />
 
             <ColorInput onChange={onChange} name={"color"} value={content} />
             <ImagePicker onChange={onChange} name={"logo"} value={content} />

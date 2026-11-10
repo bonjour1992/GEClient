@@ -1,17 +1,21 @@
 import { EditorInput } from "../../Input/EditorInput"
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
+import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { Text } from "../../Component/Text"
-import { backgroundColor, borderColor, police } from "./ti5Const"
+import { backgroundColor, borderColor as bordureDuJeu, police } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
 import FormBase from "../../Input/FormBase"
 
-class Habilite extends ElementContent {
+class Habilite extends aggregation(ElementContent, ExemplairesCarac) {
 
     effet = ""
 }
 
-function Display({ content, explication, style ={}}) {
+// context (feuille de faction) : couleur = nom, couleur2 = bordures.
+// Sans lui, les couleurs habituelles du jeu.
+function Display({ content, explication, style ={}, context }) {
 
+    const borderColor = context?.couleur2 ? { borderColor: context.couleur2 } : bordureDuJeu
 
     return (
         <div style={{
@@ -33,7 +37,8 @@ function Display({ content, explication, style ={}}) {
                 fontSize: police.titre,
                 fontWeight: "bold",
                 borderBottomStyle: "solid",
-                textAlign: "center"
+                textAlign: "center",
+                ...(context?.couleur ? { color: context.couleur } : {})
             }} text={content.name} />
             <Text style={{
                 fontSize: style.fontSize || police.texte,
@@ -52,6 +57,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
+            <ExemplairesForm content={content} onChange={onChange} />
 
             <EditorInput onChange={onChange} name="effet" value={content} />
 

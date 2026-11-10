@@ -1,5 +1,6 @@
 import { ElementContent, Link, aggregation } from "../../lib/datatype"
 import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { EnumInput } from "../../Input/EnumInput"
 import { NumberInput } from "../../Input/NumberInput"
 import { ModalPickerInput } from "../../Input/ModalPickerInput"
@@ -39,7 +40,7 @@ const anomalyPict = new Map([["ast", "/ti/system/asteroide.png"],
 
 // Type de lien : un système qui n'est pas « commun » est exclu du tirage au
 // hasard (remplace l'ancien booléen « special »).
-class Classe extends aggregation(ElementContent, TypeLienCarac) {
+class Classe extends aggregation(ElementContent, TypeLienCarac, ExemplairesCarac) {
     anomaly = ""
     elems = new Array(3).fill(new Link("planet"))
     elemsX = new Array(3).fill(100)
@@ -106,6 +107,7 @@ function Form({ content, onChange, onSubmit, style }) {
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
             <TypeLienForm content={content} onChange={onChange} />
+            <ExemplairesForm content={content} onChange={onChange} />
             <EnumInput onChange={onChange} name="anomaly" value={content} enumClass={anomaly} aucun={true} />
             {[0, 1, 2].map(e => <div key={e}>
                 <ModalPickerInput onChange={onChange} label={"Element " + (e + 1)} name={"elems"} index={e} value={content} type={["planet"]} />

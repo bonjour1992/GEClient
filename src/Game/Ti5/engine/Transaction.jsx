@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { turnNumber } from "../ti5Const";
 import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE } from "./Interaction";
-import { MARQUEUR, DETTE } from "./miseEnPlace";
+import { MARQUEUR, DETTE, estUniteMercenaire } from "./miseEnPlace";
+import { useElements } from "./sync";
+import { ERREUR_CARTE_ABSENTE } from "./etat";
+import { getFromType } from "../../../lib/store";
+import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
+
+// Qui a émis une faveur : le joueur, ou la faction neutre (marques.neutre)
+const nomFaveur = (jeton, nomDe, search) => (jeton.proprio === null || jeton.proprio === undefined) && jeton.marques?.neutre
+    ? nomElement(search, { type: "neutral", id: Number(jeton.marques.neutre) })
+    : nomDe(jeton.proprio);
 
 // ============================================================
 // TRANSACTION (phase de diplomatie)
@@ -15,7 +24,14 @@ import { MARQUEUR, DETTE } from "./miseEnPlace";
 //     (sans fin), avec le marqueur de l'autre faction posé dessus ;
 //   - dette : un jeton « Dette N » sur la case du tour de paiement du
 //     débiteur, à la couleur du créancier ;
-//   - faveur : un jeton de faveur change de main.
+//   - faveur : un jeton de faveur change de main ;
+//   - carte : une faction donne à l'autre une relique, une promesse, un
+//     agenda ou un mercenaire (carte ou unité mercenaire) choisi dans la
+//     liste de toutes ces cartes.
+//     Rien n'est vérifié à la proposition : à l'application, le serveur
+//     la cherche dans la main puis en jeu chez celui qui la donne (action
+//     « donnerCarte », etat.js). S'il ne l'a pas, rien n'est appliqué
+//     (aucun diplomate utilisé) et la transaction est annulée.
 //
 // Coût : une transaction use autant de diplomates que le plus grand
 // nombre d'éléments reçus par une des deux factions. Ils sont pris
@@ -24,6 +40,14 @@ import { MARQUEUR, DETTE } from "./miseEnPlace";
 // ============================================================
 
 const INFINI = "infini";
+
+// Cartes qu'une transaction peut faire donner : [type, titre du groupe]
+const TYPES_CARTES = [
+    ["relique", "Reliques"],
+    ["Promesse", "Promesses"],
+    ["Agenda", "Agendas"],
+    ["mercenaire", "Mercenaires"],
+];
 
 // Valeur maximale d'une dette (règle)
 const DETTE_MAX = 6;
@@ -113,10 +137,18 @@ export function Transactions({ nouvelle }) {
             };
         }
 
+        if (m.sorte === "carte") {
+            return {
+                texte: `${nomDe(Number(m.de))} donne la carte « ${nomElement(search, { type: m.carteType, id: Number(m.carteId) })} » à ${nomDe(Number(m.a))}` +
+                    " (vérifié à l'application)",
+                obstacle: null,
+            };
+        }
+
         const jeton = etat.composants[m.jeton];
 
         return {
-            texte: `${nomDe(Number(m.de))} donne une faveur${jeton ? " de " + nomDe(jeton.proprio) : ""} à ${nomDe(Number(m.a))}`,
+            texte: `${nomDe(Number(m.de))} donne une faveur${jeton ? " de " + nomFaveur(jeton, nomDe, search) : ""} à ${nomDe(Number(m.a))}`,
             obstacle: jeton?.zone === `joueur:${m.de}:faveurs` ? null : `${nomDe(Number(m.de))} n'a plus cette faveur`,
         };
     }
@@ -185,6 +217,11 @@ export function Transactions({ nouvelle }) {
             if (m.sorte === "faveur") {
                 actions.push({ type: "deplacer", c: m.jeton, vers: `joueur:${m.a}:faveurs`, de: `joueur:${m.de}:faveurs` });
             }
+
+            // Carte : cherchée par le serveur chez celui qui la donne
+            if (m.sorte === "carte") {
+                actions.push({ type: "donnerCarte", ligne: ligne.id });
+            }
         }
 
         return actions;
@@ -210,8 +247,22 @@ export function Transactions({ nouvelle }) {
             return;
         }
 
-        // Tout le monde a validé : elle est appliquée
-        envoyer([...application(t), ...retrait(t)], `Transaction ${nomDe(t.f1)} ↔ ${nomDe(t.f2)}`);
+        // Tout le monde a validé : elle est appliquée. Si une carte à donner
+        // n'est pas chez celui qui la donne, rien n'est appliqué (le coup est
+        // tout ou rien) et la transaction est annulée.
+        envoyer([...application(t), ...retrait(t)], `Transaction ${nomDe(t.f1)} ↔ ${nomDe(t.f2)}`, async refus => {
+
+            if (!refus.some(x => x.erreur === ERREUR_CARTE_ABSENTE)) {
+                return;
+            }
+
+            const r = await envoyer(retrait(t),
+                `Transaction ${nomDe(t.f1)} ↔ ${nomDe(t.f2)} annulée : une carte à donner n'est pas chez celui qui la donne`);
+
+            if (r) {
+                signaler("Transaction annulée : une carte à donner n'est ni dans la main ni en jeu chez celui qui doit la donner. Aucun diplomate n'a été utilisé.");
+            }
+        });
     }
 
     return (
@@ -326,6 +377,8 @@ export function Transactions({ nouvelle }) {
             <div style={{ fontSize: 12, color: "#666" }}>
                 Une promesse ou une faveur qui a changé de place depuis la proposition rend la
                 transaction inapplicable, de même qu'un diplomate qui manque à celui qui l'a proposée.
+                Une carte à donner n'est vérifiée qu'à l'application : si celui qui la donne ne l'a ni
+                en main ni en jeu, la transaction est annulée sans utiliser de diplomate.
             </div>
         </div>
     );
@@ -435,8 +488,60 @@ export function Transaction({ fermer }) {
             jeton: jeton.id,
             de,
             a,
-            texte: `${nomDe(de)} donne une faveur de ${nomDe(jeton.proprio)} à ${nomDe(a)}`,
+            texte: `${nomDe(de)} donne une faveur de ${nomFaveur(jeton, nomDe, search)} à ${nomDe(a)}`,
         }]);
+    }
+
+    // --------------------------------------------------------
+    // CARTES (reliques, promesses, agendas, mercenaires)
+    // Rien n'est vérifié ici : à l'application seulement.
+    // --------------------------------------------------------
+
+    const [donneur, setDonneur] = useState(1);
+    const [filtreCarte, setFiltreCarte] = useState("");
+    const [carteChoisie, setCarteChoisie] = useState("");
+
+    // Unités mercenaires (type de lien « mercenaire », lié à aucun) : avec
+    // les mercenaires. Leur contenu dit si elles en sont.
+    const unites = getFromType(search, ["unit"]);
+    const contenusUnites = useElements(unites.map(e => e.id));
+    const unitesMercenaires = unites.filter(e => estUniteMercenaire(contenusUnites[e.id]));
+
+    const catalogue = TYPES_CARTES.map(([type, titre]) => ({
+        type,
+        titre,
+        cartes: [
+            ...getFromType(search, [type]).map(e => ({ type, id: e.id })),
+            ...(type === "mercenaire" ? unitesMercenaires.map(e => ({ type: "unit", id: e.id })) : []),
+        ]
+            .map(e => ({ ...e, nom: nomElement(search, e) }))
+            .filter(e => !filtreCarte || e.nom.toLowerCase().includes(filtreCarte.toLowerCase()))
+            .sort((x, y) => x.nom.localeCompare(y.nom)),
+    }));
+
+    // Valeur du sélecteur : « type|id »
+    const [typeChoisi, idChoisi] = carteChoisie ? carteChoisie.split("|") : [null, null];
+    const lienChoisi = carteChoisie ? { type: typeChoisi, id: Number(idChoisi) } : null;
+
+    function donnerCarte() {
+
+        if (!lienChoisi) {
+            return;
+        }
+
+        const de = donneur === 1 ? f1 : f2;
+        const a = donneur === 1 ? f2 : f1;
+
+        setLignes(l => [...l, {
+            sorte: "carte",
+            carteType: lienChoisi.type,
+            carteId: lienChoisi.id,
+            de,
+            a,
+            texte: `${nomDe(de)} donne la carte « ${nomElement(search, lienChoisi)} » à ${nomDe(a)}`,
+        }]);
+
+        setCarteChoisie("");
     }
 
     // --------------------------------------------------------
@@ -608,11 +713,53 @@ export function Transaction({ fermer }) {
                                 {faveursDe(de).length === 0 && <i style={{ color: "#666" }}>aucune faveur</i>}
                                 {faveursDe(de).map(jeton => (
                                     <button key={jeton.id} type="button" onClick={() => donnerFaveur(jeton, de, a)}>
-                                        faveur de {nomDe(jeton.proprio)}
+                                        faveur de {nomFaveur(jeton, nomDe, search)}
                                     </button>
                                 ))}
                             </div>
                         ))}
+
+                        {/* CARTES : vérifiées à l'application seulement */}
+
+                        <b>Cartes</b>
+                        <div style={styleLigne}>
+                            {cote(donneur, setDonneur)} donne
+                            <input
+                                type="search"
+                                value={filtreCarte}
+                                placeholder="filtrer…"
+                                aria-label="Filtrer les cartes"
+                                onChange={e => setFiltreCarte(e.target.value)}
+                                style={{ width: 90 }}
+                            />
+                            <select
+                                value={carteChoisie}
+                                onChange={e => setCarteChoisie(e.target.value)}
+                                aria-label="Carte à donner"
+                                style={{ maxWidth: 230 }}
+                            >
+                                <option value="">Carte…</option>
+                                {catalogue.filter(g => g.cartes.length).map(g => (
+                                    <optgroup key={g.type} label={g.titre}>
+                                        {g.cartes.map(e => (
+                                            <option key={e.id} value={e.type + "|" + e.id}>{e.nom}</option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
+                            à {nomDe(donneur === 1 ? f2 : f1)}
+                            <button type="button" disabled={!lienChoisi} onClick={donnerCarte}>Ajouter</button>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#555", marginTop: -4, marginBottom: 6 }}>
+                            Non vérifié maintenant : si, quand la transaction s'applique, celui qui donne n'a
+                            cette carte ni en main ni en jeu, la transaction est annulée et aucun diplomate
+                            n'est utilisé.
+                        </div>
+                        {lienChoisi && (
+                            <div style={{ zoom: 0.5, marginBottom: 6 }}>
+                                <LoadAndDisplay link={lienChoisi} displayeur={lienChoisi.type === "unit" ? "merc" : undefined} />
+                            </div>
+                        )}
 
                         {/* RÉCAPITULATIF */}
 

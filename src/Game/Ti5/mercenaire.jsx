@@ -2,6 +2,7 @@ import { TextInput } from "../../Input/TextInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent, aggregation } from "../../lib/datatype"
 import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { Text } from "../../Component/Text"
 import { backgroundColorFull, borderColor, police } from "./ti5Const"
 import { fullBorder } from "../../Component/style"
@@ -18,7 +19,7 @@ function MercImage() {
     )
 }
 
-class Habilite extends aggregation(ElementContent, TypeLienCarac) {
+class Habilite extends aggregation(ElementContent, TypeLienCarac, ExemplairesCarac) {
     sousTitre = ""
     usage = ""
 }
@@ -87,6 +88,7 @@ function Form({ content, onChange, onSubmit, style }) {
     return (
         <FormBase content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
             <TypeLienForm content={content} onChange={onChange} />
+            <ExemplairesForm content={content} onChange={onChange} />
             <TextInput onChange={onChange} name="sousTitre" value={content} label="Titre" />
             <EditorInput onChange={onChange} name="usage" value={content} label="Effet" />
 

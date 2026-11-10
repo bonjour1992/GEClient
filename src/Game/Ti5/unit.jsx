@@ -9,12 +9,13 @@ import { fullBorder } from "../../Component/style"
 import { Text } from "../../Component/Text"
 import ReactDOMServer from "react-dom/server"
 import { MiniPa, SmallPa } from "../../Component/Size"
-import { backgroundColorFull, borderColor, police } from "./ti5Const"
+import { backgroundColorFull, borderColor as bordureDuJeu, police } from "./ti5Const"
 import { backgroundColor } from "./ti5Const"
 import FormBase from "../../Input/FormBase"
 import { pub } from "../../lib/fetch"
 import { LoadAndDisplay } from "../../Component/LoadAndDisplay"
 import { Verso as MercVerso } from "./mercenaire"
+import { Nom } from "./Component/Nom"
 //TODO: gestion image  
 const shipClasse = {
     fs: "Vaisseau amiral",
@@ -73,12 +74,6 @@ function factionDuVerso(content) {
 }
 
 
-function Nom({ content, style }) {
-    return (
-        <Text text={content.name} style={style} />
-    )
-}
-
 
 function Merc({ content, explication, style }) {
     return (
@@ -87,7 +82,13 @@ function Merc({ content, explication, style }) {
 }
 
 //TODO: affichage ***
-function Display({ content, explication, style }) {
+// context (feuille de faction) : couleur = nom et statistiques,
+// couleur2 = bordures. Sans lui, les couleurs habituelles du jeu.
+function Display({ content, explication, style, context }) {
+
+    const borderColor = context?.couleur2 ? { borderColor: context.couleur2 } : bordureDuJeu
+    const principale = context?.couleur ? { color: context.couleur } : {}
+
     return (
         <div
             style={{
@@ -113,7 +114,8 @@ function Display({ content, explication, style }) {
                 fontSize: police.titre,
                 fontWeight: "bold",
                 ...bottomBorder(2),
-                ...borderColor
+                ...borderColor,
+                ...principale
             }}
                 text={content.name} />
             <Text style={{
@@ -131,6 +133,8 @@ function Display({ content, explication, style }) {
             <Stat data={[content.cout, content.move, content.combat, content.capacite, content.PV]}
                 label={["Cout", "Mouvement", "Attaque", "Capacité", "Résistance"]}
                 mult={[content.prod, null, content.combat_touche]}
+                borderColor={borderColor}
+                couleurValeur={principale}
             />
         </div>
     )
@@ -156,6 +160,8 @@ function Verso({ content, explication, style }) {
 
 
 function NeutralUnit({ content, explication, style = {}, context = { num: 1 } }) {
+
+    const borderColor = bordureDuJeu
 
     return (
         <div
@@ -201,7 +207,8 @@ function NeutralUnit({ content, explication, style = {}, context = { num: 1 } })
 }
 
 
-function Stat({ data, label, mult, style = {} }) {
+// borderColor, couleurValeur : couleurs de la feuille de faction (voir Display)
+function Stat({ data, label, mult, style = {}, borderColor = bordureDuJeu, couleurValeur = {} }) {
 
     return (<div style={
         {
@@ -236,7 +243,8 @@ function Stat({ data, label, mult, style = {} }) {
                         fontWeight: "bolder",
                         width: "100%",
                         position: "absolute",
-                        bottom: (style.height - 8) / 2 || 10
+                        bottom: (style.height - 8) / 2 || 10,
+                        ...couleurValeur
                     }}>
                         {d}{mult[i] ? mult[i] > 1 ? mult[i] === 2 ? "**" : "*" + mult[i] : "" : ""}
                     </div></>) : ""}

@@ -85,6 +85,7 @@ function CasePlateau({
     systemesInertes,
     styleCase,
     contenuSupplementaire,
+    decalage = 0,
 }) {
 
     // Coordonnées axiales : le centre (0, 0) est au milieu du plateau
@@ -95,7 +96,7 @@ function CasePlateau({
 
     return (
         <div
-            data-case={index}
+            data-case={decalage + index}
             data-type={type}
             style={{
                 position: "absolute",
@@ -188,6 +189,11 @@ function CasePlateau({
 //   styleCase(index)        -> style ajouté à la case
 //   renduCase(index)        -> contenu ajouté dans la case
 //   systemesInertes         -> les systèmes ne captent pas la souris
+//   decalage                -> ajouté à l'indice de chaque case (data-case,
+//                              styleCase, renduCase) : un second groupe de
+//                              cases, à part du plateau (systèmes secondaires
+//                              de l'outil de partie). La géométrie et le
+//                              numéro affiché restent ceux de l'indice.
 // ============================================================
 
 export function PlateauView({
@@ -196,6 +202,7 @@ export function PlateauView({
     styleCase,
     renduCase,
     systemesInertes = false,
+    decalage = 0,
 }) {
 
     // Mémoïsé : les tableaux gardent leur référence entre deux rendus
@@ -219,8 +226,9 @@ export function PlateauView({
                 system={content.systems[index]}
                 rotate={content.rotates[index]}
                 systemesInertes={systemesInertes}
-                styleCase={styleCase?.(index)}
-                contenuSupplementaire={renduCase?.(index)}
+                decalage={decalage}
+                styleCase={styleCase?.(decalage + index)}
+                contenuSupplementaire={renduCase?.(decalage + index)}
             />
         );
     }

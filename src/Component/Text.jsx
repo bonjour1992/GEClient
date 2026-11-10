@@ -22,9 +22,9 @@ import { stripTags } from "../Input/EditorInput"
  *   - #machin(2, xxx)        -> remplacement avec multiplicateur
  *
  *     Un remplacement qui a une icône (champ « icone » : "hex #f2c200",
- *     "rond #d4a017") s'affiche, quand il porte un nombre, sous la forme
- *     de cette icône avec le nombre dedans : #res(2) -> hexagone « 2 ».
- *     Sans nombre, le mot reste écrit.
+ *     "rond #d4a017") s'affiche sous la forme de cette icône, avec le
+ *     nombre dedans s'il en porte un : #res(2) -> hexagone « 2 »,
+ *     #res -> hexagone vide.
  *   - #img[image.png]        -> image
  *   - !quelque chose!        -> suppression
  *
@@ -627,12 +627,12 @@ function renderRemplacement(
      */
     const icone = lireIcone(elem.icone)
 
-    if (icone && num && !mult && elem.after !== true) {
+    if (icone && !mult && elem.after !== true) {
         return (
             <IconeRemp
                 key={`remp-${key}-icone`}
                 icone={icone}
-                num={num}
+                num={num || ""}
                 nom={
                     Number(num) > 1
                         ? (elem.plural && elem.plural !== "repeat" ? elem.plural : (elem.val || "") + "s")
@@ -853,8 +853,8 @@ function IconeRemp({ icone, num, nom }) {
 
     return (
         <span
-            title={`${num} ${nom}`}
-            aria-label={`${num} ${nom}`}
+            title={`${num} ${nom}`.trim()}
+            aria-label={`${num} ${nom}`.trim()}
             style={{
                 display: "inline-block",
                 width: "1.35em",

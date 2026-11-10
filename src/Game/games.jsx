@@ -137,12 +137,21 @@ export function Displayeur({
 
     const location = useLocation();
 
-    useEffect(() => {
+    // Autre page ou autre affichage : la liste repart de zéro. La remise à
+    // zéro se fait pendant le rendu, donc avant que les textes du nouvel
+    // affichage n'y inscrivent leurs remplacements et leurs liens (dans un
+    // effet, elle passait après eux : l'explication restait vide, ou gardait
+    // celle de la page précédente).
+    const vue = location.pathname + "|" + (displayeur || "default");
+    const [vueAffichee, setVueAffichee] = useState(vue);
+
+    if (vueAffichee !== vue) {
+        setVueAffichee(vue);
         setAjout({
             remp: [],
             lien: []
-        })
-    }, [location]);
+        });
+    }
 
 
     // Mises à jour à partir de l'état précédent : plusieurs ajouts dans

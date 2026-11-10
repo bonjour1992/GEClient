@@ -118,10 +118,24 @@ Le type reste visible, comme le dos d'une carte. Son identifiant est anonyme
 (`x…`, renuméroté à chaque envoi) : on ne peut pas suivre une carte cachée d'une
 zone à l'autre.
 
+Certains versos dépendent du contenu (icône rouge d'un événement majeur, or
+d'un mineur). Le serveur (`partie.js`, `CHAMPS_VERSO` : `evenement` →
+`type`) passe à `filtrerEtat` une fonction `versoDe` ; un composant caché hors
+d'une pioche reçoit alors `verso: { type: "maj" }`, que `Dos` (`Interaction.jsx`)
+applique au contenu vide avant d'afficher le verso. Rien dans une pioche : on
+n'y sait pas quelle carte est dessus. Les contenus sont relus au plus une fois
+par minute.
+
 Zones du plateau général utilisées par l'interface : `general:table` (cartes
-révélées), `general:lois`, `general:traites`, `general:regles`,
-`general:objectifs`, `general:promesses` (réserve commune), `general:boite:<n>`
-(cases du haut du déroulé).
+révélées), `general:promesses` (réserve commune), `general:boite:<n>` (cases
+du haut du déroulé). `general:lois`, `general:traites`, `general:regles` et
+`general:objectifs` ne sont plus proposées (ni affichées, ni destinations
+d'« Envoyer vers ») ; elles ne s'affichent que si une partie existante y a
+encore des éléments (`ZONES_RETIREES`, `PlateauGeneral.jsx`).
+
+Une pile cachée (pioche) a sa carte du dessus marquée
+`dessus: true` par `filtrerEtat` : le client en montre le dos (une pile peut
+mêler plusieurs dos), sans rien savoir des autres.
 
 ### compteurs
 
@@ -153,6 +167,7 @@ Marques utilisées par l'interface : `degat` (nombre), `use` (usé), `rotation`
 | `creer` | `ref` ou `jeton`, `zone`, `proprio?`, `n?` | ajoute un composant (unité, jeton, tuile système) | oui |
 | `reveler` | `zone` | retourne face visible les cartes posées face cachée dans une zone publique (Ctrl + clic sur la carte) | oui |
 | `supprimer` | `c` | envoie un composant dans `horsJeu` | |
+| `reinitialiserVotes` | | vide et cache tous les plateaux de vote (agents des carrés : agents usés ; le reste : `horsJeu`), efface `voteRevele`, `votePret` et les compteurs `vote:<tour>:…` ; bouton « Réinitialiser le décompte » de l'onglet Vote, et à chaque « Nouveau tour » | oui |
 | `partie` | `tour?`, `phase?`, `joueurActif?`, `anneaux?` | change l'en-tête ou la taille de la carte | |
 
 Une action sur un composant que l'auteur ne voit pas est refusée, sauf `piocher`.
@@ -353,10 +368,117 @@ relique lui ajoute ses points.
 Onglet « Combat » : un sous-onglet par combat en cours (combat spatial, canons
 spatiaux, combat terrestre, bombardement), ouverts depuis la fiche d'un
 système (compteurs `combat:<lieu>`). Unités par faction, engagements ordonnés,
-« prêt au combat » de tous puis lancement de toutes les attaques en deux temps
-(frappe préventive, puis le reste), dés gardés sur les unités, dégâts glissés
-sur les cibles, neutres agressifs et défensifs engagés d'office. Détail dans
-`combat.md`.
+« prêt au combat » de tous puis quatre phases (frappe en premier, ses dégâts,
+autres attaques, leurs dégâts), dés gardés sur les unités, dégâts encaissés
+par le joueur visé (« ✹ Encaisser », surplus à l'engagement suivant) et
+d'office pour les neutres, neutres agressifs et défensifs engagés d'office.
+Détail dans `combat.md`.
+
+### boutons gris, verts, rouge gris
+
+`Interaction.jsx` : un bouton ordinaire (gris) est une action simple, sans
+règle du jeu. `BoutonRegle` est le bouton d'un effet du jeu : vert
+(`STYLE_REGLE`) s'il est faisable, rouge gris (`STYLE_INDISPONIBLE`) si ses
+`obstacles` ne sont pas vides — il reste utilisable, après une confirmation
+qui les énumère. `confirmerRegle(nom, obstacles)` fait de même pour un effet
+déclenché par un clic ou un Ctrl + clic. Tous deux donnent le commentaire du
+coup, marqué « ✔ » ou « ⚠ » : le journal affiche la ligne en vert ou en rouge
+(`lireRegle`, `Journal.jsx`). Un agent ou une ressource qui manque n'est pas
+dépensé.
+
+Concernés : nouveau tour, phase suivante, entretien, mise en place du
+recrutement, ouverture d'un combat, trêve, prise de possession, revendication,
+réparation, recherche, fouille, mobilisation ; par Ctrl + clic : recrutement,
+proposition d'agenda, activation d'un système, exploration.
+
+Message non bloquant (`signalerCapacite`, `Plan`) : embarquer plus d'unités
+qu'un vaisseau n'a de capacité se fait, avec un avertissement.
+
+### scripts de règles
+
+`engine/scripts.js` : la liste `SCRIPTS`. Un script est une aide rattachée à
+une carte (`carte` : type et identifiant ; sans identifiant, tout le type),
+datée de la version de la carte pour laquelle il a été écrit (`ecritLe`).
+Trois sortes :
+
+- `recrutement` : appelé quand un recrutement est construit (Ctrl + clic,
+  `cliquer`, `Partie.jsx`) pour les scripts dont le joueur possède la carte
+  (`scriptsDeRecrutement` : technologie débloquée — `technologiesDebloquees` —
+  ou habilité de sa faction). Il rend une variation de coût et un message,
+  affiché en orange en haut de l'écran (`aviser`, `data-avis-script`).
+- `miseEnPlace` : `placer(unite, plan)` et `actions(plan)` modifient la mise en
+  place d'une faction (ci-dessous).
+- `bouton` : un bouton de plus sur la fiche de la carte (`ScriptsCarte.jsx`).
+  Aujourd'hui « Mettre en place » sur un événement : met en jeu les éléments
+  liés à l'événement par leur type de lien (feuille de technologie chez chaque
+  joueur, promesses en réserve, tuiles en réserve de tuiles spéciales, le reste
+  sur la table), en autant d'exemplaires que le dit l'élément ; compteur
+  `evenement:<id>:place`.
+
+Un glisser-déposer ne déclenche jamais de script. Outil « Scripts de règles »
+(`/GE/ti5/tools/scripts`, `OutilScripts.jsx`) : liste, carte, version à
+l'écriture, version actuelle (« à revoir » si la carte a changé), case
+« désactivé ». Les scripts désactivés sont dans l'élément de type `reglage`
+nommé « Scripts désactivés » (`reglage.jsx`), lu par `Partie.jsx`
+(`scriptsDesactives`) : ils ne jouent plus dans aucune partie.
+
+### mise en place d'une faction (tour 0)
+
+`miseEnPlace.js` (au lancement) : la tuile du système natal, ses cartes de
+planète et les unités de départ vont dans `joueur:<u>:actif` ; les cases
+natales du plateau restent vides. Le bouton « Mise en place de ma faction »
+(`MiseEnPlaceJoueur.jsx`, bandeau du tour 0) pose la tuile sur une case natale
+libre tirée au hasard — sauf si le joueur l'a déjà glissée sur la carte —,
+puis les unités : vaisseaux dans l'espace, unités terrestres sur la planète de
+départ ; une unité sans place reste dans les éléments actifs. Les scripts
+`miseEnPlace` de la faction s'y ajoutent (Winnu, Hacan, Jol-Nar, Nomade).
+Un script qui a une `porte` (Creuss) pose cette tuile-là sur la case natale ;
+le système natal va alors dans les systèmes secondaires, sur la première case
+libre, avec les unités. Compteur `joueur:<u>:miseEnPlace`.
+
+### technologie posée sur une feuille
+
+`Technologie.jsx`, `Feuille` : une technologie (composant de type `tech`)
+déposée sur une case vide d'une feuille (zone
+`joueur:<u>:tech:<feuille>:case:<k>`) y tient lieu de technologie imprimée —
+même affichage, mêmes compteurs de recherche et d'utilisation. Elle n'est pas
+montrée en pion (`filtrePions` d'`Emplacements`) ; le bouton « ⚙ posée » ouvre
+sa fiche.
+
+### systèmes secondaires
+
+Zones `hex:<1000 + j>` (`DECALAGE_SECONDAIRE`, `estSecondaire`, `nomCase`,
+`distanceCases`, `Interaction.jsx`) : un second groupe de cases sous la carte
+de l'onglet Espace (`PlateauView` avec `decalage`), pour des systèmes hors du
+plan central. Taille : compteur `espace:secondaire:anneaux` (1 par défaut),
+réglée en mode « Modifier la carte » ; hors de ce mode, seules les cases qui
+ont un système sont visibles. Fiche, planètes, unités et combats comme tout
+système ; deux cases ne sont voisines que dans le même groupe.
+
+### exemplaires
+
+Champ `exemplaires` (`Component/Exemplaires.jsx`) des systèmes, agendas,
+promesses, reliques, habilités, mercenaires, objectifs et événements :
+nombre de tuiles ou de cartes. Lu par `exemplaires(contenu)`
+(`miseEnPlace.js`), le tirage d'un plateau et « Sélectionner tous » de
+l'impression. L'ancien préfixe `!N!` du nom reste compris.
+
+### ranger une zone
+
+Dans une main, des éléments actifs ou sur la table (`ZONE_ORDONNABLE`,
+`Interaction.jsx`), glisser un élément sur un autre de la même zone le range
+juste avant lui (moitié gauche visée) ou juste après (moitié droite) :
+`deplacer` avec `avant` ou `apres` = identifiant du repère (`etat.js` : l'ordre
+du composant est mis entre ceux de ses deux voisins). Déposé sur le fond de la
+zone, il va à la fin, comme avant.
+
+### rechercher une carte
+
+Tout en bas du plateau général (`RechercheCarte`, `Neutres.jsx`,
+`data-recherche-carte`) : recherche par nom, sans accents ni majuscules, parmi
+tous les éléments du jeu (2 lettres au moins, 40 résultats affichés). Un clic
+ouvre la fenêtre de l'élément, avec « Envoyer vers… » (il est créé dans la
+zone choisie) et « Montrer à… ».
 
 ### zones secrètes
 
@@ -418,10 +540,16 @@ nom). Icônes provisoires de claude dans `server/public/ti/neutre/`.
 
 ### trêve
 
-Jeton `trêve` (carré blanc « T » au liseré du joueur). À la phase de
-déclaration de trêve, Ctrl + clic sur un système y pose le marqueur du joueur
-et détruit un de ses diplomates. En arrivant à cette phase, tous les marqueurs
-de trêve sont retirés. Le plateau général en a une réserve infinie.
+Token « Trêve » des données du jeu (type `token`, reconnu à son nom :
+`tokenTreve`, `estTreve`, `Interaction.jsx` ; colombe au liseré du joueur qui
+l'a posé). L'ancien jeton `trêve` des parties en cours reste reconnu, et sert
+encore si le token n'existe pas. Le bouton « Déclarer
+une trêve » de la fiche d'un système (`declarerTreve`, `Espace.jsx`) y pose le
+marqueur du joueur et détruit un de ses diplomates. Hors de la phase de trêve
+ou sans diplomate, il est rouge gris (`STYLE_INDISPONIBLE`) : il reste
+utilisable après confirmation (sans diplomate, aucun n'est détruit). En
+arrivant à cette phase, tous les marqueurs de trêve sont retirés. La réserve
+de tokens du plateau général en fournit à volonté (sans propriétaire).
 
 ### unités hors fiche de faction
 
@@ -533,8 +661,9 @@ Une ruine « normale » fait tirer un jeton dans le sac `pioche:fragments`, cré
 à la mise en place : 20 anciens, 50 militaires, 50 civils, 30 spatiaux. Les
 fragments s'affichent avec les icônes des cartes relique (`/ti/relic/`). Le
 plateau général a la zone « Sac de fragments de relique » : tirer un fragment,
-en prendre un d'un type donné dans la réserve, ou en remettre un dans le sac
-en le glissant dessus.
+en prendre un d'un type donné dans la réserve infinie en glissant sa source
+(`Source jeton neutre`, icône du fragment) là où on le veut, ou en remettre un
+dans le sac en le glissant dessus.
 
 ### construire une relique (phase de science)
 
@@ -574,7 +703,7 @@ joueur. Refusé si les ressources ne suffisent pas.
 ### volet de droite
 
 Dans l'ordre : fin de tour (« Passer », joueur suivant), ressources / influence / commerce du joueur avec
-leurs boutons − / +, dés, main, agents, agents usés, marqueurs (sources), réserve
+leurs boutons − / +, dés, marqueur libre, main, agents, agents usés, marqueurs (sources), réserve
 (case « Production », sources d'infanterie), fragments, éléments actifs,
 derniers coups. La liste des parties indique le tour et la phase de chacune.
 
@@ -582,6 +711,61 @@ derniers coups. La liste des parties indique le tour et la phase de chacune.
 
 Dégâts, usé et possession ne sont proposés que pour une unité ; la face pour
 tout élément du jeu (carte, unité) ; rien de cela pour un jeton.
+
+« Envoyer vers… » (`EnvoyerVers`, `engine/Envoi.jsx`) ouvre une fenêtre des
+destinations, groupées : moi, autres joueurs (main, éléments actifs), plateau
+général (dont la zone libre), pioche et défausse du type, tuiles, agents.
+Donner à la main d'un autre demande confirmation. La fiche d'un système a le
+même bouton pour sa tuile (`Espace.jsx`).
+
+### case « Hors jeu »
+
+Tout en bas du plateau général (`Zone zone="horsJeu"`), on en ressort un pion
+en le glissant. Elle ne montre pas (filtre `visibleHorsJeu`) les transactions,
+les lignes de transaction, ni les marqueurs de faction (`marqueur`) et
+d'activation (`activation`, ruine comprise) : ils restent dans `horsJeu`, seul
+l'affichage les écarte, compteur compris.
+
+### pile d'une pioche
+
+Ctrl + glisser une pile la verse en entier (le fantôme indique ×N) : action
+serveur `verser` { `de` (pioche ou zone libre), `vers`, `n?` (dessus seulement,
+toute la pile sans n), `dessous?` }, qui garde l'ordre de la pile. Vers une
+zone ordinaire (main…) tout y arrive ; sur une autre pile, la zone visée dit
+en haut, en bas (`dessous`) ou mélangé (`verser` puis `melanger`). Sans Ctrl,
+le dessus glissé sur une autre pile passe par `verser` avec `n: 1` (pour
+pouvoir le mettre en bas) ; vers une zone ordinaire, c'est toujours `piocher`.
+Journal : « verse <de> → [dessous de] <vers> : N éléments ».
+
+Logo de faction : un élément lié à une faction ou à une faction neutre (type
+de lien) affiché en nom dans un cadre (pion générique, source « ∞ ») a le logo
+de cette faction devant son nom (`LogoFaction`, `Interaction.jsx`).
+
+La dernière colonne, « Tuiles système » (`PIOCHE_DE_TUILES`), montre la même
+pioche que l'onglet Espace (`pioche:system`) : Piocher l'envoie dans les tuiles
+piochées (`general:tuiles`), qui tiennent lieu de défausse ; pas de Révéler.
+Sa pile a un verso inventé (`VersoTuile` : hexagone doré sur fond étoilé).
+
+Chaque pioche est une colonne compacte (`Pioche`, 150 px) : « <type> : <n> »,
+la pile, Piocher / Révéler / Mélanger, la ligne « Défausse : <n> » (zone de
+dépôt `data-zone="defausse:<type>"`) et « Consulter », qui ouvre la défausse
+dans une fenêtre (`Fenetre`, exportée de `Neutres.jsx`) avec « Remettre dans la
+pioche ».
+
+Chaque pioche du plateau général montre sa pile : le verso de la carte du
+dessus au format réduit (`PilePioche`, `Dos` exporté d'`Interaction.jsx`),
+avec un effet d'épaisseur s'il reste plus d'une carte. C'est une source
+`data-source={"pioche":"pioche:<type>"}` : déposée sur une zone, le Plan envoie
+`piocher` de cette pioche vers la zone trouvée (`trouverZone`). La visibilité
+suit la zone d'arrivée (main : pour soi ; table, zone libre : pour tous).
+
+La pile (`data-pile`, affichée même vide) reçoit aussi les pions : pendant un
+glisser, le Plan pose `data-survol` sur la pile survolée, ce qui fait
+apparaître trois zones (`data-zone` = la pioche, `data-position`) : « Ajouter
+en haut » (`dessus`), « Ajouter et mélanger » (`melanger`), « Ajouter en bas »
+(`dessous`) ; la zone visée reçoit `data-actif`. Au dépôt : `deplacer` (avec
+`dessous: true` en bas), suivi de `melanger` pour la zone du milieu, dans un
+seul coup.
 
 ### tuiles système
 
@@ -634,12 +818,28 @@ première par défaut), envoyée en un seul coup commenté.
 - dette : jeton `Dette` (montant dans `marques.montant`) sur la case du tour de
   paiement du débiteur, avec le marqueur de faction du créancier posé dessus ;
   sa fiche a les boutons − / + du montant ;
-- faveur : un jeton de `joueur:<u>:faveurs` passe chez l'autre.
+- faveur : un jeton de `joueur:<u>:faveurs` passe chez l'autre ;
+- carte : une faction donne à l'autre une carte choisie parmi toutes les
+  reliques, promesses, agendas et mercenaires (ligne `sorte: "carte"`,
+  `carteType`, `carteId`, `de`, `a`). Rien n'est vérifié à la proposition.
+  À l'application, l'action serveur `donnerCarte` (`etat.js`) la cherche chez
+  `de` : dans sa main (elle va dans la main du receveur), sinon en jeu (ses
+  zones `joueur:<de>:...` ou une carte dont il est propriétaire ; elle va dans
+  les éléments actifs du receveur). Introuvable : refus
+  `ERREUR_CARTE_ABSENTE`, donc tout le coup est refusé (aucun diplomate
+  utilisé), puis le client retire la transaction (« annulée »). L'action n'est
+  permise qu'à une faction de la transaction, quand l'autre l'a validée.
 
 ### agents
 
 Dans le volet de droite et sur la feuille de faction : un clic sur un de ses
 agents l'utilise (ou récupère un agent usé), Ctrl + clic le supprime.
+
+Réserve infinie du plateau général (`general:agents`) : une source par agent
+de base (`etat.references.agentsBase`), à glisser où l'on veut ; la case
+« autres agents » ajoute tous les autres agents du jeu (noble, généticien...).
+L'agent créé appartient au joueur dont il rejoint une zone (`joueur:<u>:...`),
+sinon à personne ; il peut se poser sur une planète.
 
 ### cartes face cachée
 
@@ -650,7 +850,27 @@ l'état mais est notée au journal ; seul son auteur y voit le contenu.
 ### cartes citées
 
 La fiche d'une carte montre les cartes qu'elle cite (liens `|123|` de son texte
-et champ `Lien`), avec « Prendre en main » et « Dans mes éléments actifs ».
+et champ `Lien`), avec « Prendre en main », « Dans mes éléments actifs » et
+« Mettre en jeu » (créée sans propriétaire dans `general:table`).
+
+### agent réimplémenté au recrutement
+
+Champ `reimplemente` d'un agent (`agent.jsx`) : l'agent de base qu'il remplace
+(Généticien d'Arborec → Logisticien). Au recrutement (Ctrl + clic, `cliquer`,
+`Partie.jsx`), un agent de base (`lienType` `commun`) qui n'est pas sur la
+feuille de ma faction devient l'agent de ma feuille qui le réimplémente :
+action `remplacer` (`c`, `ref` : le composant devient un autre élément, sans
+changer de place). Ni l'un ni l'autre sur ma feuille : recrutement impossible
+(message). Un agent qui n'est pas de base est recruté tel quel.
+
+### miniatures d'unité
+
+`server/public/ti/unit_mini/<type>.png` : copies des images de `unit_icon`
+recadrées sur la silhouette. `tailleMini` (`Interaction.jsx`, table `MINIS` des
+dimensions) donne la taille d'affichage, à l'échelle de l'image d'origine, avec
+une hauteur minimale. Un type sans miniature garde l'image de `unit_icon`.
+Pour refaire une miniature : remplacer le fichier et mettre ses dimensions dans
+`MINIS`.
 
 ### défilement
 
@@ -692,7 +912,7 @@ sur A4 paysage.
 ### type de lien
 
 Champ `lienType` (`Component/TypeLien.jsx`) des feuilles de technologie, agendas,
-promesses, reliques, mercenaires, unités, systèmes et planètes : `commun`, `faction`, `neutre`, `evenement`,
+promesses, reliques, mercenaires, unités, agents, systèmes et planètes : `commun`, `faction`, `neutre`, `evenement`,
 `mercenaire` (avec `lienElement`) ou `special` (lié à rien). Pour une unité, il
 remplace les anciens champs `merc` et `faction` : le verso montre le logo de la
 faction liée. Pour un système, il remplace l'ancien booléen `special` : un
@@ -701,6 +921,144 @@ système non commun est exclu du tirage au hasard (`horsReserveCommune`,
 est écarté des pioches et
 de la réserve de promesses ; une feuille de technologie liée à une faction ne
 va qu'à cette faction. Sans ce champ, un élément est commun. Non affiché.
+
+Agents : un agent commun forme la réserve commune (`agentsBase` : sac d'agents,
+réserve infinie du plateau général) ; un agent lié à une faction n'y est pas.
+Sans type de lien, un agent cité par au moins deux factions est commun (ancienne
+règle). Les agents existants ont été migrés ainsi : cité par plusieurs factions
+→ commun (Amiral, Scientifique, Logisticien, Négociant, Diplomate, Politique),
+par une seule → lié à cette faction (versions signées `claude`).
+
+### unités mercenaires
+
+Une unité dont le type de lien est « Lié à un mercenaire » et « Lié à » vide
+(`estUniteMercenaire`, `miseEnPlace.js`) est un mercenaire :
+
+- mise en place : elle est mélangée dans `pioche:mercenaire` avec la marque
+  `dos: "mercenaire"` ; cachée, elle montre le dos d'une carte mercenaire
+  (`dosDe`, `etat.js` : marque `dos`, sinon type ; aussi pour le journal) ;
+- hors de la carte du jeu (recrutement, éléments actifs, main...), elle
+  s'affiche en carte au format mercenaire (affichage `merc` de l'unité,
+  `estMercenaire`, `Interaction.jsx`) ; sur la carte, c'est un pion ;
+- recrutement : elle s'achète comme une carte mercenaire (2 de plus et le
+  surcoût du tour), va dans les éléments actifs et devient la propriété de
+  l'acheteur (`deplacer` avec `proprio` = l'auteur, seule valeur admise) ;
+- transactions : elle est proposée dans le groupe « Mercenaires » de
+  « Cartes » (ligne `carteType: "unit"`) ;
+- retirée, elle sort du jeu (elle n'est dans la réserve d'aucun joueur).
+
+### retour en réserve
+
+Une unité retirée (action `supprimer` : fiche, combat...) qui appartient à un
+joueur retourne dans `joueur:<u>:reserve` du propriétaire, sans ses marques
+(dégâts, usé, possession). Ce qu'elle transporte la suit : les unités de
+joueurs dans leur réserve, le reste hors jeu. La transformation est faite par
+le client avant l'envoi (`retourEnReserve`, `sync.js`), car seul lui connaît le
+type de l'unité. Une unité neutre et l'infanterie (illimitée) sortent du jeu.
+
+### neutres et feuilles spéciales (bas du plateau général)
+
+`engine/Neutres.jsx` :
+
+- **unités neutres** : zone `general:neutres`, avec une source illimitée
+  (`Source` avec `neutre`) par unité des factions neutres ; l'unité créée n'a
+  pas de propriétaire et ne se paie pas ;
+- **factions neutres** : la liste ; un clic ouvre la fenêtre de la faction
+  (comme la fiche d'une carte) : sa feuille et
+  « Obtenir une faveur » : jeton `faveur` sans propriétaire, `marques.neutre` =
+  identifiant de la faction neutre (son logo et sa couleur). À l'encaissement,
+  l'émetteur d'une faveur est le joueur ou la faction neutre
+  (`emetteurFaveur`, `miseEnPlace.js` ; même règle dans `etat.js`) ;
+- **feuilles de technologie spéciales** : type de lien ni `commun` ni
+  `faction` (Tempête stellaire, Rupture), au format small quand seules les
+  cases 8 à 15 sont remplies (`affichageFeuille`, `Technologie.jsx`). Un clic
+  ouvre sa fenêtre, avec « Envoyer dans les technologies de chaque joueur », qui la crée dans
+  `joueur:<u>:tech` de chaque joueur qui ne l'a pas ; un second coup coche les
+  technologies déjà débloquées.
+- dans ces deux fenêtres, « Envoyer vers… » (`EnvoyerVers` avec `lien`,
+  `Envoi.jsx`) crée la feuille dans la zone choisie, au nom du joueur dont
+  c'est une zone ; pour une feuille de technologie, le groupe « Technologies »
+  propose l'onglet Technologie de chaque joueur (cases débloquées cochées).
+- **tokens** (`ReserveTokens`, après les feuilles spéciales) : tous les
+  éléments de type `token` des données du jeu (faveurs, trous de ver...), en
+  réserve illimitée (`Source` avec `lien` `{ type: "token" }` et `neutre`) :
+  glisser en crée un sans propriétaire, sans paiement. Un token est toujours
+  un pion, jamais une carte : sa miniature (`MiniToken`, `Interaction.jsx` :
+  forme, couleur, image), suivie de son nom hors de la carte du jeu.
+
+### éléments posés sur les unités et habilités
+
+Sur la feuille de faction (`faction.jsx`) et celle d'une faction neutre
+(`neutralFaction.jsx`), chaque unité et habilité a un `data-emplacement`
+`unite:<i>` / `habilite:<i>` (`i` = rang sur la feuille) : zones
+`joueur:<u>:unite:<i>`, `neutre:<id>:habilite:<i>`... On y glisse agents,
+ressources, fragments, cartes ; ils s'affichent en haut à droite de la carte
+(`stylePions`, `PlateauJoueur.jsx`).
+
+### jetons de ressource
+
+Dans le volet de droite, l'icône devant « Ressources », « Influence » et
+« Commerce » se glisse (`data-source` `{ ressource, n }`) : un jeton
+`Ressource` / `Influence` / `Commerce` (`RESSOURCES`, `miseEnPlace.js`)
+portant `marques.montant` = n est créé sur l'élément visé (`sur`) ou dans la
+zone visée. C'est un simple marqueur : le compteur ne change pas. Un clic
+sur l'icône règle n (1 par défaut). Un jeton se pose toujours sur l'élément où
+on le dépose. Sa fiche a le montant − / +.
+
+### marqueur libre
+
+Volet de droite, entre les dés et les derniers coups : la source « Marqueur
+libre » (jeton `libre`, `LIBRE` dans `miseEnPlace.js`) se glisse où l'on veut.
+Sa fenêtre (`FicheLibre`, `Partie.jsx`) s'ouvre dès la création : texte libre
+(`marques.texte`, 120 caractères) et couleur (`marques.couleur`). Un clic la
+rouvre ; il se déplace en le glissant.
+
+Déposé sur une carte (source ou marqueur déjà en jeu), il s'y attache
+(`sur`, comme un jeton de ressource) : il s'affiche dans le cadre de la carte
+et la suit. Une carte, ici, est tout composant visible avec un contenu, sauf
+agents, tokens et unités non mercenaires (`estCarteCible`, `Plan` dans
+`Interaction.jsx`) ; sur ceux-ci, Maj reste nécessaire. Glissé vers une zone,
+il se détache. Dans la fiche de l'élément qui le porte, la ligne « Porte : »
+montre le marqueur entier : son texte complet sur sa couleur.
+
+### notes
+
+Onglet « Notes » (`engine/Notes.jsx`) : texte libre privé de chaque joueur,
+hors de l'état de la partie (collection `partieNote`, une note par partie et
+par joueur, 20 000 caractères). Enregistré peu après la frappe, en quittant le
+champ et en quittant l'onglet. Supprimé avec la partie.
+
+### montrer une carte
+
+Sur la fiche d'une carte que je suis seul à voir (ma main, carte cachée) et
+sous une carte consultée : « Montrer à… » écrit dans la conversation privée
+avec ce joueur « Je vous montre une carte : |id| ». Dans le chat, un lien
+`|id|` devient un bouton au nom de la carte qui l'affiche en entier.
+
+### zone libre
+
+Dernière colonne des pioches du plateau général : `general:libre`
+(`ZONE_PILE_LIBRE`, `etat.js`) fonctionne comme une pioche vide en début de
+partie. Elle reçoit tout élément (glisser, avec les trois zones de dépôt, ou
+« Envoyer vers… »), on en pioche le dessus (`piocher`, `verser` l'acceptent),
+sa pile a un verso noir et « Consulter » montre tout son contenu.
+
+### disposition du plateau joueur
+
+`PlateauJoueur.jsx` : éléments actifs, main, puis une barre de gauche
+(`data-barre-joueur`, 175 px) qui longe le recto puis le verso de la feuille
+de faction : compteurs, faveurs, fragments de relique, agents usés, réserve.
+La zone « Agents hors feuille » (agents d'un type sans case sur la feuille)
+n'apparaît que si elle n'est pas vide.
+
+### repères sur la carte de l'espace
+
+- Silhouettes d'unité : contour blanc d'un pixel (`CONTOUR_BLANC`,
+  `Interaction.jsx`), doré pour une unité hors fiche de faction. Hors de la
+  carte, le logo de la faction liée précède le nom de l'unité (`LogoFaction`).
+- Système où un combat est en cours (compteur `combat:<lieu>`, toutes sortes) :
+  hexagone entouré de rouge si j'y ai des unités, de jaune sinon
+  (`enCombat`, `renduCase`, `Espace.jsx` ; `data-combat` = `moi` / `autre`).
 
 ### recrutement du tour
 
@@ -711,6 +1069,10 @@ jetons qu'il y a de joueurs (`piocher` de `pioche:sac` vers `general:boite:<n>`)
 Les jetons déjà en place y restent.
 
 Un nom d'élément qui commence par `!N!` donne N exemplaires (cartes, systèmes).
+
+Dans les lignes événement, objectif militaire et agenda du déroulé, une carte
+qui déborde sur la colonne du tour suivant passe devant celle de ce tour
+(`devantLeTourSuivant`, `PlateauGeneral.jsx` : `z-index` décroissant avec le tour).
 
 ## API
 
@@ -729,8 +1091,10 @@ Toutes les routes demandent d'être connecté.
 | `GET /partie/:id/coups?avant=<n>` | historique : coups plus anciens que `n`, filtrés |
 | `DELETE /partie/:id` | supprimer la partie (créateur) |
 | `POST /partie/:id/chat` | écrire un message : `{ texte, a }` ; `a` = identifiant du destinataire d'un message privé, ou `null` pour tous |
+| `GET /partie/:id/note` | ma note de la partie : `{ texte, date }` (joueurs seulement) |
+| `PUT /partie/:id/note` | enregistrer ma note : `{ texte }` (20 000 caractères au plus) |
 
-Collections MongoDB : `partie`, `partieCoup`, `partieChat`.
+Collections MongoDB : `partie`, `partieCoup`, `partieChat`, `partieNote`.
 
 ## fichiers
 
@@ -762,6 +1126,9 @@ client/src/Game/Ti5/engine/
     PlateauJoueur.jsx    onglet plateau joueur
     Technologie.jsx      onglet technologie
     PlateauGeneral.jsx   onglet plateau général (déroulé, pioches) ; les dés sont dans le volet de droite
+    Neutres.jsx          bas du plateau général : unités et factions neutres, feuilles spéciales
+    Envoi.jsx            « Envoyer vers… » (destinations), « Montrer à… », zone libre
+    Notes.jsx            onglet notes privées
     Journal.jsx          historique des coups
 ```
 
@@ -778,6 +1145,7 @@ Attributs lus par l'engine dans les affichages existants :
 | `data-emplacement="militaire:<t>"`, `evenement:<t>` | `deroule.jsx` | `general:militaire:<t>`... (carte affichée en entier) |
 | `data-emplacement="agents"` + `data-filtre="<id>"` | `faction.jsx` | `joueur:<u>:agents`, limité aux agents de ce type |
 | `data-tech="<k>"` | `techSheet.jsx` | compteur de la technologie `k` |
+| `data-emplacement="unite:<i>"`, `habilite:<i>` | `faction.jsx`, `neutralFaction.jsx` | `joueur:<u>:unite:<i>`, `neutre:<id>:unite:<i>`... (éléments posés sur l'unité ou l'habilité) |
 
 Les pions d'un emplacement sont affichés dedans par un portail React
 (`Emplacements` dans `Interaction.jsx`) : l'affichage n'en sait rien.

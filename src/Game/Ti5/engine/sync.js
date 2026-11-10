@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchAPI, getElement } from "../../../lib/fetch";
+import { portes } from "./etat";
+import { LIMITES_UNITES, typeUnite, estUniteMercenaire } from "./miseEnPlace";
 
 // ============================================================
 // SYNCHRONISATION D'UNE PARTIE AVEC LE SERVEUR
@@ -13,6 +15,65 @@ const CONNEXION_PERDUE = "Connexion au serveur impossible";
 
 const PERIODE = 2000;          // onglet visible
 const PERIODE_CACHE = 15000;   // onglet caché
+
+// ============================================================
+// RETOUR EN RÉSERVE
+//
+// Une unité retirée (action « supprimer ») qui appartient à un
+// joueur retourne dans sa réserve, débarrassée de ses marques
+// (dégâts, usé, possession...), au lieu de sortir du jeu. Ce
+// qu'elle transporte la suit : les unités de joueurs dans la
+// réserve de leur propriétaire, le reste hors jeu. Une unité
+// neutre, et l'infanterie (illimitée, non comptée), sortent du
+// jeu comme avant.
+// ============================================================
+
+function vaEnReserve(c) {
+    // (une unité mercenaire n'est pas dans la réserve d'un joueur : elle sort du jeu)
+    return !!c && !c.cache && c.ref?.type === "unit" && Number.isInteger(c.proprio) &&
+        c.marques?.dos !== "mercenaire" && !estUniteMercenaire(contenuEnCache(c.ref.id)) &&
+        LIMITES_UNITES[typeUnite(contenuEnCache(c.ref.id))] !== undefined;
+}
+
+function renvoyer(c) {
+    return [
+        { type: "deplacer", c: c.id, vers: `joueur:${c.proprio}:reserve` },
+        ...Object.keys(c.marques || {}).map(marque => ({ type: "marquer", c: c.id, marque, valeur: null })),
+    ];
+}
+
+export function retourEnReserve(actions, etat) {
+
+    if (!etat?.composants) {
+        return actions;
+    }
+
+    return actions.flatMap(action => {
+
+        const c = action?.type === "supprimer" && Object.hasOwn(etat.composants, action.c)
+            ? etat.composants[action.c]
+            : null;
+
+        if (!vaEnReserve(c)) {
+            return [action];
+        }
+
+        // Ce qu'elle transporte, à tous les niveaux
+        const transportes = [];
+
+        for (let k = 0, pile = [c.id]; k < pile.length; k++) {
+            for (const d of portes(etat, pile[k])) {
+                transportes.push(d);
+                pile.push(d.id);
+            }
+        }
+
+        return [
+            ...renvoyer(c),
+            ...transportes.flatMap(d => (vaEnReserve(d) ? renvoyer(d) : [{ type: "supprimer", c: d.id }])),
+        ];
+    });
+}
 
 export function usePartie(id) {
 
@@ -159,7 +220,11 @@ export function usePartie(id) {
         }
     }
 
-    async function envoyerActions(actions, commentaire) {
+    // surRefus(refus) : appelé si le serveur refuse le coup (rien n'est appliqué)
+    async function envoyerActions(liste, commentaire, surRefus) {
+
+        // Unités de joueurs retirées : retour dans leur réserve
+        const actions = retourEnReserve(liste, etat);
 
         if (!actions.length) {
             return null;
@@ -190,6 +255,8 @@ export function usePartie(id) {
                     ? " (un autre joueur a agi entre-temps)."
                     : ".")
             );
+
+            surRefus?.(r.refus);
 
             return null;
         }
@@ -240,7 +307,9 @@ export function usePartie(id) {
         jouer,
         requete,
         // Un coup commenté : plusieurs actions validées ensemble
-        envoyer: (commentaire, actions = []) => envoyerActions(actions, commentaire || ""),
+        // (comme jouer, les valeurs fausses de la liste sont ignorées)
+        envoyer: (commentaire, actions = [], surRefus) =>
+            envoyerActions((Array.isArray(actions) ? actions : [actions]).filter(Boolean), commentaire || "", surRefus),
     };
 }
 

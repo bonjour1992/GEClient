@@ -5,8 +5,8 @@ import { systemSize } from "../systeme";
 import { nombreCases, anneauDeIndex, distanceIndex } from "../hexSpirale";
 import { techType } from "../ti5Const";
 import {
-    useEngine, Emplacements, Pions, Zone, Defilable, agentDisponible, aMotCle,
-    STYLE_INDISPONIBLE as styleSansCondition,
+    useEngine, Emplacements, Pions, Zone, Defilable, agentDisponible, aMotCle, tokenTreve,
+    DECALAGE_SECONDAIRE, estSecondaire, nomCase, BoutonRegle, confirmerRegle,
 } from "./Interaction";
 import {
     PIOCHE_TUILES,
@@ -21,7 +21,8 @@ import {
 } from "./miseEnPlace";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
-import { cleCombat, combatsEnCours } from "./Combat";
+import { cleCombat, combatsEnCours, aDesUnites } from "./Combat";
+import { EnvoyerVers } from "./Envoi";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -68,6 +69,20 @@ export function Espace() {
         }
     }
 
+    // Cases où un combat est en cours (de toute sorte, planètes comprises) :
+    // "moi" si j'ai des unités dans l'un d'eux, "autre" sinon
+    const enCombat = {};
+
+    for (const lieu of combatsEnCours(etat)) {
+        const numero = parseInt(lieu, 10);
+
+        if (aDesUnites(index, lieu, moi)) {
+            enCombat[numero] = "moi";
+        } else {
+            enCombat[numero] ??= "autre";
+        }
+    }
+
     // --------------------------------------------------------
     // POSSESSION DES PLANÈTES
     //
@@ -99,20 +114,21 @@ export function Espace() {
             return null;
         }
 
-        const icone = `url("${pub}/ti/unit_icon/inf.png")`;
+        // (miniature recadrée de l'infanterie : public/ti/unit_mini)
+        const icone = `url("${pub}/ti/unit_mini/inf.png")`;
 
         return (
             <span
                 title={"Planète de " + nomDe(u)}
                 style={{
                     display: "inline-block",
-                    width: 26,
-                    height: 17,
+                    width: 12,
+                    height: 13,
                     backgroundColor: couleurDe(u) || "#c8c8c8",
                     WebkitMaskImage: icone,
                     maskImage: icone,
-                    WebkitMaskSize: "125%",
-                    maskSize: "125%",
+                    WebkitMaskSize: "100% 100%",
+                    maskSize: "100% 100%",
                     WebkitMaskRepeat: "no-repeat",
                     maskRepeat: "no-repeat",
                     WebkitMaskPosition: "center",
@@ -159,8 +175,63 @@ export function Espace() {
 
     }, [anneauxAffiches, signature]);
 
+    // --------------------------------------------------------
+    // SYSTÈMES SECONDAIRES
+    //
+    // Second groupe de cases, sous la carte : zones hex:<1000 + j>
+    // (Interaction.jsx). Sa taille est le compteur
+    // espace:secondaire:anneaux (1 par défaut : 7 cases). Hors du mode
+    // « Modifier la carte », seules les cases qui ont un système sont
+    // visibles : chaque îlot de cases voisines est un groupe.
+    // --------------------------------------------------------
+
+    const ANNEAUX_SECONDAIRES = "espace:secondaire:anneaux";
+    const anneaux2 = Math.max(0, Math.min(6, Number(etat.compteurs[ANNEAUX_SECONDAIRES] ?? 1)));
+
+    const aDesSecondaires = Object.keys(tuiles).some(estSecondaire);
+
+    const content2 = useMemo(() => {
+
+        const n = nombreCases(anneaux2);
+        const type = Array(n).fill("vide");
+        const systems = Array(n).fill(null);
+        const rotates = Array(n).fill(0);
+
+        for (const morceau of signature ? signature.split(";") : []) {
+            const [i, id, rotation] = morceau.split(":").map(Number);
+            const j = i - DECALAGE_SECONDAIRE;
+
+            if (j >= 0 && j < n) {
+                type[j] = "select";
+                systems[j] = { type: "system", id, __link: true };
+                rotates[j] = rotation;
+            }
+        }
+
+        return { anneaux: anneaux2, type, systems, rotates };
+
+    }, [anneaux2, signature]);
+
+    function changerAnneaux2(delta) {
+
+        const nouveau = Math.max(0, Math.min(6, anneaux2 + delta));
+
+        // (une case occupée ne disparaît pas de l'écran sans prévenir)
+        const occupe = delta < 0 && [...index.parZone.keys()].some(zone => {
+            const m = /^hex:(\d+)/.exec(zone);
+            return m && estSecondaire(m[1]) && Number(m[1]) - DECALAGE_SECONDAIRE >= nombreCases(nouveau);
+        });
+
+        if (occupe) {
+            signaler(`L'anneau ${anneaux2} des systèmes secondaires n'est pas vide : retirez d'abord ce qui s'y trouve.`);
+            return;
+        }
+
+        jouer({ type: "compteur", id: ANNEAUX_SECONDAIRES, valeur: nouveau });
+    }
+
     // Cases où j'ai au moins une unité (dans l'espace, sur une planète ou embarquée)
-    const mesCases = [...new Set(Object.values(etat.composants)
+    const mesCases =[...new Set(Object.values(etat.composants)
         .filter(c => c.ref?.type === "unit" && c.proprio === moi)
         .map(c => /^hex:(\d+)/.exec(c.zone || "")?.[1])
         .filter(Boolean))]
@@ -230,7 +301,8 @@ export function Espace() {
         if (delta < 0) {
             const occupe = [...index.parZone.keys()].some(zone => {
                 const m = /^hex:(\d+)/.exec(zone);
-                return m && anneauDeIndex(Number(m[1])) > nouveau;
+                // (les systèmes secondaires ne sont pas sur la carte)
+                return m && !estSecondaire(m[1]) && anneauDeIndex(Number(m[1])) > nouveau;
             });
 
             if (occupe) {
@@ -248,11 +320,7 @@ export function Espace() {
     // (neutres, indiquées sur le système et sur ses planètes) sont posées.
     async function explorer(numero) {
 
-        if (!explorables.has(numero)) {
-            signaler("Explorer : choisir un emplacement vide à côté d'un système où vous avez une unité.");
-            return;
-        }
-
+        // (rien à poser d'une pioche vide : là, l'action est impossible)
         if (!(index.parZone.get(PIOCHE_TUILES) || []).length) {
             signaler("Explorer : la pioche de tuiles est vide.");
             return;
@@ -261,8 +329,15 @@ export function Espace() {
         const logisticien = agentDisponible({ index, moi, search }, "logisticien");
         const scientifique = agentDisponible({ index, moi, search }, "scientifique");
 
-        if (!logisticien || !scientifique) {
-            signaler("Explorer demande un logisticien et un scientifique disponibles.");
+        // Effet du jeu déclenché par un Ctrl + clic : hors conditions, une
+        // confirmation dit pourquoi (un agent absent n'est pas usé)
+        const commentaire = confirmerRegle(`Explorer (${nomCase(numero)})`, [
+            !explorables.has(numero) && "il faut un emplacement vide à côté d'un système où vous avez une unité",
+            !logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+            !scientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+        ]);
+
+        if (!commentaire) {
             return;
         }
 
@@ -273,10 +348,10 @@ export function Espace() {
         const reponse = await envoyer([
             // Au-delà du bord : la carte gagne un anneau
             anneauDeIndex(numero) > anneaux && { type: "partie", anneaux: anneauDeIndex(numero) },
-            { type: "deplacer", c: logisticien.id, vers: uses },
-            { type: "deplacer", c: scientifique.id, vers: uses },
+            logisticien && { type: "deplacer", c: logisticien.id, vers: uses },
+            scientifique && { type: "deplacer", c: scientifique.id, vers: uses },
             { type: "piocher", de: PIOCHE_TUILES, vers: zone },
-        ].filter(Boolean), "Exploration");
+        ].filter(Boolean), commentaire);
 
         // La tuile piochée n'est connue qu'à la réponse du serveur
         const tuile = Object.values(reponse?.etat?.composants || {})
@@ -332,7 +407,19 @@ export function Espace() {
         // Phase de déplacement : Ctrl + clic pose son marqueur de faction
         // sur le système (système activé).
         if (event.ctrlKey && joueur && /d[ée]placement/i.test(etat.phase)) {
-            jouer({ type: "creer", jeton: MARQUEUR, zone: "hex:" + numero, proprio: moi });
+
+            const dejaActive = (index.parZone.get("hex:" + numero) || [])
+                .some(c => !c.ref && c.jeton === MARQUEUR && c.proprio === moi);
+
+            const commentaire = confirmerRegle(`Activer le système (${nomCase(numero)})`, [
+                dejaActive && "vous avez déjà activé ce système",
+                !tuiles[numero] && "il n'y a pas de système sur cette case",
+            ]);
+
+            if (commentaire) {
+                envoyer([{ type: "creer", jeton: MARQUEUR, zone: "hex:" + numero, proprio: moi }], commentaire);
+            }
+
             return;
         }
 
@@ -342,24 +429,7 @@ export function Espace() {
             return;
         }
 
-        // Phase de trêve : Ctrl + clic sur un système y pose un marqueur de
-        // trêve ; un diplomate est détruit.
-        if (event.ctrlKey && joueur && /tr[eê]ve/i.test(etat.phase) && !edition && tuiles[numero]) {
-
-            const diplomate = agentDisponible({ index, moi, search }, "diplomate");
-
-            if (!diplomate) {
-                signaler("Déclarer une trêve demande un diplomate disponible.");
-                return;
-            }
-
-            jouer([
-                { type: "supprimer", c: diplomate.id },
-                { type: "creer", jeton: TREVE, zone: "hex:" + numero, proprio: moi },
-            ]);
-
-            return;
-        }
+        // (Déclarer une trêve : bouton de la fiche du système)
 
         if (edition) {
             setCaseChoisie(numero);
@@ -399,6 +469,36 @@ export function Espace() {
                     </div>
                 )}
 
+                {/* Combat en cours dans ce système : contour rouge s'il me
+                    concerne (j'y ai des unités), jaune sinon */}
+                {enCombat[i] && (
+                    <svg
+                        data-combat={enCombat[i]}
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                        style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            pointerEvents: "none",
+                            zIndex: 16,
+                        }}
+                    >
+                        <title>
+                            {enCombat[i] === "moi" ? "Combat en cours : vous y avez des unités" : "Combat en cours"}
+                        </title>
+                        {/* (le trait est à cheval sur le bord de la case : sa moitié extérieure est rognée) */}
+                        <polygon
+                            points="25,0 75,0 100,50 75,100 25,100 0,50"
+                            fill="none"
+                            stroke={enCombat[i] === "moi" ? "#ff1744" : "#ffd600"}
+                            strokeWidth={9}
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </svg>
+                )}
+
                 <div
                     style={{
                         position: "absolute",
@@ -425,6 +525,12 @@ export function Espace() {
             return { backgroundColor: "#ff9800" };
         }
 
+        // Systèmes secondaires : une case sans système n'est visible qu'en
+        // modifiant la carte
+        if (estSecondaire(i)) {
+            return tuiles[i] || edition ? undefined : { visibility: "hidden" };
+        }
+
         // Anneau ajouté pour l'exploration : seuls les emplacements
         // explorables y sont affichés
         if (anneauDeIndex(i) > anneaux && !explorables.has(i)) {
@@ -438,7 +544,11 @@ export function Espace() {
     // et à taille lisible (la tuile est réduite et peut être tournée).
     function stylePions(zone, noeud) {
 
-        const rotation = content.rotates[Number(zone.split(":")[1])] || 0;
+        const numero = Number(zone.split(":")[1]);
+
+        const rotation = (estSecondaire(numero)
+            ? content2.rotates[numero - DECALAGE_SECONDAIRE]
+            : content.rotates[numero]) || 0;
 
         // Échelle de la planète dans la tuile (style de systeme.jsx), et
         // de la tuile dans la case : on les annule pour garder des pions
@@ -500,11 +610,17 @@ export function Espace() {
                             <button type="button" onClick={() => changerAnneaux(1)}>+</button>
                         </span>
 
+                        <span title="Taille du groupe des systèmes secondaires, sous la carte">
+                            <button type="button" onClick={() => changerAnneaux2(-1)} disabled={anneaux2 === 0}>−</button>
+                            {" "}{anneaux2} anneaux secondaires{" "}
+                            <button type="button" onClick={() => changerAnneaux2(1)} disabled={anneaux2 === 6}>+</button>
+                        </span>
+
                         {caseChoisie === null && <span>Cliquer sur une case de la carte.</span>}
 
                         {caseChoisie !== null && (
                             <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                                <b>Case {caseChoisie + 1} :</b>
+                                <b style={{ textTransform: "capitalize" }}>{nomCase(caseChoisie)} :</b>
                                 système
                                 <ModalPickerInput
                                     name="systeme"
@@ -542,6 +658,35 @@ export function Espace() {
                     </Emplacements>
                 </div>
             </Defilable>
+
+            {/* SYSTÈMES SECONDAIRES : à part du plan central, on y accède par
+                des trous de ver. Le cadre n'apparaît que s'il y en a, ou en
+                modifiant la carte (pour en poser). */}
+
+            {(aDesSecondaires || edition) && (
+                <div
+                    data-systemes-secondaires
+                    style={{ marginTop: 8, border: "2px solid #7e57c2", borderRadius: 8, backgroundColor: "#111" }}
+                >
+                    <div style={{ padding: "2px 8px", color: "#d1c4e9", fontSize: 13 }}>
+                        <b>Systèmes secondaires</b> — hors du plan central, reliés par des trous de ver
+                        {edition && " (cliquer une case pour y poser un système)"}
+                    </div>
+
+                    <Defilable style={{ maxHeight: "60vh" }}>
+                        <div onClick={onClick} style={{ zoom, width: "max-content", margin: "0 auto" }}>
+                            <Emplacements stylePions={stylePions} extra={etendard} petit>
+                                <PlateauView
+                                    content={content2}
+                                    decalage={DECALAGE_SECONDAIRE}
+                                    renduCase={renduCase}
+                                    styleCase={styleCase}
+                                />
+                            </Emplacements>
+                        </div>
+                    </Defilable>
+                </div>
+            )}
 
             {/* TUILES : pioche des tuiles non spéciales qui ne sont pas sur la
                 carte, tuiles piochées, réserve des tuiles spéciales. Une tuile
@@ -593,7 +738,8 @@ export function Espace() {
 const lienValide = lien => lien && lien.id > 0;
 
 // Nombre d'infanteries à mobiliser sur une planète, puis le bouton
-function Mobilisation({ max, cout, mobiliser }) {
+// obstacles(n) : raisons pour lesquelles mobiliser n infanteries ne devrait pas se faire
+function Mobilisation({ max, cout, mobiliser, obstacles }) {
 
     const [n, setN] = useState(max);
 
@@ -620,14 +766,14 @@ function Mobilisation({ max, cout, mobiliser }) {
             >
                 +
             </button>
-            <button
-                type="button"
-                onClick={() => mobiliser(nombre)}
+            <BoutonRegle
+                nom={`Mobiliser ${nombre} infanterie${nombre > 1 ? "s" : ""}`}
+                obstacles={obstacles(nombre)}
+                faire={commentaire => mobiliser(nombre, commentaire)}
                 title={`Use un logisticien, dépense ${nombre * cout} ressource(s), pose ${nombre} infanterie(s) et active la planète`}
-                style={{ fontWeight: "bold" }}
             >
                 infanterie{nombre > 1 ? "s" : ""} ({nombre * cout} res.)
-            </button>
+            </BoutonRegle>
         </span>
     );
 }
@@ -646,10 +792,10 @@ function FicheSysteme({ numero, id, fermer }) {
     //   "<i>p<k>" combat terrestre, "<i>p<k>b" bombardement
     const combats = combatsEnCours(etat);
 
-    function envoyerAuCombat(lieu) {
+    function envoyerAuCombat(lieu, commentaire = "") {
 
         if (!combats.includes(lieu)) {
-            envoyer([{ type: "compteur", id: cleCombat(lieu), valeur: 1 }], "Combat ouvert");
+            envoyer([{ type: "compteur", id: cleCombat(lieu), valeur: 1 }], commentaire || "Combat ouvert");
         }
 
         setCombatVu(lieu);
@@ -657,21 +803,40 @@ function FicheSysteme({ numero, id, fermer }) {
         allerA("combat");
     }
 
-    // Bouton d'un combat : « voir » s'il est déjà ouvert
-    const boutonCombat = (lieu, libelle, titre) => (
-        <button
-            key={lieu}
-            type="button"
-            onClick={() => envoyerAuCombat(lieu)}
-            title={titre}
-            style={{ fontWeight: combats.includes(lieu) ? "bold" : "normal" }}
-        >
-            {combats.includes(lieu) ? "Voir : " + libelle.toLowerCase() : libelle}
-        </button>
-    );
+    const enCombatPhase = /combat|canon|bombard/i.test(etat.phase);
+
+    // Bouton d'un combat : « voir » (bouton simple) s'il est déjà ouvert ;
+    // sinon l'ouvrir est un effet du jeu, attendu aux phases de combat
+    const boutonCombat = (lieu, libelle, titre) => (combats.includes(lieu)
+        ? (
+            <button
+                key={lieu}
+                type="button"
+                onClick={() => envoyerAuCombat(lieu)}
+                title={titre}
+                style={{ fontWeight: "bold" }}
+            >
+                Voir : {libelle.toLowerCase()}
+            </button>
+        )
+        : (
+            <BoutonRegle
+                key={lieu}
+                nom={`${libelle} (${nomCase(numero)})`}
+                obstacles={[!enCombatPhase && "ce n'est pas une phase de combat"]}
+                faire={commentaire => envoyerAuCombat(lieu, commentaire)}
+                title={titre}
+            >
+                {libelle}
+            </BoutonRegle>
+        ));
 
     const enScience = /science/i.test(etat.phase);
     const enProduction = /production/i.test(etat.phase);
+
+    // Scientifique et logisticien disponibles (le Généticien d'Arborec mobilise comme un logisticien)
+    const aScientifique = !!agentDisponible({ index, moi, search }, "scientifique");
+    const aLogisticien = !!agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
 
     const zoneEspace = "hex:" + numero;
     const zonePlanete = k => `${zoneEspace}:planete:${k}`;
@@ -708,84 +873,70 @@ function FicheSysteme({ numero, id, fermer }) {
     // Utilise un agent : retourne l'action, ou null (avec un message) s'il
     // n'y en a pas de disponible
     // (nomAgent est une expression régulière ; libelle est le nom à afficher)
-    function utiliser(nomAgent, libelle = nomAgent) {
+    // Utilise un agent : retourne l'action, ou null s'il n'y en a pas de
+    // disponible (le bouton l'a alors dit avant de confirmer : rien n'est usé)
+    function utiliser(nomAgent) {
 
         const agent = agentDisponible({ index, moi, search }, nomAgent);
 
-        if (!agent) {
-            signaler(`Vous n'avez pas de ${libelle} disponible.`);
-            return null;
-        }
-
-        return { type: "deplacer", c: agent.id, vers: uses };
+        return agent ? { type: "deplacer", c: agent.id, vers: uses } : null;
     }
 
     // Phase de science, rechercher : active la planète et utilise un
     // scientifique. La recherche gagnée s'ajoute à la main (onglet Technologie).
-    function rechercher(k) {
-
-        const agent = utiliser("scientifique");
-
-        if (agent) {
-            jouer([agent, { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) }]);
-        }
+    function rechercher(k, commentaire) {
+        envoyer([utiliser("scientifique"), { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) }], commentaire);
     }
 
     // Phase de science, fouiller une ruine : active la ruine, utilise un
     // scientifique et rapporte un fragment de relique — celui du type de la
     // ruine, ou tiré dans le sac pour une ruine « normale ».
-    function fouiller(k, ruine, type) {
+    function fouiller(k, ruine, type, commentaire) {
 
         const fragment = FRAGMENTS[type];
         const vers = `joueur:${moi}:fragments`;
 
+        // (rien à tirer d'un sac vide : là, l'action est impossible)
         if (!fragment && !(index.parZone.get(SAC_FRAGMENTS) || []).length) {
             signaler("Le sac de fragments est vide (ou cette partie a été créée avant son ajout).");
             return;
         }
 
-        const agent = utiliser("scientifique");
-
-        if (agent) {
-            jouer([
-                agent,
-                { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k), marques: { ruine } },
-                fragment
-                    ? { type: "creer", jeton: fragment[0], zone: vers }
-                    : { type: "piocher", de: SAC_FRAGMENTS, vers },
-            ]);
-        }
+        envoyer([
+            utiliser("scientifique"),
+            { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k), marques: { ruine } },
+            fragment
+                ? { type: "creer", jeton: fragment[0], zone: vers }
+                : { type: "piocher", de: SAC_FRAGMENTS, vers },
+        ], commentaire);
     }
 
     // Phase de production, mobiliser : use un logisticien, dépense les
     // ressources, pose l'infanterie sur la planète et l'active.
-    function mobiliser(k, n) {
+    const mesRes = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
 
-        const compteur = `joueur:${moi}:res`;
-        const dispo = Number(etat.compteurs[compteur]) || 0;
+    const obstaclesMobilisation = n => [
+        mesRes < n * coutInfanterie &&
+            `ressources insuffisantes : ${n} infanterie(s) coûtent ${n * coutInfanterie}, vous avez ${mesRes}`,
+        !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+    ];
+
+    function mobiliser(k, n, commentaire) {
+
         const cout = n * coutInfanterie;
 
-        if (dispo < cout) {
-            signaler(`Ressources insuffisantes : mobiliser ${n} infanterie(s) coûte ${cout}, vous avez ${dispo}.`);
-            return;
-        }
-
-        // Un logisticien, ou le Généticien (Arborec) qui mobilise comme lui
-        const agent = utiliser("logisticien|g[ée]n[ée]ticien", "logisticien");
-
-        if (agent) {
-            jouer([
-                agent,
-                cout && { type: "compteur", id: compteur, delta: -cout },
-                ...Array.from({ length: n }, () => ({
-                    type: "creer",
-                    ref: { type: "unit", id: idInfanterie },
-                    zone: zonePlanete(k),
-                    proprio: moi,
-                })),
-                { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) },
-            ]);
-        }
+        envoyer([
+            // Un logisticien, ou le Généticien (Arborec) qui mobilise comme lui
+            utiliser("logisticien|g[ée]n[ée]ticien"),
+            cout && { type: "compteur", id: `joueur:${moi}:res`, delta: -cout },
+            ...Array.from({ length: n }, () => ({
+                type: "creer",
+                ref: { type: "unit", id: idInfanterie },
+                zone: zonePlanete(k),
+                proprio: moi,
+            })),
+            { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) },
+        ], commentaire);
     }
 
     // Mes unités endommagées dans le système (espace, planètes, embarquées).
@@ -802,12 +953,12 @@ function FicheSysteme({ numero, id, fermer }) {
     const coutReparation = aReparer.reduce((total, c) => total + Number(c.marques.degat), 0);
     const mesRessources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
 
-    function reparer() {
-        jouer([
+    function reparer(commentaire) {
+        envoyer([
             { type: "compteur", id: `joueur:${moi}:res`, delta: -coutReparation },
             // (si : refusé si les dégâts ont changé entre-temps)
             ...aReparer.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: 0, si: c.marques.degat })),
-        ]);
+        ], commentaire);
     }
 
     // Carte d'une planète déjà en jeu (chez un joueur), ou undefined
@@ -823,20 +974,16 @@ function FicheSysteme({ numero, id, fermer }) {
     //
     // Les deux boutons restent utilisables si la condition d'unité manque
     // (ils sont alors rouge gris) : l'engine prévient, les joueurs décident.
-    function revendiquer(idPlanete) {
+    function revendiquer(idPlanete, commentaire) {
 
         const diplomate = agentDisponible({ index, moi, search }, "diplomate");
 
-        // Sans diplomate disponible, pas de revendication
-        if (!diplomate) {
-            signaler("Revendiquer demande un diplomate disponible.");
-            return;
-        }
-
-        prendre(idPlanete, [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }]);
+        // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
+        prendre(idPlanete, commentaire,
+            diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : []);
     }
 
-    function prendre(idPlanete, avant = []) {
+    function prendre(idPlanete, commentaire, avant = []) {
 
         const carte = cartePlanete(idPlanete);
         const zone = `joueur:${moi}:actif`;
@@ -845,7 +992,7 @@ function FicheSysteme({ numero, id, fermer }) {
         const verrou = "planete:" + idPlanete;
         const prises = Number(etat.compteurs[verrou]) || 0;
 
-        jouer([
+        envoyer([
             ...avant,
             ...(carte
                 ? [{ type: "deplacer", c: carte.id, vers: zone, de: carte.zone }]
@@ -853,19 +1000,61 @@ function FicheSysteme({ numero, id, fermer }) {
                     { type: "compteur", id: verrou, valeur: prises + 1, si: prises },
                     { type: "creer", ref: { type: "planet", id: idPlanete }, zone, proprio: moi },
                 ]),
-        ]);
+        ], commentaire);
     }
 
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
 
+    // --------------------------------------------------------
+    // DÉCLARER UNE TRÊVE
+    //
+    // Pose mon marqueur de trêve dans le système et détruit un de mes
+    // diplomates. Hors de la phase de trêve ou sans diplomate, le bouton
+    // est rouge gris : il reste utilisable après confirmation (sans
+    // diplomate, aucun n'est détruit).
+    // --------------------------------------------------------
+
+    const enTreve = /tr[eê]ve/i.test(etat.phase);
+
+    const obstaclesTreve = [
+        !enTreve && "ce n'est pas la phase de trêve",
+        !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera détruit)",
+    ].filter(Boolean);
+
+    function declarerTreve(commentaire) {
+
+        const diplomate = agentDisponible({ index, moi, search }, "diplomate");
+
+        envoyer([
+            diplomate && { type: "supprimer", c: diplomate.id },
+            // Le token « Trêve » des données du jeu ; à défaut, l'ancien jeton
+            tokenTreve(search)
+                ? { type: "creer", ref: { type: "token", id: tokenTreve(search).id }, zone: zoneEspace, proprio: moi }
+                : { type: "creer", jeton: TREVE, zone: zoneEspace, proprio: moi },
+        ], commentaire);
+
+        fermer();
+    }
+
+    // Rechercher et fouiller demandent une unité dans le système et un scientifique
+    const obstaclesScience = [
+        !mesUnitesIci && "il faut une de vos unités dans le système",
+        !aScientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+    ];
+
+    const nomPlanete = planete => (planete?.name || "la planète").replace(/^!([^!]*)!/, "") || "la planète";
+
     // k : position de la planète dans le système (emplacement planete:<k>)
-    const liensPlanetes = (systeme?.elems || [])
+    const liensPlanetes =(systeme?.elems || [])
         .map((lien, k) => ({ lien, k }))
         .filter(x => lienValide(x.lien));
 
     const planetes = useElements(liensPlanetes.map(x => x.lien.id));
 
     const lienSysteme = useMemo(() => ({ type: "system", id }), [id]);
+
+    // Composant de la tuile posée sur cette case
+    const tuileDuSysteme = (index.parZone.get("hex:" + numero) || []).find(estTuile) || null;
 
     return (
         <div
@@ -899,22 +1088,22 @@ function FicheSysteme({ numero, id, fermer }) {
                     <b style={{ fontSize: 18 }}>
                         {(systeme?.name || "Système").replace(/^!([^!]*)!/, "")}
                     </b>
-                    <span style={{ marginLeft: 8, color: "#666" }}>case {numero + 1}</span>
+                    <span style={{ marginLeft: 8, color: "#666" }}>{nomCase(numero)}</span>
 
-                    {/* Toujours disponible : remet à zéro les dégâts de mes unités */}
-                    {joueur && (
-                        <button
-                            type="button"
-                            disabled={!aReparer.length || mesRessources < coutReparation}
-                            onClick={reparer}
-                            title={aReparer.length && mesRessources < coutReparation
-                                ? `Il faut ${coutReparation} ressource(s), vous en avez ${mesRessources}`
-                                : "Coûte 1 ressource par dégât réparé"}
+                    {/* Remet à zéro les dégâts de mes unités (rien à réparer : pas de bouton) */}
+                    {joueur && aReparer.length > 0 && (
+                        <BoutonRegle
+                            nom={`Réparer mes unités (${nomCase(numero)})`}
+                            obstacles={[
+                                mesRessources < coutReparation &&
+                                    `ressources insuffisantes : il en faut ${coutReparation}, vous en avez ${mesRessources}`,
+                            ]}
+                            faire={reparer}
+                            title="Coûte 1 ressource par dégât réparé"
                             style={{ marginLeft: 16 }}
                         >
-                            Réparer toutes mes unités
-                            {aReparer.length ? ` (${coutReparation} res.)` : ""}
-                        </button>
+                            Réparer toutes mes unités ({coutReparation} res.)
+                        </BoutonRegle>
                     )}
 
                     {joueur && (
@@ -923,6 +1112,23 @@ function FicheSysteme({ numero, id, fermer }) {
                                 "Ouvre un combat entre les vaisseaux de ce système, pour toute la table")}
                             {boutonCombat(numero + "c", "Canons spatiaux",
                                 "Les unités à canon spatial du système et des systèmes voisins tirent sur ses vaisseaux")}
+
+                            <BoutonRegle
+                                data-action="declarer-treve"
+                                nom={`Déclarer une trêve (${nomCase(numero)})`}
+                                obstacles={obstaclesTreve}
+                                faire={declarerTreve}
+                                title="Pose votre marqueur de trêve dans ce système et détruit un de vos diplomates"
+                            >
+                                Déclarer une trêve
+                            </BoutonRegle>
+                        </span>
+                    )}
+
+                    {/* La tuile elle-même : zone libre, réserve de tuiles... */}
+                    {joueur && tuileDuSysteme && (
+                        <span style={{ marginLeft: 8 }}>
+                            <EnvoyerVers c={tuileDuSysteme} apres={fermer} libelle="Envoyer la tuile vers…" />
                         </span>
                     )}
 
@@ -996,29 +1202,25 @@ function FicheSysteme({ numero, id, fermer }) {
                                         {/* Toujours utilisables ; rouge gris si la condition manque */}
                                         {joueur && !aMoi && (
                                             <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 6 }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => prendre(lien.id)}
-                                                    style={monInfanterieSur(k) ? undefined : styleSansCondition}
-                                                    title={monInfanterieSur(k)
-                                                        ? "Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs"
-                                                        : "Condition non remplie : il faut une de vos infanteries sur la planète (le bouton reste utilisable)"}
+                                                <BoutonRegle
+                                                    nom={`Prendre possession de ${nomPlanete(planete)}`}
+                                                    obstacles={[!monInfanterieSur(k) && "il faut une de vos infanteries sur la planète"]}
+                                                    faire={commentaire => prendre(lien.id, commentaire)}
+                                                    title="Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs"
                                                 >
                                                     Prendre possession
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => revendiquer(lien.id)}
-                                                    style={mesUnitesIci && aDiplomate ? undefined : styleSansCondition}
-                                                    title={mesUnitesIci && aDiplomate
-                                                        ? "Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs"
-                                                        : (!aDiplomate
-                                                            ? "Refusé : il faut un diplomate disponible" +
-                                                                (mesUnitesIci ? "" : ", et une de vos unités dans le système")
-                                                            : "Condition non remplie : il faut une de vos unités dans le système (le bouton reste utilisable)")}
+                                                </BoutonRegle>
+                                                <BoutonRegle
+                                                    nom={`Revendiquer ${nomPlanete(planete)}`}
+                                                    obstacles={[
+                                                        !mesUnitesIci && "il faut une de vos unités dans le système",
+                                                        !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                                                    ]}
+                                                    faire={commentaire => revendiquer(lien.id, commentaire)}
+                                                    title="Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs"
                                                 >
                                                     Revendiquer (use un diplomate)
-                                                </button>
+                                                </BoutonRegle>
                                             </span>
                                         )}
 
@@ -1037,16 +1239,14 @@ function FicheSysteme({ numero, id, fermer }) {
 
                                         {joueur && enScience && !activee && (
                                             <>
-                                                <button
-                                                    type="button"
-                                                    disabled={!mesUnitesIci}
-                                                    onClick={() => rechercher(k)}
-                                                    title={mesUnitesIci
-                                                        ? "Pose un marqueur d'activation sur la planète et use un scientifique"
-                                                        : "Il faut une de vos unités dans le système"}
+                                                <BoutonRegle
+                                                    nom={`Rechercher sur ${nomPlanete(planete)}`}
+                                                    obstacles={obstaclesScience}
+                                                    faire={commentaire => rechercher(k, commentaire)}
+                                                    title="Pose un marqueur d'activation sur la planète et use un scientifique"
                                                 >
                                                     Rechercher
-                                                </button>
+                                                </BoutonRegle>
                                                 <span style={{ fontSize: 12, color: "#444" }}>
                                                     Gagnez 2 de technologie au choix
                                                     {specialites ? `, doublé en ${specialites}` : ""} : à
@@ -1059,18 +1259,16 @@ function FicheSysteme({ numero, id, fermer }) {
                                             ruineActivee(k, ruine)
                                                 ? <b key={ruine} style={{ color: "#555" }}>■ Ruine {ruines.length > 1 ? ruine + " " : ""}fouillée</b>
                                                 : (
-                                                    <button
+                                                    <BoutonRegle
                                                         key={ruine}
-                                                        type="button"
-                                                        disabled={!mesUnitesIci}
-                                                        onClick={() => fouiller(k, ruine, type)}
-                                                        title={mesUnitesIci
-                                                            ? "Pose un marqueur d'activation sur la ruine, use un scientifique et rapporte un fragment de relique"
-                                                            : "Il faut une de vos unités dans le système"}
+                                                        nom={`Fouiller une ruine de ${nomPlanete(planete)}`}
+                                                        obstacles={obstaclesScience}
+                                                        faire={commentaire => fouiller(k, ruine, type, commentaire)}
+                                                        title="Pose un marqueur d'activation sur la ruine, use un scientifique et rapporte un fragment de relique"
                                                     >
                                                         Fouiller la ruine{ruines.length > 1 ? " " + ruine : ""} (
                                                         {FRAGMENTS[type] ? FRAGMENTS[type][0].toLowerCase() : "fragment tiré du sac"})
-                                                    </button>
+                                                    </BoutonRegle>
                                                 )
                                         ))}
 
@@ -1080,7 +1278,8 @@ function FicheSysteme({ numero, id, fermer }) {
                                             <Mobilisation
                                                 max={prodInfanterie}
                                                 cout={coutInfanterie}
-                                                mobiliser={n => mobiliser(k, n)}
+                                                mobiliser={(n, commentaire) => mobiliser(k, n, commentaire)}
+                                                obstacles={obstaclesMobilisation}
                                             />
                                         )}
                                     </div>

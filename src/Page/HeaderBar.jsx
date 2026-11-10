@@ -9,16 +9,37 @@ export default function HeaderBar() {
 
     return (
         <>
+            <style>{STYLE_PETIT_ECRAN}</style>
             <Location location={loc} />
             <User />
             <div
-                className="no-print"
+                className="no-print ge-bar-espace"
                 style={{ height: 40 }}
             ></div>
             <Outlet />
         </>
     )
 }
+
+// Petit écran : l'en-tête passe sur deux lignes. Le fil d'Ariane prend toute
+// la première (il défile de côté au lieu de passer à la ligne) ; recherche,
+// « Ajouter » et compte se partagent la seconde. (Les barres ont des styles
+// en ligne, d'où les !important.)
+const STYLE_PETIT_ECRAN = `
+@media (max-width: 800px) {
+    .ge-bar-fil { width: 100% !important; margin-right: 0 !important; display: flex !important; overflow-x: auto; overflow-y: hidden; box-sizing: border-box; }
+    .ge-bar-fil > div { flex: none; }
+    .ge-bar-search { top: 40px !important; margin-left: 0 !important; width: 45% !important; white-space: nowrap; overflow: hidden; }
+    .ge-bar-search > span { font-size: 18px !important; }
+    .ge-bar-search > input { font-size: 15px !important; width: calc(100% - 34px) !important; box-sizing: border-box; }
+    .ge-bar-add { top: 40px !important; margin-left: 45% !important; width: 25% !important; gap: 4px !important; }
+    .ge-bar-add button { font-size: 15px !important; }
+    .ge-bar-user { top: 40px !important; margin-left: 70% !important; width: 30% !important; box-sizing: border-box; font-size: 12px; gap: 4px; overflow: hidden; }
+    .ge-bar-user button { font-size: 12px; padding: 1px 4px; }
+    .ge-bar-espace { height: 80px !important; }
+    [data-resultats-recherche] { top: 80px !important; left: 0 !important; width: 100vw !important; box-sizing: border-box; }
+}
+`;
 
 const page = {
     remp: "Remplacement",
@@ -185,7 +206,7 @@ function LocationBar({ fil }) {
 
     return (
         <div
-            className="no-print"
+            className="no-print ge-bar-fil"
             style={{
                 zIndex: 50,
                 backgroundColor: "white",
@@ -295,7 +316,7 @@ function User() {
 
     return (
         <div
-            className="no-print"
+            className="no-print ge-bar-user"
             style={{
                 zIndex: 50,
                 backgroundColor: "white",

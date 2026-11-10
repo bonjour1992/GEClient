@@ -18,7 +18,10 @@ import derouleHandler from "./deroule"
 import voteHandler from "./vote"
 import plateauHandler from "./plateau"
 import tokenHandler from "./token"
+import reglageHandler from "./reglage"
 import OutilParties from "./engine/Parties"
+import OutilScripts from "./engine/OutilScripts"
+import { Nom } from "./Component/Nom"
 
 
 export const Handler = {
@@ -41,11 +44,19 @@ export const Handler = {
     "deroule": derouleHandler,
     "vote": voteHandler,
     "plateau":plateauHandler,
-    "token": tokenHandler
+    "token": tokenHandler,
+    "reglage": reglageHandler
+}
+
+// Tous les types ont l'affichage « nom » (nom précédé de ses icônes :
+// Component/Nom.jsx), sauf ceux qui ont déjà le leur (faction, agent)
+for (const handler of Object.values(Handler)) {
+    handler.display = { ...handler.display, nom: handler.display.nom || Nom }
 }
 
 export const Tools = {
-    "partie": { name: "Parties", component: OutilParties }
+    "partie": { name: "Parties", component: OutilParties },
+    "scripts": { name: "Scripts de règles", component: OutilScripts }
 }
 
 
