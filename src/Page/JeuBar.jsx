@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Outlet, useParams, useNavigate, Link } from "react-router";
 import { Trash2 } from "lucide-react";
 import { useRemp, useSearch } from "../lib/store"
-import { games, getHandler } from "../Game/games";
-import { getElement } from "../lib/fetch";
+import { games } from "../Game/games";
 import { nameAff } from "../Component/Text";
+import { LigneElement } from "../Component/NomElement";
 
 let jeu
 
@@ -42,33 +42,6 @@ const MAX_RESULTATS = 12;
 
 const simplifier = texte =>
     nameAff(texte || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-// Un résultat : l'affichage « nom » du type une fois le contenu chargé ; le
-// nom seul en attendant, ou si le type n'a pas cet affichage
-function Resultat({ element }) {
-
-    const Nom = getHandler(jeu, element.type)?.display?.nom;
-    const [contenu, setContenu] = useState(null);
-
-    useEffect(() => {
-
-        let annule = false;
-
-        if (Nom) {
-            getElement(element.id)
-                .then(r => !annule && setContenu(r?.content || null))
-                .catch(() => { });
-        }
-
-        return () => {
-            annule = true;
-        };
-    }, [element.id, Nom]);
-
-    return Nom && contenu
-        ? <Nom content={contenu} />
-        : <span>{nameAff(element.name || "")}</span>;
-}
 
 function Search({ search }) {
 
@@ -199,22 +172,13 @@ function Search({ search }) {
                             }}
                             onMouseEnter={() => setActif(k)}
                             style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
                                 padding: "4px 10px",
                                 cursor: "pointer",
                                 backgroundColor: k === actif ? "#e3f2fd" : undefined,
                             }}
                         >
-                            <span style={{ flex: 1, minWidth: 0 }}>
-                                <Resultat element={element} />
-                            </span>
-                            {/* Ce à quoi il est lié (faction, événement…), puis son type */}
-                            <span style={{ flex: "none", fontSize: 11, color: "#666", textAlign: "right" }}>
-                                {element.lie && <span style={{ color: "#333" }}>{element.lie} · </span>}
-                                {getHandler(jeu, element.type)?.name || element.type}
-                            </span>
+                            {/* Le nom et ses icônes, ce à quoi il est lié, son type */}
+                            <LigneElement jeu={jeu} element={element} />
                         </div>
                     ))}
 

@@ -1349,8 +1349,6 @@ export function Partie({ id }) {
                                 <MesCompteurs userId={moi} />
                             </Repli>
 
-                            <Zone zone={`joueur:${moi}:main`} titre="Ma main" cartes={0.65} repli="main" />
-
                             {/* Clic : utiliser l'agent. Ctrl + clic : le supprimer. */}
                             <Zone
                                 zone={`joueur:${moi}:agents`}
@@ -1358,6 +1356,8 @@ export function Partie({ id }) {
                                 repli="agents"
                             />
                             <Zone zone={`joueur:${moi}:agentsUses`} titre="Mes agents usés" repli="agentsUses" />
+
+                            <Zone zone={`joueur:${moi}:main`} titre="Ma main" cartes={0.65} repli="main" />
 
                             {/* Marqueurs à poser : le mien, et le marqueur d'activation
                                 (neutre, noir). Illimités : glisser vers la carte. */}

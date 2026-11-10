@@ -4,7 +4,7 @@ import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE } from "./Interac
 import { MARQUEUR, DETTE, estUniteMercenaire } from "./miseEnPlace";
 import { useElements } from "./sync";
 import { ERREUR_CARTE_ABSENTE } from "./etat";
-import { getFromType } from "../../../lib/store";
+import { getFromType, nomDeListe } from "../../../lib/store";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 
 // Qui a émis une faveur : le joueur, ou la faction neutre (marques.neutre)
@@ -514,7 +514,8 @@ export function Transaction({ fermer }) {
             ...getFromType(search, [type]).map(e => ({ type, id: e.id })),
             ...(type === "mercenaire" ? unitesMercenaires.map(e => ({ type: "unit", id: e.id })) : []),
         ]
-            .map(e => ({ ...e, nom: nomElement(search, e) }))
+            // (comme dans les autres listes : « nom — faction » pour distinguer les homonymes)
+            .map(e => ({ ...e, nom: nomDeListe(search.find(x => x.id === e.id)) || nomElement(search, e) }))
             .filter(e => !filtreCarte || e.nom.toLowerCase().includes(filtreCarte.toLowerCase()))
             .sort((x, y) => x.nom.localeCompare(y.nom)),
     }));

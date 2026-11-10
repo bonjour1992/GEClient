@@ -409,10 +409,13 @@ Trois sortes :
 - `miseEnPlace` : `placer(unite, plan)` et `actions(plan)` modifient la mise en
   place d'une faction (ci-dessous).
 - `bouton` : un bouton de plus sur la fiche de la carte (`ScriptsCarte.jsx`).
-  Aujourd'hui « Mettre en place » sur un événement : met en jeu les éléments
-  liés à l'événement par leur type de lien (feuille de technologie chez chaque
-  joueur, promesses en réserve, tuiles en réserve de tuiles spéciales, le reste
-  sur la table), en autant d'exemplaires que le dit l'élément ; compteur
+  Aujourd'hui « Mettre en place » sur un événement, avec un script par
+  événement : `poses` liste ce qui est mis en jeu et où (`vers` : la table,
+  chaque joueur, la réserve de tuiles spéciales, la réserve de promesses, la
+  case Événement — `{ evenement: k }` — ou la case Agenda, lois à venir —
+  `{ agenda: k }` — du tour T + k, T étant le tour de l'événement) ;
+  `anomalies` pose des unités neutres sur les systèmes du plateau qui ont une
+  anomalie donnée ; `reste` rappelle ce qui se fait à la main. Compteur
   `evenement:<id>:place`.
 
 Un glisser-déposer ne déclenche jamais de script. Outil « Scripts de règles »

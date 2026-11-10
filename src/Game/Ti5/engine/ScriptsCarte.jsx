@@ -1,5 +1,7 @@
-import { useEngine, BoutonRegle, nomElement } from "./Interaction";
-import { getList } from "../../../lib/fetch";
+import { useEngine, BoutonRegle, nomElement, distanceCases } from "./Interaction";
+import { chargerContenu } from "./sync";
+import { normaliserPlateau } from "../hexSpirale";
+import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
 import { RESERVE_TUILES, exemplaires } from "./miseEnPlace";
 
@@ -21,82 +23,129 @@ export function ScriptsCarte({ c, fermer }) {
     return scriptsActifs(scriptsDesactives)
         .filter(s => s.sorte === "bouton" && concerne(s, c.ref))
         .map(s => (s.bouton === "evenement"
-            ? <MettreEnPlaceEvenement key={s.id} c={c} fermer={fermer} />
+            ? <MettreEnPlaceEvenement key={s.id} c={c} script={s} fermer={fermer} />
             : null));
 }
 
 // ------------------------------------------------------------
 // MISE EN PLACE D'UN ÉVÉNEMENT
 //
-// Met en jeu les éléments liés à l'événement (type de lien « Lié à
-// un événement », Component/TypeLien.jsx), selon leur type :
-//
-//   feuille de technologie   chez chaque joueur qui ne l'a pas
-//   promesse                 dans la réserve de promesses
-//   tuile système            dans la réserve de tuiles spéciales
-//   agenda, relique, carte   sur la table (à placer selon le texte)
-//
-// en autant d'exemplaires que le dit l'élément. Les planètes viennent
-// avec leur système, et les unités se posent à la main (réserve
-// neutre, recherche de carte). Le reste du texte de l'événement
-// (« à T+1… ») reste à la main : la fiche montre les cartes citées.
-// Le compteur evenement:<id>:place retient que c'est fait.
+// Chaque événement a son script (scripts.js) : la liste de ce qu'il
+// met en jeu (`poses`) et où. T est le tour de l'événement : celui de
+// sa case du déroulé, sinon le tour en cours. Une case au-delà du
+// dernier tour n'existe pas : l'élément n'est alors pas posé.
+// Le reste du texte (`reste`) se fait à la main ; le compteur
+// evenement:<id>:place retient que la mise en place est faite.
 // ------------------------------------------------------------
 
-// Types dont un élément peut être lié à un événement, et où il va
-const DESTINATIONS = {
-    techsheet: "joueurs",
-    Promesse: "general:promesses",
-    system: RESERVE_TUILES,
-    Agenda: "general:table",
-    relique: "general:table",
-    mercenaire: "general:table",
-    agent: "general:table",
-};
+function MettreEnPlaceEvenement({ c, script, fermer }) {
 
-function MettreEnPlaceEvenement({ c, fermer }) {
-
-    const { etat, index, envoyer, partie, jeu, search, aviser, signaler } = useEngine();
+    const { etat, index, envoyer, partie, search, aviser } = useEngine();
 
     const compteur = `evenement:${c.ref.id}:place`;
     const nom = nomElement(search, c.ref);
 
-    async function faire(commentaire) {
+    // Tour de l'événement
+    const tour = Number(/^general:evenement:(\d+)$/.exec(c.zone || "")?.[1]) || etat.tour;
 
-        const actions = [];
-        const poses = [];
+    // Zone d'une pose : { zone } ou { horsDeroule: tour }
+    function zoneDe(vers) {
 
-        for (const [type, destination] of Object.entries(DESTINATIONS)) {
+        if (vers === "table") {
+            return { zone: "general:table" };
+        }
 
-            const lies = ((await getList(jeu, type)) || []).filter(e =>
-                e.content?.lienType === "evenement" && Number(e.content.lienElement?.id) === c.ref.id);
+        if (vers === "tuiles") {
+            return { zone: RESERVE_TUILES };
+        }
 
-            for (const e of lies) {
+        if (vers === "promesses") {
+            return { zone: "general:promesses" };
+        }
 
-                const ref = { type, id: e.id };
+        const [rangee, k] = Object.entries(vers)[0];
+        const t = tour + k;
 
-                if (destination === "joueurs") {
+        return t <= turnNumber ? { zone: `general:${rangee}:${t}` } : { horsDeroule: t };
+    }
 
-                    // Une feuille par joueur qui ne l'a pas encore
-                    const sans = partie.joueurs.filter(j =>
-                        !(index.parZone.get(`joueur:${j.userId}:tech`) || []).some(x => x.ref?.id === e.id));
+    // Unités neutres posées sur les anomalies du plateau
+    async function surAnomalies({ unite, n, types, loinDesNatals }) {
 
-                    actions.push(...sans.map(j => ({ type: "creer", ref, zone: `joueur:${j.userId}:tech`, proprio: j.userId })));
-                } else {
-                    actions.push({ type: "creer", ref, zone: destination, n: exemplaires(e.content) });
-                }
+        const plateau = normaliserPlateau(await chargerContenu(partie.plateau));
+        const natals = plateau.type.map((type, i) => (type === "natal" ? i : -1)).filter(i => i >= 0);
 
-                poses.push((e.content.name || "").replace(/^(![^!]*!)+/, ""));
+        const tuiles = Object.values(etat.composants)
+            .filter(x => x.ref?.type === "system" && /^hex:\d+$/.test(x.zone));
+
+        const cases = [];
+
+        for (const tuile of tuiles) {
+
+            const numero = Number(tuile.zone.slice(4));
+            const contenu = await chargerContenu(tuile.ref.id);
+
+            if (types.includes(contenu?.anomaly) &&
+                !(loinDesNatals && natals.some(i => distanceCases(i, numero) <= 1))) {
+                cases.push(numero);
             }
         }
 
-        if (!poses.length) {
-            signaler(`${nom} : aucun élément n'est lié à cet événement (type de lien « Lié à un événement »).`);
-            return;
+        return cases.map(numero => ({ type: "creer", ref: { type: "unit", id: unite }, zone: "hex:" + numero, n }));
+    }
+
+    async function faire(commentaire) {
+
+        const actions = [];
+        const horsDeroule = [];
+
+        for (const pose of script.poses || []) {
+
+            const ref = { type: pose.type, id: pose.id };
+
+            if (pose.vers === "joueurs") {
+
+                // Une feuille par joueur qui ne l'a pas encore
+                const sans = partie.joueurs.filter(j =>
+                    !(index.parZone.get(`joueur:${j.userId}:tech`) || []).some(x => x.ref?.id === pose.id));
+
+                actions.push(...sans.map(j => ({ type: "creer", ref, zone: `joueur:${j.userId}:tech`, proprio: j.userId })));
+                continue;
+            }
+
+            const { zone, horsDeroule: t } = zoneDe(pose.vers);
+
+            if (!zone) {
+                horsDeroule.push(`${nomElement(search, ref)} (tour ${t})`);
+                continue;
+            }
+
+            const voulu = typeof pose.n === "function"
+                ? pose.n(partie.joueurs.length)
+                : pose.n ?? exemplaires(await chargerContenu(pose.id));
+
+            // Tuiles : la réserve en a peut-être déjà (mise en place de la partie) ;
+            // on complète jusqu'au nombre voulu, où qu'elles soient
+            const n = pose.vers === "tuiles"
+                ? voulu - Object.values(etat.composants).filter(x => x.ref?.type === pose.type && x.ref.id === pose.id).length
+                : voulu;
+
+            if (n > 0) {
+                actions.push({ type: "creer", ref, zone, n });
+            }
         }
 
-        envoyer([...actions, { type: "compteur", id: compteur, valeur: 1 }], commentaire);
-        aviser(`${nom} : mis en jeu — ${poses.join(", ")}. Le reste du texte se fait à la main.`);
+        const pirates = script.anomalies ? await surAnomalies(script.anomalies) : [];
+
+        envoyer([...actions, ...pirates, { type: "compteur", id: compteur, valeur: 1 }], commentaire);
+
+        aviser([
+            `${nom} : mis en place — ${script.description}`,
+            script.anomalies && `${pirates.length} système(s) concerné(s).`,
+            horsDeroule.length && `Après le dernier tour, non posé : ${horsDeroule.join(", ")}.`,
+            script.reste && `Reste à faire à la main : ${script.reste}.`,
+        ].filter(Boolean).join(" "));
+
         fermer?.();
     }
 
@@ -106,7 +155,7 @@ function MettreEnPlaceEvenement({ c, fermer }) {
             nom={`Mettre en place ${nom}`}
             obstacles={[etat.compteurs[compteur] && "cet événement est déjà mis en place"]}
             faire={faire}
-            title="Met en jeu les éléments liés à cet événement : feuille de technologie chez chaque joueur, promesses dans la réserve, tuiles dans la réserve de tuiles spéciales, le reste sur la table"
+            title={script.description + (script.reste ? ` Reste à la main : ${script.reste}.` : "")}
         >
             Mettre en place
         </BoutonRegle>

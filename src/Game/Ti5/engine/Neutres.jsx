@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
+import { LigneElement } from "../../../Component/NomElement";
 import { getFromType } from "../../../lib/store";
 import { pub } from "../../../lib/fetch";
-import { useEngine, Emplacements, Zone, Source, Defilable, nomElement, nomType, COULEUR_A_FAIRE } from "./Interaction";
+import { useEngine, Emplacements, Zone, Source, Defilable, nomElement, COULEUR_A_FAIRE } from "./Interaction";
 import { useElements } from "./sync";
 import { FAVEUR } from "./miseEnPlace";
 import { stylePions } from "./PlateauJoueur";
@@ -436,11 +437,8 @@ export function RechercheCarte() {
                 <div style={styleListe}>
                     {trouves.slice(0, MAX_RESULTATS).map(e => (
                         <Onglet key={e.id} ouvert={ouverte === e.id} onClick={() => setOuverte(e.id)}>
-                            {sansPrefixe(e.name)}
-                            {/* Ce à quoi il est lié (faction, événement…) distingue les homonymes */}
-                            <span style={{ fontSize: 11, color: "#666" }}>
-                                {e.lie ? e.lie + " · " : ""}{nomType(jeu, e.type)}
-                            </span>
+                            {/* Comme la recherche de l'en-tête : nom et icônes, lien, type */}
+                            <LigneElement jeu={jeu} element={e} />
                         </Onglet>
                     ))}
                 </div>

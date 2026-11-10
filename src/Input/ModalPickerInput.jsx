@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, LinkToString } from "../lib/datatype";
 import { useSearch, getFromSearch, getFromType, nomDeListe } from "../lib/store";
 import { LoadAndDisplay } from "../Component/LoadAndDisplay";
@@ -7,6 +7,10 @@ import { getHandler, getHandlerTypes } from "../Game/games";
 import { useParams } from "react-router";
 import { Label } from "./inputUtils";
 import { Text } from "../Component/Text";
+import { LigneElement } from "../Component/NomElement";
+
+// Sans accents ni majuscules, pour le filtre
+const simplifier = texte => (texte || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 
 function ModalPicker({
@@ -36,12 +40,27 @@ function ModalPicker({
             new Link(availableTypes[0])
         );
 
+    // Texte du filtre ; la liste n'est construite que fenêtre ouverte
+    const [filtre, setFiltre] = useState("");
+    const [ouvert, setOuvert] = useState(false);
+
+    // À l'ouverture, la liste défile jusqu'à l'élément choisi
+    useEffect(() => {
+        if (ouvert) {
+            document.getElementById(modalId.current)
+                ?.querySelector("[data-choisi]")
+                ?.scrollIntoView({ block: "center" });
+        }
+    }, [ouvert]);
+
     const open = () => {
 
         // L'élément déjà choisi est sélectionné à l'ouverture (et non « Aucun »)
         const actuel = value?.id > 0 && search.find(e => e.id === value.id);
 
         setSelectedType(null);
+        setFiltre("");
+        setOuvert(true);
 
         setSelected(
             actuel
@@ -60,6 +79,8 @@ function ModalPicker({
     };
 
     const close = () => {
+        setOuvert(false);
+
         const modal =
             document.getElementById(
                 modalId.current
@@ -111,6 +132,22 @@ function ModalPicker({
                 availableTypes
             );
 
+    // Filtre sur le nom et sur ce à quoi l'élément est lié
+    const cherche = simplifier(filtre.trim());
+
+    const visibles = cherche
+        ? options.filter(e => simplifier(nomDeListe(e)).includes(cherche))
+        : options;
+
+    const estChoisi = e => selected?.id === e.id;
+
+    const styleLigne = choisi => ({
+        padding: "3px 8px",
+        cursor: "pointer",
+        backgroundColor: choisi ? "#bbdefb" : undefined,
+        fontWeight: choisi ? 700 : 400,
+    });
+
     return (
         <>
             {children({ open })}
@@ -141,8 +178,11 @@ function ModalPicker({
 
                             margin: "50px auto 0 auto",
 
-                            width: 400,
-                            height: 400,
+                            width: "min(760px, 96vw)",
+                            height: "min(520px, calc(100vh - 70px))",
+
+                            display: "flex",
+                            flexDirection: "column",
 
                             backgroundColor:
                                 "#FFF",
@@ -201,7 +241,7 @@ function ModalPicker({
                         </div>
 
                         {/* ==================================
-                            SÉLECTION
+                            TYPE, FILTRE, VALIDATION
                         ================================== */}
 
                         <div
@@ -209,6 +249,9 @@ function ModalPicker({
                                 padding: 8,
                                 borderBottom:
                                     "2px solid #ccc",
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 6,
                             }}
                         >
 
@@ -247,60 +290,13 @@ function ModalPicker({
                                 </select>
                             )}
 
-                            <select
-                                value={
-                                    LinkToString(
-                                        selected
-                                    )
-                                }
-                                onChange={e => {
-
-                                    setSelected(
-                                        new Link()
-                                            .fromString(
-                                                e.target.value
-                                            )
-                                    );
-
-                                }}
-                            >
-
-                                <option
-                                    value={
-                                        `${
-                                            selectedType ??
-                                            availableTypes[0]
-                                        }#-1`
-                                    }
-                                >
-                                    Aucun
-                                </option>
-
-                                {options.map(
-                                    e => (
-
-                                        <option
-                                            key={
-                                                `${e.type}-${e.id}`
-                                            }
-                                            value={
-                                                new Link(
-                                                    e.type,
-                                                    e.id
-                                                ).toString()
-                                            }
-                                        >
-                                            {nomDeListe(e)}
-                                            {/* Tous les types mélangés : le type aide à s'y retrouver */}
-                                            {!selectedType && availableTypes.length > 1
-                                                ? ` (${getHandler(jeu, e.type)?.name || e.type})`
-                                                : ""}
-                                        </option>
-
-                                    )
-                                )}
-
-                            </select>
+                            <input
+                                type="search"
+                                value={filtre}
+                                onChange={e => setFiltre(e.target.value)}
+                                placeholder="filtrer par nom"
+                                style={{ flex: "1 1 160px", minWidth: 0 }}
+                            />
 
                             <button
                                 type="button"
@@ -312,27 +308,79 @@ function ModalPicker({
                         </div>
 
                         {/* ==================================
-                            APERÇU
+                            LISTE (à gauche) ET APERÇU (à droite)
+
+                            Les noms sont ceux de la recherche de
+                            l'en-tête : icônes, lien, type.
                         ================================== */}
 
                         <div
                             style={{
-                                padding: 10,
-                                overflow: "auto",
-                                height: 320,
+                                flex: 1,
+                                minHeight: 0,
+                                display: "flex",
                             }}
                         >
 
-                            <LoadAndDisplay
-                                link={
-                                    selected?.__link
-                                        ? selected
-                                        : new Link(
-                                            selectedType ??
-                                            availableTypes[0]
-                                        )
-                                }
-                            />
+                            <div
+                                data-liste-selecteur
+                                style={{
+                                    flex: "0 0 46%",
+                                    overflowY: "auto",
+                                    borderRight: "2px solid #ccc",
+                                    fontFamily: "Arial, sans-serif",
+                                    fontSize: 14,
+                                }}
+                            >
+
+                                <div
+                                    onClick={() => setSelected(new Link(selectedType ?? availableTypes[0]))}
+                                    onDoubleClick={validate}
+                                    style={styleLigne(!(selected?.id > 0))}
+                                >
+                                    Aucun
+                                </div>
+
+                                {ouvert && visibles.map(e => (
+                                    <div
+                                        key={`${e.type}-${e.id}`}
+                                        data-choisi={estChoisi(e) || undefined}
+                                        onClick={() => setSelected(new Link(e.type, e.id))}
+                                        onDoubleClick={validate}
+                                        style={styleLigne(estChoisi(e))}
+                                    >
+                                        {/* (un seul type proposé : inutile de le répéter) */}
+                                        <LigneElement
+                                            jeu={jeu}
+                                            element={e}
+                                            sansType={!!selectedType || availableTypes.length === 1}
+                                        />
+                                    </div>
+                                ))}
+
+                            </div>
+
+                            <div
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    padding: 10,
+                                    overflow: "auto",
+                                }}
+                            >
+
+                                <LoadAndDisplay
+                                    link={
+                                        selected?.__link
+                                            ? selected
+                                            : new Link(
+                                                selectedType ??
+                                                availableTypes[0]
+                                            )
+                                    }
+                                />
+
+                            </div>
 
                         </div>
 

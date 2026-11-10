@@ -21,8 +21,8 @@
 // toutes les parties (élément de type « reglage », SCRIPTS_DESACTIVES).
 //
 // Ajouter un script : une entrée de plus dans SCRIPTS. Le tableau
-// d'implémentabilité (demandes-ti5/implementabilite.md) dit ce qui
-// est faisable de la même façon.
+// d'implémentabilité (doc/implementabilite.md) dit ce qui est
+// faisable de la même façon.
 // ============================================================
 
 // Nom de l'élément « reglage » qui garde la liste des scripts désactivés
@@ -162,23 +162,126 @@ export const SCRIPTS = [
     // --------------------------------------------------------
     // BOUTONS DE LA FICHE D'UNE CARTE
     //
-    // carte.id absent : le script vaut pour toutes les cartes du type.
     // Le bouton lui-même est dans ScriptsCarte.jsx (il lui faut l'état
     // de la partie) : `bouton` y renvoie.
     // --------------------------------------------------------
 
-    {
-        id: "mise-en-place-evenement",
-        sorte: "bouton",
-        carte: { type: "evenement" },
-        ecritLe: null,
-        nom: "Mise en place d'un événement",
-        description: "Bouton « Mettre en place » de la fiche d'un événement : met en jeu les éléments liés à " +
-            "cet événement (type de lien « Lié à un événement ») — feuille de technologie chez chaque joueur, " +
-            "promesses dans la réserve, tuiles dans la réserve de tuiles spéciales, le reste sur la table.",
-        bouton: "evenement",
-    },
+    // --------------------------------------------------------
+    // MISE EN PLACE D'UN ÉVÉNEMENT : un script par événement
+    //
+    // Bouton « Mettre en place » de la fiche de l'événement. T est le
+    // tour de l'événement (celui de sa case du déroulé).
+    //
+    // poses : [{ type, id, vers, n }] — ce qui est mis en jeu
+    //   vers   "table"            la table
+    //          "joueurs"          un exemplaire chez chaque joueur (feuille de technologie)
+    //          "tuiles"           la réserve de tuiles spéciales (complétée jusqu'à n :
+    //                             les tuiles déjà en jeu comptent)
+    //          "promesses"        la réserve de promesses
+    //          { evenement: k }   la case Événement du tour T + k
+    //          { agenda: k }      la case Agenda (lois à venir) du tour T + k
+    //   n      nombre d'exemplaires : un nombre, ou une fonction du nombre de
+    //          joueurs ; par défaut le champ « exemplaires » de l'élément
+    // anomalies : { unite, n, types, loinDesNatals } — n unités neutres sur
+    //          chaque système du plateau qui a une de ces anomalies
+    // reste : ce qui reste à faire à la main (rappelé dans le bandeau orange)
+    // --------------------------------------------------------
+
+    evenement("evenement-tempete-spatiale", 450, 1794335055032, "Tempête spatiale", {
+        description: "« Tempête spatiale » au tour T+1, « Fin de la tempête » au tour T+5, la feuille « Tempête stellaire » chez chaque joueur.",
+        poses: [
+            { type: "habilite", id: 442, vers: { evenement: 1 } },
+            { type: "habilite", id: 443, vers: { evenement: 5 } },
+            { type: "techsheet", id: 520, vers: "joueurs" },
+        ],
+    }),
+
+    evenement("evenement-catastrophe-lointaine", 455, 1794335055033, "Catastrophe lointaine", {
+        description: "« Péage aux frontières » aux tours T+1 et T+2, « Offre d'asile » au tour T+2, les promesses « Tuteur des réfugiés » dans la réserve.",
+        poses: [
+            { type: "habilite", id: 452, vers: { evenement: 1 }, n: 1 },
+            { type: "habilite", id: 452, vers: { evenement: 2 }, n: 1 },
+            { type: "habilite", id: 453, vers: { evenement: 2 } },
+            { type: "Promesse", id: 454, vers: "promesses" },
+        ],
+    }),
+
+    evenement("evenement-recrudescence-piraterie", 459, 1794335055034, "Recrudescence de la piraterie", {
+        description: "La faction neutre « Pirate » sur la table ; 2 vaisseaux pirates sur chaque champ d'astéroïdes et chaque rupture gravitationnelle non adjacents à une case natale.",
+        poses: [{ type: "neutral", id: 521, vers: "table" }],
+        anomalies: { unite: 407, n: 2, types: ["ast", "rift"], loinDesNatals: true },
+    }),
+
+    evenement("evenement-signal-capte", 485, 1794335055043, "Signal capté", {
+        description: "« Présence de cache » au tour T ; « Cache », « BDD technique », « vaisseau relique » et « Plan ancien » sur la table ; les 4 tuiles SIG dans la réserve de tuiles spéciales.",
+        poses: [
+            { type: "habilite", id: 491, vers: { evenement: 0 } },
+            { type: "habilite", id: 486, vers: "table" },
+            { type: "habilite", id: 487, vers: "table" },
+            { type: "unit", id: 854, vers: "table" },
+            { type: "relique", id: 853, vers: "table", n: 1 },
+            { type: "system", id: 477, vers: "tuiles" },
+            { type: "system", id: 478, vers: "tuiles" },
+            { type: "system", id: 479, vers: "tuiles" },
+            { type: "system", id: 480, vers: "tuiles" },
+        ],
+        reste: "mélangez les 4 tuiles SIG aux 12 prochaines tuiles système ; un fragment de relique sur chaque système exploré ; numérotez de 1 à 4, face cachée, les 4 cartes posées sur la table",
+    }),
+
+    evenement("evenement-grand-khan", 553, 1794335055053, "Grand Khan", {
+        description: "La faction neutre « Invasion du grand Khan » au tour T+1.",
+        poses: [{ type: "neutral", id: 526, vers: { evenement: 1 } }],
+        reste: "au tour T+1, à un endroit aléatoire : 1 Palais du khan et 25 frégates du khan (réserve des unités neutres)",
+    }),
+
+    evenement("evenement-rebellion-interplanetaire", 562, 1794335055058, "Rébellion interplanétaire", {
+        description: "La faction neutre « Rébellion inter-planétaire » sur la table ; l'agenda « Collaboration contre révolutionnaire » dans les lois à venir du tour T+1.",
+        poses: [
+            { type: "neutral", id: 559, vers: "table" },
+            { type: "Agenda", id: 564, vers: { agenda: 1 } },
+        ],
+        reste: "les jets de rébellion de chaque planète (1D3 rebelles par jet réussi)",
+    }),
+
+    evenement("evenement-comment-la-democratie-meurt", 719, 1794335055066, "Comment la démocratie meurt", {
+        description: "La faction neutre « Conclave secret » sur la table ; quatre agendas dans les lois à venir des tours T+2 à T+5.",
+        poses: [
+            { type: "neutral", id: 718, vers: "table" },
+            { type: "Agenda", id: 717, vers: { agenda: 2 } },
+            { type: "Agenda", id: 726, vers: { agenda: 3 } },
+            { type: "Agenda", id: 727, vers: { agenda: 4 } },
+            { type: "Agenda", id: 721, vers: { agenda: 5 } },
+        ],
+    }),
+
+    evenement("evenement-rupture-espace-temps", 823, 1794045501935, "Rupture de l'espace-temps", {
+        description: "« Rupture de l'espace-temps » et « Étude des failles » sur la table ; Akhenar et les failles (la moitié des joueurs, arrondie au supérieur, + 1) dans la réserve de tuiles spéciales ; la feuille « Rupture » chez chaque joueur.",
+        poses: [
+            { type: "habilite", id: 814, vers: "table" },
+            { type: "habilite", id: 815, vers: "table" },
+            { type: "system", id: 813, vers: "tuiles", n: 1 },
+            { type: "system", id: 811, vers: "tuiles", n: joueurs => Math.ceil(joueurs / 2) + 1 },
+            { type: "techsheet", id: 822, vers: "joueurs" },
+        ],
+        reste: "posez Akhenar et les failles à côté du plateau (systèmes secondaires) ; par faille : 3 Nefs de la rupture, et un jeton trou de ver oméga sur un système aléatoire de la galaxie",
+    }),
 ];
+
+// Script de mise en place d'un événement (bouton de sa fiche)
+function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, reste }) {
+    return {
+        id,
+        sorte: "bouton",
+        carte: { type: "evenement", id: carte },
+        ecritLe,
+        nom: `Mise en place : ${nom}`,
+        description,
+        bouton: "evenement",
+        poses,
+        anomalies,
+        reste,
+    };
+}
 
 // Vaisseau de plus grande capacité (pour y embarquer des unités)
 function plusGrandeCapacite(vaisseaux) {
