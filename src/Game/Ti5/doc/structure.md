@@ -436,6 +436,41 @@ Un script qui a une `porte` (Creuss) pose cette tuile-là sur la case natale ;
 le système natal va alors dans les systèmes secondaires, sur la première case
 libre, avec les unités. Compteur `joueur:<u>:miseEnPlace`.
 
+### déplacement assisté
+
+`engine/Deplacement.jsx` (`useDeplacement`, appelé par `Espace.jsx`) : à la
+phase de déplacement, un panneau au-dessus de la carte déroule un déplacement
+et l'envoie en un coup. Le glisser-déposer des vaisseaux reste possible.
+
+1. Ctrl + clic active un système (marqueur de faction) : c'est la destination.
+   Les systèmes activés sont des boutons ; on y choisit la destination.
+2. « Choisir le système de départ », puis clic sur la carte.
+3. Vaisseaux cochés, et unités transportables du système à charger (réparties
+   selon la capacité). Agents par type de vaisseau (`agentDe` : amiral pour
+   les militaires et les transports, négociant, logisticien, scientifique), en
+   flottes de 3 (`coutEnAgents` : un vaisseau seul, un agent ; une flotte,
+   deux) ; utilisés, ou dépensés si le système de départ est déjà activé.
+4. Trajet tracé sur la carte : clic ou glisser de case en case (pendant un
+   tracé, les gestes sont pris en capture : ni glisser de pion, ni défilement —
+   `data-sans-defilement`). Deux cases se suivent si elles sont voisines
+   (`distanceCases`) ou si elles partagent un trou de ver de la même catégorie,
+   lu sur la tuile ou sur un token posé (`typeTrou`, d'après l'image).
+5. Blocage, case par case : les autres unités de chaque case du trajet sont
+   listées ; chaque vaisseau peut s'arrêter sur une case, ou rester au départ.
+   Rupture gravitationnelle quittée par un bord, trou de ver oméga : « Lancer
+   les jets » (un dé de 10 par vaisseau, lancé par le serveur) arrête,
+   avantage ou touche le vaisseau selon la règle.
+6. « Déplacer » (`BoutonRegle`) : rouge gris si le trajet ne mène pas au
+   système activé, saute entre deux cases, traverse une supernova ou une
+   nébuleuse, dépasse le mouvement d'un vaisseau, manque d'agents ou de
+   capacité, ou si les jets ne sont pas lancés. Le journal porte le coût du
+   trajet. Un système où des vaisseaux se sont arrêtés est activé à son tour
+   et devient la destination.
+
+Non gérés : les hyperlanes (comptées comme des cases ordinaires), les champs
+d'astéroïdes, le vaisseau amiral de Creuss comme trou de ver, la règle exacte
+du blocage (c'est le joueur qui dit quel vaisseau s'arrête).
+
 ### technologie posée sur une feuille
 
 `Technologie.jsx`, `Feuille` : une technologie (composant de type `tech`)

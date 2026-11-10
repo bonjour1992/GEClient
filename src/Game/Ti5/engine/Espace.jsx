@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useDeplacement } from "./Deplacement";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
 import { PlateauView } from "../plateauVue";
 import { systemSize } from "../systeme";
@@ -418,6 +419,9 @@ export function Espace() {
 
             if (commentaire) {
                 envoyer([{ type: "creer", jeton: MARQUEUR, zone: "hex:" + numero, proprio: moi }], commentaire);
+
+                // Le système activé devient la destination du déplacement assisté
+                deplacement.activer(numero);
             }
 
             return;
@@ -437,6 +441,73 @@ export function Espace() {
             setCaseVue(numero);
         }
     }
+
+    // --------------------------------------------------------
+    // DÉPLACEMENT ASSISTÉ (Deplacement.jsx)
+    //
+    // Pendant qu'il attend un clic sur la carte (choix du départ, tracé
+    // du trajet), les clics et le glisser sur les cases lui reviennent :
+    // ils sont pris à la descente (capture), avant le glisser des pions
+    // (Plan) et le défilement de la carte (Defilable). Un Ctrl + clic
+    // garde son sens (activer un système).
+    // --------------------------------------------------------
+
+    const deplacement = useDeplacement({ tuiles, systemes });
+
+    // Case où le bouton de la souris a été enfoncé (début d'un tracé glissé)
+    const debutTrace = useRef(null);
+
+    const caseSous = event => {
+        const noeud = event.target.closest?.("[data-case]");
+        return noeud ? Number(noeud.dataset.case) : null;
+    };
+
+    const poigneesDeplacement = deplacement.mode ? {
+        "data-sans-defilement": "",
+        onPointerDownCapture: event => {
+            if (!event.ctrlKey) {
+                event.stopPropagation();
+                debutTrace.current = caseSous(event);
+            }
+        },
+        onPointerMoveCapture: event => {
+
+            const numero = caseSous(event);
+
+            if (event.buttons !== 1 || numero === null || debutTrace.current === null || numero === debutTrace.current) {
+                return;
+            }
+
+            // On sort de la case de départ du geste : elle entre dans le trajet, puis les suivantes
+            if (debutTrace.current !== -1) {
+                deplacement.survolCase(debutTrace.current);
+                debutTrace.current = -1;
+            }
+
+            deplacement.survolCase(numero);
+        },
+        onPointerUpCapture: () => {
+            // (-1 : un tracé glissé vient de finir, le clic qui suit ne compte pas)
+            debutTrace.current = debutTrace.current === -1 ? -2 : null;
+        },
+        onClickCapture: event => {
+
+            const numero = caseSous(event);
+
+            if (event.ctrlKey) {
+                return;
+            }
+
+            event.stopPropagation();
+
+            if (debutTrace.current !== -2 && numero !== null) {
+                deplacement.clicCase(numero);
+            }
+
+            debutTrace.current = null;
+        },
+        style: { cursor: "crosshair" },
+    } : {};
 
     // --------------------------------------------------------
     // PIONS
@@ -468,6 +539,9 @@ export function Espace() {
                         Ctrl + clic :<br />explorer
                     </div>
                 )}
+
+                {/* Déplacement assisté : départ, rang dans le trajet, arrivée */}
+                {deplacement.decor(i)}
 
                 {/* Combat en cours dans ce système : contour rouge s'il me
                     concerne (j'y ai des unités), jaune sinon */}
@@ -645,10 +719,18 @@ export function Espace() {
                 )}
             </div>
 
+            {/* DÉPLACEMENT ASSISTÉ (phase de déplacement) */}
+
+            {deplacement.panneau}
+
             {/* CARTE */}
 
             <Defilable style={{ maxHeight: "80vh", backgroundColor: "#111" }}>
-                <div onClick={onClick} style={{ zoom, width: "max-content", margin: "0 auto" }}>
+                <div
+                    onClick={onClick}
+                    {...poigneesDeplacement}
+                    style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
+                >
                     <Emplacements stylePions={stylePions} extra={etendard} petit>
                         <PlateauView
                             content={content}
@@ -674,7 +756,11 @@ export function Espace() {
                     </div>
 
                     <Defilable style={{ maxHeight: "60vh" }}>
-                        <div onClick={onClick} style={{ zoom, width: "max-content", margin: "0 auto" }}>
+                        <div
+                            onClick={onClick}
+                            {...poigneesDeplacement}
+                            style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
+                        >
                             <Emplacements stylePions={stylePions} extra={etendard} petit>
                                 <PlateauView
                                     content={content2}

@@ -1689,7 +1689,8 @@ export function Defilable({ children, style }) {
 
         if (
             event.button !== 0 ||
-            event.target.closest("[data-composant], [data-source], button, input, select, textarea, a")
+            // (data-sans-defilement : la carte ne défile pas pendant qu'on y trace un trajet)
+            event.target.closest("[data-composant], [data-source], [data-sans-defilement], button, input, select, textarea, a")
         ) {
             return;
         }
