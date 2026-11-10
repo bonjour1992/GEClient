@@ -533,11 +533,27 @@ function CombatSysteme({ lieu }) {
         new RegExp(`(^|<p[^>]*>|<br\\s*/?>|<li[^>]*>|,)\\s*(<strong>)?\\s*#${cle}\\b`, "i")
             .test(v.u.habilite || "");
 
-    const aFrappePreventive = v => aCapacite(v, "fpre");
+    // Script Stratégie de saut : le vaisseau est arrivé ce tour par un trou de ver
+    const aSaute = v => sorte === "spatial" && Number(v.c.marques?.saut) === etat.tour &&
+        v.camp !== NEUTRE && aScript(v.camp, "strategie-de-saut");
+
+    // (scripts : Avantage aérien pour les infanteries au combat terrestre, Stratégie de saut)
+    const aFrappePreventive = v => aCapacite(v, "fpre") || aSaute(v) ||
+        (sorte === "terrestre" && v.u.type === "inf" && v.camp !== NEUTRE && aScript(v.camp, "avantage-aerien"));
 
     // Cible spécifique : -2 pour toucher, sauf capacité de précision
-    const malus = v =>
-        (engagement(v).some(e => e.startsWith("@")) && !aCapacite(v, "prec") ? 2 : 0);
+    // (script Stratégie dominante de la cible : -2 de plus)
+    const malus = v => {
+        const cible = engagement(v).find(e => e.startsWith("@"));
+
+        if (!cible || aCapacite(v, "prec")) {
+            return 0;
+        }
+
+        const camp = parId[cible.slice(1)]?.camp;
+
+        return 2 + (camp && aScript(camp, "strategie-dominante") ? 2 : 0);
+    };
 
     // --------------------------------------------------------
     // BONUS DES SCRIPTS (technologies débloquées, scripts.js) : ils
@@ -591,6 +607,13 @@ function CombatSysteme({ lieu }) {
             sorte === "spatial" && a("arme-amplifiee") && amplifie(v) && [2, "Arme amplifiée"],
             sorte === "spatial" && a("centre-de-coordination") &&
                 dansLeSysteme(v.camp).some(c => ["dock", "fs"].includes(contenuDe(c)?.type)) && [1, "Centre de coordination"],
+            sorte === "spatial" && a("pc") &&
+                dansLeSysteme(v.camp).some(c => ["dock", "fs"].includes(contenuDe(c)?.type)) && [1, "PC"],
+            sorte === "spatial" && a("strategie-dominante") && aFrappePreventive(v) && [1, "Stratégie dominante"],
+            aSaute(v) && [1, "Stratégie de saut"],
+            // Cartographie de l'espace : les attaques contre ses vaisseaux ont −1 dans un système à anomalie
+            (sorte === "spatial" || sorte === "canons") && campVise(v) && aScript(campVise(v), "cartographie-de-l-espace") &&
+                systeme?.anomaly && !/^hpl/.test(systeme.anomaly) && [-1, "Cartographie de l'espace"],
             sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
             (sorte === "canons" || sorte === "bombardement") && a("systeme-de-visee") && [1, "Système de visée"],
             sorte === "canons" && campVise(v) && aScript(campVise(v), "bouclier-deflecteur") && [-1, "Bouclier déflecteur"],
@@ -628,6 +651,11 @@ function CombatSysteme({ lieu }) {
     const debout = x => !estDetruit(x);
 
     // Unités visées par un engagement
+    // Furtif (#furtif, script Camouflage) : tant qu'elle n'a engagé personne,
+    // l'unité ne peut qu'être ciblée — un engagement de faction ne l'atteint pas
+    const estFurtif = x => sorte === "spatial" && x.cible && engagement(x).length === 0 &&
+        (aCapacite(x, "furtif") || (x.camp !== NEUTRE && aScript(x.camp, "camouflage")));
+
     const ciblesDe = code => {
 
         if (code.startsWith("@")) {
@@ -637,7 +665,7 @@ function CombatSysteme({ lieu }) {
         const militaire = code === "n" || code[0] === "j";
         const camp = code === "n" || code === "N" ? NEUTRE : Number(code.slice(1));
 
-        return vaisseaux.filter(x => x.cible && x.camp === camp && x.militaire === militaire);
+        return vaisseaux.filter(x => x.cible && x.camp === camp && x.militaire === militaire && !estFurtif(x));
     };
 
     const cibleActuelle = v => engagement(v).find(code => ciblesDe(code).some(debout)) ?? null;

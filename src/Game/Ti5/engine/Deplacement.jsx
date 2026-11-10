@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, nomElement } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
-import { capaciteDe, depenserAgent } from "./effets";
+import { capaciteDe, depenserAgent, estDeplacementFurtif } from "./effets";
 import {
     TRAJET, DEPART, useCarte, sorteEtape, sorteJet, campsAdverses, rangArret, passagesEnCours, Passage,
 } from "./Blocage";
@@ -41,7 +41,6 @@ import {
 // transmet les clics sur les cases et dessine le trajet (decor).
 // ============================================================
 
-const TAILLE_FLOTTE = 3;
 
 // Agent du déplacement, selon les mots-clés du vaisseau
 const AGENTS = {
@@ -61,8 +60,9 @@ function agentDe(contenu) {
                 : (mots.includes("civ") ? "logisticien" : "amiral")));
 }
 
-// Agents pour n vaisseaux : une flotte de 3 en coûte deux, un vaisseau seul un
-const coutEnAgents = n => Math.floor(n / TAILLE_FLOTTE) * 2 + Math.min(n % TAILLE_FLOTTE, 2);
+// Agents pour n vaisseaux : une flotte (autant de vaisseaux que la capacité
+// logistique du joueur, 3 par défaut) en coûte deux, un vaisseau seul un
+const agentsPour = (n, flotte) => Math.floor(n / flotte) * 2 + Math.min(n % flotte, 2);
 
 const ANOMALIES = {
     hplt: "hyperlane",
@@ -82,7 +82,11 @@ const styleMini = { fontSize: 12, padding: "1px 6px" };
 
 export function useDeplacement({ tuiles }) {
 
-    const { etat, index, envoyer, joueur, moi, search, aviser, nomDe, aScript } = useEngine();
+    const { etat, index, envoyer, joueur, moi, search, aviser, nomDe, aScript, capaciteLogistique } = useEngine();
+
+    // Taille d'une flotte : la capacité logistique du joueur (script Logistique améliorée)
+    const TAILLE_FLOTTE = capaciteLogistique(moi);
+    const coutEnAgents = n => agentsPour(n, TAILLE_FLOTTE);
 
     const enPhase = /d[ée]placement/i.test(etat.phase);
 
@@ -93,6 +97,7 @@ export function useDeplacement({ tuiles }) {
     const [choisis, setChoisis] = useState([]);     // vaisseaux qui partent
     const [charges, setCharges] = useState([]);     // unités transportables à charger
     const [trajet, setTrajet] = useState([]);       // cases traversées, après le départ
+    const [gravite, setGravite] = useState(false);  // script Moteur à gravité : +1 mouvement
 
     const actif = joueur && ouvert && (enPhase || depart !== null);
 
@@ -101,7 +106,7 @@ export function useDeplacement({ tuiles }) {
     // (Blocage.jsx), systèmes activés
     // --------------------------------------------------------
 
-    const carte = useCarte(actif && depart !== null ? [depart, ...trajet] : []);
+    const carte = useCarte(actif && depart !== null ? [depart, ...trajet] : [], moi);
 
     const anomalie = carte.anomalie;
 
@@ -204,8 +209,12 @@ export function useDeplacement({ tuiles }) {
     // Risques de blocage, case par case : chaque case que l'on quitte (le
     // départ, puis chaque case avant l'arrivée)
     //   { ou, camps: unités militaires spatiales d'un autre camp, jet: "rift", "omega" ou null }
+    // Tous furtifs (#deplfurtif, script Camouflage) : les unités adverses ne les arrêtent pas
+    const tousFurtifs = selection.length > 0 &&
+        selection.every(v => estDeplacementFurtif(contenus[v.ref.id], moi, aScript));
+
     const risques = etapes
-        .map(e => ({ ou: e.de, camps: campsAdverses(carte, e.de, moi), jet: sorteJet(carte, e.de, e.a) }))
+        .map(e => ({ ou: e.de, camps: tousFurtifs ? [] : campsAdverses(carte, e.de, moi), jet: sorteJet(carte, e.de, e.a) }))
         .filter(r => r.camps.length > 0 || r.jet);
 
     // Hyperlanes : elles ne coûtent pas de mouvement, mais on ne les traverse qu'en
@@ -218,7 +227,14 @@ export function useDeplacement({ tuiles }) {
 
     // Mouvement d'un vaisseau : chaque rupture gravitationnelle franchie donne 1 de plus
     const ruptures = risques.filter(r => r.jet === "rift").length;
-    const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures;
+    // Scripts : Moteur FTL (+1), Moteur à gravité (+1, des scientifiques sont usés)
+    const avecGravite = gravite && aScript(moi, "moteur-a-gravite");
+
+    const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures +
+        (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0);
+
+    // Moteur à gravité : un scientifique par vaisseau seul, deux par flotte
+    const scientifiquesGravite = avecGravite ? disponibles("scientifique").slice(0, coutEnAgents(selection.length)) : [];
 
     const nomCamp = camp => (camp ? nomDe(camp) : "neutres");
 
@@ -252,6 +268,8 @@ export function useDeplacement({ tuiles }) {
             .map(b => `il faut ${b.cout} ${b.cout > 1 ? b.pluriel : b.nom}, ${b.dispo.length} disponible(s) : ` +
                 (b.dispo.length ? `seuls ceux-là seront ${depuisActive ? "dépensés" : "utilisés"}` : "aucun agent ne sera pris")),
         sansPlace > 0 && `${sansPlace} unité(s) chargée(s) au-delà de la capacité des vaisseaux`,
+        avecGravite && scientifiquesGravite.length < coutEnAgents(selection.length) &&
+            `Moteur à gravité : il faut ${coutEnAgents(selection.length)} scientifique(s), ${scientifiquesGravite.length} disponible(s)`,
         !carte.pret && "la carte du trajet n'est pas encore chargée (les risques de blocage ne sont pas connus)",
     ];
 
@@ -264,6 +282,7 @@ export function useDeplacement({ tuiles }) {
         setChoisis([]);
         setCharges([]);
         setTrajet([]);
+        setGravite(false);
         setMode(nouveauDepart === null ? null : "trajet");
     }
 
@@ -274,8 +293,12 @@ export function useDeplacement({ tuiles }) {
 
         const uses = `joueur:${moi}:agentsUses`;
 
-        const k = rangArret(carte, moi, depart, trajet, false);
+        const k = rangArret(carte, moi, depart, trajet, false, tousFurtifs);
         const reste = trajet.slice(k + 1);
+
+        // Script Stratégie de saut : arrivée directe par un trou de ver (marque lue au combat)
+        const saut = !reste.length && aScript(moi, "strategie-de-saut") &&
+            (etapes[etapes.length - 1]?.sorte || "").startsWith("trou:");
 
         envoyer([
             // Agents : utilisés, ou dépensés si le système de départ est déjà activé
@@ -285,7 +308,9 @@ export function useDeplacement({ tuiles }) {
                 : [{ type: "deplacer", c: agent.id, vers: uses }]))),
             // Chargement, avant le départ : les unités suivent leur vaisseau
             ...chargement.map(x => ({ type: "deplacer", c: x.unite.id, sur: x.vaisseau.id })),
+            ...scientifiquesGravite.map(agent => ({ type: "deplacer", c: agent.id, vers: uses })),
             ...partent.flatMap(v => [
+                saut && { type: "marquer", c: v.id, marque: "saut", valeur: etat.tour },
                 k >= 0 && { type: "deplacer", c: v.id, vers: "hex:" + trajet[k], de: zoneDepart },
                 reste.length > 0 && { type: "marquer", c: v.id, marque: TRAJET, valeur: reste.join(">") },
                 reste.length > 0 && { type: "marquer", c: v.id, marque: DEPART, valeur: "c" + depart },
@@ -482,6 +507,14 @@ export function useDeplacement({ tuiles }) {
                                 </span>
                             ))}
                         </div>
+                    )}
+
+                    {/* Script Moteur à gravité */}
+                    {selection.length > 0 && aScript(moi, "moteur-a-gravite") && (
+                        <label data-script="moteur-a-gravite">
+                            <input type="checkbox" checked={gravite} onChange={e => setGravite(e.target.checked)} />{" "}
+                            <b>Moteur à gravité</b> : +1 mouvement, use {coutEnAgents(selection.length)} scientifique(s)
+                        </label>
                     )}
 
                     {/* TRAJET */}

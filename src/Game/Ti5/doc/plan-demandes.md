@@ -215,3 +215,37 @@ Trois catégories (README) : **D** données en base · **P** outil de partie ·
   « Revendiquer » n'ouvre pas de conflit ; l'hyperlane en X ne relie pas ses deux
   traits, la patte d'oie relie ses quatre branches ; les notifications ne partent que
   si la page n'est pas au premier plan.
+
+## Chantier « toutes les technologies » (consignes du 2026-11-11, soir)
+
+Consignes de Loïc : `E:\GE\demandes-ti5\2026-11-11\instructions-technologies.txt` (une ligne par
+technologie ou mécanique ; une technologie sans ligne se fait comme le tableau le proposait ;
+**rien après la 419**). Lots, cochés quand ils sont testés, déployés et poussés :
+
+- ☑ Lot A — effets simples : données (ligne « explorer » retirée des scientifiques, Dock :
+  `#prod` = capacité logistique) ; 218 Exploration réservée à qui a la technologie ; 211 Pillage
+  à la prise de possession ; boutons du plateau 210 Université, 213 Réseau de commerce, 214
+  Extorsion, 237 Micro-téléporteur ; déplacement 233 Moteur à gravité, 234 Stratégie de saut, 236
+  Camouflage (`#furtif`, `#deplfurtif`), 238 Stargate, 239 Moteur FTL ; combat 192 PC, 231
+  Cartographie, 244 Bouclier amplifié, 252 Stratégie dominante, 253 Avantage aérien ; vote 247
+  Réseau d'ingérence (scientifique posé sur le plateau de vote), 251 Argumentation véhémente
+  (interface de vote, résultat immédiat) ; 245 Cuve de clonage (mobilisation) ; 217 Rayon
+  tracteur et valeur de contrôle (`#con`) dans le blocage et les conflits de contrôle.
+- ☐ Lot B — production : 191 capacité logistique (taille de flotte, production du Dock) ; mode
+  production (Ctrl + clic sur un élément à `#prod` : marqueur d'activation, bandeau « production
+  en cours … 1/3 », réserve en rouge pour ce qui n'est pas productible, « Terminer ») ; 193 IA
+  industrielle ; capture (une unité capturée glissée en production donne mon unité équivalente,
+  sans coût, et retourne dans la réserve de son propriétaire).
+- ☐ Lot C — commerce et agents : livraison commerciale depuis la fiche d'une unité à `#livr`
+  (comptoir dans le système, choix de la faction) ; 216 Science intégrée et 269 Commerce
+  profitable à la livraison ; 270 Connexion (fenêtre quand un agent est utilisé) ; 212 Propagande
+  (fenêtre au gain d'infamie).
+- ☐ Lot D — conflits : canons spatiaux (liste de mes canons accessibles avec leur distance,
+  tirer = amiral usé + marqueur d'activation ; 235 et 248 pour la portée) ; conflit résolu gardé
+  jusqu'à la fin de la phase, avec 250 Grappin de capture ; 182 Bombe bactériologique (dégâts
+  verts) ; 242 Médecine.
+- ☐ Lot E — 232 Exploitation du vide (conflit de domination par système vide disputé, entretien
+  bloqué tant qu'ils ne sont pas résolus) ; 246 Drain spatial dans le cadre de blocage ; 209
+  Archéologie (fouille : 2 fragments, en garder un ; bouton pour piocher un plan).
+- Non faits, et pourquoi : 273 Exploitation de masse et 274 Enrôlement (ils modifient l'action
+  « Esclaves » de Kabal, qui n'existe pas dans l'outil).

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { useEngine, Emplacements, Defilable, nomElement } from "./Interaction";
+import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
 import { MARQUEUR } from "./miseEnPlace";
 import { PlayerColor } from "../ti5Const";
 
@@ -97,7 +97,8 @@ const styleCellule = { border: "1px solid #bbb", padding: "1px 6px", textAlign: 
 const styleMini = { fontSize: 11, padding: "0 4px" };
 
 // Voix et classement des votes du tour (aussi lu par effets.js, pour Trading)
-export function decompteVotes({ etat, index, joueurs, search }) {
+//   aScript : script Réseau d'ingérence — un scientifique posé sur le plateau de vote vaut 2 voix
+export function decompteVotes({ etat, index, joueurs, search, aScript }) {
 
     const tour = etat.tour;
 
@@ -116,9 +117,13 @@ export function decompteVotes({ etat, index, joueurs, search }) {
         const politiciens = contenu.filter(c =>
             !c.cache && c.ref?.type === "agent" && /politi/i.test(nomElement(search, c.ref))).length;
 
+        const scientifiques = aScript?.(Number(m[1]), "reseau-d-ingerence")
+            ? contenu.filter(c => !c.cache && c.ref?.type === "agent" && /scientifique/i.test(nomElement(search, c.ref))).length
+            : 0;
+
         const cle = `${m[2]}:${m[3]}:${m[1]}`;
 
-        posees[cle] = (posees[cle] || 0) + politiciens * (m[4] ? 1 : 2);
+        posees[cle] = (posees[cle] || 0) + politiciens * (m[4] ? 1 : 2) + scientifiques * 2;
         nombreLois = Math.max(nombreLois, Number(m[2]));
     }
 
@@ -143,7 +148,7 @@ export function decompteVotes({ etat, index, joueurs, search }) {
 //   -> { actions, messages }
 export function tradingFinDeVote({ etat, index, joueurs, search, aScript, nomDe }) {
 
-    const votes = decompteVotes({ etat, index, joueurs, search });
+    const votes = decompteVotes({ etat, index, joueurs, search, aScript });
     const gains = new Map();
     const messages = [];
 
@@ -173,14 +178,14 @@ export function tradingFinDeVote({ etat, index, joueurs, search, aScript, nomDe 
 
 function Decompte({ lois }) {
 
-    const { etat, index, envoyer, joueur, moi, partie, search, nomDe, couleurDe } = useEngine();
+    const { etat, index, envoyer, joueur, moi, partie, search, nomDe, couleurDe, aScript } = useEngine();
 
     // Toutes les colonnes, ou seulement celles qui ont des voix
     const [toutes, setToutes] = useState(false);
 
     const joueurs = partie.joueurs;
 
-    const votes = decompteVotes({ etat, index, joueurs, search });
+    const votes = decompteVotes({ etat, index, joueurs, search, aScript });
     const { cleAjustement, cleOrdre, ajustement, voix, total, ordre } = votes;
     const nombreLois = Math.max(lois.length, votes.nombreLois);
 
@@ -237,7 +242,8 @@ function Decompte({ lois }) {
                 <b>Décompte des votes</b>
 
                 <span style={{ fontSize: 12, color: "#444" }}>
-                    Un politicien vaut 2 voix dans la case, 1 dans sa partie droite ; les autres agents 0.
+                    Un politicien vaut 2 voix dans la case, 1 dans sa partie droite ; les autres agents 0
+                    (un scientifique : 2 voix avec « Réseau d'ingérence »).
                 </span>
 
                 {/* Qui a révélé son plateau, qui est prêt */}
@@ -434,7 +440,10 @@ function Decompte({ lois }) {
 
 export function Vote({ vu }) {
 
-    const { etat, index, jouer, joueur, moi, search, ouvrirFiche } = useEngine();
+    const { etat, index, jouer, envoyer, joueur, moi, search, ouvrirFiche, aScript } = useEngine();
+
+    // Script Argumentation véhémente : loi et colonne visées
+    const [argument, setArgument] = useState({ loi: 1, col: 1 });
 
     const u = vu.userId;
     const base = "joueur:" + u;
@@ -480,8 +489,49 @@ export function Vote({ vu }) {
     // Leur numéro est celui de la ligne du plateau de vote.
     const lois = index.parZone.get("general:agenda:" + etat.tour) || [];
 
+    // Script Argumentation véhémente (prévote) : un politicien est utilisé — il
+    // ne reste pas sur le plateau —, 1 influence est payée, et 2 voix s'ajoutent
+    // tout de suite au décompte (ajustement du vote, visible de tous)
+    const politicien = agentDisponible({ index, moi, search }, "politi");
+    const monInfluence = Number(etat.compteurs[`joueur:${moi}:inf`]) || 0;
+
+    const argumentation = joueur && u === moi && aScript(moi, "argumentation-vehemente") && (
+        <div
+            data-script="argumentation-vehemente"
+            style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, padding: "4px 10px", border: "1px solid #aaa", borderRadius: 8, backgroundColor: "#f5f5f5" }}
+        >
+            <b>Argumentation véhémente</b> : 2 voix sur la loi
+            <select value={argument.loi} onChange={e => setArgument({ ...argument, loi: Number(e.target.value) })}>
+                {Array.from({ length: Math.max(lois.length, 1) }, (_, k) => <option key={k} value={k + 1}>{k + 1}</option>)}
+            </select>
+            pour
+            <select value={argument.col} onChange={e => setArgument({ ...argument, col: Number(e.target.value) })}>
+                {COLONNES.map((nom, col) => <option key={col} value={col}>{nom}</option>)}
+            </select>
+            <BoutonRegle
+                data-action="argumentation-vehemente"
+                nom={`Argumentation véhémente : 2 voix « ${COLONNES[argument.col]} » sur la loi ${argument.loi}`}
+                obstacles={[
+                    !/pr[ée]vote/i.test(etat.phase) && "ce n'est pas la phase de prévote",
+                    !politicien && "vous n'avez pas de politicien disponible (aucun ne sera usé)",
+                    monInfluence < 1 && "il vous faut 1 influence",
+                ]}
+                faire={commentaire => envoyer([
+                    politicien && { type: "deplacer", c: politicien.id, vers: `joueur:${moi}:agentsUses` },
+                    { type: "compteur", id: `joueur:${moi}:inf`, delta: -1 },
+                    { type: "compteur", id: `vote:${etat.tour}:${argument.loi}:${argument.col}:${moi}`, delta: 2 },
+                ], commentaire)}
+                title="Use un politicien et 1 influence : 2 voix ajoutées tout de suite au décompte"
+            >
+                Générer 2 voix (use un politicien, 1 influence)
+            </BoutonRegle>
+        </div>
+    );
+
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+
+            {argumentation}
 
             <div
                 style={{

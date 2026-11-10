@@ -409,6 +409,92 @@ export const SCRIPTS = [
     effet("trading", 208, 1794335054851, "Trading", "auto",
         "« Phase suivante », à la fin de la phase de vote",
         "Un de vos négociants posé sur votre plateau de vote est votre prédiction : si cette case est première de sa loi à la fin de la phase, +2 commerce."),
+
+    // ---- chantier « toutes les technologies », lot A ----
+
+    effet("logistique-amelioree-capacite", 191, 1794335054843, "Logistique améliorée", "auto",
+        "Capacité logistique : taille d'une flotte (déplacement assisté), production d'un dock",
+        "Chaque logisticien posé sur la technologie (onglet Technologie : le glisser sur sa carte) augmente votre capacité logistique de 1 (3 par défaut)."),
+
+    effet("pc", 192, 1793999783810, "PC", "auto",
+        "Conflit : combat spatial",
+        "Vous avez +1 au combat spatial dans un système qui contient votre vaisseau amiral ou un de vos docks."),
+
+    effet("universite", 210, 1790237003321, "Université", "nouveau",
+        "Plateau joueur : « Actions de mes technologies »",
+        "Phase de recrutement : la technologie et l'agent choisi sont utilisés ; un agent du même type vous attend sur votre case du tour suivant."),
+
+    effet("pillage", 211, 1794335054852, "Pillage", "modifie",
+        "Fiche d'un système : « Prendre possession » (et le conflit de contrôle)",
+        "Prendre possession d'une planète qu'une autre faction possédait lui vole 2 commerce."),
+
+    effet("reseau-de-commerce", 213, 1780480244313, "Réseau de commerce", "nouveau",
+        "Plateau joueur : « Actions de mes technologies »",
+        "Deux boutons de conversion, un pour un : influence en ressources, ressources en influence."),
+
+    effet("extorsion", 214, 1794335054854, "Extorsion", "nouveau",
+        "Plateau joueur : « Actions de mes technologies »",
+        "Phase de diplomatie : use un diplomate ; la faction choisie reçoit une dette de 3 envers vous, à payer dans 3 tours."),
+
+    effet("rayon-tracteur", 217, 1794335054857, "Rayon tracteur", "auto",
+        "Conflit : blocage d'un déplacement, conflits de contrôle",
+        "Vos vaisseaux qui ont plus de 1 de résistance comptent 1 de contrôle de plus."),
+
+    effet("exploration", 218, 1790236587336, "Exploration", "modifie",
+        "Onglet Espace, phase de science : Ctrl + clic sur un emplacement vide",
+        "L'exploration (use un scientifique et un logisticien, pioche une tuile) est réservée à qui a cette technologie : sans elle, la confirmation le dit."),
+
+    effet("cartographie-de-l-espace", 231, 1794335054865, "Cartographie de l'espace", "auto",
+        "Conflit : combat spatial, canons spatiaux",
+        "Dans un système qui a une anomalie, les attaques contre vos vaisseaux ont −1."),
+
+    effet("moteur-a-gravite", 233, 1794335054865, "Moteur à gravité", "modifie",
+        "Déplacement assisté : case « Moteur à gravité »",
+        "Cochée, vos vaisseaux ont +1 mouvement ; des scientifiques sont utilisés au départ (un par vaisseau seul, deux par flotte)."),
+
+    effet("strategie-de-saut", 234, 1794335054866, "Stratégie de saut", "auto",
+        "Déplacement assisté, puis Conflit : combat spatial",
+        "Des vaisseaux arrivés par un trou de ver ont, ce tour, la frappe en premier et +1 au combat spatial."),
+
+    effet("camouflage", 236, 1787508935658, "Camouflage", "auto",
+        "Conflit : blocage d'un déplacement, combat spatial",
+        "Vos vaisseaux ne sont pas bloqués par des unités adverses, et tant qu'ils n'ont engagé personne ils ne peuvent qu'être ciblés."),
+
+    effet("micro-teleporteur", 237, 1794335054868, "Micro-téléporteur", "nouveau",
+        "Plateau joueur : « Actions de mes technologies »",
+        "Phase de production : use un logisticien ; vous déplacez ensuite les unités transportables à la main."),
+
+    effet("stargate", 238, 1794335054868, "Stargate", "auto",
+        "Déplacement assisté",
+        "Pour vos déplacements, chaque système où vous avez un dock a un trou de ver alpha."),
+
+    effet("moteur-ftl", 239, 1790228808456, "Moteur FTL", "auto",
+        "Déplacement assisté",
+        "Tous vos vaisseaux ont 1 de mouvement de plus."),
+
+    effet("bouclier-amplifie", 244, 1794343420976, "Bouclier amplifié", "auto",
+        "Résistance des unités (Conflit, où la valeur modifiée est en vert)",
+        "Votre vaisseau amiral et vos systèmes de défense ont 2 de résistance de plus, vos boucliers mobiles 1."),
+
+    effet("cuve-de-clonage", 245, 1794343420980, "Cuve de clonage", "nouveau",
+        "Fiche d'un système, à côté de « Mobiliser »",
+        "Phase de production : use un logisticien et un scientifique ; une infanterie de plus, et toute la mobilisation est gratuite."),
+
+    effet("reseau-d-ingerence", 247, 1794343420983, "Réseau d'ingérence", "auto",
+        "Onglet Vote : décompte",
+        "Un de vos scientifiques posé sur votre plateau de vote vaut 2 voix."),
+
+    effet("argumentation-vehemente", 251, 1794343420985, "Argumentation véhémente", "nouveau",
+        "Onglet Vote, au-dessus des lois",
+        "Phase de prévote : use un politicien (qui ne reste pas sur le plateau) et 1 influence ; 2 voix s'ajoutent tout de suite au décompte, sur la loi et la colonne choisies."),
+
+    effet("strategie-dominante", 252, 1794343420986, "Stratégie dominante", "auto",
+        "Conflit : combat spatial",
+        "Vos unités à frappe en premier ont +1 ; cibler un de vos vaisseaux coûte −4 au lieu de −2."),
+
+    effet("avantage-aerien", 253, 1794343420987, "Avantage aérien", "auto",
+        "Conflit : combat terrestre",
+        "Vos infanteries ont la frappe en premier."),
 ];
 
 // Script d'effet de technologie : sa description seule (son code est là où il agit)
@@ -491,7 +577,11 @@ export async function technologiesDe(etat, userId, charger) {
             const progres = Number(etat.compteurs[`${base}:tech:${feuille.id}:${k}`]) || 0;
 
             if (progres >= (Number(tech?.cout) || 1)) {
-                debloquees.set(id, { utilisee: `${base}:techUse:${feuille.id}:${k}` });
+                debloquees.set(id, {
+                    utilisee: `${base}:techUse:${feuille.id}:${k}`,
+                    // Zone des éléments posés sur la technologie
+                    zone: `${base}:tech:${feuille.id}:case:${k}`,
+                });
             }
         }
     }

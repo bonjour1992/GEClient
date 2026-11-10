@@ -3,6 +3,8 @@ import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDispon
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
 import { estHyperlane, hyperlaneRelie } from "./hyperlane";
+import { controleDe, estDeplacementFurtif } from "./effets";
+import { contenuEnCache } from "./sync";
 
 // ============================================================
 // BLOCAGE D'UN DÉPLACEMENT, CASE PAR CASE (onglet Conflit)
@@ -90,9 +92,15 @@ export function passagesEnCours(etat) {
 // ver (tuile et tokens posés), unités militaires de l'espace
 // ------------------------------------------------------------
 
-export function useCarte(cases) {
+//   mover : le joueur qui se déplace (script Stargate : ses systèmes à dock ont un trou de ver alpha)
+export function useCarte(cases, mover) {
 
-    const { index } = useEngine();
+    const { index, aScript } = useEngine();
+
+    // Un dock du joueur dans le système (espace ou planètes) ?
+    const aUnDock = i => [...index.parZone].some(([zone, contenu]) =>
+        (zone === "hex:" + i || zone.startsWith(`hex:${i}:`)) &&
+        contenu.some(c => c.ref?.type === "unit" && campDe(c) === mover && contenuEnCache(c.ref.id)?.type === "dock"));
 
     const uniques = [...new Set(cases)];
     const ids = liste => [...new Set(liste.filter(id => Number.isInteger(id) && id > 0))];
@@ -130,7 +138,10 @@ export function useCarte(cases) {
         trous: i => new Set([
             ...(systemes[tuile(i)?.ref.id]?.elems || []).map(lien => typeTrou(planetes[lien?.id]?.img)),
             ...tokens(i).map(c => typeTrou(contenusTokens[c.ref.id]?.img)),
+            mover && aScript(mover, "stargate") && aUnDock(i) && "alpha",
         ].filter(Boolean)),
+        // Contrôle d'une unité (effets.js : #con, Rayon tracteur)
+        controle: c => controleDe(contenus[c.ref.id], campDe(c), aScript),
         // Unités militaires spatiales de la case
         militaires: i => unites(i).filter(c => contenus[c.ref.id]?.mot_cle?.includes("mil")),
     };
@@ -161,7 +172,7 @@ export function sorteJet(carte, de, a) {
 }
 
 // Camps qui ont des unités militaires spatiales sur la case, hors celui qui se déplace
-//   [{ camp, unites, controle }] — contrôle : 1 par unité, pour l'instant
+//   [{ camp, unites, controle }] — contrôle : celui de chaque unité (1 par défaut)
 export function campsAdverses(carte, numero, mover) {
 
     const parCamp = new Map();
@@ -175,15 +186,21 @@ export function campsAdverses(carte, numero, mover) {
         }
     }
 
-    return [...parCamp].map(([camp, unites]) => ({ camp, unites, controle: unites.length }));
+    return [...parCamp].map(([camp, unites]) => ({
+        camp,
+        unites,
+        controle: unites.reduce((s, c) => s + carte.controle(c), 0),
+    }));
 }
 
 // Jusqu'où va un groupe sans risque de blocage : rang, dans `trajet`, de la
 // première case à risque — ou de la dernière (l'arrivée) ; -1 s'il y a un
-// risque là où il est (ignoré si `resolu` : ce risque vient d'être traité)
-export function rangArret(carte, mover, ici, trajet, resolu) {
+// risque là où il est (ignoré si `resolu` : ce risque vient d'être traité).
+// furtifs : tous les vaisseaux du groupe ont le déplacement furtif — les unités
+// adverses ne les arrêtent pas.
+export function rangArret(carte, mover, ici, trajet, resolu, furtifs = false) {
 
-    const risque = (de, a) => campsAdverses(carte, de, mover).length > 0 || !!sorteJet(carte, de, a);
+    const risque = (de, a) => (!furtifs && campsAdverses(carte, de, mover).length > 0) || !!sorteJet(carte, de, a);
 
     if (!resolu && risque(ici, trajet[0])) {
         return -1;
@@ -230,7 +247,7 @@ export function Passage({ passage }) {
 
     const { mover, numero, trajet, vaisseaux } = passage;
 
-    const carte = useCarte([numero, ...trajet]);
+    const carte = useCarte([numero, ...trajet], mover);
 
     // Vaisseaux que le joueur arrête ici (cases cochées)
     const [stoppes, setStoppes] = useState([]);
@@ -247,7 +264,11 @@ export function Passage({ passage }) {
     // OÙ EN EST-ON SUR CETTE CASE
     // --------------------------------------------------------
 
-    const adverses = campsAdverses(carte, numero, mover);
+    // Déplacement furtif (#deplfurtif, script Camouflage) : ces vaisseaux ne sont pas bloqués par des unités
+    const furtif = v => estDeplacementFurtif(carte.contenus[v.ref.id], mover, aScript);
+    const exposes = vaisseaux.filter(v => !furtif(v));
+
+    const adverses = exposes.length ? campsAdverses(carte, numero, mover) : [];
     const jet = sorteJet(carte, numero, suivante);
 
     const stade = !carte.pret ? "charge"
@@ -266,7 +287,8 @@ export function Passage({ passage }) {
     const choixDe = camp => Number(etat.compteurs[cleChoix(camp)]) || (camp === NEUTRE ? 3 : 0);
 
     // Mes propres unités militaires restées sur la case aident d'office
-    const allies = carte.militaires(numero).filter(c => campDe(c) === mover && !c.marques?.[TRAJET]).length;
+    const allies = carte.militaires(numero).filter(c => campDe(c) === mover && !c.marques?.[TRAJET])
+        .reduce((s, c) => s + carte.controle(c), 0);
 
     // Script Rapport de force : un diplomate usé ajoute 2 au contrôle d'un camp
     // pour ce blocage (compteur blocage:<case>:<joueur>:<camp>:plus)
@@ -297,9 +319,9 @@ export function Passage({ passage }) {
         .reduce((s, a) => s + a.controle + plus(a.camp), 0);
 
     const surplus = controle(3) - controle(2) - allies - plus(mover);
-    const aBloquer = stade === "unites" ? Math.max(0, Math.min(surplus, vaisseaux.length)) : 0;
+    const aBloquer = stade === "unites" ? Math.max(0, Math.min(surplus, exposes.length)) : 0;
 
-    const militaires = vaisseaux.filter(estMilitaire);
+    const militaires = exposes.filter(estMilitaire);
     const milRequis = Math.min(aBloquer, militaires.length);
     const autresRequis = aBloquer - milRequis;
 
@@ -334,10 +356,16 @@ export function Passage({ passage }) {
     // Fait avancer des vaisseaux jusqu'à la prochaine case à risque, ou l'arrivée
     function avancer(navires) {
 
-        const k = rangArret(carte, mover, numero, trajet, true);
+        const k = rangArret(carte, mover, numero, trajet, true, navires.every(furtif));
         const reste = trajet.slice(k + 1);
 
+        // Script Stratégie de saut : arrivés par un trou de ver, les vaisseaux
+        // le gardent en marque pour le combat de ce tour (Combat.jsx)
+        const saut = !reste.length && aScript(mover, "strategie-de-saut") &&
+            sorteEtape(carte, k > 0 ? trajet[k - 1] : numero, trajet[k]).startsWith("trou:");
+
         return navires.flatMap(v => [
+            saut && { type: "marquer", c: v.id, marque: "saut", valeur: etat.tour },
             { type: "deplacer", c: v.id, vers: "hex:" + trajet[k], de: "hex:" + numero },
             ...(reste.length
                 ? [{ type: "marquer", c: v.id, marque: TRAJET, valeur: reste.join(">") }]
@@ -406,7 +434,7 @@ export function Passage({ passage }) {
     // Coche d'office ce qu'il faut arrêter : les militaires d'abord
     const proposer = () => setStoppes([
         ...militaires.slice(0, milRequis),
-        ...vaisseaux.filter(v => !estMilitaire(v)).slice(0, autresRequis),
+        ...exposes.filter(v => !estMilitaire(v)).slice(0, autresRequis),
     ].map(v => v.id));
 
     // --------------------------------------------------------
@@ -538,7 +566,7 @@ export function Passage({ passage }) {
                                     onChange={() => setStoppes(stoppes.includes(v.id) ? stoppes.filter(x => x !== v.id) : [...stoppes, v.id])}
                                 />
                             )}{" "}
-                            {nom(v)} <span style={{ color: "#555" }}>({estMilitaire(v) ? "militaire" : "non militaire"})</span>
+                            {nom(v)} <span style={{ color: "#555" }}>({estMilitaire(v) ? "militaire" : "non militaire"}{furtif(v) ? ", furtif : les unités ne le bloquent pas" : ""})</span>
                             {stade === "jets" && (
                                 <b>
                                     {" "}: {de(v)} — {bloqueParJet(v) ? "bloqué" : (touche(v) ? "passe, 1 touche" : (jet === "rift" ? "passe, +1 mouvement" : "passe"))}

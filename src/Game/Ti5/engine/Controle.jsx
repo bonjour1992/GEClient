@@ -1,6 +1,7 @@
 import { useEngine, BoutonRegle, nomCase, nomElement } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { typeUnite } from "./miseEnPlace";
+import { controleDe } from "./effets";
 
 // ============================================================
 // CONFLIT DE CONTRÔLE (onglet Conflit)
@@ -40,26 +41,37 @@ export function controlesEnCours(etat) {
 
 // Actions d'une prise de possession : la carte de la planète va dans mes
 // éléments actifs (elle est créée si personne ne l'avait encore).
-// Script Assimilation : une planète qu'aucun joueur ne possédait reçoit une
-// de mes infanteries. -> { actions, assimilation }
-export function actionsPossession({ etat, moi, aScript }, zonePlanete, idPlanete, idInfanterie) {
+// Scripts — Assimilation : une planète qu'aucun joueur ne possédait reçoit une
+// de mes infanteries ; Pillage : prise par les armes à une autre faction, je lui
+// vole 2 commerce (ce qu'elle a, au plus). -> { actions, messages }
+export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, idPlanete, idInfanterie, militaire = true) {
 
     const carte = Object.values(etat.composants)
         .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");
 
     const zone = `joueur:${moi}:actif`;
 
-    const assimilation = !!idInfanterie && aScript(moi, "assimilation") &&
-        !/^joueur:\d+:actif$/.test(carte?.zone || "");
+    const ancien = Number(/^joueur:(\d+):actif$/.exec(carte?.zone || "")?.[1]) || null;
+
+    const assimilation = !!idInfanterie && aScript(moi, "assimilation") && !ancien;
+
+    const butin = militaire && ancien && ancien !== moi && aScript(moi, "pillage")
+        ? Math.min(2, Number(etat.compteurs[`joueur:${ancien}:commerce`]) || 0)
+        : 0;
 
     // (de / si : refusé si un autre joueur vient de la prendre — pas de carte en double)
     const verrou = "planete:" + idPlanete;
     const prises = Number(etat.compteurs[verrou]) || 0;
 
     return {
-        assimilation,
+        messages: [
+            assimilation && "Assimilation : planète neutre obtenue, une infanterie y est posée.",
+            butin > 0 && `Pillage : ${butin} commerce volé(s) à ${nomDe?.(ancien) ?? "son ancien possesseur"}.`,
+        ].filter(Boolean),
         actions: [
             assimilation && { type: "creer", ref: { type: "unit", id: idInfanterie }, zone: zonePlanete, proprio: moi },
+            butin > 0 && { type: "compteur", id: `joueur:${ancien}:commerce`, delta: -butin },
+            butin > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: butin },
             ...(carte
                 ? [{ type: "deplacer", c: carte.id, vers: zone, de: carte.zone }]
                 : [
@@ -112,7 +124,12 @@ function Controle({ conflit }) {
 
     // (le demandeur est toujours de la partie, même sans unité militaire)
     const camps = [...new Set([demandeur, ...parCamp.keys()])]
-        .map(camp => ({ camp, unites: parCamp.get(camp) || [], controle: (parCamp.get(camp) || []).length }));
+        .map(camp => ({
+            camp,
+            unites: parCamp.get(camp) || [],
+            // (contrôle de chaque unité : effets.js — #con, Rayon tracteur)
+            controle: (parCamp.get(camp) || []).reduce((s, c) => s + controleDe(contenus[c.ref.id], camp, aScript), 0),
+        }));
 
     const cleChoix = camp => `${cle}:${camp}`;
 
@@ -139,12 +156,12 @@ function Controle({ conflit }) {
 
     function prendre(commentaire) {
 
-        const { actions, assimilation } = actionsPossession({ etat, moi, aScript }, zonePlanete, idPlanete, idInfanterie);
+        const { actions, messages } = actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, idPlanete, idInfanterie);
 
-        envoyer([...actions, ...cloture()], commentaire);
+        envoyer([...actions, ...cloture()], [commentaire, ...messages].join(" — "));
 
-        if (assimilation) {
-            aviser("Assimilation : planète neutre obtenue, une infanterie y est posée.");
+        if (messages.length) {
+            aviser(messages.join(" "));
         }
     }
 

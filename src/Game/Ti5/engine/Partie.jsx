@@ -337,6 +337,18 @@ export function Partie({ id }) {
                 [script.carte.id, ...(script.aussi || [])].some(tech => technologies[userId]?.has(tech));
         },
 
+        // Capacité logistique d'un joueur (taille d'une flotte, production d'un dock) :
+        // 3, plus 1 par logisticien posé sur sa technologie « Logistique améliorée »
+        capaciteLogistique: userId => {
+            const script = SCRIPTS.find(s => s.id === "logistique-amelioree-capacite");
+            const zone = !scriptsDesactives.includes(script.id) && technologies[userId]?.get(script.carte.id)?.zone;
+
+            return 3 + (zone
+                ? (index.parZone.get(zone) || []).filter(c => c.ref?.type === "agent" &&
+                    /logisticien|g[ée]n[ée]ticien/i.test(nomElement(search, c.ref))).length
+                : 0);
+        },
+
         // Le joueur a-t-il débloqué cette technologie ?
         aTechnologie: (userId, idTech) => !!technologies[userId]?.has(idTech),
 

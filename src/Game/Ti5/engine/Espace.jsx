@@ -47,7 +47,7 @@ const RE_HEX = /^hex:(\d+)$/;
 
 export function Espace() {
 
-    const { etat, index, jouer, envoyer, joueur, moi, partie, couleurDe, nomDe, search, signaler } = useEngine();
+    const { etat, index, jouer, envoyer, joueur, moi, partie, couleurDe, nomDe, search, signaler, aScript } = useEngine();
 
     const [zoom, setZoom] = useState(1);
     const [edition, setEdition] = useState(false);
@@ -335,6 +335,8 @@ export function Espace() {
         // Effet du jeu déclenché par un Ctrl + clic : hors conditions, une
         // confirmation dit pourquoi (un agent absent n'est pas usé)
         const commentaire = confirmerRegle(`Explorer (${nomCase(numero)})`, [
+            // (script Exploration : l'exploration vient de cette technologie)
+            !aScript(moi, "exploration") && "vous n'avez pas la technologie « Exploration »",
             !explorables.has(numero) && "il faut un emplacement vide à côté d'un système où vous avez une unité",
             !logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
             !scientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
@@ -827,7 +829,7 @@ const lienValide = lien => lien && lien.id > 0;
 
 // Nombre d'infanteries à mobiliser sur une planète, puis le bouton
 // obstacles(n) : raisons pour lesquelles mobiliser n infanteries ne devrait pas se faire
-function Mobilisation({ max, cout, mobiliser, obstacles }) {
+function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
 
     const [n, setN] = useState(max);
 
@@ -862,6 +864,19 @@ function Mobilisation({ max, cout, mobiliser, obstacles }) {
             >
                 infanterie{nombre > 1 ? "s" : ""} ({nombre * cout} res.)
             </BoutonRegle>
+
+            {/* Script Cuve de clonage */}
+            {clonage && (
+                <BoutonRegle
+                    data-action="cuve-de-clonage"
+                    nom={`Cuve de clonage : mobiliser ${nombre + 1} infanteries gratuitement`}
+                    obstacles={clonage.obstacles}
+                    faire={commentaire => mobiliser(nombre, commentaire, true)}
+                    title={`Cuve de clonage : use un logisticien et un scientifique, pose ${nombre + 1} infanteries sans rien payer et active la planète`}
+                >
+                    Cuve de clonage : {nombre + 1} gratuites (use un scientifique)
+                </BoutonRegle>
+            )}
         </span>
     );
 }
@@ -1025,9 +1040,15 @@ function FicheSysteme({ numero, id, fermer }) {
         !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
     ];
 
-    function mobiliser(k, n, commentaire) {
+    //   clonage : script Cuve de clonage — un scientifique est usé, une infanterie
+    //   de plus est posée et toute la mobilisation est gratuite
+    function mobiliser(k, n, commentaire, clonage = false) {
 
-        const cout = n * coutInfanterie;
+        const cout = clonage ? 0 : n * coutInfanterie;
+
+        if (clonage) {
+            n += 1;
+        }
 
         // Script Assimilation : sur une planète sauvage, une infanterie de plus, gratuite
         const assimilation = aScript(moi, "assimilation") &&
@@ -1041,6 +1062,7 @@ function FicheSysteme({ numero, id, fermer }) {
         envoyer([
             // Un logisticien, ou le Généticien (Arborec) qui mobilise comme lui
             utiliser("logisticien|g[ée]n[ée]ticien"),
+            clonage && utiliser("scientifique"),
             cout && { type: "compteur", id: `joueur:${moi}:res`, delta: -cout },
             ...Array.from({ length: n }, () => ({
                 type: "creer",
@@ -1093,16 +1115,18 @@ function FicheSysteme({ numero, id, fermer }) {
 
         // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
         prendre(idPlanete, k, commentaire,
-            diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : []);
+            diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : [], false);
     }
 
-    function prendre(idPlanete, k, commentaire, avant = []) {
+    //   militaire : prise de possession par les armes (script Pillage), et non revendication
+    function prendre(idPlanete, k, commentaire, avant = [], militaire = true) {
 
-        // (Controle.jsx ; script Assimilation : une infanterie sur une planète sans propriétaire)
-        const { actions, assimilation } = actionsPossession({ etat, moi, aScript }, zonePlanete(k), idPlanete, idInfanterie);
+        // (Controle.jsx ; scripts Assimilation et Pillage)
+        const { actions, messages } = actionsPossession(
+            { etat, moi, aScript, nomDe }, zonePlanete(k), idPlanete, idInfanterie, militaire);
 
-        if (assimilation) {
-            aviser("Assimilation : planète neutre obtenue, une infanterie y est posée.");
+        if (messages.length) {
+            aviser(messages.join(" "));
         }
 
         envoyer([...avant, ...actions], commentaire);
@@ -1446,8 +1470,14 @@ function FicheSysteme({ numero, id, fermer }) {
                                             <Mobilisation
                                                 max={prodInfanterie}
                                                 cout={coutInfanterie}
-                                                mobiliser={(n, commentaire) => mobiliser(k, n, commentaire)}
+                                                mobiliser={(n, commentaire, clonage) => mobiliser(k, n, commentaire, clonage)}
                                                 obstacles={obstaclesMobilisation}
+                                                clonage={aScript(moi, "cuve-de-clonage") && {
+                                                    obstacles: [
+                                                        !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+                                                        !aScientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+                                                    ],
+                                                }}
                                             />
                                         )}
                                     </div>
