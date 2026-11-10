@@ -25,6 +25,7 @@ import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync"
 import { cleCombat, combatsEnCours, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
+import { ProductionEnCours } from "./Production";
 import { actionsPossession, cleControle, controlesEnCours } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
@@ -724,6 +725,8 @@ export function Espace() {
             </div>
 
             {/* DÉPLACEMENT ASSISTÉ (phase de déplacement) */}
+
+            <ProductionEnCours />
 
             {deplacement.panneau}
 

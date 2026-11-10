@@ -7,6 +7,8 @@ import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe } from "./effets";
 import { estHyperlane } from "./hyperlane";
+import { estProductible } from "./Production";
+import { typeUnite } from "./miseEnPlace";
 import {
     MARQUEUR,
     FAVEUR,
@@ -1781,7 +1783,10 @@ const estCarteCible = c => !!c?.ref && !c.cache && c.ref.type !== "agent" && c.r
 
 export function Plan({ children, style }) {
 
-    const { etat, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, signaler, search, aScript } = useEngine();
+    const {
+        etat, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
+        search, aScript, factionDe,
+    } = useEngine();
 
     const appui = useRef(null);
     const [glisser, setGlisser] = useState(null);
@@ -1858,9 +1863,38 @@ export function Plan({ children, style }) {
             return [];
         }
 
-        const cout = refs
-            .filter(ref => ref?.type === "unit")
-            .reduce((total, ref) => total + (Number(contenuEnCache(ref.id)?.cout) || 0), 0);
+        const unites = refs.filter(ref => ref?.type === "unit");
+
+        // Production ouverte avec une unité (Production.jsx) : ce qu'elle ne
+        // peut pas produire, ou une unité de trop, demande une confirmation ;
+        // la quantité produite est comptée, et la réduction d'IA industrielle
+        // vient en déduction du coût.
+        const ouverte = production !== true ? production : null;
+
+        if (ouverte && unites.length) {
+
+            const refusees = unites.filter(ref => !estProductible(contenuEnCache(ref.id), ouverte.types));
+
+            const obstacles = [
+                refusees.length > 0 &&
+                    `${ouverte.nom} ne produit pas : ${refusees.map(ref => nomElement(search, ref)).join(", ")}`,
+                ouverte.max !== null && ouverte.fait + unites.length > ouverte.max &&
+                    `${ouverte.nom} produit ${ouverte.max} unité(s) au plus (${ouverte.fait} déjà)`,
+            ].filter(Boolean);
+
+            if (obstacles.length && !window.confirm(
+                `Production normalement impossible :\n- ${obstacles.join("\n- ")}\n\nProduire quand même ?`)) {
+                return null;
+            }
+        }
+
+        const brut = unites.reduce((total, ref) => total + (Number(contenuEnCache(ref.id)?.cout) || 0), 0);
+        const reduction = Math.min(brut, ouverte?.reduction || 0);
+        const cout = brut - reduction;
+
+        if (ouverte && unites.length) {
+            setProduction({ ...ouverte, fait: ouverte.fait + unites.length, reduction: ouverte.reduction - reduction });
+        }
 
         if (!cout) {
             return [];
@@ -2243,6 +2277,37 @@ export function Plan({ children, style }) {
                 signaler?.(`${a.nom || "Cette unité"} n'est pas une unité terrestre : elle ne peut pas être posée sur une planète.`);
                 return;
             }
+        }
+
+        // Capture (Production.jsx) : pendant une production, une unité capturée — celle
+        // d'un autre joueur, dans mes éléments actifs — glissée sur la carte me donne
+        // mon unité du même type, sans coût, et retourne dans la réserve de son joueur
+        const capturees = !production || !/^hex:/.test(zone) ? [] : aDeplacer
+            .map(id => etat.composants[id])
+            .filter(c => c.ref?.type === "unit" && c.zone === `joueur:${moi}:actif` &&
+                Number.isInteger(c.proprio) && c.proprio !== moi);
+
+        if (capturees.length) {
+
+            const miennes = (contenuEnCache(factionDe(moi))?.units || []).map(lien => Number(lien?.id)).filter(id => id > 0);
+
+            const equivalente = c => miennes.find(id =>
+                typeUnite(contenuEnCache(id)) === typeUnite(contenuEnCache(c.ref.id)));
+
+            const sans = capturees.find(c => !equivalente(c));
+
+            if (sans) {
+                signaler?.(`Capture : votre faction n'a pas d'unité du type de ${nomElement(search, sans.ref)}.`);
+                return;
+            }
+
+            envoyer(capturees.flatMap(c => [
+                { type: "creer", ref: { type: "unit", id: equivalente(c) }, zone, proprio: moi },
+                { type: "marquer", c: c.id, marque: "degat", valeur: 0 },
+                { type: "deplacer", c: c.id, vers: `joueur:${c.proprio}:reserve` },
+            ]), `Production : ${capturees.length} unité(s) capturée(s) échangée(s) contre les miennes`);
+
+            return;
         }
 
         // Production : une unité qui quitte ma réserve se paie en ressources

@@ -4,6 +4,7 @@ import { useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, Bouto
 import { useElement, useElements } from "./sync";
 import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite } from "./miseEnPlace";
 import { ActionsTechnologies } from "./ActionsTechnologies";
+import { ReserveProductible } from "./Production";
 
 // ============================================================
 // ONGLET PLATEAU JOUEUR
@@ -177,11 +178,11 @@ export function SourcesIllimitees({ userId }) {
 // unité de sa réserve (ou une infanterie) retire son coût de ses ressources.
 export function CaseProduction() {
 
-    const { production, setProduction } = useEngine();
+    const { production, setProduction, moi } = useEngine();
 
     return (
         <label
-            title="Cochée : glisser une unité hors de la réserve coûte son coût en ressources"
+            title="Cochée : glisser une unité hors de la réserve coûte son coût en ressources. Ctrl + clic sur une unité à production (un dock…) ouvre une production comptée ; décocher la termine."
             style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -200,7 +201,10 @@ export function CaseProduction() {
                 checked={!!production}
                 onChange={e => setProduction(e.target.checked)}
             />
-            Production
+            Production{production && production !== true ? ` : ${production.nom}` : ""}
+
+            {/* Ce que la production en cours ne peut pas produire est cerclé de rouge */}
+            <ReserveProductible zone={`joueur:${moi}:reserve`} />
         </label>
     );
 }

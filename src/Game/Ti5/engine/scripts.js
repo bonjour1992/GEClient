@@ -495,6 +495,12 @@ export const SCRIPTS = [
     effet("avantage-aerien", 253, 1794343420987, "Avantage aérien", "auto",
         "Conflit : combat terrestre",
         "Vos infanteries ont la frappe en premier."),
+
+    // ---- lot B : production ----
+
+    effet("ia-industrielle", 193, 1790238201043, "IA industrielle", "auto",
+        "Production ouverte avec un dock (Ctrl + clic sur le dock, phase de production)",
+        "Vos docks produisent 2 unités de plus ; pour un dock posé sur une planète militaire, le coût total de la production baisse de 2."),
 ];
 
 // Script d'effet de technologie : sa description seule (son code est là où il agit)

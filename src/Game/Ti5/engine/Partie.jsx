@@ -4,7 +4,7 @@ import { useSearch, getFromType } from "../../../lib/store";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { Text } from "../../../Component/Text";
 import { getHandler } from "../../games";
-import { usePartie, useElement, useElements, chargerContenu } from "./sync";
+import { usePartie, useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
 import { SCRIPTS, SCRIPTS_DESACTIVES, scriptsDeRecrutement, technologiesDe } from "./scripts";
 import { depenserAgent } from "./effets";
 import { MiseEnPlaceJoueur } from "./MiseEnPlaceJoueur";
@@ -65,6 +65,7 @@ import { Combat, combatsEnCours, aDesUnites, COULEUR_COMBAT } from "./Combat";
 import { passagesEnCours } from "./Blocage";
 import { controlesEnCours } from "./Controle";
 import { Notifications } from "./Notifications";
+import { ouvrirProduction, lireProduction } from "./Production";
 import { EnvoyerVers, MontrerA } from "./Envoi";
 import { Notes } from "./Notes";
 import { quiVoit } from "./etat";
@@ -622,6 +623,14 @@ export function Partie({ id }) {
     function cliquer(id, event) {
 
         const c = etat.composants[id];
+
+        // Phase de production : Ctrl + clic sur une de mes unités de la carte qui a
+        // une capacité de production ouvre une production (Production.jsx)
+        if (estJoueur && c && event.ctrlKey && enProduction && c.ref?.type === "unit" &&
+            /^hex:/.test(c.zone || "") && lireProduction(contenuEnCache(c.ref.id))) {
+            ouvrirProduction({ ...ctx, setProduction }, c, confirmerRegle);
+            return true;
+        }
 
         // Phase de proposition : Ctrl + clic sur un agenda de ma main l'ajoute
         // aux agendas du tour suivant, en utilisant un politique. Une seule
@@ -1242,8 +1251,9 @@ export function Partie({ id }) {
                         {/* Phase de production */}
                         {enProduction && estJoueur && (
                             <div style={{ marginTop: 4, fontSize: 13 }}>
-                                <b>Produire :</b> cocher « Production » dans la réserve, puis
-                                glisser une unité : son coût est retiré de vos ressources.{" "}
+                                <b>Produire :</b> Ctrl + clic sur une de vos unités à production (un dock…),
+                                puis glisser les unités depuis la réserve : leur coût est retiré de vos
+                                ressources (ou cocher « Production » dans la réserve, pour produire librement).{" "}
                                 <b>Mobiliser :</b> cliquer sur un système, le bouton est à côté
                                 de chaque planète que vous possédez.
                             </div>

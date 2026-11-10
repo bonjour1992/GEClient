@@ -231,7 +231,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Réseau d'ingérence (scientifique posé sur le plateau de vote), 251 Argumentation véhémente
   (interface de vote, résultat immédiat) ; 245 Cuve de clonage (mobilisation) ; 217 Rayon
   tracteur et valeur de contrôle (`#con`) dans le blocage et les conflits de contrôle.
-- ☐ Lot B — production : 191 capacité logistique (taille de flotte, production du Dock) ; mode
+- ☑ Lot B — production : 191 capacité logistique (taille de flotte, production du Dock) ; mode
   production (Ctrl + clic sur un élément à `#prod` : marqueur d'activation, bandeau « production
   en cours … 1/3 », réserve en rouge pour ce qui n'est pas productible, « Terminer ») ; 193 IA
   industrielle ; capture (une unité capturée glissée en production donne mon unité équivalente,
