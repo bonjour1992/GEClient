@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle } from "./Interaction";
+import { useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { resistanceDe } from "./effets";
+import { resistanceDe, victimesBombe } from "./effets";
+import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
-import { MARQUEUR } from "./miseEnPlace";
+import { MARQUEUR, ACTIVATION } from "./miseEnPlace";
 import { Blocages } from "./Blocage";
 import { Controles } from "./Controle";
 
@@ -77,7 +78,11 @@ export function lireLieu(lieu) {
     };
 }
 
-// Lieux des combats en cours
+// Lieux des combats encore ouverts (les combats résolus, gardés jusqu'à la fin
+// de la phase, n'en font pas partie)
+export const combatsActifs = etat => combatsEnCours(etat).filter(lieu => Number(etat.compteurs[cleCombat(lieu)]) === 1);
+
+// Lieux des combats de l'onglet : en cours (compteur à 1) ou résolus (à 2)
 export function combatsEnCours(etat) {
     return Object.keys(etat.compteurs)
         .filter(id => id.startsWith("combat:") && etat.compteurs[id])
@@ -103,9 +108,19 @@ export function aDesUnites(index, lieu, userId) {
 }
 
 // Capacité d'attaque à distance d'une unité : #bomb(5,2) -> [5, 2]
+// Notation à étoiles : « #can 6** » -> [6, 2] (une étoile par dé).
 function capacite(u, cle) {
-    const m = new RegExp(`#${cle}\\((\\d+)(?:,\\s*(\\d+))?\\)`, "i").exec(u?.habilite || "");
-    return m ? [Number(m[1]), Number(m[2]) || 1] : null;
+
+    const texte = u?.habilite || "";
+    const m = new RegExp(`#${cle}\\((\\d+)(?:,\\s*(\\d+))?\\)`, "i").exec(texte);
+
+    if (m) {
+        return [Number(m[1]), Number(m[2]) || 1];
+    }
+
+    const etoiles = new RegExp(`#${cle}\\s*(\\d+)(\\*+)`, "i").exec(texte);
+
+    return etoiles ? [Number(etoiles[1]), etoiles[2].length] : null;
 }
 
 // Camp des unités sans propriétaire
@@ -186,10 +201,13 @@ export function Combat() {
         );
     }
 
-    // Combat affiché : celui qu'on a choisi, sinon le premier où j'ai des unités
+    // Combat résolu : gardé dans l'onglet jusqu'à la fin de la phase
+    const resolu = n => Number(etat.compteurs[cleCombat(n)]) === 2;
+
+    // Combat affiché : celui qu'on a choisi, sinon le premier, encore ouvert, où j'ai des unités
     const choisi = combats.includes(combatVu)
         ? combatVu
-        : (combats.find(n => aDesUnites(index, n, moi)) ?? combats[0]);
+        : (combats.find(n => !resolu(n) && aDesUnites(index, n, moi)) ?? combats.find(n => !resolu(n)) ?? combats[0]);
 
     return (
         <div>
@@ -213,9 +231,11 @@ export function Combat() {
                                 borderRadius: 5,
                                 fontWeight: choisi === n ? "bold" : "normal",
                                 border: choisi === n ? "3px solid #b71c1c" : "1px solid #555",
-                                backgroundColor: avecMoi ? COULEUR_COMBAT.avecMoi : COULEUR_COMBAT.sansMoi,
+                                backgroundColor: avecMoi && !resolu(n) ? COULEUR_COMBAT.avecMoi : COULEUR_COMBAT.sansMoi,
+                                opacity: resolu(n) ? 0.7 : 1,
                             }}
                         >
+                            {resolu(n) ? "✔ résolu : " : ""}
                             {SORTES[l.sorte]} — {nom}, {nomCase(l.numero)}
                             {l.planete !== null ? `, planète ${l.planete + 1}` : ""}
                             {avecMoi ? " ⚔" : ""}
@@ -274,7 +294,8 @@ function CombatSysteme({ lieu }) {
         for (const z of index.parZone.keys()) {
             const m = /^hex:(\d+)(:planete:\d+)?$/.exec(z);
 
-            if (m && distanceCases(numero, Number(m[1])) <= 1) {
+            // (jusqu'à 3 cases : la portée de chaque canon est vérifiée plus bas)
+            if (m && distanceCases(numero, Number(m[1])) <= 3) {
                 aDistance.push(...unitesDe(z));
             }
         }
@@ -303,6 +324,29 @@ function CombatSysteme({ lieu }) {
     const campDe = c => c.marques?.possession ?? c.proprio ?? NEUTRE;
     const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
 
+    // Canons spatiaux : distance d'une unité au système, et portée — 1, +1 avec le
+    // script Canon longue portée ; une case de plus encore avec Laser longue
+    // portée, au prix d'un scientifique. -> "oui", "scientifique" ou null
+    const distanceDe = c => distanceCases(numero, Number(/^hex:(\d+)/.exec(c.zone || "")?.[1]));
+
+    const aPortee = c => {
+        const camp = campDe(c);
+        const portee = 1 + (camp !== NEUTRE && aScript(camp, "canon-longue-portee") ? 1 : 0);
+        const d = distanceDe(c);
+
+        return d <= portee ? "oui"
+            : (d === portee + 1 && camp !== NEUTRE && aScript(camp, "laser-longue-portee") ? "scientifique" : null);
+    };
+
+    // Canon d'une unité : celui de son texte ; script Laser longue portée : le
+    // vaisseau amiral en gagne un (6, 3 dés)
+    const canonDe = c => capacite(contenus[c.ref.id], "can") ||
+        (contenus[c.ref.id]?.type === "fs" && campDe(c) !== NEUTRE && aScript(campDe(c), "laser-longue-portee") ? [6, 3] : null);
+
+    // Mes canons à portée qui n'ont pas encore été choisis pour tirer
+    const canonsEnAttente = sorte !== "canons" ? [] : unites.filter(c =>
+        contenus[c.ref.id] && campDe(c) !== NEUTRE && !c.marques?.canon && canonDe(c) && aPortee(c));
+
     // tire : peut attaquer ; cible : peut être engagée ; att, nb : seuil et nombre de dés
     const vaisseaux = unites
         .map(c => {
@@ -323,9 +367,13 @@ function CombatSysteme({ lieu }) {
                 tire = cible && militaire;
                 [att, nb] = [u.combat, u.combat_touche];
             } else {
-                const tir = capacite(u, sorte === "bombardement" ? "bomb" : "can");
+                const tir = sorte === "bombardement" ? capacite(u, "bomb") : canonDe(c);
 
-                tire = !!tir;
+                // Un canon spatial ne tire que s'il a été choisi (marque « canon » : un
+                // amiral est usé, un marqueur d'activation posé dessus) ; ceux des
+                // neutres tirent d'office, à portée 1
+                tire = !!tir && (sorte !== "canons" ||
+                    (campDe(c) === NEUTRE ? distanceDe(c) <= 1 : !!c.marques?.canon));
                 cible = ici && (sorte === "bombardement" || mots.includes("ship"));
                 [att, nb] = tir || [0, 1];
             }
@@ -624,6 +672,9 @@ function CombatSysteme({ lieu }) {
         ].filter(Boolean);
     }
 
+    // Script Bombe bactériologique : au bombardement, les dégâts de ce tireur sont verts
+    const degatsVerts = v => sorte === "bombardement" && v.camp !== NEUTRE && aScript(v.camp, "bombe-bacteriologique");
+
     // Le dé touche s'il fait le seuil ou moins
     const seuil = v => attaque(v) - malus(v) + ajust(v) + bonusScripts(v).reduce((s, [n]) => s + n, 0);
 
@@ -634,6 +685,18 @@ function CombatSysteme({ lieu }) {
         const resistance = pv(v).valeur;
         return resistance > 0 && (Number(v.c.marques?.degat) || 0) >= resistance;
     };
+
+    // Retrait d'une unité détruite : elle garde la trace du combat (marque
+    // « detruitA »), pour le Grappin de capture d'un combat résolu
+    const retrait = v => [
+        { type: "marquer", c: v.id, marque: "detruitA", valeur: `${lieu}:${etat.tour}` },
+        v.c.marques?.medecine && { type: "marquer", c: v.id, marque: "medecine", valeur: null },
+        { type: "supprimer", c: v.id },
+    ].filter(Boolean);
+
+    // Script Médecine : une de mes unités biologiques, et son jet de capture
+    const medecine = v => v.camp === moi && (v.u.mot_cle || []).includes("bio") && aScript(moi, "medecine");
+    const jetMedecine = v => Number(v.c.marques?.medecine) || 0;
 
     // Unités détruites à retirer du jeu (bouton « Retirer tous les détruits »)
     const aRetirer = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes"));
@@ -725,7 +788,15 @@ function CombatSysteme({ lieu }) {
             parCible.set(x.id, (parCible.get(x.id) || 0) + 1);
         }
 
+        // Script Bombe bactériologique : une infanterie biologique détruite par un
+        // de ses dégâts en entraîne deux autres, identiques
+        const epidemie = couples
+            .filter(({ x, v }) => degatsVerts(v) &&
+                (Number(x.c.marques?.degat) || 0) + parCible.get(x.id) >= pv(x).valeur)
+            .flatMap(({ x }) => victimesBombe(etat, x.c, x.u, [...parCible.keys()]));
+
         return [
+            ...epidemie,
             ...[...parTireur].map(([id, indices]) => ({
                 ...marquer(id, M.desA, indices),
                 si: parId[id].c.marques?.[M.desA] ?? 0,
@@ -940,7 +1011,9 @@ function CombatSysteme({ lieu }) {
             ...Object.keys(etat.compteurs)
                 .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup):\d+$|:detruits$/.test(id) && etat.compteurs[id])
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
-            { type: "compteur", id: COMBAT, valeur: 0 },
+            ...unites.filter(c => c.marques?.canon).map(c => ({ type: "marquer", c: c.id, marque: "canon", valeur: null })),
+            // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
+            { type: "compteur", id: COMBAT, valeur: 2 },
         ], commentaire + (gain ? ` — Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}` : ""));
     }
 
@@ -1065,11 +1138,43 @@ function CombatSysteme({ lieu }) {
                         <b style={{ color: "#c00" }}>{indestructible ? "désactivé" : "détruit"}</b>
                     )}
 
-                    {joueur && detruit && !indestructible && (
+                    {/* Script Médecine : une de mes unités biologiques détruite peut être capturée
+                        (sauvée) sur un jet de 5 ou moins — elle va alors dans mes éléments actifs */}
+                    {joueur && detruit && !indestructible && medecine(v) && !jetMedecine(v) && (
+                        <button
+                            type="button"
+                            data-action="medecine-jet"
+                            style={styleBouton}
+                            onClick={() => envoyer([{ type: "des", n: 1, faces: 10, c: v.id, marque: "medecine" }], "Médecine : jet de capture")}
+                        >
+                            Médecine : jet (5 ou moins)
+                        </button>
+                    )}
+
+                    {joueur && detruit && !indestructible && medecine(v) && jetMedecine(v) > 0 && (
+                        <b style={{ color: jetMedecine(v) <= 5 ? "#1b5e20" : "#b71c1c" }}>Médecine : {jetMedecine(v)}</b>
+                    )}
+
+                    {joueur && detruit && !indestructible && medecine(v) && jetMedecine(v) > 0 && jetMedecine(v) <= 5 && (
+                        <button
+                            type="button"
+                            data-action="medecine-capturer"
+                            style={styleBouton}
+                            onClick={() => envoyer([
+                                { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+                                { type: "marquer", c: v.id, marque: "medecine", valeur: null },
+                                { type: "deplacer", c: v.id, vers: `joueur:${moi}:actif` },
+                            ], `Médecine : ${v.nom} capturée (éléments actifs)`)}
+                        >
+                            Capturer
+                        </button>
+                    )}
+
+                    {joueur && detruit && !indestructible && !(medecine(v) && jetMedecine(v) > 0 && jetMedecine(v) <= 5) && (
                         <button
                             type="button"
                             style={styleBouton}
-                            onClick={() => jouer([{ type: "supprimer", c: v.id }, { type: "compteur", id: DETRUITS, delta: 1 }])}
+                            onClick={() => jouer([...retrait(v), { type: "compteur", id: DETRUITS, delta: 1 }])}
                         >
                             Retirer
                         </button>
@@ -1187,9 +1292,11 @@ function CombatSysteme({ lieu }) {
 
                                     {touche && !attribues.includes(k) && (
                                         <span
-                                            data-degat={`${v.id}:${k}:${M.desA}`}
+                                            data-degat={`${v.id}:${k}:${M.desA}${degatsVerts(v) ? ":vert" : ""}`}
                                             data-nom="Dégât"
-                                            title="Dégât : le glisser sur le vaisseau touché"
+                                            title={degatsVerts(v)
+                                                ? "Dégât de Bombe bactériologique : s'il détruit une infanterie biologique, deux autres identiques sont détruites"
+                                                : "Dégât : le glisser sur le vaisseau touché"}
                                             style={{
                                                 display: "inline-flex",
                                                 alignItems: "center",
@@ -1197,7 +1304,7 @@ function CombatSysteme({ lieu }) {
                                                 width: 22,
                                                 height: 22,
                                                 borderRadius: "50%",
-                                                backgroundColor: "#c62828",
+                                                backgroundColor: degatsVerts(v) ? "#2e7d32" : "#c62828",
                                                 color: "#fff",
                                                 fontWeight: "bold",
                                                 cursor: "grab",
@@ -1234,6 +1341,29 @@ function CombatSysteme({ lieu }) {
     // RENDU
     // --------------------------------------------------------
 
+    const titre = `${SORTES[sorte]} — ` +
+        (planete !== null ? `${(laPlanete?.name || "planète " + (planete + 1)).replace(/^!([^!]*)!/, "")}, ` : "") +
+        `${(systeme?.name || "système").replace(/^!([^!]*)!/, "")}, ${nomCase(numero)}`;
+
+    if (Number(etat.compteurs[COMBAT]) === 2) {
+        return <CombatResolu lieu={lieu} compteur={COMBAT} titre={titre} />;
+    }
+
+    // Tirer avec un de mes canons spatiaux : un amiral est usé (et un scientifique
+    // au-delà de sa portée, script Laser longue portée), un marqueur d'activation
+    // est posé sur le canon, qui rejoint les tireurs
+    const amiral = agentDisponible({ index, moi, search }, "amiral");
+    const scientifique = agentDisponible({ index, moi, search }, "scientifique");
+
+    const tirerAvec = (c, commentaire) => envoyer([
+        amiral && { type: "deplacer", c: amiral.id, vers: `joueur:${moi}:agentsUses` },
+        aPortee(c) === "scientifique" && scientifique && { type: "deplacer", c: scientifique.id, vers: `joueur:${moi}:agentsUses` },
+        { type: "creer", jeton: ACTIVATION, sur: c.id },
+        { type: "marquer", c: c.id, marque: "canon", valeur: 1 },
+    ], commentaire);
+
+    const mesCanons = canonsEnAttente.filter(c => campDe(c) === moi);
+
     return (
         <div>
 
@@ -1250,11 +1380,7 @@ function CombatSysteme({ lieu }) {
                     backgroundColor: "#f5f5f5",
                 }}
             >
-                <b style={{ fontSize: 16 }}>
-                    {SORTES[sorte]} —{" "}
-                    {planete !== null && `${(laPlanete?.name || "planète " + (planete + 1)).replace(/^!([^!]*)!/, "")}, `}
-                    {(systeme?.name || "système").replace(/^!([^!]*)!/, "")}, {nomCase(numero)}
-                </b>
+                <b style={{ fontSize: 16 }}>{titre}</b>
 
                 {/* Les quatre phases du combat : celle en cours est en gras. Les
                     attaques d'une phase partent quand tout le monde est prêt. */}
@@ -1334,7 +1460,7 @@ function CombatSysteme({ lieu }) {
                             title="Retire du jeu toutes les unités détruites de ce combat (pas les unités indestructibles, qui sont seulement désactivées)"
                             onClick={() => envoyer(
                                 [
-                                    ...aRetirer.map(v => ({ type: "supprimer", c: v.id })),
+                                    ...aRetirer.flatMap(retrait),
                                     { type: "compteur", id: DETRUITS, delta: aRetirer.length },
                                 ],
                                 `Combat : ${aRetirer.length} unité(s) détruite(s) retirée(s)`
@@ -1380,6 +1506,43 @@ function CombatSysteme({ lieu }) {
 
             {vaisseaux.length === 0 && (
                 <i style={{ color: "#666" }}>Aucune unité dans ce combat.</i>
+            )}
+
+            {/* Canons spatiaux : mes canons à portée, à choisir pour tirer */}
+            {sorte === "canons" && joueur && mesCanons.length > 0 && (
+                <div
+                    data-canons-accessibles
+                    style={{ marginBottom: 8, padding: "6px 10px", border: "2px solid #b71c1c", borderRadius: 8, backgroundColor: "#fff", fontSize: 13 }}
+                >
+                    <b>Mes canons spatiaux à portée</b>{" "}
+                    <span style={{ color: "#555" }}>
+                        — en choisir un le fait tirer : un amiral est utilisé et un marqueur d'activation posé dessus.
+                    </span>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px", marginTop: 4 }}>
+                        {mesCanons.map(c => (
+                            <span key={c.id} data-canon={c.id} style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                                <b>{nomElement(search, c.ref)}</b>
+                                <span style={{ color: "#444" }}>
+                                    {nomLieu(c.zone)}, distance {distanceDe(c)}, canon {canonDe(c)[0]}{canonDe(c)[1] > 1 ? " ×" + canonDe(c)[1] : ""}
+                                </span>
+                                <BoutonRegle
+                                    data-action="tirer-canon"
+                                    nom={`Canon spatial : ${nomElement(search, c.ref)} tire (${nomLieu(c.zone)}, distance ${distanceDe(c)})`}
+                                    obstacles={[
+                                        !amiral && "vous n'avez pas d'amiral disponible (aucun ne sera usé)",
+                                        aPortee(c) === "scientifique" && !scientifique &&
+                                            "Laser longue portée : il faut aussi un scientifique disponible pour tirer à cette distance",
+                                    ]}
+                                    faire={commentaire => tirerAvec(c, commentaire)}
+                                    title="Use un amiral et pose un marqueur d'activation sur ce canon : il rejoint les tireurs"
+                                    style={styleBouton}
+                                >
+                                    Tirer (use un amiral{aPortee(c) === "scientifique" ? " et un scientifique" : ""})
+                                </BoutonRegle>
+                            </span>
+                        ))}
+                    </div>
+                </div>
             )}
 
             {/* Script Capsule de secours : infanteries des vaisseaux détruits */}

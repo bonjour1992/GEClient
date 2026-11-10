@@ -5,7 +5,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { capaciteDe } from "./effets";
+import { capaciteDe, victimesBombe } from "./effets";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -2128,11 +2128,21 @@ export function Plan({ children, style }) {
             const touchee = etat.composants[idCible];
             // "<tireur>:<dé>:<marque>" — la marque des dégâts attribués dépend
             // de la sorte de combat (desA, desAB pour un bombardement...)
-            const [idTireur, de, marque = "desA"] = a.degat.split(":");
+            // (vert : dégât de Bombe bactériologique — une infanterie biologique
+            // qu'il détruit en entraîne deux autres, effets.js)
+            const [idTireur, de, marque = "desA", vert] = a.degat.split(":");
             const tireur = etat.composants[idTireur];
 
             if (touchee?.ref?.type === "unit" && tireur) {
+
+                const contenuTouchee = contenuEnCache(touchee.ref.id);
+
+                const epidemie = vert && (Number(touchee.marques?.degat) || 0) + 1 >= (Number(contenuTouchee?.PV) || 1)
+                    ? victimesBombe(etat, touchee, contenuTouchee)
+                    : [];
+
                 jouer([
+                    ...epidemie,
                     {
                         type: "marquer",
                         c: touchee.id,

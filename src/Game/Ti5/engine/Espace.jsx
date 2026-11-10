@@ -22,7 +22,7 @@ import {
 } from "./miseEnPlace";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
-import { cleCombat, combatsEnCours, aDesUnites } from "./Combat";
+import { cleCombat, combatsActifs, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
 import { ProductionEnCours } from "./Production";
@@ -77,7 +77,7 @@ export function Espace() {
     // "moi" si j'ai des unités dans l'un d'eux, "autre" sinon
     const enCombat = {};
 
-    for (const lieu of combatsEnCours(etat)) {
+    for (const lieu of combatsActifs(etat)) {
         const numero = parseInt(lieu, 10);
 
         if (aDesUnites(index, lieu, moi)) {
@@ -897,7 +897,7 @@ function FicheSysteme({ numero, id, fermer }) {
     // la table. Envoyé tout de suite, comme toute action.
     //   "<i>" combat spatial, "<i>c" canons spatiaux,
     //   "<i>p<k>" combat terrestre, "<i>p<k>b" bombardement
-    const combats = combatsEnCours(etat);
+    const combats = combatsActifs(etat);
 
     function envoyerAuCombat(lieu, commentaire = "") {
 

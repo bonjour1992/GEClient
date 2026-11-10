@@ -78,3 +78,25 @@ export function depenserAgent({ aScript, moi, etat }, agent, nom = "cet agent") 
         ]
         : [{ type: "supprimer", c: agent.id }];
 }
+
+// Bombe bactériologique : quand un de ses dégâts (affichés en vert) détruit
+// une infanterie biologique, deux autres infanteries identiques — même unité,
+// même camp, même lieu, encore debout — sont détruites aussi.
+//   deja : identifiants déjà touchés par le même coup
+//   -> actions qui les marquent détruites
+export function victimesBombe(etat, touchee, contenu, deja = []) {
+
+    if (contenu?.type !== "inf" || !contenu.mot_cle?.includes("bio")) {
+        return [];
+    }
+
+    const resistance = Number(contenu.PV) || 1;
+    const camp = c => c.marques?.possession ?? c.proprio ?? 0;
+
+    return Object.values(etat.composants)
+        .filter(c => c.id !== touchee.id && !deja.includes(c.id) && c.zone === touchee.zone &&
+            c.ref?.type === "unit" && c.ref.id === touchee.ref.id && camp(c) === camp(touchee) &&
+            (Number(c.marques?.degat) || 0) < resistance)
+        .slice(0, 2)
+        .map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: resistance }));
+}

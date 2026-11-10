@@ -240,7 +240,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   (comptoir dans le système, choix de la faction) ; 216 Science intégrée et 269 Commerce
   profitable à la livraison ; 270 Connexion (fenêtre quand un agent est utilisé) ; 212 Propagande
   (fenêtre au gain d'infamie).
-- ☐ Lot D — conflits : canons spatiaux (liste de mes canons accessibles avec leur distance,
+- ☑ Lot D — conflits : canons spatiaux (liste de mes canons accessibles avec leur distance,
   tirer = amiral usé + marqueur d'activation ; 235 et 248 pour la portée) ; conflit résolu gardé
   jusqu'à la fin de la phase, avec 250 Grappin de capture ; 182 Bombe bactériologique (dégâts
   verts) ; 242 Médecine.

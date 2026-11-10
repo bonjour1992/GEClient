@@ -519,6 +519,28 @@ export const SCRIPTS = [
     effet("connexion", 270, 1794343420989, "Connexion", "modifie",
         "Tout bouton qui utilise ou dépense un agent",
         "Si vous n'avez pas l'agent demandé mais avez un négociant, une fenêtre propose de l'utiliser à sa place pour 2 commerce (pas pour les agents du déplacement assisté)."),
+
+    // ---- lot D : conflits ----
+
+    effet("bombe-bacteriologique", 182, 1794335054835, "Bombe bactériologique", "auto",
+        "Conflit : bombardement",
+        "Vos dégâts de bombardement sont verts : une infanterie biologique qu'ils détruisent entraîne deux autres infanteries identiques de la planète."),
+
+    effet("canon-longue-portee", 235, 1794335054867, "Canon longue portée", "auto",
+        "Conflit : canons spatiaux (« Mes canons spatiaux à portée »)",
+        "La portée de vos canons spatiaux passe de 1 à 2."),
+
+    effet("medecine", 242, 1794335054872, "Médecine", "modifie",
+        "Conflit : « Retirer » d'une de vos unités biologiques détruites",
+        "Avant de la retirer, un jet (5 ou moins sur un dé de 10) permet de la capturer : elle va dans vos éléments actifs, d'où vous la replacez (use un logisticien, à la main)."),
+
+    effet("laser-longue-portee", 248, 1794343420984, "Laser longue portée", "auto",
+        "Conflit : canons spatiaux (« Mes canons spatiaux à portée »)",
+        "Votre vaisseau amiral a un canon spatial (6, 3 dés) ; un canon peut tirer une case plus loin que sa portée si un scientifique est aussi utilisé."),
+
+    effet("grappin-de-capture", 250, 1794335054876, "Grappin de capture", "nouveau",
+        "Conflit : cadre d'un combat résolu",
+        "Use un logisticien : un vaisseau adverse détruit pendant ce combat (ni soleil de guerre ni vaisseau amiral) arrive capturé dans vos éléments actifs."),
 ];
 
 // Script d'effet de technologie : sa description seule (son code est là où il agit)

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useEngine } from "./Interaction";
-import { combatsEnCours, aDesUnites } from "./Combat";
+import { combatsActifs, aDesUnites } from "./Combat";
 import { passagesEnCours } from "./Blocage";
 import { controlesEnCours } from "./Controle";
 
@@ -56,7 +56,7 @@ export function Notifications() {
             attentes[`tour:${etat.tour}:${etat.phase}`] = `C'est votre tour${etat.phase ? ` (${etat.phase})` : ""}.`;
         }
 
-        for (const lieu of combatsEnCours(etat)) {
+        for (const lieu of combatsActifs(etat)) {
             if (aDesUnites(index, lieu, moi)) {
                 attentes["combat:" + lieu] = "Un combat est ouvert là où vous avez des unités.";
             }

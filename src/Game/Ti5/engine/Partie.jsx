@@ -63,7 +63,7 @@ import { Vote, tradingFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
-import { Combat, combatsEnCours, aDesUnites, COULEUR_COMBAT } from "./Combat";
+import { Combat, combatsEnCours, combatsActifs, cleCombat, aDesUnites, COULEUR_COMBAT } from "./Combat";
 import { passagesEnCours } from "./Blocage";
 import { controlesEnCours } from "./Controle";
 import { Notifications } from "./Notifications";
@@ -371,8 +371,13 @@ export function Partie({ id }) {
 
     // Combats et blocages de déplacement en cours : l'onglet Conflit est mis
     // en avant, d'une couleur différente selon que j'y ai des unités ou non
-    const combats = combatsEnCours(etat);
+    const combats = combatsActifs(etat);
     const passages = passagesEnCours(etat);
+
+    // Combats résolus : ils restent dans l'onglet Conflit jusqu'à la fin de la phase
+    const retraitResolus = combatsEnCours(etat)
+        .filter(lieu => !combats.includes(lieu))
+        .map(lieu => ({ type: "compteur", id: cleCombat(lieu), valeur: 0 }));
     const controles = controlesEnCours(etat);
     const conflits = combats.length + passages.length + controles.length;
     const combatEnCours = conflits > 0;
@@ -562,7 +567,7 @@ export function Partie({ id }) {
         if (phase) {
             p.envoyer([commentaire, ...trading.messages].filter(Boolean).join(" — "), [
                 ...trading.actions,
-                ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse] : []),
+                ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
                 ...remiseDesPasses,
