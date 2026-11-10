@@ -63,6 +63,8 @@ import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
 import { Combat, combatsEnCours, aDesUnites, COULEUR_COMBAT } from "./Combat";
 import { passagesEnCours } from "./Blocage";
+import { controlesEnCours } from "./Controle";
+import { Notifications } from "./Notifications";
 import { EnvoyerVers, MontrerA } from "./Envoi";
 import { Notes } from "./Notes";
 import { quiVoit } from "./etat";
@@ -353,9 +355,12 @@ export function Partie({ id }) {
     // en avant, d'une couleur différente selon que j'y ai des unités ou non
     const combats = combatsEnCours(etat);
     const passages = passagesEnCours(etat);
-    const combatEnCours = combats.length + passages.length > 0;
+    const controles = controlesEnCours(etat);
+    const conflits = combats.length + passages.length + controles.length;
+    const combatEnCours = conflits > 0;
     const combatAvecMoi = combats.some(n => aDesUnites(index, n, moi)) ||
-        passages.some(p => p.mover === moi || aDesUnites(index, String(p.numero), moi));
+        passages.some(p => p.mover === moi || aDesUnites(index, String(p.numero), moi)) ||
+        controles.some(c => c.demandeur === moi || aDesUnites(index, `${c.numero}p${c.k}`, moi));
 
     // Encaissement des faveurs : l'onglet Faveurs n'apparaît qu'à la phase
     // d'événement d'un tour qui en prévoit
@@ -898,6 +903,9 @@ export function Partie({ id }) {
                     {/* Le retour à la liste est dans la barre de navigation (« Parties ») */}
                     <b style={{ fontSize: 18 }}>{partie.nom}</b>
 
+                    {/* Notifications du navigateur : mon tour, un conflit où j'ai des unités */}
+                    {estJoueur && <Notifications />}
+
                     <span>
                         Tour{" "}
                         {!enteteReduit && (
@@ -1312,7 +1320,7 @@ export function Partie({ id }) {
                                                             : undefined,
                                     }}
                                 >
-                                    {libelle}{cle === "combat" && combatEnCours ? ` (${combats.length + passages.length})` : ""}
+                                    {libelle}{cle === "combat" && combatEnCours ? ` (${conflits})` : ""}
                                     {cle === "transactions" && transactionsEnCours.length > 0
                                         ? ` (${transactionsEnCours.length})`
                                         : ""}

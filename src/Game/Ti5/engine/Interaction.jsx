@@ -6,6 +6,7 @@ import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe } from "./effets";
+import { estHyperlane } from "./hyperlane";
 import {
     MARQUEUR,
     FAVEUR,
@@ -1785,6 +1786,18 @@ export function Plan({ children, style }) {
     const appui = useRef(null);
     const [glisser, setGlisser] = useState(null);
 
+    // Hyperlane : aucune unité ne s'y pose (la tuile de la case est une hyperlane)
+    const estSurHyperlane = zone => {
+        const m = /^hex:(\d+)/.exec(zone || "");
+
+        const tuile = m && Object.values(etat.composants)
+            .find(c => c.zone === "hex:" + m[1] && c.ref?.type === "system");
+
+        return !!tuile && estHyperlane(contenuEnCache(tuile.ref.id)?.anomaly);
+    };
+
+    const REFUS_HYPERLANE = "Une hyperlane n'est pas une case : aucune unité ne peut y être posée.";
+
     // Message non bloquant : après un embarquement, dit si le vaisseau porte
     // plus d'unités que sa capacité (l'embarquement est fait quand même).
     // embarques : composants qu'on vient d'y poser ; crees : unités qu'on vient d'y créer
@@ -2111,6 +2124,11 @@ export function Plan({ children, style }) {
                 return;
             }
 
+            if (!jeton && (a.source.type || "unit") === "unit" && estSurHyperlane(zone)) {
+                signaler?.(REFUS_HYPERLANE);
+                return;
+            }
+
             const paiement = jeton || a.source.neutre ? [] : payerProduction([a.source]);
 
             if (!paiement) {
@@ -2183,6 +2201,11 @@ export function Plan({ children, style }) {
         const zone = trouverZone(cible);
 
         if (!zone) {
+            return;
+        }
+
+        if (ids.some(id => etat.composants[id]?.ref?.type === "unit") && estSurHyperlane(zone)) {
+            signaler?.(REFUS_HYPERLANE);
             return;
         }
 

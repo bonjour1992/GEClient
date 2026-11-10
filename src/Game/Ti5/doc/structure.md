@@ -532,9 +532,37 @@ et l'envoie en un coup. Le glisser-déposer des vaisseaux reste possible.
    Un système où des vaisseaux s'arrêtent en chemin est activé (marqueur).
    « Abandonner » retire les marques : les vaisseaux restent où ils sont.
 
-Non gérés : les hyperlanes (comptées comme des cases ordinaires), les champs
-d'astéroïdes, le vaisseau amiral de Creuss comme trou de ver, un contrôle
-autre que 1 par unité.
+Hyperlanes (`engine/hyperlane.js`) : une tuile d'hyperlane (anomalie `hpl…`)
+n'est pas une case. Aucune unité ne s'y pose (`Plan`, `estSurHyperlane` : le
+dépôt est refusé) ; un trajet la traverse sans dépenser de mouvement, mais
+seulement d'une voisine à une autre que ses lignes relient (`hyperlaneRelie` :
+`LIGNES` donne les bords reliés de chaque sorte de tuile, décalés de sa
+rotation), et ne peut pas y finir.
+
+Non gérés : le vaisseau amiral de Creuss comme trou de ver, un contrôle autre
+que 1 par unité.
+
+### conflit de contrôle
+
+`engine/Controle.jsx`. « Prendre possession » d'une planète où un autre camp a
+des unités militaires n'est plus immédiat : `demanderPossession` (`Espace.jsx`)
+ouvre un test de contrôle, affiché en tête de l'onglet Conflit (`Controles`).
+Compteurs : `controle:<case>p<planète>` = joueur qui demande, et
+`controle:<case>p<planète>:<camp>` = 1 s'abstient, 2 soutient, 3 s'oppose (le
+demandeur soutient, les neutres s'opposent sauf si un joueur en décide
+autrement). Contrôle = 1 par unité militaire de la planète. Le demandeur prend
+possession si le contrôle pour dépasse le contrôle contre (`BoutonRegle`), ou
+renonce. `actionsPossession` est la prise de possession elle-même, partagée
+avec la fiche d'un système.
+
+### notifications du navigateur
+
+`engine/Notifications.jsx` : case « 🔔 Notifications » de l'en-tête (choix gardé
+dans le navigateur, `ge-engine-notifications`). Elle demande la permission du
+navigateur, puis notifie chaque attente nouvelle du joueur — il devient le
+joueur actif, un combat, un blocage ou un conflit de contrôle s'ouvre là où il
+a des unités — quand la page n'est pas au premier plan. Demande une adresse en
+https ou localhost.
 
 ### technologie posée sur une feuille
 

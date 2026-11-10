@@ -25,6 +25,7 @@ import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync"
 import { cleCombat, combatsEnCours, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
+import { actionsPossession, cleControle, controlesEnCours } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -1097,31 +1098,46 @@ function FicheSysteme({ numero, id, fermer }) {
 
     function prendre(idPlanete, k, commentaire, avant = []) {
 
-        const carte = cartePlanete(idPlanete);
-        const zone = `joueur:${moi}:actif`;
-
-        // Script Assimilation : une planète qu'aucun joueur ne possédait reçoit une de mes infanteries
-        const assimilation = aScript(moi, "assimilation") && idInfanterie &&
-            !/^joueur:\d+:actif$/.test(carte?.zone || "");
+        // (Controle.jsx ; script Assimilation : une infanterie sur une planète sans propriétaire)
+        const { actions, assimilation } = actionsPossession({ etat, moi, aScript }, zonePlanete(k), idPlanete, idInfanterie);
 
         if (assimilation) {
-            avant = [...avant, { type: "creer", ref: { type: "unit", id: idInfanterie }, zone: zonePlanete(k), proprio: moi }];
             aviser("Assimilation : planète neutre obtenue, une infanterie y est posée.");
         }
 
-        // (de / si : refusé si un autre joueur vient de la prendre — pas de carte en double)
-        const verrou = "planete:" + idPlanete;
-        const prises = Number(etat.compteurs[verrou]) || 0;
+        envoyer([...avant, ...actions], commentaire);
+    }
 
-        envoyer([
-            ...avant,
-            ...(carte
-                ? [{ type: "deplacer", c: carte.id, vers: zone, de: carte.zone }]
-                : [
-                    { type: "compteur", id: verrou, valeur: prises + 1, si: prises },
-                    { type: "creer", ref: { type: "planet", id: idPlanete }, zone, proprio: moi },
-                ]),
-        ], commentaire);
+    // Prendre possession : si un autre camp a des unités militaires sur la
+    // planète, un conflit de contrôle s'ouvre dans l'onglet Conflit (Controle.jsx)
+    // au lieu de la prise immédiate. (Une unité dont le contenu n'est pas encore
+    // connu est comptée comme militaire.)
+    function demanderPossession(idPlanete, k, commentaire) {
+
+        const opposants = (index.parZone.get(zonePlanete(k)) || []).some(c =>
+            c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio ?? 0) !== moi &&
+            contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
+
+        if (!opposants) {
+            prendre(idPlanete, k, commentaire);
+            return;
+        }
+
+        const cle = cleControle(numero, k);
+
+        if (!controlesEnCours(etat).some(c => c.cle === cle)) {
+            envoyer([
+                // (les choix d'un conflit précédent sur cette planète sont oubliés)
+                ...Object.keys(etat.compteurs).filter(id => id.startsWith(cle + ":") && etat.compteurs[id])
+                    .map(id => ({ type: "compteur", id, valeur: 0 })),
+                { type: "compteur", id: cle, valeur: moi },
+            ], commentaire + " — conflit de contrôle ouvert");
+
+            aviser("D'autres unités militaires sont sur la planète : un conflit de contrôle est ouvert (onglet Conflit).");
+        }
+
+        fermer();
+        allerA("combat");
     }
 
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
@@ -1341,8 +1357,8 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
                                                     obstacles={[!monInfanterieSur(k) && "il faut une de vos infanteries sur la planète"]}
-                                                    faire={commentaire => prendre(lien.id, k, commentaire)}
-                                                    title="Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs"
+                                                    faire={commentaire => demanderPossession(lien.id, k, commentaire)}
+                                                    title="Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs. Si un autre camp y a des unités militaires, un conflit de contrôle s'ouvre d'abord (onglet Conflit)"
                                                 >
                                                     Prendre possession
                                                 </BoutonRegle>

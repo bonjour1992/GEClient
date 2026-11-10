@@ -1,5 +1,5 @@
 import { EditorInput } from "../../Input/EditorInput"
-import { ElementContent } from "../../lib/datatype"
+import { ElementContent, aggregation } from "../../lib/datatype"
 import { Text } from "../../Component/Text"
 import { backgroundColor, borderColor } from "./ti5Const"
 import { techType } from "./ti5Const"
@@ -8,8 +8,8 @@ import { fullBorder } from "../../Component/style"
 import { SmallPa } from "../../Component/Size"
 import { EnumInput } from "../../Input/EnumInput"
 import { NumberInput } from "../../Input/NumberInput"
-import { BooleanInput } from "../../Input/BooleanInput"
 import FormBase from "../../Input/FormBase"
+import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
 
 export const TechColor = {
     vide: { borderColor: "#666666", backgroundColor: "#DDDDDD" },
@@ -25,13 +25,17 @@ export const TechColor = {
 }
 
 
-class Tech extends ElementContent {
+// Une technologie de faction, d'événement... le dit par son type de lien
+// (Component/TypeLien.jsx), qui remplace l'ancienne case « spéciale ».
+class Tech extends aggregation(ElementContent, TypeLienCarac) {
     techType = "spa";
     tier = 3;
     cout = 5;
     effet = ""
-    special = false
 }
+
+// Hors réserve commune : son nom est écrit en jaune
+const estLiee = content => (content.lienType ? content.lienType !== "commun" : content.special === true)
 
 function Display({ content, context = { unlocked: false }, style, explication }) {
 
@@ -59,7 +63,7 @@ function Display({ content, context = { unlocked: false }, style, explication })
             paddingLeft: 7,
             ...borderColor,
             fontSize: 12,
-            color:content.special?"#f2f086":"white",
+            color:estLiee(content)?"#f2f086":"white",
             fontWeight: "bold",
         }} />
         <Text text={content.effet} style={{
@@ -107,7 +111,7 @@ function Form({ content, onChange, onSubmit, style }) {
                 <NumberInput onChange={onChange} name="tier" value={content} min={1} max={5} />
                 <NumberInput onChange={onChange} name="cout" value={content} min={1} max={16} />
                 <EditorInput onChange={onChange} name="effet" value={content} />
-                <BooleanInput onChange={onChange} name={"special"} value={content} label="Technologie spéciale?" />
+                <TypeLienForm onChange={onChange} content={content} />
 
             </FormBase>
 

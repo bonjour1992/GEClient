@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDisponible } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
+import { estHyperlane, hyperlaneRelie } from "./hyperlane";
 
 // ============================================================
 // BLOCAGE D'UN DÉPLACEMENT, CASE PAR CASE (onglet Conflit)
@@ -123,6 +124,9 @@ export function useCarte(cases) {
             charge(idsTokens, contenusTokens) && charge(idsUnites, contenus),
         contenus,
         anomalie: i => systemes[tuile(i)?.ref.id]?.anomaly || "",
+        // Hyperlane (hyperlane.js) : on la traverse sans s'y arrêter, le long de ses lignes
+        hyperlane: i => estHyperlane(systemes[tuile(i)?.ref.id]?.anomaly),
+        relie: (i, de, vers) => hyperlaneRelie(systemes[tuile(i)?.ref.id]?.anomaly, tuile(i)?.marques?.rotation, i, de, vers),
         trous: i => new Set([
             ...(systemes[tuile(i)?.ref.id]?.elems || []).map(lien => typeTrou(planetes[lien?.id]?.img)),
             ...tokens(i).map(c => typeTrou(contenusTokens[c.ref.id]?.img)),

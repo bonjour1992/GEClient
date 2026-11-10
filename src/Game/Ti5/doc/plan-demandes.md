@@ -202,3 +202,16 @@ Trois catégories (README) : **D** données en base · **P** outil de partie ·
   de coordination : combat spatial seulement ; Récupération compte toutes les unités
   détruites pendant le combat ; la version Hacan de Réparation improvisée (#419) a le
   même bouton. Aucun changement côté serveur.
+- 2026-11-11 (suite) : technologies au type de lien (55 technologies de faction ou
+  d'événement liées d'après leur feuille, plus de case « spéciale » ni de préfixe
+  « hacan: » ; migrate-tech-lien.mjs) ; mercenaire « Ilyane Vorsk — Unioniste » (#910)
+  et plateau « Random 2 joueurs » (#911 : triangle de 33 cases, départs et Mecatol à 4
+  cases les uns des autres ; migrate-unioniste-plateau.mjs) ; hyperlanes (hyperlane.js) ;
+  conflit de contrôle à la prise de possession (Controle.jsx) ; notifications du
+  navigateur (Notifications.jsx) ; mots-clés d'unité dans doc/implementabilite.md.
+  Choix faits sans consigne : l'« agent unioniste » est un mercenaire (les seuls à avoir
+  nom et titre) ; le conflit de contrôle ne s'ouvre que si un autre camp a des unités
+  militaires sur la planète, le demandeur soutient d'office, les neutres s'opposent ;
+  « Revendiquer » n'ouvre pas de conflit ; l'hyperlane en X ne relie pas ses deux
+  traits, la patte d'oie relie ses quatre branches ; les notifications ne partent que
+  si la page n'est pas au premier plan.

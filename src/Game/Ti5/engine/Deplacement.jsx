@@ -65,6 +65,11 @@ function agentDe(contenu) {
 const coutEnAgents = n => Math.floor(n / TAILLE_FLOTTE) * 2 + Math.min(n % TAILLE_FLOTTE, 2);
 
 const ANOMALIES = {
+    hplt: "hyperlane",
+    hplc: "hyperlane",
+    hpldc: "hyperlane",
+    hplpa: "hyperlane",
+    hplx: "hyperlane",
     neb: "nébuleuse",
     rift: "rupture gravitationnelle",
     sup: "supernova",
@@ -203,6 +208,14 @@ export function useDeplacement({ tuiles }) {
         .map(e => ({ ou: e.de, camps: campsAdverses(carte, e.de, moi), jet: sorteJet(carte, e.de, e.a) }))
         .filter(r => r.camps.length > 0 || r.jet);
 
+    // Hyperlanes : elles ne coûtent pas de mouvement, mais on ne les traverse qu'en
+    // suivant leurs lignes, d'une voisine à une autre
+    const cout = trajet.filter(i => !carte.hyperlane(i)).length;
+
+    const horsLigne = trajet
+        .map((i, k) => ({ i, de: k === 0 ? depart : trajet[k - 1], vers: trajet[k + 1] }))
+        .filter(x => carte.hyperlane(x.i) && x.vers !== undefined && !carte.relie(x.i, x.de, x.vers));
+
     // Mouvement d'un vaisseau : chaque rupture gravitationnelle franchie donne 1 de plus
     const ruptures = risques.filter(r => r.jet === "rift").length;
     const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures;
@@ -231,8 +244,10 @@ export function useDeplacement({ tuiles }) {
             .map(i => `${nomCase(i)} : une nébuleuse met fin au mouvement de qui y entre`),
         depart !== null && anomalie(depart) === "neb" && etapes.length > 1 && etapes[0].sorte === "bord" &&
             "quitter une nébuleuse par un bord met fin au mouvement à la case suivante",
-        ...partent.filter(v => trajet.length > mouvement(v))
-            .map(v => `${nom(v)} dépasse son mouvement (${mouvement(v)}${ruptures ? ", ruptures franchies comprises," : ""} pour ${trajet.length} case${trajet.length > 1 ? "s" : ""})`),
+        ...horsLigne.map(x => `${nomCase(x.i)} : l'hyperlane ne relie pas ${nomCase(x.de)} à ${nomCase(x.vers)}`),
+        arrivee !== null && carte.hyperlane(arrivee) && `${nomCase(arrivee)} : le trajet ne peut pas finir sur une hyperlane`,
+        ...partent.filter(v => cout > mouvement(v))
+            .map(v => `${nom(v)} dépasse son mouvement (${mouvement(v)}${ruptures ? ", ruptures franchies comprises," : ""} pour ${cout} case${cout > 1 ? "s" : ""})`),
         ...besoins.filter(b => b.dispo.length < b.cout)
             .map(b => `il faut ${b.cout} ${b.cout > 1 ? b.pluriel : b.nom}, ${b.dispo.length} disponible(s) : ` +
                 (b.dispo.length ? `seuls ceux-là seront ${depuisActive ? "dépensés" : "utilisés"}` : "aucun agent ne sera pris")),
@@ -490,7 +505,7 @@ export function useDeplacement({ tuiles }) {
                                     {nomCase(e.a)}{ANOMALIES[anomalie(e.a)] ? ` [${ANOMALIES[anomalie(e.a)]}]` : ""}
                                 </span>
                             ))}
-                            {trajet.length > 0 && <b> — {trajet.length} case{trajet.length > 1 ? "s" : ""}</b>}
+                            {trajet.length > 0 && <b> — {cout} case{cout > 1 ? "s" : ""}{cout < trajet.length ? " (hyperlanes non comptées)" : ""}</b>}
                         </span>
                     </div>
 
@@ -517,7 +532,7 @@ export function useDeplacement({ tuiles }) {
                             data-action="deplacer"
                             disabled={!partent.length || !trajet.length}
                             nom={`Déplacement ${nomCase(depart)} → ${arrivee === null ? "?" : nomCase(arrivee)} : ` +
-                                `${partent.length} vaisseau${partent.length > 1 ? "x" : ""}, trajet de ${trajet.length}`}
+                                `${partent.length} vaisseau${partent.length > 1 ? "x" : ""}, trajet de ${cout}`}
                             obstacles={obstacles}
                             faire={partir}
                             title="Utilise les agents, charge les unités et fait partir les vaisseaux : jusqu'à la première case à risque de blocage, ou jusqu'à l'arrivée"

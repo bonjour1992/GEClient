@@ -5,6 +5,7 @@ import { resistanceDe } from "./effets";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR } from "./miseEnPlace";
 import { Blocages } from "./Blocage";
+import { Controles } from "./Controle";
 
 // ============================================================
 // ONGLET CONFLIT : les combats, et les blocages de déplacement
@@ -176,6 +177,7 @@ export function Combat() {
     if (!combats.length) {
         return (
             <div style={{ padding: 8, color: "#444" }}>
+                <Controles />
                 <Blocages />
                 Aucun combat en cours. Dans l'onglet Espace, ouvrir la fiche d'un système :
                 « Combat spatial » ou « Canons spatiaux » pour le système, « Combat terrestre »
@@ -191,6 +193,7 @@ export function Combat() {
 
     return (
         <div>
+            <Controles />
             <Blocages />
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>

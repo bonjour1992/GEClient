@@ -1,6 +1,6 @@
 # Implémentabilité des règles TI5 dans l'outil de partie
 
-Pour chaque technologie, habilité et unité : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 11 novembre 2026).
+Pour chaque technologie, habilité, unité et mot-clé d'unité : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 11 novembre 2026).
 
 Colonnes :
 
@@ -95,7 +95,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 400 | Adaptation de la visée | non | automatique (prévu) | — | Annule le malus de tempête à l'écran de combat, une fois celui-ci scripté. (moyenne) |
 | 402 | Vaccin | non | nouveau bouton (prévu) | — | Bouton : +4 points ; faveur si personne n'a découvert le vaccin avant. (moyenne) |
 | 403 | Arme bactériologique | non | nouveau bouton (prévu) | — | Bouton : use un scientifique, jet de 5 par infanterie du système choisi. (moyenne) |
-| 419 | hacan:Réparation improvisée | **oui** | nouveau bouton | Version de Hacan de « Réparation improvisée » (195) : même bouton, sur la fiche d'un vaisseau endommagé. | Vaisseau « non bloqué » : non vérifié. |
+| 419 | Réparation improvisée (Conglomérat mercantile d'Hacan) | **oui** | nouveau bouton | Version de Hacan de « Réparation improvisée » (195) : même bouton, sur la fiche d'un vaisseau endommagé. | Vaisseau « non bloqué » : non vérifié. |
 | 445 | Station météorologique | non | automatique (prévu) | — | Message orange si une station météorologique est produite sans cette technologie. (facile) |
 | 446 | Tempête électromagnétique | non | nouveau bouton (prévu) | — | Bouton : use un scientifique, lance un canon (4,4) ; nébuleuse et cible choisies. (moyenne) |
 | 447 | Générateur de tempête | non | nouveau bouton + automatique (prévu) | — | Bouton : use un scientifique, −3 ressources ; malus de combat à saisir à la main. (moyenne) |
@@ -281,6 +281,49 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 850 | Armageddon | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | À sa destruction : change de propriétaire avec 1 de résistance restante. (moyenne) |
 | 854 | vaisseau relique | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Quatre boutons dépensant chacun un fragment ; le bonus de mouvement reste manuel. (moyenne) |
 | 856 | Lune noire (Pirate Mentak) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Ciblage obligatoire : notion de cible absente de l'écran de combat. (moyenne) |
+
+## Mots-clés d'unité
+
+Deux sortes : les **capacités** écrites dans le texte d'une unité (`#furtif`, `#can(6,2)`…, définies dans les remplacements) et les **étiquettes** de son champ « mots-clés » (`ship`, `mil`…). Le nombre d'unités est celui des unités dont le texte cite la capacité.
+
+### Capacités (texte de l'unité)
+
+| Mot-clé | Règle | Unités | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
+|---|---|---:|---|---|---|---|
+| `#bomb` bombardement | Attaque contre les forces terrestres. | 12 | **partiel** | automatique | Conflit, « Bombardement » : les unités de l'espace qui ont `#bomb(valeur, dés)` tirent sur la planète. | Notation à étoiles (« 5\*\* ») non lue : seule `#bomb(5,2)` l'est. (facile) |
+| `#can` canon spatial | Attaque à distance, portée 1 par défaut. | 11 | **partiel** | automatique | Conflit, « Canons spatiaux » : les unités du système et des systèmes voisins qui ont `#can(valeur, dés)` tirent sur les vaisseaux. | Notation à étoiles (« 6\*\* ») non lue ; portée autre que 1. (facile, moyenne) |
+| `#fpre` frappe en premier | L'unité attaque avant les autres. | 6 | **oui** | automatique | Conflit : phases 1 et 2 du combat (frappe en premier, puis ses dégâts) avant les autres attaques. | — |
+| `#prec` précis | Pas de malus en ciblant une unité. | 6 | **oui** | automatique | Conflit : « Cibler » ne coûte pas −2 à cette unité. | — |
+| `#con` contrôle | Valeur de contrôle de l'unité (1 par défaut). | 16 | **partiel** | automatique | Blocage d'un déplacement et conflit de contrôle : chaque unité militaire vaut 1. | Lire la valeur écrite sur l'unité (`#con(3)`) ; test de domination. (moyenne) |
+| `#furtif` furtif | Tant qu'ils n'ont engagé personne, ces vaisseaux doivent être ciblés. | 7 | non | automatique (prévu) | — | Conflit : interdire l'engagement de faction contre une unité furtive qui n'a rien engagé. (moyenne) |
+| `#deplfurtif` déplacement furtif | Ne peut pas être bloqué par des vaisseaux adverses en se déplaçant. | 4 | non | automatique (prévu) | — | Cadre de blocage : ne pas compter ces vaisseaux dans ceux à arrêter. (facile) |
+| `#pill` pillage | Qui détruit l'unité gagne le commerce indiqué. | 16 | non | automatique (prévu) | — | Conflit : à « Retirer », donner le commerce au camp qui a détruit l'unité (à désigner s'ils sont plusieurs). (moyenne) |
+| `#comp` comptoir commercial | Permet de recevoir une livraison. | 11 | non | bouton existant modifié (prévu) | — | Vérifié par une action « livraison » qui reste à créer. (moyenne) |
+| `#livr` livraison commerciale | L'unité, non bloquée, livre du commerce à une faction qui a un comptoir dans le système. | 6 | **partiel** | nouveau bouton | Seule la livraison d'« Art du commerce » existe (plateau joueur). | Bouton de livraison sur la fiche de l'unité : commerce donné, dettes réduites. (moyenne) |
+| `#rep` réparation | Permet de réparer : 1 ressource par point de résistance. | 4 | **partiel** | — | Fiche d'un système : « Réparer » paie 1 ressource par dégât. | Le bouton ne vérifie pas qu'une unité à réparation est dans le système. (facile) |
+| `#prod` production | Produit des unités en payant leur coût (type et quantité indiqués). | 5 | **partiel** | — | Case « Production » de la réserve : glisser une unité retire son coût des ressources. | Type, quantité et lieu de production non vérifiés. (moyenne) |
+| `#raid` raid | Bombardement qui capture les infanteries. | 2 | non | automatique (prévu) | — | Conflit, bombardement : infanterie touchée capturée au lieu d'être détruite. (moyenne) |
+| `#tvd`, `#tvo` trous de ver | L'unité compte comme un trou de ver (delta), ou les ignore (oméga). | 4 | **partiel** | automatique | Déplacement assisté : trous de ver des tuiles et des tokens ; jet du trou de ver oméga. | Une unité qui vaut trou de ver (Hil Colish) ; la Nef de la rupture qui ignore l'oméga. (moyenne) |
+| `#use`, `#spend`, `#dep`, `#act`, `#destroy` | Symboles : utiliser, dépenser, placer, activer, destruction. | — | — | — | Symboles de rédaction, sans effet propre. | — |
+
+### Étiquettes (champ « mots-clés »)
+
+| Étiquette | Sens | Implémenté | Ce que fait l'outil |
+|---|---|---|---|
+| `ship` | Vaisseau | **oui** | Combat spatial et cible des canons ; déplacement assisté ; porte les unités transportables ; ne se pose pas sur une planète. |
+| `mil` | Militaire | **oui** | Tire au combat ; compte pour le blocage et le contrôle ; se déplace avec un amiral. |
+| `terre` | Terrestre | **oui** | Seule une unité terrestre se pose sur une planète. |
+| `transportable` | Transportable | **oui** | Embarque sur un vaisseau (glisser, ou « Charger » du déplacement assisté), avec avertissement de capacité. |
+| `trans` | Transport | **oui** | Se déplace avec un amiral ; +2 de capacité avec « Capsule de transport ». |
+| `com` | Commerce | **oui** | Se déplace avec un négociant. |
+| `civ` | Civil | **oui** | Se déplace avec un logisticien. |
+| `science` | Scientifique | **oui** | Se déplace avec un scientifique. |
+| `bio` | Biologique | **oui** | Ne se répare pas (« Réparer » l'ignore). |
+| `struc` | Structure | **partiel** | Comptée par « Bâtiment résistant ». Les structures spatiales ne comptent pas encore au contrôle d'un système. |
+| `agg` | Agressif (neutres) | **oui** | Conflit : les neutres agressifs engagent d'office. |
+| `def` | Défensif (neutres) | **oui** | Conflit : les neutres défensifs engagent d'office ceux qui les engagent. |
+| `space` | Structure spatiale | non | À faire : compter au contrôle du système (automatique, facile). |
+| `sattelite` | Satellite | non | Sans effet dans l'outil. |
 
 ## Par où commencer
 
