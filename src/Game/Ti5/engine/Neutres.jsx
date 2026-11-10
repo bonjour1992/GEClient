@@ -437,7 +437,10 @@ export function RechercheCarte() {
                     {trouves.slice(0, MAX_RESULTATS).map(e => (
                         <Onglet key={e.id} ouvert={ouverte === e.id} onClick={() => setOuverte(e.id)}>
                             {sansPrefixe(e.name)}
-                            <span style={{ fontSize: 11, color: "#666" }}>{nomType(jeu, e.type)}</span>
+                            {/* Ce à quoi il est lié (faction, événement…) distingue les homonymes */}
+                            <span style={{ fontSize: 11, color: "#666" }}>
+                                {e.lie ? e.lie + " · " : ""}{nomType(jeu, e.type)}
+                            </span>
                         </Onglet>
                     ))}
                 </div>

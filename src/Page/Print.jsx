@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { getHandler } from "../Game/games";
-import { getFromType, useSearch } from "../lib/store";
+import { getFromType, useSearch, nomDeListe } from "../lib/store";
 import { getElement } from "../lib/fetch";
 import { LoadAndDisplay } from "../Component/LoadAndDisplay";
 import { Link } from "../lib/datatype";
@@ -207,7 +207,7 @@ export default function Print() {
                             onChange={onChange}
                         />
 
-                        {e.name}
+                        {nomDeListe(e)}
                     </p>
                 ))}
             </div>

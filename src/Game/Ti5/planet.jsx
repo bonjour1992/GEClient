@@ -54,6 +54,8 @@ class Classe extends aggregation(ElementContent, TypeLienCarac) {
     type = "pla"
     techSpe = []
     legendary = false
+    // Le nom n'est pas affiché sur la planète (ruine, trou de ver) : il ne sert qu'aux listes
+    nomCache = false
     ruine = false
     ruineType = "normal"
     ruine2 = false
@@ -101,7 +103,9 @@ export function PlanetPict({ content, style, context, explication }) {
                 fontWeight: 600,
                 textShadow: "2px 0px 3px black"
             }}
-                text={(content.planetType ? "#img[" + planeteIcon.get(content.planetType) + "]" : "") + content.name} />
+                text={(content.planetType ? "#img[" + planeteIcon.get(content.planetType) + "]" : "") +
+                    // Nom masqué : la planète garde un nom pour les listes, sans l'afficher (ruine, trou de ver)
+                    (content.nomCache ? "" : content.name)} />
                 </div>
             {(content.type === "sat" && content.stationType) ? (
                 <Text style={{
@@ -193,6 +197,7 @@ function Form({ content, onChange, onSubmit, style }) {
                 <EnumInput onChange={onChange} name="stationType" value={content} enumClass={stationType} aucun={true} style={{ display: content.type === "sat" ? "inline" : "none" }} />
 
                 <BooleanInput onChange={onChange} name="legendary" value={content} />
+                <BooleanInput onChange={onChange} name="nomCache" value={content} label="Nom masqué (ruine, trou de ver)" />
                 <ImagePicker onChange={onChange} name="img" value={content} />
                 <NumberInput onChange={onChange} name="res" value={content} min={0} max={9} lebel="res"/>
                 <NumberInput onChange={onChange} name="inf" value={content} min={0} max={9} label="inf"/>

@@ -210,7 +210,9 @@ function Search({ search }) {
                             <span style={{ flex: 1, minWidth: 0 }}>
                                 <Resultat element={element} />
                             </span>
-                            <span style={{ flex: "none", fontSize: 11, color: "#666" }}>
+                            {/* Ce à quoi il est lié (faction, événement…), puis son type */}
+                            <span style={{ flex: "none", fontSize: 11, color: "#666", textAlign: "right" }}>
+                                {element.lie && <span style={{ color: "#333" }}>{element.lie} · </span>}
                                 {getHandler(jeu, element.type)?.name || element.type}
                             </span>
                         </div>

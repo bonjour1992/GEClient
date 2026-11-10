@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useRef, useState } from "react";
 import { Link, LinkToString } from "../lib/datatype";
-import { useSearch, getFromSearch, getFromType } from "../lib/store";
+import { useSearch, getFromSearch, getFromType, nomDeListe } from "../lib/store";
 import { LoadAndDisplay } from "../Component/LoadAndDisplay";
 import { getHandler, getHandlerTypes } from "../Game/games";
 import { useParams } from "react-router";
@@ -37,10 +37,16 @@ function ModalPicker({
         );
 
     const open = () => {
+
+        // L'élément déjà choisi est sélectionné à l'ouverture (et non « Aucun »)
+        const actuel = value?.id > 0 && search.find(e => e.id === value.id);
+
         setSelectedType(null);
 
         setSelected(
-            new Link(availableTypes[0])
+            actuel
+                ? new Link(actuel.type, actuel.id)
+                : new Link(availableTypes[0])
         );
 
         const modal =
@@ -284,7 +290,11 @@ function ModalPicker({
                                                 ).toString()
                                             }
                                         >
-                                            {e.name}
+                                            {nomDeListe(e)}
+                                            {/* Tous les types mélangés : le type aide à s'y retrouver */}
+                                            {!selectedType && availableTypes.length > 1
+                                                ? ` (${getHandler(jeu, e.type)?.name || e.type})`
+                                                : ""}
                                         </option>
 
                                     )

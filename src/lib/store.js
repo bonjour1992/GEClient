@@ -182,6 +182,18 @@ export const useTags = create((set, get) => ({
 
 
 // Recherche un élément par son id
+// Nom d'un élément dans une liste (sélecteur, impression, recherche) : son
+// nom, sans l'ancien préfixe !...!, suivi de ce à quoi il est lié quand le
+// serveur le donne (champ « lie » : faction, événement, mercenaire...).
+// Distingue les homonymes : « Cuirassé — Université de Jol-Nar ».
+export function nomDeListe(element) {
+
+    const nom = String(element?.name ?? "").replace(/^(![^!]*!)+/, "");
+
+    return element?.lie ? `${nom} — ${element.lie}` : nom;
+}
+
+
 export function getFromSearch(search, id, def = "not found") {
     return search.find(e => e.id === id) ?? def;
 }
@@ -191,5 +203,6 @@ export function getFromSearch(search, id, def = "not found") {
 export function getFromType(search, type) {
     return search
         .filter(e => type.includes(e.type))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        // (par nom affiché : les homonymes se suivent, rangés par ce à quoi ils sont liés)
+        .sort((a, b) => nomDeListe(a).localeCompare(nomDeListe(b)));
 }

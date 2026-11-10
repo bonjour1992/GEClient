@@ -168,7 +168,8 @@ function Location({ location }) {
             );
 
             fil.push([
-                r ? r.name : "erreur",
+                // (sans l'ancien préfixe !...! des noms)
+                r ? String(r.name || "").replace(/^(![^!]*!)+/, "") : "erreur",
                 "/GE/" +
                 part[2] +
                 "/" +
