@@ -7,7 +7,7 @@ import { nombreCases, anneauDeIndex, distanceIndex } from "../hexSpirale";
 import { techType } from "../ti5Const";
 import {
     useEngine, Emplacements, Pions, Zone, Defilable, agentDisponible, aMotCle, tokenTreve,
-    DECALAGE_SECONDAIRE, estSecondaire, nomCase, BoutonRegle, confirmerRegle,
+    DECALAGE_SECONDAIRE, estSecondaire, nomCase, distanceCases, BoutonRegle, confirmerRegle,
 } from "./Interaction";
 import {
     PIOCHE_TUILES,
@@ -24,6 +24,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
 import { cleCombat, combatsEnCours, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
+import { depenserAgent } from "./effets";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -868,6 +869,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const {
         etat, index, jouer, envoyer, joueur, moi, nomDe, search, signaler, factionDe, allerA, setCombatVu,
+        aScript, aviser,
     } = useEngine();
 
     const systeme = useElement(id);
@@ -881,7 +883,22 @@ function FicheSysteme({ numero, id, fermer }) {
     function envoyerAuCombat(lieu, commentaire = "") {
 
         if (!combats.includes(lieu)) {
-            envoyer([{ type: "compteur", id: cleCombat(lieu), valeur: 1 }], commentaire || "Combat ouvert");
+
+            // Script Écoles militaires : +1 au premier combat spatial que j'ouvre dans le tour
+            const premier = `joueur:${moi}:premierCombat`;
+
+            const ecoles = /^\d+$/.test(lieu) && aScript(moi, "ecoles-militaires-combat") &&
+                Number(etat.compteurs[premier]) !== etat.tour;
+
+            envoyer([
+                { type: "compteur", id: cleCombat(lieu), valeur: 1 },
+                ecoles && { type: "compteur", id: premier, valeur: etat.tour },
+                ecoles && { type: "compteur", id: `${cleCombat(lieu)}:plus:${moi}`, valeur: 1 },
+            ], commentaire || "Combat ouvert");
+
+            if (ecoles) {
+                aviser("Écoles militaires : c'est le premier combat que vous ouvrez ce tour, vos unités y ont +1.");
+            }
         }
 
         setCombatVu(lieu);
@@ -1011,6 +1028,15 @@ function FicheSysteme({ numero, id, fermer }) {
 
         const cout = n * coutInfanterie;
 
+        // Script Assimilation : sur une planète sauvage, une infanterie de plus, gratuite
+        const assimilation = aScript(moi, "assimilation") &&
+            planetes[liensPlanetes.find(x => x.k === k)?.lien.id]?.planetType === "sauv";
+
+        if (assimilation) {
+            n += 1;
+            aviser("Assimilation : planète sauvage, une infanterie de plus, gratuite.");
+        }
+
         envoyer([
             // Un logisticien, ou le Généticien (Arborec) qui mobilise comme lui
             utiliser("logisticien|g[ée]n[ée]ticien"),
@@ -1060,19 +1086,28 @@ function FicheSysteme({ numero, id, fermer }) {
     //
     // Les deux boutons restent utilisables si la condition d'unité manque
     // (ils sont alors rouge gris) : l'engine prévient, les joueurs décident.
-    function revendiquer(idPlanete, commentaire) {
+    function revendiquer(idPlanete, k, commentaire) {
 
         const diplomate = agentDisponible({ index, moi, search }, "diplomate");
 
         // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
-        prendre(idPlanete, commentaire,
+        prendre(idPlanete, k, commentaire,
             diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : []);
     }
 
-    function prendre(idPlanete, commentaire, avant = []) {
+    function prendre(idPlanete, k, commentaire, avant = []) {
 
         const carte = cartePlanete(idPlanete);
         const zone = `joueur:${moi}:actif`;
+
+        // Script Assimilation : une planète qu'aucun joueur ne possédait reçoit une de mes infanteries
+        const assimilation = aScript(moi, "assimilation") && idInfanterie &&
+            !/^joueur:\d+:actif$/.test(carte?.zone || "");
+
+        if (assimilation) {
+            avant = [...avant, { type: "creer", ref: { type: "unit", id: idInfanterie }, zone: zonePlanete(k), proprio: moi }];
+            aviser("Assimilation : planète neutre obtenue, une infanterie y est posée.");
+        }
 
         // (de / si : refusé si un autre joueur vient de la prendre — pas de carte en double)
         const verrou = "planete:" + idPlanete;
@@ -1090,6 +1125,20 @@ function FicheSysteme({ numero, id, fermer }) {
     }
 
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
+
+    // Script Manipulation mentale : use un diplomate, pose une de mes infanteries
+    // sur une planète de ce système — une de mes unités doit être ici ou à côté
+    const monUniteProche = Object.values(etat.composants).some(c => {
+        const m = c.ref?.type === "unit" && c.proprio === moi && /^hex:(\d+)/.exec(c.zone || "");
+        return m && distanceCases(numero, Number(m[1])) <= 1;
+    });
+
+    function manipuler(k, commentaire) {
+        envoyer([
+            utiliser("diplomate"),
+            { type: "creer", ref: { type: "unit", id: idInfanterie }, zone: zonePlanete(k), proprio: moi },
+        ], commentaire);
+    }
 
     // --------------------------------------------------------
     // DÉCLARER UNE TRÊVE
@@ -1112,7 +1161,8 @@ function FicheSysteme({ numero, id, fermer }) {
         const diplomate = agentDisponible({ index, moi, search }, "diplomate");
 
         envoyer([
-            diplomate && { type: "supprimer", c: diplomate.id },
+            // (le diplomate est dépensé : Bio stimulant propose de l'user à la place)
+            ...depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
             // Le token « Trêve » des données du jeu ; à défaut, l'ancien jeton
             tokenTreve(search)
                 ? { type: "creer", ref: { type: "token", id: tokenTreve(search).id }, zone: zoneEspace, proprio: moi }
@@ -1291,7 +1341,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
                                                     obstacles={[!monInfanterieSur(k) && "il faut une de vos infanteries sur la planète"]}
-                                                    faire={commentaire => prendre(lien.id, commentaire)}
+                                                    faire={commentaire => prendre(lien.id, k, commentaire)}
                                                     title="Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs"
                                                 >
                                                     Prendre possession
@@ -1302,7 +1352,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                         !mesUnitesIci && "il faut une de vos unités dans le système",
                                                         !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
                                                     ]}
-                                                    faire={commentaire => revendiquer(lien.id, commentaire)}
+                                                    faire={commentaire => revendiquer(lien.id, k, commentaire)}
                                                     title="Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs"
                                                 >
                                                     Revendiquer (use un diplomate)
@@ -1319,6 +1369,22 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 {boutonCombat(`${numero}p${k}b`, "Bombardement",
                                                     "Les unités à bombardement de l'espace du système tirent sur cette planète")}
                                             </span>
+                                        )}
+
+                                        {joueur && idInfanterie && aScript(moi, "manipulation-mentale") && (
+                                            <BoutonRegle
+                                                data-action="manipulation-mentale"
+                                                nom={`Manipulation mentale sur ${nomPlanete(planete)}`}
+                                                obstacles={[
+                                                    !enProduction && "ce n'est pas la phase de production",
+                                                    !monUniteProche && "il faut une de vos unités dans ce système ou un système voisin",
+                                                    !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                                                ]}
+                                                faire={commentaire => manipuler(k, commentaire)}
+                                                title="Manipulation mentale : use un diplomate et pose une de vos infanteries sur cette planète"
+                                            >
+                                                Manipulation mentale (use un diplomate)
+                                            </BoutonRegle>
                                         )}
 
                                         {/* PHASE DE SCIENCE */}

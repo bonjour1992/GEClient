@@ -23,6 +23,14 @@ const SORTES = {
     recrutement: "Action construite (recrutement)",
     miseEnPlace: "Mise en place d'une faction",
     bouton: "Bouton de la fiche d'une carte",
+    effet: "Effet de technologie",
+};
+
+// Ce que le script change à l'interface (champ mode) : [libellé, couleur]
+const MODES = {
+    nouveau: ["Nouveau bouton", "#bbdefb"],
+    modifie: ["Bouton existant modifié", "#ffe0b2"],
+    auto: ["Automatique (aucun bouton)", "#e0e0e0"],
 };
 
 const date = ms => (ms
@@ -99,6 +107,8 @@ export default function OutilScripts() {
                 Un script applique, à la place du joueur, l'effet d'une carte. L'outil de partie reste
                 permissif : tout peut toujours se faire à la main. Un script désactivé ici ne joue plus
                 dans aucune partie. « À revoir » : la carte a changé depuis l'écriture du script.
+                La colonne « Interface » dit si le script ajoute un bouton, change le comportement d'un
+                bouton qui existait déjà, ou agit sans bouton — et où.
             </p>
 
             {!reglage && (
@@ -115,7 +125,7 @@ export default function OutilScripts() {
                     <tr style={{ backgroundColor: "#eee" }}>
                         <th style={cellule}>Désactivé</th>
                         <th style={cellule}>Script</th>
-                        <th style={cellule}>Sorte</th>
+                        <th style={cellule}>Interface</th>
                         <th style={cellule}>Carte</th>
                         <th style={cellule}>Version à l'écriture</th>
                         <th style={cellule}>Version actuelle</th>
@@ -143,7 +153,13 @@ export default function OutilScripts() {
                                     <div style={{ fontSize: 12, color: "#444", maxWidth: 420 }}>{s.description}</div>
                                     <code style={{ fontSize: 11, color: "#777" }}>{s.id}</code>
                                 </td>
-                                <td style={cellule}>{SORTES[s.sorte] || s.sorte}</td>
+                                <td style={{ ...cellule, maxWidth: 300 }}>
+                                    <b data-mode={s.mode} style={{ padding: "0 6px", borderRadius: 8, backgroundColor: MODES[s.mode]?.[1] }}>
+                                        {MODES[s.mode]?.[0] || "—"}
+                                    </b>
+                                    <div style={{ fontSize: 12 }}>{s.ou}</div>
+                                    <div style={{ fontSize: 11, color: "#777" }}>{SORTES[s.sorte] || s.sorte}</div>
+                                </td>
                                 <td style={cellule}>
                                     {s.carte.id
                                         ? (

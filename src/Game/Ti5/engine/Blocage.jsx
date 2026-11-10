@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDisponible } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
 
@@ -222,7 +222,7 @@ export function Blocages() {
 
 export function Passage({ passage }) {
 
-    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aviser } = useEngine();
+    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aviser, aScript } = useEngine();
 
     const { mover, numero, trajet, vaisseaux } = passage;
 
@@ -264,9 +264,35 @@ export function Passage({ passage }) {
     // Mes propres unités militaires restées sur la case aident d'office
     const allies = carte.militaires(numero).filter(c => campDe(c) === mover && !c.marques?.[TRAJET]).length;
 
-    const controle = valeur => adverses.filter(a => choixDe(a.camp) === valeur).reduce((s, a) => s + a.controle, 0);
+    // Script Rapport de force : un diplomate usé ajoute 2 au contrôle d'un camp
+    // pour ce blocage (compteur blocage:<case>:<joueur>:<camp>:plus)
+    const clePlus = camp => cleChoix(camp) + ":plus";
+    const plus = camp => Number(etat.compteurs[clePlus(camp)]) || 0;
 
-    const surplus = controle(3) - controle(2) - allies;
+    const rapportDeForce = camp => joueur && camp === moi && !plus(camp) && aScript(moi, "rapport-de-force") && (
+        <BoutonRegle
+            data-action="rapport-de-force"
+            nom={`Rapport de force (${nomCase(numero)}) : +2 à votre contrôle`}
+            obstacles={[!agentDisponible({ index, moi, search }, "diplomate") && "vous n'avez pas de diplomate disponible (aucun ne sera usé)"]}
+            faire={commentaire => {
+                const diplomate = agentDisponible({ index, moi, search }, "diplomate");
+
+                envoyer([
+                    diplomate && { type: "deplacer", c: diplomate.id, vers: `joueur:${moi}:agentsUses` },
+                    { type: "compteur", id: clePlus(moi), valeur: 2 },
+                ], commentaire);
+            }}
+            title="Rapport de force : use un diplomate, +2 à votre valeur de contrôle pour ce blocage"
+            style={styleMini}
+        >
+            Rapport de force (+2, use un diplomate)
+        </BoutonRegle>
+    );
+
+    const controle = valeur => adverses.filter(a => choixDe(a.camp) === valeur)
+        .reduce((s, a) => s + a.controle + plus(a.camp), 0);
+
+    const surplus = controle(3) - controle(2) - allies - plus(mover);
     const aBloquer = stade === "unites" ? Math.max(0, Math.min(surplus, vaisseaux.length)) : 0;
 
     const militaires = vaisseaux.filter(estMilitaire);
@@ -339,8 +365,9 @@ export function Passage({ passage }) {
         envoyer([
             ...arretes.flatMap(liberer),
             ...activation(),
-            ...adverses.filter(a => etat.compteurs[cleChoix(a.camp)])
-                .map(a => ({ type: "compteur", id: cleChoix(a.camp), valeur: 0 })),
+            ...[...adverses.map(a => a.camp), mover].flatMap(camp => [cleChoix(camp), clePlus(camp)])
+                .filter(id => etat.compteurs[id])
+                .map(id => ({ type: "compteur", id, valeur: 0 })),
             ...continuent.filter(touche).map(v => ({
                 type: "marquer",
                 c: v.id,
@@ -440,7 +467,8 @@ export function Passage({ passage }) {
                             <div key={a.camp} data-camp={a.camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
                                 <span>
                                     {pastille(a.camp)}
-                                    <b>{nomCamp(a.camp)}</b> : contrôle {a.controle}{" "}
+                                    <b>{nomCamp(a.camp)}</b> : contrôle {a.controle}
+                                    {plus(a.camp) > 0 && <b style={{ color: "#1b5e20" }}> + {plus(a.camp)} (Rapport de force)</b>}{" "}
                                     <span style={{ color: "#555" }}>({a.unites.map(nom).join(", ")})</span>
                                 </span>
 
@@ -461,6 +489,8 @@ export function Passage({ passage }) {
                                         </button>
                                     ))
                                     : <b style={{ color: choix ? "#000" : "#b71c1c" }}>{nomChoix(choix) || "n'a pas encore choisi"}</b>}
+
+                                {rapportDeForce(a.camp)}
                             </div>
                         );
                     })}
@@ -471,8 +501,16 @@ export function Passage({ passage }) {
                         </div>
                     )}
 
+                    {(plus(mover) > 0 || rapportDeForce(mover)) && (
+                        <div style={{ marginTop: 2 }}>
+                            {pastille(mover)}{nomCamp(mover)}
+                            {plus(mover) > 0 && <b style={{ color: "#1b5e20" }}> : + {plus(mover)} (Rapport de force)</b>}{" "}
+                            {rapportDeForce(mover)}
+                        </div>
+                    )}
+
                     <div data-surplus style={{ marginTop: 4 }}>
-                        Surplus de blocage : {controle(3)} (bloquent) − {controle(2) + allies} (aident) = <b>{surplus}</b>.{" "}
+                        Surplus de blocage : {controle(3)} (bloquent) − {controle(2) + allies + plus(mover)} (aident) = <b>{surplus}</b>.{" "}
                         {aBloquer > 0
                             ? <b style={{ color: "#b71c1c" }}>
                                 {aBloquer} vaisseau{aBloquer > 1 ? "x" : ""} à arrêter : {milRequis} militaire{milRequis > 1 ? "s" : ""}

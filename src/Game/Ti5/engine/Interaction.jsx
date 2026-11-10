@@ -5,6 +5,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
+import { capaciteDe } from "./effets";
 import {
     MARQUEUR,
     FAVEUR,
@@ -1779,7 +1780,7 @@ const estCarteCible = c => !!c?.ref && !c.cache && c.ref.type !== "agent" && c.r
 
 export function Plan({ children, style }) {
 
-    const { etat, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, signaler, search } = useEngine();
+    const { etat, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, signaler, search, aScript } = useEngine();
 
     const appui = useRef(null);
     const [glisser, setGlisser] = useState(null);
@@ -1802,7 +1803,8 @@ export function Plan({ children, style }) {
             .filter(c => c.sur === idPorteur && estUnite(c) && !embarques.includes(c.id)).length;
 
         const portees = deja + embarques.filter(id => estUnite(etat.composants[id])).length + crees;
-        const capacite = Number(contenu.capacite) || 0;
+        // (script Capsule de transport : capacité majorée)
+        const capacite = capaciteDe(contenu, vaisseau.marques?.possession ?? vaisseau.proprio, aScript);
 
         if (portees > capacite) {
             signaler?.(`Attention : ${nomElement(search, vaisseau.ref)} porte ${portees} unité${portees > 1 ? "s" : ""} ` +

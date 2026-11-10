@@ -3,6 +3,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, BoutonRegle } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite } from "./miseEnPlace";
+import { ActionsTechnologies } from "./ActionsTechnologies";
 
 // ============================================================
 // ONGLET PLATEAU JOUEUR
@@ -206,7 +207,7 @@ export function CaseProduction() {
 
 export function PlateauJoueur({ vu }) {
 
-    const { etat, index, jouer, envoyer, moi, joueur } = useEngine();
+    const { etat, index, jouer, envoyer, moi, joueur, aScript } = useEngine();
 
     const u = vu.userId;
     const base = "joueur:" + u;
@@ -236,7 +237,23 @@ export function PlateauJoueur({ vu }) {
     );
 
     const ressources = somme("res");
-    const influence = somme("inf");
+
+    // Scripts d'entretien. Diversité : +1 influence par planète. Culture
+    // courtisane : +1 influence par alliance en jeu chez moi (promesse de
+    // type alliance dans mes éléments actifs ou sur une case de tour).
+    const promesses = [...index.parZone]
+        .filter(([zone]) => zone === base + ":actif" || zone.startsWith(base + ":tour:"))
+        .flatMap(([, contenu]) => contenu.filter(c => !c.cache && c.ref?.type === "Promesse"));
+
+    const contenuPromesses = useElements(promesses.map(c => c.ref.id));
+    const alliances = promesses.filter(c => contenuPromesses[c.ref.id]?.type === "alli").length;
+
+    const bonusInfluence = [
+        aScript(u, "diversite") && planetes.length > 0 && [planetes.length, "Diversité"],
+        aScript(u, "culture-courtisane-alliances") && alliances > 0 && [alliances, "Culture courtisane"],
+    ].filter(Boolean);
+
+    const influence = somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0);
     const agentsUses = index.parZone.get(base + ":agentsUses") || [];
 
     const techsUtilisees = Object.keys(etat.compteurs)
@@ -316,12 +333,16 @@ export function PlateauJoueur({ vu }) {
                         style={{ padding: "4px 10px" }}
                     >
                         {(entretienFait ? "✔ Entretien fait ce tour — " : "Entretien : ") +
-                            `+${ressources} ressources, +${influence} influence, ` +
+                            `+${ressources} ressources, +${influence} influence` +
+                            bonusInfluence.map(([n, nom]) => ` (dont ${n} : ${nom})`).join("") + ", " +
                             `${agentsUses.length} agent(s), ${techsUtilisees.length} technologie(s)` +
                             (possedeNatale ? ", +1 faveur" : "")}
                     </BoutonRegle>
                 )}
             </div>
+
+            {/* Nouveaux boutons des scripts de mes technologies */}
+            {joueur && u === moi && <ActionsTechnologies />}
 
             {/* ZONES */}
 

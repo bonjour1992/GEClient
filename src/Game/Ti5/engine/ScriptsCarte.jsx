@@ -1,30 +1,79 @@
-import { useEngine, BoutonRegle, nomElement, distanceCases } from "./Interaction";
-import { chargerContenu } from "./sync";
+import { useEngine, BoutonRegle, nomElement, distanceCases, agentDisponible } from "./Interaction";
+import { chargerContenu, useElement } from "./sync";
 import { normaliserPlateau } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
-import { RESERVE_TUILES, exemplaires } from "./miseEnPlace";
+import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires } from "./miseEnPlace";
 
 // ============================================================
 // BOUTONS DES SCRIPTS SUR LA FICHE D'UNE CARTE
 //
 // Les scripts de sorte « bouton » (scripts.js) rattachés à la
-// carte ajoutent chacun un bouton à sa fiche.
+// carte ajoutent chacun un bouton à sa fiche ; de même le script
+// d'effet Réparation improvisée, sur la fiche d'un de mes vaisseaux.
 // ============================================================
 
 export function ScriptsCarte({ c, fermer }) {
 
-    const { joueur, scriptsDesactives } = useEngine();
+    const { joueur, scriptsDesactives, aScript, moi } = useEngine();
 
     if (!joueur || !c?.ref || c.cache) {
         return null;
     }
 
-    return scriptsActifs(scriptsDesactives)
-        .filter(s => s.sorte === "bouton" && concerne(s, c.ref))
-        .map(s => (s.bouton === "evenement"
-            ? <MettreEnPlaceEvenement key={s.id} c={c} script={s} fermer={fermer} />
-            : null));
+    return [
+        ...scriptsActifs(scriptsDesactives)
+            .filter(s => s.sorte === "bouton" && concerne(s, c.ref))
+            .map(s => (s.bouton === "evenement"
+                ? <MettreEnPlaceEvenement key={s.id} c={c} script={s} fermer={fermer} />
+                : null)),
+        c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && aScript(moi, "reparation-improvisee") &&
+            <ReparationImprovisee key="reparation-improvisee" c={c} fermer={fermer} />,
+    ];
+}
+
+// ------------------------------------------------------------
+// RÉPARATION IMPROVISÉE (fiche d'un de mes vaisseaux endommagés)
+//
+// Use un logisticien et répare le vaisseau : 1 ressource par dégât.
+// ------------------------------------------------------------
+
+function ReparationImprovisee({ c, fermer }) {
+
+    const { etat, index, envoyer, moi, search } = useEngine();
+
+    const contenu = useElement(c.ref.id);
+    const degat = Number(c.marques?.degat) || 0;
+
+    if (!contenu?.mot_cle?.includes("ship") || !degat) {
+        return null;
+    }
+
+    const logisticien = agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
+
+    return (
+        <BoutonRegle
+            data-action="reparation-improvisee"
+            nom={`Réparation improvisée : ${nomElement(search, c.ref)} (${degat} dégât${degat > 1 ? "s" : ""})`}
+            obstacles={[
+                !/production/i.test(etat.phase) && "ce n'est pas la phase de production",
+                !logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+                ressources < degat && `ressources insuffisantes : ${degat} à payer, vous en avez ${ressources}`,
+            ]}
+            faire={commentaire => {
+                envoyer([
+                    logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
+                    { type: "compteur", id: `joueur:${moi}:res`, delta: -degat },
+                    { type: "marquer", c: c.id, marque: "degat", valeur: 0, si: degat },
+                ], commentaire);
+                fermer?.();
+            }}
+            title="Réparation improvisée : use un logisticien et répare ce vaisseau, 1 ressource par dégât (le vaisseau ne doit pas être bloqué)"
+        >
+            Réparation improvisée ({degat} ressource{degat > 1 ? "s" : ""}, use un logisticien)
+        </BoutonRegle>
+    );
 }
 
 // ------------------------------------------------------------
@@ -40,7 +89,7 @@ export function ScriptsCarte({ c, fermer }) {
 
 function MettreEnPlaceEvenement({ c, script, fermer }) {
 
-    const { etat, index, envoyer, partie, search, aviser } = useEngine();
+    const { etat, index, envoyer, partie, search, aviser, signaler, moi } = useEngine();
 
     const compteur = `evenement:${c.ref.id}:place`;
     const nom = nomElement(search, c.ref);
@@ -94,14 +143,104 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
         return cases.map(numero => ({ type: "creer", ref: { type: "unit", id: unite }, zone: "hex:" + numero, n }));
     }
 
+    // Tuiles à mélanger aux n tuiles du dessus de la pioche : celles-ci passent
+    // dans une pile à part, où les nouvelles tuiles les rejoignent (celles
+    // déjà en jeu, la réserve par exemple, sont déplacées) ; la pile est
+    // mélangée puis reversée sur la pioche.
+    function melangerALaPioche(tuiles, n) {
+
+        const A_PART = "pioche:melange";
+        const enPioche = (index.parZone.get(PIOCHE_TUILES) || []).length;
+
+        return [
+            enPioche > 0 && { type: "verser", de: PIOCHE_TUILES, vers: A_PART, n: Math.min(n, enPioche) },
+            ...tuiles.map(ref => {
+                const enJeu = Object.values(etat.composants)
+                    .find(x => !x.cache && x.ref?.type === ref.type && x.ref.id === ref.id && x.zone !== "horsJeu");
+
+                return enJeu
+                    ? { type: "deplacer", c: enJeu.id, vers: A_PART }
+                    : { type: "creer", ref, zone: A_PART };
+            }),
+            { type: "melanger", zone: A_PART },
+            { type: "verser", de: A_PART, vers: PIOCHE_TUILES },
+        ];
+    }
+
+    // Jets de rébellion : un dé par planète possédée par un joueur, hors
+    // système natal ; sur le seuil de son type ou plus, un dé « renforts »
+    // d'unités neutres y est posé. Les dés sont lancés par le serveur, dans un
+    // premier coup. -> { actions, bilan }, ou null si les dés n'ont pas pu être lus
+    async function jetsDeRebellion({ unite, faces, seuils, defaut, renforts }) {
+
+        const factions = await Promise.all(partie.joueurs.map(j => chargerContenu(j.faction)));
+        const natals = new Set(factions.map(f => Number(f?.system?.id)).filter(id => id > 0));
+
+        const possedee = id => partie.joueurs.some(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+            .some(x => x.ref?.type === "planet" && x.ref.id === id));
+
+        const cibles = [];
+
+        for (const tuile of Object.values(etat.composants)
+            .filter(x => x.ref?.type === "system" && /^hex:\d+$/.test(x.zone) && !natals.has(x.ref.id))) {
+
+            const systeme = await chargerContenu(tuile.ref.id);
+
+            for (const [k, lien] of (systeme?.elems || []).entries()) {
+
+                if (lien?.id > 0 && possedee(lien.id)) {
+                    const planete = await chargerContenu(lien.id);
+
+                    cibles.push({
+                        zone: `${tuile.zone}:planete:${k}`,
+                        nom: planete?.name || "planète",
+                        seuil: seuils[planete?.planetType] ?? defaut,
+                    });
+                }
+            }
+        }
+
+        if (!cibles.length) {
+            return { actions: [], bilan: "aucune planète possédée hors système natal : pas de jet de rébellion." };
+        }
+
+        // (un jet de dés du serveur compte 30 dés au plus)
+        const lots = cotes => Array.from({ length: Math.ceil(cibles.length / 30) },
+            (_, i) => ({ type: "des", n: Math.min(30, cibles.length - 30 * i), faces: cotes }));
+
+        const r = await envoyer([...lots(faces), ...lots(renforts)], `${nom} : jets de rébellion (${cibles.length} planète(s))`);
+
+        const des = [...(r?.coups || [])]
+            .sort((a, b) => b.n - a.n)
+            .find(x => x.auteur === moi)?.actions.filter(a => a.type === "des").flatMap(a => a.resultats || []);
+
+        if (!Array.isArray(des) || des.length !== 2 * cibles.length) {
+            return null;
+        }
+
+        const jets = cibles.map((cible, i) => ({ ...cible, jet: des[i], n: des[cibles.length + i] }));
+        const reussis = jets.filter(j => j.jet >= j.seuil);
+
+        return {
+            actions: reussis.map(j => ({ type: "creer", ref: { type: "unit", id: unite }, zone: j.zone, n: j.n })),
+            bilan: `Rébellion : ${jets.map(j => `${j.nom} ${j.jet}${j.jet >= j.seuil ? ` (${j.seuil}+) → ${j.n} rebelle(s)` : ` (${j.seuil}+ raté)`}`).join(" ; ")}.`,
+        };
+    }
+
     async function faire(commentaire) {
 
         const actions = [];
         const horsDeroule = [];
+        const aMelanger = [];
 
         for (const pose of script.poses || []) {
 
             const ref = { type: pose.type, id: pose.id };
+
+            if (pose.vers?.pioche) {
+                aMelanger.push({ ref, n: pose.vers.pioche });
+                continue;
+            }
 
             if (pose.vers === "joueurs") {
 
@@ -137,10 +276,26 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
 
         const pirates = script.anomalies ? await surAnomalies(script.anomalies) : [];
 
-        envoyer([...actions, ...pirates, { type: "compteur", id: compteur, valeur: 1 }], commentaire);
+        const melange = aMelanger.length
+            ? melangerALaPioche(aMelanger.map(x => x.ref), Math.max(...aMelanger.map(x => x.n)))
+            : [];
+
+        const rebellion = script.rebellion ? await jetsDeRebellion(script.rebellion) : { actions: [], bilan: "" };
+
+        if (!rebellion) {
+            signaler(`${nom} : les jets de rébellion n'ont pas pu être lus. Rien n'est mis en place : réessayez.`);
+            return;
+        }
+
+        envoyer(
+            [...actions, ...melange, ...pirates, ...rebellion.actions, { type: "compteur", id: compteur, valeur: 1 }],
+            // (le journal garde le détail des jets, dans la limite d'un commentaire)
+            [commentaire, rebellion.bilan].filter(Boolean).join(" — ").slice(0, 300)
+        );
 
         aviser([
             `${nom} : mis en place — ${script.description}`,
+            rebellion.bilan,
             script.anomalies && `${pirates.length} système(s) concerné(s).`,
             horsDeroule.length && `Après le dernier tour, non posé : ${horsDeroule.join(", ")}.`,
             script.reste && `Reste à faire à la main : ${script.reste}.`,

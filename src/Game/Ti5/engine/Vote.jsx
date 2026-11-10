@@ -96,19 +96,14 @@ function styleVote(col) {
 const styleCellule = { border: "1px solid #bbb", padding: "1px 6px", textAlign: "center" };
 const styleMini = { fontSize: 11, padding: "0 4px" };
 
-function Decompte({ lois }) {
-
-    const { etat, index, envoyer, joueur, moi, partie, search, nomDe, couleurDe } = useEngine();
-
-    // Toutes les colonnes, ou seulement celles qui ont des voix
-    const [toutes, setToutes] = useState(false);
+// Voix et classement des votes du tour (aussi lu par effets.js, pour Trading)
+export function decompteVotes({ etat, index, joueurs, search }) {
 
     const tour = etat.tour;
-    const joueurs = partie.joueurs;
 
     // Voix posées, par "<loi>:<colonne>:<joueur>"
     const posees = {};
-    let nombreLois = lois.length;
+    let nombreLois = 0;
 
     for (const [zone, contenu] of index.parZone) {
 
@@ -134,6 +129,60 @@ function Decompte({ lois }) {
     const voix = (loi, col, u) => (posees[`${loi}:${col}:${u}`] || 0) + ajustement(loi, col, u);
     const total = (loi, col) => joueurs.reduce((s, j) => s + voix(loi, col, j.userId), 0);
     const ordre = (loi, col) => Number(etat.compteurs[cleOrdre(loi, col)]) || 0;
+
+    // Classement des colonnes d'une loi : total, puis l'ordre donné par le responsable du sénat
+    const classement = loi => COLONNES.map((_, col) => col)
+        .sort((a, b) => total(loi, b) - total(loi, a) || ordre(loi, b) - ordre(loi, a) || a - b);
+
+    return { nombreLois, cleAjustement, cleOrdre, ajustement, voix, total, ordre, classement };
+}
+
+// Trading, à la fin de la phase de vote : un négociant posé sur le plateau
+// de vote d'un joueur est sa prédiction ; si cette case est la première de
+// sa loi, il gagne 2 commerce (une fois par loi).
+//   -> { actions, messages }
+export function tradingFinDeVote({ etat, index, joueurs, search, aScript, nomDe }) {
+
+    const votes = decompteVotes({ etat, index, joueurs, search });
+    const gains = new Map();
+    const messages = [];
+
+    for (const [zone, contenu] of index.parZone) {
+
+        const m = /^joueur:(\d+):vote:(\d+):(\d+)(:d)?$/.exec(zone);
+        const u = Number(m?.[1]);
+
+        if (!m || !aScript(u, "trading") || gains.get(u)?.has(m[2]) ||
+            !contenu.some(c => !c.cache && c.ref?.type === "agent" && /n[ée]gociant/i.test(nomElement(search, c.ref)))) {
+            continue;
+        }
+
+        const [loi, col] = [Number(m[2]), Number(m[3])];
+
+        if (votes.total(loi, col) > 0 && votes.classement(loi)[0] === col) {
+            gains.set(u, (gains.get(u) || new Set()).add(m[2]));
+            messages.push(`Trading : ${nomDe(u)} gagne 2 commerce (loi ${loi})`);
+        }
+    }
+
+    return {
+        actions: [...gains].map(([u, lois]) => ({ type: "compteur", id: `joueur:${u}:commerce`, delta: 2 * lois.size })),
+        messages,
+    };
+}
+
+function Decompte({ lois }) {
+
+    const { etat, index, envoyer, joueur, moi, partie, search, nomDe, couleurDe } = useEngine();
+
+    // Toutes les colonnes, ou seulement celles qui ont des voix
+    const [toutes, setToutes] = useState(false);
+
+    const joueurs = partie.joueurs;
+
+    const votes = decompteVotes({ etat, index, joueurs, search });
+    const { cleAjustement, cleOrdre, ajustement, voix, total, ordre } = votes;
+    const nombreLois = Math.max(lois.length, votes.nombreLois);
 
     // Responsable du sénat : le joueur de la dernière case d'initiative
     const senat = (index.parZone.get("general:initiative:" + joueurs.length) || [])
@@ -271,9 +320,7 @@ function Decompte({ lois }) {
 
                     const carte = lois[loi - 1];
 
-                    // Classement : total, puis l'ordre donné par le responsable du sénat
-                    const classement = COLONNES.map((_, col) => col)
-                        .sort((a, b) => total(loi, b) - total(loi, a) || ordre(loi, b) - ordre(loi, a) || a - b);
+                    const classement = votes.classement(loi);
 
                     const affichees = classement.filter(col =>
                         toutes || total(loi, col) !== 0 || joueurs.some(j => ajustement(loi, col, j.userId) !== 0));

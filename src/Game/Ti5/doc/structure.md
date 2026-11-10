@@ -399,7 +399,7 @@ qu'un vaisseau n'a de capacité se fait, avec un avertissement.
 `engine/scripts.js` : la liste `SCRIPTS`. Un script est une aide rattachée à
 une carte (`carte` : type et identifiant ; sans identifiant, tout le type),
 datée de la version de la carte pour laquelle il a été écrit (`ecritLe`).
-Trois sortes :
+Quatre sortes :
 
 - `recrutement` : appelé quand un recrutement est construit (Ctrl + clic,
   `cliquer`, `Partie.jsx`) pour les scripts dont le joueur possède la carte
@@ -417,6 +417,49 @@ Trois sortes :
   `anomalies` pose des unités neutres sur les systèmes du plateau qui ont une
   anomalie donnée ; `reste` rappelle ce qui se fait à la main. Compteur
   `evenement:<id>:place`.
+
+- `effet` : effet d'une technologie débloquée. Le script ne porte que sa
+  description ; son code est là où il agit, sous la condition
+  `aScript(joueur, id)` du contexte (`Partie.jsx` : script en service et
+  technologie débloquée — `technologiesDe`, recalculé à chaque coup ; `aussi`
+  liste les versions de faction de la même technologie). Où :
+  - calculs partagés, `engine/effets.js` (sans import) : `capaciteDe` (Capsule
+    de transport), `resistanceDe` (Blindage en duranium), `depenserAgent` (Bio
+    stimulant : fenêtre « l'utiliser et payer 2 ressources » à chaque agent
+    dépensé) ;
+  - `Combat.jsx`, `bonusScripts(v)` : variations ajoutées d'office à la valeur
+    pour toucher et dites sur la ligne de l'unité (Écoles militaires — compteur
+    `combat:<lieu>:plus:<u>` posé à l'ouverture du premier combat spatial du
+    tour, `joueur:<u>:premierCombat` —, Arme amplifiée, Centre de
+    coordination, Troupe d'élite, Système de visée, Bouclier déflecteur,
+    Bâtiment résistant) ; `pv(v)` pour la résistance ; case « Récupération »
+    de « Terminer le combat » (`combat:<lieu>:recup:<u>` à 2 = décochée,
+    `combat:<lieu>:detruits`) ; cadre `Sauvetage.jsx` (Capsule de secours :
+    marque `jetSauv` sur l'infanterie) ;
+  - `Espace.jsx` (fiche d'un système) : Assimilation dans `prendre` et
+    `mobiliser`, bouton Manipulation mentale ;
+  - `PlateauJoueur.jsx` : entretien (Diversité, Culture courtisane), et
+    `ActionsTechnologies.jsx`, le bloc « Actions de mes technologies »
+    (Apprentissage, Arme amplifiée — un scientifique posé sur la case
+    `joueur:<u>:unite:<i>` du type de vaisseau —, Art du commerce, Réparation) ;
+  - `Technologie.jsx`, `reactions` : Brevet (`brevet:<lui>:<chercheur>:<tech>`
+    = tour), Soleil de guerre ;
+  - `Vote.jsx`, `tradingFinDeVote` (appelé par `changerPhase`) : Trading ;
+    `decompteVotes` est le décompte partagé ;
+  - `Partie.jsx`, `piocherPropositions` : École politique ;
+  - `Blocage.jsx` : Rapport de force (`blocage:<case>:<joueur>:<camp>:plus`) ;
+    `Deplacement.jsx` : champs d'astéroïdes interdits sans Bouclier déflecteur ;
+  - `ScriptsCarte.jsx` : Réparation improvisée, sur la fiche d'un vaisseau.
+
+Chaque script dit ce qu'il change à l'interface : `mode` — `nouveau` (un bouton
+de plus), `modifie` (un bouton existant change de comportement), `auto` (calcul
+ou réaction, sans bouton) — et `ou`, l'endroit. L'outil « Scripts de règles »
+l'affiche ; `doc/implementabilite.md` le tient pour toutes les cartes.
+
+Événements : `vers: { pioche: n }` mélange des tuiles aux n tuiles du dessus de
+la pioche (pile à part `pioche:melange`, mélangée puis reversée) ; `rebellion`
+lance un dé par planète possédée hors système natal (premier coup : les dés du
+serveur ; second coup : les unités neutres).
 
 Un glisser-déposer ne déclenche jamais de script. Outil « Scripts de règles »
 (`/GE/ti5/tools/scripts`, `OutilScripts.jsx`) : liste, carte, version à

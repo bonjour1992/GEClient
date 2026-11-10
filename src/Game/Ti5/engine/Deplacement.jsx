@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, nomElement } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
+import { capaciteDe, depenserAgent } from "./effets";
 import {
     TRAJET, DEPART, useCarte, sorteEtape, sorteJet, campsAdverses, rangArret, passagesEnCours, Passage,
 } from "./Blocage";
@@ -76,7 +77,7 @@ const styleMini = { fontSize: 12, padding: "1px 6px" };
 
 export function useDeplacement({ tuiles }) {
 
-    const { etat, index, envoyer, joueur, moi, search, aviser, nomDe } = useEngine();
+    const { etat, index, envoyer, joueur, moi, search, aviser, nomDe, aScript } = useEngine();
 
     const enPhase = /d[ée]placement/i.test(etat.phase);
 
@@ -162,7 +163,8 @@ export function useDeplacement({ tuiles }) {
     {
         const place = new Map(selection.map(v => [
             v.id,
-            (Number(contenus[v.ref.id]?.capacite) || 0) - Object.values(etat.composants).filter(c => c.sur === v.id).length,
+            // (script Capsule de transport : capacité majorée)
+            capaciteDe(contenus[v.ref.id], moi, aScript) - Object.values(etat.composants).filter(c => c.sur === v.id).length,
         ]));
 
         for (const unite of aCharger) {
@@ -222,6 +224,9 @@ export function useDeplacement({ tuiles }) {
             .map(e => `${nomCase(e.de)} → ${nomCase(e.a)} : ni voisines, ni reliées par un trou de ver`),
         ...trajet.filter(i => !tuiles[i]).map(i => `${nomCase(i)} : pas de système sur cette case`),
         ...trajet.filter(i => anomalie(i) === "sup").map(i => `${nomCase(i)} : supernova, le déplacement y est impossible`),
+        // Champ d'astéroïdes : interdit, sauf avec le script Bouclier déflecteur
+        ...(aScript(moi, "bouclier-deflecteur") ? [] : trajet.filter(i => anomalie(i) === "ast")
+            .map(i => `${nomCase(i)} : champ d'astéroïdes, le déplacement y est interdit`)),
         ...trajet.slice(0, -1).filter(i => anomalie(i) === "neb")
             .map(i => `${nomCase(i)} : une nébuleuse met fin au mouvement de qui y entre`),
         depart !== null && anomalie(depart) === "neb" && etapes.length > 1 && etapes[0].sorte === "bord" &&
@@ -259,9 +264,10 @@ export function useDeplacement({ tuiles }) {
 
         envoyer([
             // Agents : utilisés, ou dépensés si le système de départ est déjà activé
-            ...besoins.flatMap(b => b.dispo.slice(0, b.cout).map(agent => (depuisActive
-                ? { type: "supprimer", c: agent.id }
-                : { type: "deplacer", c: agent.id, vers: uses }))),
+            // (dépensés : le script Bio stimulant propose de les user à la place)
+            ...besoins.flatMap(b => b.dispo.slice(0, b.cout).flatMap(agent => (depuisActive
+                ? depenserAgent({ aScript, moi, etat }, agent, `${b.nom} (départ d'un système déjà activé)`)
+                : [{ type: "deplacer", c: agent.id, vers: uses }]))),
             // Chargement, avant le départ : les unités suivent leur vaisseau
             ...chargement.map(x => ({ type: "deplacer", c: x.unite.id, sur: x.vaisseau.id })),
             ...partent.flatMap(v => [

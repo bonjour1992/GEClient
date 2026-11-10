@@ -189,3 +189,16 @@ Trois catégories (README) : **D** données en base · **P** outil de partie ·
   si le joueur passe outre (bouton rouge gris). Aucun changement côté serveur.
   Reste ouvert : hyperlanes, astéroïdes, contrôle autre que 1 par unité, « Porte de
   Creuss » visible dans la réserve de tuiles spéciales de toutes les parties.
+- 2026-11-11 : scripts d'effet de technologie (sorte « effet », `aScript`) pour 25
+  technologies — 139 à 141, 180, 181, 183 à 190, 194 à 198, 200 à 202, 205 à 208 —
+  selon les consignes de Loïc (liste du 2026-11-11) ; chaque script dit s'il crée un
+  bouton, modifie un bouton existant ou agit d'office (colonne « Interface » de
+  doc/implementabilite.md et de l'outil « Scripts de règles »). Événements : tuiles SIG
+  mélangées à la pioche, jets de rébellion. Donnée : Blindage en duranium (#197) vaut
+  aussi pour les transporteurs (migrate-blindage.mjs). Choix faits sans consigne :
+  Bio stimulant paie 2 ressources (texte de la carte ; la consigne disait « 2 inf ») ;
+  « jet de 6 » de Capsule de secours = 6 ou moins sur un dé de 10 ; Brevet : une fois
+  par tour, par faction qui recherche et par technologie ; Écoles militaires et Centre
+  de coordination : combat spatial seulement ; Récupération compte toutes les unités
+  détruites pendant le combat ; la version Hacan de Réparation improvisée (#419) a le
+  même bouton. Aucun changement côté serveur.

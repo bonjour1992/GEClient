@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
 import { useEngine, Zone, Emplacements } from "./Interaction";
-import { useElement, useElements } from "./sync";
+import { useElement, useElements, chargerContenu } from "./sync";
+import { SCRIPTS } from "./scripts";
 
 // ============================================================
 // ONGLET TECHNOLOGIE
@@ -51,7 +52,10 @@ export function affichageFeuille(jeu, contenu) {
 
 function Feuille({ composant, base }) {
 
-    const { etat, index, jouer, joueur, jeu, ouvrirFiche } = useEngine();
+    const {
+        etat, index, jouer, envoyer, joueur, jeu, ouvrirFiche, partie, factionDe, nomDe, aviser,
+        aScript, aTechnologie, scriptsDesactives,
+    } = useEngine();
 
     const contenu = useElement(composant.ref.id);
     const racine = useRef(null);
@@ -144,9 +148,77 @@ function Feuille({ composant, base }) {
 
         const valeur = Math.max(0, Math.min(cout(k), progres(k) + (event.ctrlKey ? -1 : 1)));
 
-        if (valeur !== progres(k)) {
-            jouer({ type: "compteur", id: idProgres(k), valeur });
+        if (valeur === progres(k)) {
+            return;
         }
+
+        const avance = { type: "compteur", id: idProgres(k), valeur };
+
+        // Une case de moins : rien d'autre
+        if (valeur < progres(k)) {
+            jouer(avance);
+            return;
+        }
+
+        reactions(liens[k]?.id, valeur >= cout(k)).then(({ actions, messages }) => {
+
+            if (!actions.length) {
+                jouer(avance);
+                return;
+            }
+
+            envoyer([avance, ...actions], messages.join(" — "));
+            aviser(messages.join(" "));
+        });
+    }
+
+    // --------------------------------------------------------
+    // SCRIPTS DÉCLENCHÉS PAR UNE CASE DE RECHERCHE (scripts.js)
+    //
+    //   Brevet            un autre joueur qui possède cette technologie
+    //                     gagne 1 commerce (une fois par tour, par
+    //                     chercheur et par technologie : compteur
+    //                     brevet:<lui>:<chercheur>:<technologie>) ;
+    //   Soleil de guerre  la technologie vient d'être obtenue : un soleil
+    //                     de guerre de la faction arrive dans les éléments
+    //                     actifs du joueur.
+    // -> { actions, messages }
+    // --------------------------------------------------------
+
+    async function reactions(idTech, obtenue) {
+
+        const chercheur = Number(base.split(":")[1]);
+        const actions = [];
+        const messages = [];
+
+        for (const j of partie.joueurs) {
+
+            const cle = `brevet:${j.userId}:${chercheur}:${idTech}`;
+
+            if (j.userId !== chercheur && aScript(j.userId, "brevet") && aTechnologie(j.userId, idTech) &&
+                Number(etat.compteurs[cle]) !== etat.tour) {
+                actions.push({ type: "compteur", id: cle, valeur: etat.tour });
+                actions.push({ type: "compteur", id: `joueur:${j.userId}:commerce`, delta: 1 });
+                messages.push(`Brevet : ${nomDe(j.userId)} gagne 1 commerce (${nomDe(chercheur)} recherche une technologie qu'il possède).`);
+            }
+        }
+
+        const soleil = SCRIPTS.find(s => s.id === "soleil-de-guerre");
+
+        if (obtenue && idTech === soleil?.carte.id && !scriptsDesactives.includes(soleil.id)) {
+
+            const faction = await chargerContenu(factionDe(chercheur) ?? -1);
+            const ids = (faction?.units || []).map(lien => Number(lien?.id)).filter(id => id > 0);
+            const unites = await Promise.all(ids.map(chargerContenu));
+            const id = ids.find((x, i) => unites[i]?.type === "sun");
+
+            if (id) {
+                actions.push({ type: "creer", ref: { type: "unit", id }, zone: `${base}:actif`, proprio: chercheur });
+                messages.push("Soleil de guerre : technologie obtenue, un soleil de guerre arrive dans les éléments actifs.");
+            }
+        }
+
+        return { actions, messages };
     }
 
     return (

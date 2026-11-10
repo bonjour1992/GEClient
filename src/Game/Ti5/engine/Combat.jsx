@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { useEngine, nomElement, nomCase, distanceCases, DORE } from "./Interaction";
-import { useElement, useElements } from "./sync";
+import { useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle } from "./Interaction";
+import { useElement, useElements, contenuEnCache } from "./sync";
+import { resistanceDe } from "./effets";
+import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR } from "./miseEnPlace";
 import { Blocages } from "./Blocage";
 
@@ -230,7 +232,7 @@ export function Combat() {
 
 function CombatSysteme({ lieu }) {
 
-    const { etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler } = useEngine();
+    const { etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript } = useEngine();
 
     // zone : celle des cibles (espace du système, ou planète)
     const { numero, planete, sorte, zone } = lireLieu(lieu);
@@ -534,11 +536,76 @@ function CombatSysteme({ lieu }) {
     const malus = v =>
         (engagement(v).some(e => e.startsWith("@")) && !aCapacite(v, "prec") ? 2 : 0);
 
+    // --------------------------------------------------------
+    // BONUS DES SCRIPTS (technologies débloquées, scripts.js) : ils
+    // s'ajoutent d'office à la valeur de combat du tireur, et sont
+    // dits sur sa ligne. -> [[variation, nom du script]]
+    // --------------------------------------------------------
+
+    const contenuDe = c => contenus[c.ref.id] ?? contenuEnCache(c.ref.id);
+
+    // Unités d'un camp dans le système (espace et planètes)
+    const dansLeSysteme = camp => Object.values(etat.composants).filter(c =>
+        c.ref?.type === "unit" && campDe(c) === camp &&
+        (c.zone === "hex:" + numero || c.zone?.startsWith(`hex:${numero}:`)));
+
+    // Possesseur de la planète du combat : sa carte est dans ses éléments actifs
+    const idPlanete = planete === null ? null : systeme?.elems?.[planete]?.id;
+
+    const possesseur = idPlanete > 0
+        ? partie.joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+            .some(c => c.ref?.type === "planet" && c.ref.id === idPlanete))?.userId ?? null
+        : null;
+
+    // Camp visé par le premier engagement d'un tireur (ou null)
+    const campVise = v => {
+        const code = engagement(v)[0];
+
+        return !code ? null
+            : (code.startsWith("@") ? parId[code.slice(1)]?.camp ?? null
+                : (/^n$/i.test(code) ? NEUTRE : Number(code.slice(1))));
+    };
+
+    // Arme amplifiée : un scientifique est posé sur ce type de vaisseau de la feuille du joueur
+    const amplifie = v => {
+        const fiche = fiches[partie.joueurs.find(j => j.userId === v.camp)?.faction];
+        const i = (fiche?.units || []).findIndex(lien => lien?.id === v.c.ref.id);
+
+        return i >= 0 && (index.parZone.get(`joueur:${v.camp}:unite:${i}`) || [])
+            .some(c => c.ref?.type === "agent" && /scientifique/i.test(nomElement(search, c.ref)));
+    };
+
+    function bonusScripts(v) {
+
+        if (!v.tire) {
+            return [];
+        }
+
+        const a = id => v.camp !== NEUTRE && aScript(v.camp, id);
+
+        return [
+            sorte === "spatial" && etat.compteurs[`${COMBAT}:plus:${v.camp}`] && [1, "Écoles militaires"],
+            sorte === "spatial" && a("arme-amplifiee") && amplifie(v) && [2, "Arme amplifiée"],
+            sorte === "spatial" && a("centre-de-coordination") &&
+                dansLeSysteme(v.camp).some(c => ["dock", "fs"].includes(contenuDe(c)?.type)) && [1, "Centre de coordination"],
+            sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
+            (sorte === "canons" || sorte === "bombardement") && a("systeme-de-visee") && [1, "Système de visée"],
+            sorte === "canons" && campVise(v) && aScript(campVise(v), "bouclier-deflecteur") && [-1, "Bouclier déflecteur"],
+            sorte === "bombardement" && possesseur && possesseur !== v.camp && aScript(possesseur, "batiment-resistant") && [
+                unitesDe(zone).some(c => campDe(c) === possesseur && contenuDe(c)?.mot_cle?.includes("struc")) ? -2 : -1,
+                "Bâtiment résistant",
+            ],
+        ].filter(Boolean);
+    }
+
     // Le dé touche s'il fait le seuil ou moins
-    const seuil = v => attaque(v) - malus(v) + ajust(v);
+    const seuil = v => attaque(v) - malus(v) + ajust(v) + bonusScripts(v).reduce((s, [n]) => s + n, 0);
+
+    // Résistance d'une unité, Blindage en duranium compris : { valeur, bonus }
+    const pv = v => resistanceDe(v.u, v.camp, aScript);
 
     const estDetruit = v => {
-        const resistance = Number(v.u.PV) || 0;
+        const resistance = pv(v).valeur;
         return resistance > 0 && (Number(v.c.marques?.degat) || 0) >= resistance;
     };
 
@@ -609,7 +676,7 @@ function CombatSysteme({ lieu }) {
         : []);
 
     // Résistance qu'il reste à une unité (sans résistance : elle encaisse tout)
-    const reste = x => (Number(x.u.PV) > 0 ? Number(x.u.PV) - (Number(x.c.marques?.degat) || 0) : Infinity);
+    const reste = x => (pv(x).valeur > 0 ? pv(x).valeur - (Number(x.c.marques?.degat) || 0) : Infinity);
 
     const aRepartir = camp => Object.entries(enAttente)
         .filter(([code]) => ciblesDe(code)[0]?.camp === camp)
@@ -801,17 +868,49 @@ function CombatSysteme({ lieu }) {
 
     // Efface les engagements, les dés et les dégâts non attribués de toute la
     // table : demande une confirmation.
+    //
+    // Script Récupération (combat spatial) : chaque joueur du combat qui a la
+    // technologie a une case, cochée d'office (compteur combat:<lieu>:recup:<u>
+    // à 2 = décochée) ; à la fin du combat il gagne 1 ressource par unité
+    // détruite pendant ce combat (compteur combat:<lieu>:detruits, plus celles
+    // qui ne sont pas encore retirées). Deux cases cochées : une seule faction
+    // domine le système, le bouton le dit avant de confirmer.
+    const DETRUITS = COMBAT + ":detruits";
+    const RECUP = COMBAT + ":recup:";
+
+    const recuperateurs = sorte === "spatial" ? campsJoueurs.filter(u => aScript(u, "recuperation")) : [];
+    const recupCochee = u => Number(etat.compteurs[RECUP + u]) !== 2;
+    const epaves = (Number(etat.compteurs[DETRUITS]) || 0) + aRetirer.length;
+
     function terminer() {
 
-        if (!window.confirm("Terminer ce combat ? Les engagements et les dés seront effacés pour tout le monde.")) {
+        const cochees = recuperateurs.filter(recupCochee);
+
+        const obstacles = [
+            cochees.length > 1 &&
+                `Récupération est cochée par ${cochees.map(nomDe).join(" et ")} : une seule faction domine le système`,
+        ];
+
+        const commentaire = obstacles.some(Boolean)
+            ? confirmerRegle("Terminer le combat", obstacles)
+            : (window.confirm("Terminer ce combat ? Les engagements et les dés seront effacés pour tout le monde.") ? "Combat terminé" : null);
+
+        if (!commentaire) {
             return;
         }
+
+        const gain = epaves > 0 && cochees.length > 0;
 
         envoyer([
             ...effacer([M.engage, M.des, M.desF, M.desA, M.ajust, M.ajustN]),
             ...remiseEtape,
+            ...(gain ? cochees.map(u => ({ type: "compteur", id: `joueur:${u}:res`, delta: epaves })) : []),
+            // Compteurs des scripts de ce combat (Écoles militaires, Récupération)
+            ...Object.keys(etat.compteurs)
+                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup):\d+$|:detruits$/.test(id) && etat.compteurs[id])
+                .map(id => ({ type: "compteur", id, valeur: 0 })),
             { type: "compteur", id: COMBAT, valeur: 0 },
-        ], "Combat terminé");
+        ], commentaire + (gain ? ` — Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}` : ""));
     }
 
     const maSelection = selection.filter(id => parId[id]?.camp === moi);
@@ -824,7 +923,7 @@ function CombatSysteme({ lieu }) {
 
         const aMoi = v.camp === moi;
         const degat = Number(v.c.marques?.degat) || 0;
-        const resistance = Number(v.u.PV) || 0;
+        const { valeur: resistance, bonus: blindage } = pv(v);
         const detruit = resistance > 0 && degat >= resistance;
         const indestructible = aCapacite(v, "indes");
         const engage = v.tire ? engagement(v) : [];
@@ -879,7 +978,9 @@ function CombatSysteme({ lieu }) {
                         {v.tire && attaque(v) > 0
                             ? `${NOM_ATTAQUE[sorte]} ${attaque(v)}${nombreDes(v) > 1 ? " ×" + nombreDes(v) : ""}`
                             : "sans attaque"}
-                        {" · "}rés. {resistance}
+                        {" · "}rés. {blindage
+                            ? <b data-resistance-modifiee title={`Blindage en duranium : ${resistance - blindage} + ${blindage}`} style={{ color: "#1b5e20" }}>{resistance} (+{blindage})</b>
+                            : resistance}
                         {/* Tireur à distance : dit d'où il tire */}
                         {v.tire && !v.cible && v.c.zone !== "hex:" + numero && ` · ${nomLieu(v.c.zone)}`}
                     </span>
@@ -916,6 +1017,13 @@ function CombatSysteme({ lieu }) {
                         );
                     })}
 
+                    {/* Bonus et malus des scripts, déjà comptés dans la valeur pour toucher */}
+                    {bonusScripts(v).map(([n, nom]) => (
+                        <span key={nom} data-bonus-script={n} style={{ fontSize: 11, fontWeight: "bold", color: n > 0 ? "#1b5e20" : "#b71c1c" }}>
+                            {n > 0 ? "+" : "−"}{Math.abs(n)} {nom}
+                        </span>
+                    ))}
+
                     {degat > 0 && <b style={{ color: "#c00" }}>✹{degat}</b>}
 
                     {aFrappePreventive(v) && (
@@ -930,7 +1038,7 @@ function CombatSysteme({ lieu }) {
                         <button
                             type="button"
                             style={styleBouton}
-                            onClick={() => jouer({ type: "supprimer", c: v.id })}
+                            onClick={() => jouer([{ type: "supprimer", c: v.id }, { type: "compteur", id: DETRUITS, delta: 1 }])}
                         >
                             Retirer
                         </button>
@@ -1194,16 +1302,39 @@ function CombatSysteme({ lieu }) {
                             disabled={!aRetirer.length}
                             title="Retire du jeu toutes les unités détruites de ce combat (pas les unités indestructibles, qui sont seulement désactivées)"
                             onClick={() => envoyer(
-                                aRetirer.map(v => ({ type: "supprimer", c: v.id })),
+                                [
+                                    ...aRetirer.map(v => ({ type: "supprimer", c: v.id })),
+                                    { type: "compteur", id: DETRUITS, delta: aRetirer.length },
+                                ],
                                 `Combat : ${aRetirer.length} unité(s) détruite(s) retirée(s)`
                             )}
                         >
                             Retirer tous les détruits{aRetirer.length ? ` (${aRetirer.length})` : ""}
                         </button>
 
-                        <button type="button" onClick={terminer} style={{ marginLeft: "auto" }}>
-                            Terminer le combat
-                        </button>
+                        {/* Script Récupération : une case par joueur qui a la technologie */}
+                        <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                            {recuperateurs.map(u => (
+                                <label
+                                    key={u}
+                                    data-recuperation={u}
+                                    title="Récupération : à la fin du combat, si vous dominez le système, +1 ressource par vaisseau détruit pendant ce combat"
+                                    style={{ fontSize: 12 }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={recupCochee(u)}
+                                        disabled={u !== moi}
+                                        onChange={() => envoyer([{ type: "compteur", id: RECUP + u, valeur: recupCochee(u) ? 2 : 0 }], "")}
+                                    />{" "}
+                                    Récupération ({nomDe(u)}) : +{epaves}
+                                </label>
+                            ))}
+
+                            <button type="button" data-action="terminer-combat" onClick={terminer}>
+                                Terminer le combat
+                            </button>
+                        </span>
                     </>
                 )}
             </div>
@@ -1218,6 +1349,15 @@ function CombatSysteme({ lieu }) {
 
             {vaisseaux.length === 0 && (
                 <i style={{ color: "#666" }}>Aucune unité dans ce combat.</i>
+            )}
+
+            {/* Script Capsule de secours : infanteries des vaisseaux détruits */}
+            {(sorte === "spatial" || sorte === "canons") && (
+                <Sauvetage
+                    numero={numero}
+                    navires={vaisseaux.filter(estDetruit).map(v => v.c)}
+                    planetes={(systeme?.elems || []).map((lien, k) => (lien?.id > 0 ? k : -1)).filter(k => k >= 0)}
+                />
             )}
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 8 }}>

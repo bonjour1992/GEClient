@@ -5,7 +5,8 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { Text } from "../../../Component/Text";
 import { getHandler } from "../../games";
 import { usePartie, useElement, useElements, chargerContenu } from "./sync";
-import { SCRIPTS_DESACTIVES, scriptsDeRecrutement } from "./scripts";
+import { SCRIPTS, SCRIPTS_DESACTIVES, scriptsDeRecrutement, technologiesDe } from "./scripts";
+import { depenserAgent } from "./effets";
 import { MiseEnPlaceJoueur } from "./MiseEnPlaceJoueur";
 import { ScriptsCarte } from "./ScriptsCarte";
 import {
@@ -56,7 +57,7 @@ import { Technologie } from "./Technologie";
 import { PlateauGeneral, Des } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
-import { Vote } from "./Vote";
+import { Vote, tradingFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
@@ -250,6 +251,28 @@ export function Partie({ id }) {
         p.vue?.partie.joueurs.find(j => j.userId === p.moi)?.faction
     );
 
+    // Technologies débloquées de chaque joueur, pour les scripts d'effet
+    // (scripts.js) : { <joueur>: Map(technologie -> { utilisee }) }
+    const [technologies, setTechnologies] = useState({});
+    const idsJoueurs = (p.vue?.partie.joueurs || []).map(j => j.userId).join(",");
+
+    useEffect(() => {
+
+        if (!p.etat) {
+            return undefined;
+        }
+
+        let annule = false;
+
+        Promise.all(idsJoueurs.split(",").filter(Boolean).map(Number)
+            .map(async u => [u, await technologiesDe(p.etat, u, chargerContenu)]))
+            .then(liste => !annule && setTechnologies(Object.fromEntries(liste)));
+
+        return () => {
+            annule = true;
+        };
+    }, [p.etat, idsJoueurs]);
+
     if (!p.vue) {
         return (
             <div style={styleCadre}>
@@ -303,6 +326,21 @@ export function Partie({ id }) {
         // et scripts désactivés
         aviser: setAvis,
         scriptsDesactives,
+
+        // Script d'effet : il est en service et le joueur a débloqué sa technologie
+        aScript: (userId, id) => {
+            const script = SCRIPTS.find(s => s.id === id);
+
+            return !!script && !scriptsDesactives.includes(id) &&
+                [script.carte.id, ...(script.aussi || [])].some(tech => technologies[userId]?.has(tech));
+        },
+
+        // Le joueur a-t-il débloqué cette technologie ?
+        aTechnologie: (userId, idTech) => !!technologies[userId]?.has(idTech),
+
+        // Compteur « utilisée ce tour » de la technologie d'un script (ou null)
+        techDuScript: (userId, id) =>
+            technologies[userId]?.get(SCRIPTS.find(s => s.id === id)?.carte.id)?.utilisee ?? null,
 
         // Change d'onglet (un système envoyé au combat ouvre l'onglet Conflit),
         // et combat affiché dans cet onglet (case du système)
@@ -492,9 +530,15 @@ export function Partie({ id }) {
     function changerPhase(pas, commentaire = "") {
         const phase = phases[iPhase + pas];
 
+        // Script Trading : on quitte la phase de vote, les prédictions justes sont payées
+        const trading = pas > 0 && /^(?!.*pr[ée]).*vote/i.test(etat.phase)
+            ? tradingFinDeVote({ etat, index, joueurs, search, aScript: ctx.aScript, nomDe: ctx.nomDe })
+            : { actions: [], messages: [] };
+
         // Nouvelle phase : plus personne n'a passé, le premier de l'ordre joue
         if (phase) {
-            p.envoyer(commentaire, [
+            p.envoyer([commentaire, ...trading.messages].filter(Boolean).join(" — "), [
+                ...trading.actions,
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse] : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
@@ -503,6 +547,10 @@ export function Partie({ id }) {
                 ...(pas > 0 ? figerOrdre : []),
                 { type: "partie", phase: phase.nom, joueurActif: (pas > 0 ? ordreSuivant : ordreJeu)[0] ?? null },
             ]);
+
+            if (trading.messages.length) {
+                setAvis(trading.messages.join(" ; "));
+            }
         }
     }
 
@@ -625,8 +673,9 @@ export function Partie({ id }) {
         const uses = `joueur:${moi}:agentsUses`;
 
         if (achete.ref.type === "agent" && (c.zone === stock || c.zone === uses)) {
+            // (Ctrl + clic : dépensé — le script Bio stimulant propose de l'user à la place)
             p.jouer(event.ctrlKey
-                ? { type: "supprimer", c: id }
+                ? depenserAgent(ctx, c, nomElement(search, c.ref))
                 : { type: "deplacer", c: id, vers: c.zone === stock ? uses : stock });
 
             return true;
@@ -771,7 +820,10 @@ export function Partie({ id }) {
 
     function piocherPropositions() {
 
-        const n = Math.max(1, Math.min(10, Math.floor(Number(nbPropositions)) || 1));
+        // Script École politique : 2 propositions de plus, même en dépensant 0 influence
+        const bonus = ctx.aScript(moi, "ecole-politique-lois") ? 2 : 0;
+        const paye = Math.floor(Number(nbPropositions));
+        const n = Math.max(bonus ? 0 : 1, Math.min(10, Number.isFinite(paye) ? paye : 1));
         const compteur = `joueur:${moi}:inf`;
         const influence = Number(etat.compteurs[compteur]) || 0;
         const enPioche = (index.parZone.get("pioche:Agenda") || []).length;
@@ -791,16 +843,20 @@ export function Partie({ id }) {
             return;
         }
 
-        if (enPioche < n) {
+        if (enPioche < n + bonus) {
             p.setErreur(`Il ne reste que ${enPioche} agenda(s) dans la pioche.`);
             return;
         }
 
         p.jouer([
             { type: "compteur", id: compteurPioche, valeur: etat.tour, si: Number(etat.compteurs[compteurPioche]) || 0 },
-            { type: "compteur", id: compteur, delta: -n },
-            { type: "piocher", de: "pioche:Agenda", vers: zoneChoix, n },
-        ]);
+            n > 0 && { type: "compteur", id: compteur, delta: -n },
+            { type: "piocher", de: "pioche:Agenda", vers: zoneChoix, n: n + bonus },
+        ].filter(Boolean));
+
+        if (bonus) {
+            setAvis(`École politique : ${n + bonus} propositions piochées pour ${n} influence (2 de plus).`);
+        }
     }
 
     function choisirProposition(idCarte) {
@@ -1180,7 +1236,7 @@ export function Partie({ id }) {
                                     Piocher{" "}
                                     <input
                                         type="number"
-                                        min={1}
+                                        min={ctx.aScript(moi, "ecole-politique-lois") ? 0 : 1}
                                         max={10}
                                         value={nbPropositions}
                                         onChange={e => setNbPropositions(e.target.value)}
@@ -1195,7 +1251,8 @@ export function Partie({ id }) {
                                     >
                                         {dejaPioche
                                             ? "✔ propositions piochées ce tour"
-                                            : "proposition(s) (coûte autant d'influence)"}
+                                            : "proposition(s) (coûte autant d'influence)" +
+                                                (ctx.aScript(moi, "ecole-politique-lois") ? " + 2 gratuites (École politique)" : "")}
                                     </button>
                                 </span>
                                 <span>
@@ -1837,7 +1894,7 @@ function FicheLibre({ id, fermer }) {
 
 function Fiche({ id, fermer }) {
 
-    const { etat, index, jouer, joueur, moi, partie, jeu, search, nomDe, signaler } = useEngine();
+    const { etat, index, jouer, joueur, moi, partie, jeu, search, nomDe, signaler, aScript } = useEngine();
 
     const c = etat.composants[id];
 
@@ -1954,7 +2011,8 @@ function Fiche({ id, fermer }) {
         }
 
         jouer([
-            { type: "supprimer", c: scientifique.id },
+            // (le scientifique est dépensé : Bio stimulant propose de l'user à la place)
+            ...depenserAgent({ aScript, moi, etat }, scientifique, "le scientifique"),
             ...aRetirer.map(f => ({ type: "supprimer", c: f.id })),
             { type: "deplacer", c: c.id, vers: `joueur:${moi}:actif` },
             // Mon marqueur avance sur la piste des points du déroulé
