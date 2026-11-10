@@ -49,6 +49,8 @@ import {
     estTreve,
     BoutonRegle,
     confirmerRegle,
+    reglerConnexion,
+    payerConnexion,
 } from "./Interaction";
 import { Preparation } from "./Preparation";
 import { Espace } from "./Espace";
@@ -305,7 +307,8 @@ export function Partie({ id }) {
         coups,
         moi,
         joueur: estJoueur,
-        jouer: p.jouer,
+        // (payerConnexion : script Connexion, un négociant utilisé à la place d'un autre agent)
+        jouer: actions => p.jouer(payerConnexion(actions)),
         ouvrirFiche: setFiche,
         nomDe: userId => trouver(userId)?.nom || "personne",
         factionDe: userId => trouver(userId)?.faction ?? null,
@@ -317,7 +320,7 @@ export function Partie({ id }) {
         ecrire: p.ecrire,
 
         // Envoie tout de suite ces actions (avec celles en attente) en un coup commenté
-        envoyer: (actions, commentaire, surRefus) => p.envoyer(commentaire, actions, surRefus),
+        envoyer: (actions, commentaire, surRefus) => p.envoyer(commentaire, payerConnexion(actions), surRefus),
         couleurDe: userId => (trouver(userId) ? couleurJoueur(trouver(userId)) : null),
 
         // Production (case de la réserve) et message d'erreur de l'en-tête
@@ -363,6 +366,8 @@ export function Partie({ id }) {
         combatVu,
         setCombatVu,
     };
+
+    reglerConnexion({ aScript: ctx.aScript, moi });
 
     // Combats et blocages de déplacement en cours : l'onglet Conflit est mis
     // en avant, d'une couleur différente selon que j'y ai des unités ou non

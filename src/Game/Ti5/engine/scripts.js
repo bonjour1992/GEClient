@@ -501,6 +501,24 @@ export const SCRIPTS = [
     effet("ia-industrielle", 193, 1790238201043, "IA industrielle", "auto",
         "Production ouverte avec un dock (Ctrl + clic sur le dock, phase de production)",
         "Vos docks produisent 2 unités de plus ; pour un dock posé sur une planète militaire, le coût total de la production baisse de 2."),
+
+    // ---- lot C : commerce et agents ----
+
+    effet("propagande", 212, 1780480307120, "Propagande", "modifie",
+        "Plateau général : « + » de la piste d'infamie",
+        "Au gain d'un point d'infamie, une fenêtre propose de dépenser un diplomate pour ne pas le gagner."),
+
+    effet("science-integree-livraison", 216, 1794335054856, "Science intégrée", "modifie",
+        "Livraison commerciale (fiche d'une unité, Art du commerce)",
+        "Lors d'une livraison, une fenêtre propose d'user un scientifique : la faction livrée gagne 4 cases de recherche d'une technologie que vous possédez (elle les coche à la main)."),
+
+    effet("commerce-profitable", 269, 1794343420988, "Commerce profitable", "auto",
+        "Livraison commerciale",
+        "Vos livraisons valent 1 de plus ; une livraison que vous recevez vous rapporte 1 commerce de plus."),
+
+    effet("connexion", 270, 1794343420989, "Connexion", "modifie",
+        "Tout bouton qui utilise ou dépense un agent",
+        "Si vous n'avez pas l'agent demandé mais avez un négociant, une fenêtre propose de l'utiliser à sa place pour 2 commerce (pas pour les agents du déplacement assisté)."),
 ];
 
 // Script d'effet de technologie : sa description seule (son code est là où il agit)

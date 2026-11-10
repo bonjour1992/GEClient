@@ -600,10 +600,78 @@ export function IconeRessource({ ressource, n, cote = 22 }) {
     );
 }
 
+// ------------------------------------------------------------
+// Script Connexion : « vos négociants peuvent être utilisés comme
+// n'importe quel agent en dépensant 2 commerce ».
+//
+// Quand le joueur n'a pas l'agent demandé mais a un négociant, c'est
+// le négociant qui est rendu, et la substitution est notée. Au moment
+// d'envoyer le coup (payerConnexion, appelé par Partie.jsx), une
+// fenêtre demande s'il faut utiliser ce négociant pour 2 commerce :
+// oui, le coût s'ajoute au coup ; non, l'agent n'est pas utilisé.
+// ------------------------------------------------------------
+
+// Contexte de la partie affichée ({ aScript, moi }), tenu à jour par Partie.jsx
+let connexion = null;
+
+export const reglerConnexion = contexte => {
+    connexion = contexte;
+};
+
+// Négociant rendu à la place d'un autre agent -> nom de l'agent demandé
+const substitutions = new Map();
+
+// Ajoute au coup le prix des négociants utilisés à la place d'un autre agent
+export function payerConnexion(actions) {
+
+    const liste = (Array.isArray(actions) ? actions : [actions]).filter(Boolean);
+    const vues = new Set();
+
+    const gardees = liste.filter(action => {
+
+        const demande = (action.type === "deplacer" || action.type === "supprimer") && substitutions.get(action.c);
+
+        if (!demande || vues.has(action.c)) {
+            return true;
+        }
+
+        vues.add(action.c);
+        substitutions.delete(action.c);
+
+        return window.confirm(
+            `Connexion : vous n'avez pas l'agent demandé (${demande.replace(/[|\\[\]]/g, " ")}).\n\n` +
+            "OK : utiliser un négociant à sa place, pour 2 commerce.\nAnnuler : aucun agent n'est utilisé.") && vues.add("ok:" + action.c);
+    });
+
+    const payes = [...vues].filter(x => String(x).startsWith("ok:")).length;
+
+    return payes && connexion
+        ? [...gardees, { type: "compteur", id: `joueur:${connexion.moi}:commerce`, delta: -2 * payes }]
+        : gardees;
+}
+
 // Agent disponible (non usé) du joueur dont le nom contient `nom`, ou null
 export function agentDisponible({ index, moi, search }, nom) {
-    return (index.parZone.get(`joueur:${moi}:agents`) || [])
-        .find(c => c.ref && new RegExp(nom, "i").test(nomElement(search, c.ref))) || null;
+
+    const motif = new RegExp(nom, "i");
+    const agents = (index.parZone.get(`joueur:${moi}:agents`) || []).filter(c => c.ref);
+    const trouve = agents.find(c => motif.test(nomElement(search, c.ref))) || null;
+
+    if (trouve) {
+        // (un négociant demandé pour lui-même n'est pas une substitution)
+        substitutions.delete(trouve.id);
+        return trouve;
+    }
+
+    const negociant = connexion?.moi === moi && connexion.aScript(moi, "connexion")
+        ? agents.find(c => /n[ée]gociant/i.test(nomElement(search, c.ref)))
+        : null;
+
+    if (negociant) {
+        substitutions.set(negociant.id, nom);
+    }
+
+    return negociant || null;
 }
 
 // Couleur d'un cube : celle de l'agent, noir pour un cube mercenaire (■),

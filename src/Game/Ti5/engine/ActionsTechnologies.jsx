@@ -3,6 +3,7 @@ import { useEngine, BoutonRegle, agentDisponible, nomElement } from "./Interacti
 import { useElement, useElements } from "./sync";
 import { MARQUEUR, DETTE } from "./miseEnPlace";
 import { turnNumber } from "../ti5Const";
+import { livrer } from "./Livraison";
 
 // ============================================================
 // ACTIONS DE MES TECHNOLOGIES (plateau joueur)
@@ -211,7 +212,8 @@ function ArmeAmplifiee() {
 
 function Livraison() {
 
-    const { etat, envoyer, moi, nomDe, techDuScript } = useEngine();
+    const ctx = useEngine();
+    const { etat, envoyer, moi, nomDe, techDuScript, aviser } = ctx;
 
     const [cible, choix] = useAutres();
     const utilisee = techDuScript(moi, "art-du-commerce-livraison");
@@ -227,11 +229,14 @@ function Livraison() {
                     !/diplo/i.test(etat.phase) && "ce n'est pas la phase de diplomatie",
                     utilisee && etat.compteurs[utilisee] && "la technologie est déjà utilisée ce tour",
                 ]}
-                faire={commentaire => envoyer([
-                    utilisee && { type: "compteur", id: utilisee, valeur: 1 },
-                    { type: "compteur", id: `joueur:${cible}:commerce`, delta: 2 },
-                ], commentaire)}
-                title="Utilise la technologie : la faction choisie gagne 2 commerce (elle réduit vos dettes à la main)"
+                faire={commentaire => {
+                    // (Livraison.jsx : commerce donné, dettes réduites, scripts de livraison)
+                    const { actions, messages } = livrer(ctx, cible, 2);
+
+                    envoyer([utilisee && { type: "compteur", id: utilisee, valeur: 1 }, ...actions], [commentaire, ...messages].join(" — "));
+                    aviser(messages.join(" "));
+                }}
+                title="Utilise la technologie : la faction choisie gagne 2 commerce, et vos dettes envers elle baissent d'autant"
             >
                 Livrer
             </BoutonRegle>

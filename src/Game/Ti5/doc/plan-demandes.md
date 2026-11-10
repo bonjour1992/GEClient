@@ -236,7 +236,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   en cours … 1/3 », réserve en rouge pour ce qui n'est pas productible, « Terminer ») ; 193 IA
   industrielle ; capture (une unité capturée glissée en production donne mon unité équivalente,
   sans coût, et retourne dans la réserve de son propriétaire).
-- ☐ Lot C — commerce et agents : livraison commerciale depuis la fiche d'une unité à `#livr`
+- ☑ Lot C — commerce et agents : livraison commerciale depuis la fiche d'une unité à `#livr`
   (comptoir dans le système, choix de la faction) ; 216 Science intégrée et 269 Commerce
   profitable à la livraison ; 270 Connexion (fenêtre quand un agent est utilisé) ; 212 Propagande
   (fenêtre au gain d'infamie).

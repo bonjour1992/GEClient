@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, BoutonRegle } from "./Interaction";
+import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
+import { depenserAgent } from "./effets";
 import { getHandler } from "../../games";
 import {
     TYPES_PIOCHE,
@@ -771,7 +772,7 @@ function Pioche({
 
 export function PlateauGeneral() {
 
-    const { etat, index, partie, jouer, joueur, moi } = useEngine();
+    const { etat, index, partie, jouer, envoyer, joueur, moi, search, aScript } = useEngine();
 
     const [zoom, setZoom] = useState(0.7);
 
@@ -781,9 +782,25 @@ export function PlateauGeneral() {
 
         const piste = event.target.closest("[data-action]")?.dataset.action;
 
-        if (joueur && piste) {
-            jouer(actionsPiste(etat, moi, piste, 1));
+        if (!joueur || !piste) {
+            return;
         }
+
+        // Script Propagande : au gain d'un point d'infamie, une fenêtre propose
+        // de dépenser un diplomate pour ne pas le gagner
+        const diplomate = piste === "infamie" && aScript(moi, "propagande")
+            ? agentDisponible({ index, moi, search }, "diplomate")
+            : null;
+
+        if (diplomate && window.confirm(
+            "Propagande : vous gagnez un point d'infamie.\n\n" +
+            "OK : dépenser un diplomate pour ne pas le gagner.\nAnnuler : gagner le point d'infamie.")) {
+            envoyer(depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
+                "Propagande : un diplomate dépensé, le point d'infamie n'est pas gagné");
+            return;
+        }
+
+        jouer(actionsPiste(etat, moi, piste, 1));
     }
 
     const deroule = etat.references?.deroule;

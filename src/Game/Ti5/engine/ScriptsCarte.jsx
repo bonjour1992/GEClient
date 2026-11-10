@@ -4,6 +4,7 @@ import { normaliserPlateau } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
 import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires } from "./miseEnPlace";
+import { LivraisonCommerciale } from "./Livraison";
 
 // ============================================================
 // BOUTONS DES SCRIPTS SUR LA FICHE D'UNE CARTE
@@ -29,6 +30,9 @@ export function ScriptsCarte({ c, fermer }) {
                 : null)),
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && aScript(moi, "reparation-improvisee") &&
             <ReparationImprovisee key="reparation-improvisee" c={c} fermer={fermer} />,
+        // Livraison commerciale : une de mes unités de la carte dont le texte porte #livr(n)
+        c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi &&
+            <LivraisonCommerciale key="livraison-commerciale" c={c} fermer={fermer} />,
     ];
 }
 
