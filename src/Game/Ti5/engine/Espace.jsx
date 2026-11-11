@@ -432,8 +432,13 @@ export function Espace() {
             const dejaActive = (index.parZone.get("hex:" + numero) || [])
                 .some(c => !c.ref && c.jeton === MARQUEUR && c.proprio === moi);
 
+            // Un déplacement à la fois : une activation est encore ouverte
+            const ouvertes = deplacement.ouvertes.filter(i => i !== numero);
+
             const commentaire = confirmerRegle(`Activer le système (${nomCase(numero)})`, [
                 dejaActive && "vous avez déjà activé ce système",
+                ouvertes.length > 0 &&
+                    `votre déplacement vers ${ouvertes.map(nomCase).join(", ")} n'est pas fini (« Finir le déplacement », ou « Annuler l'activation »)`,
                 !tuiles[numero] && "il n'y a pas de système sur cette case",
             ]);
 
@@ -754,11 +759,15 @@ export function Espace() {
                     style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
                 >
                     <Emplacements stylePions={stylePions} extra={etendard} petit>
-                        <PlateauView
-                            content={content}
-                            renduCase={renduCase}
-                            styleCase={styleCase}
-                        />
+                        <div style={{ position: "relative", width: "max-content" }}>
+                            <PlateauView
+                                content={content}
+                                renduCase={renduCase}
+                                styleCase={styleCase}
+                            />
+                            {/* Trajet du déplacement assisté, en flèches */}
+                            {deplacement.fleches(false, anneauxAffiches)}
+                        </div>
                     </Emplacements>
                 </div>
             </Defilable>
@@ -784,12 +793,15 @@ export function Espace() {
                             style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
                         >
                             <Emplacements stylePions={stylePions} extra={etendard} petit>
-                                <BandeView
-                                    content={content2}
-                                    decalage={DECALAGE_SECONDAIRE}
-                                    renduCase={renduCase}
-                                    styleCase={styleCase}
-                                />
+                                <div style={{ position: "relative", width: "max-content" }}>
+                                    <BandeView
+                                        content={content2}
+                                        decalage={DECALAGE_SECONDAIRE}
+                                        renduCase={renduCase}
+                                        styleCase={styleCase}
+                                    />
+                                    {deplacement.fleches(true, 0)}
+                                </div>
                             </Emplacements>
                         </div>
                     </Defilable>

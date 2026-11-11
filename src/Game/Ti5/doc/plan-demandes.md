@@ -299,5 +299,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `demandes-ti5/migrate-canons-stations.mjs`).
 - ☑ Complément : bouton « Abandonner » (phase de revendication) — retire le drapeau, la carte
   quitte les éléments actifs, l'agent d'une station revient dans les agents usés.
+- ☑ Complément déplacement : « Annuler l'activation » tant qu'aucun vaisseau n'est déplacé ; un
+  déplacement à la fois (seconde activation signalée) ; « Finir le déplacement » clôt les
+  activations (marque `fini`, le marqueur reste) ; trajet en flèches sur la carte.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

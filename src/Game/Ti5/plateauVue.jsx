@@ -315,3 +315,32 @@ export function BandeView({
         </div>
     );
 }
+
+// ============================================================
+// CENTRE D'UNE CASE
+//
+// En pixels, dans le repère du plateau (PlateauView) ou de la bande
+// (BandeView) : pour dessiner par-dessus, d'une case à l'autre (le
+// trajet d'un déplacement, dans l'outil de partie).
+// ============================================================
+
+export function centreCase(index, anneaux) {
+
+    const { q, r } = coordonneesIndex(index);
+
+    return {
+        x: (q + anneaux) * PAS_X + LARGEUR_HEX / 2,
+        y: (r + q / 2 + anneaux) * HAUTEUR_HEX + HAUTEUR_HEX / 2,
+    };
+}
+
+export function centreCaseBande(index, colonnes) {
+
+    const colonne = index % colonnes;
+    const ligne = Math.floor(index / colonnes);
+
+    return {
+        x: colonne * PAS_X + LARGEUR_HEX / 2,
+        y: (ligne + (colonne % 2) / 2) * HAUTEUR_HEX + HAUTEUR_HEX / 2,
+    };
+}

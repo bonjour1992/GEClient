@@ -603,7 +603,17 @@ d'un vaisseau, elles embarquent tout de suite (glisser-déposer de `Plan`). Le
 bouton du départ n'apparaît qu'une fois un système activé. « Finir le
 déplacement » (`finirTour` du contexte) passe la main : vert dès qu'un vaisseau
 a été déplacé (compteur `joueur:<u>:deplaces`, remis à zéro en finissant et à
-chaque changement de phase).
+chaque changement de phase). Il clôt aussi les activations du déplacement : le
+marqueur du joueur reçoit la marque `fini` — il reste sur la carte jusqu'à la
+fin de la phase (un départ de ce système dépense toujours les agents), mais le
+système n'est plus proposé dans le panneau. Un déplacement à la fois : tant
+qu'une activation est ouverte (marqueur sans `fini`), Ctrl + clic sur un autre
+système est rouge gris (`deplacement.ouvertes`, `Espace.jsx`) ; les
+activations dues à un blocage s'ouvrent toujours toutes seules. « Annuler
+l'activation » retire le marqueur tant qu'aucun vaisseau n'a été déplacé. Le
+trajet tracé est dessiné en flèches, d'un centre de case au suivant
+(`fleches` ; `centreCase`, `centreCaseBande` de `plateauVue.jsx`), en pointillé
+pour un trou de ver ou un saut.
 
 ### recherche du tour
 

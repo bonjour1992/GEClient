@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, nomElement, Pions } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
+import { centreCase, centreCaseBande } from "../plateauVue";
+import { COLONNES_BANDE } from "../hexSpirale";
 import { capaciteDe, depenserAgent, estDeplacementFurtif } from "./effets";
 import {
     TRAJET, DEPART, useCarte, sorteEtape, sorteJet, campsAdverses, rangArret, passagesEnCours, Passage,
@@ -41,7 +43,16 @@ import {
 //      (ici et dans l'onglet Conflit) ;
 //   7. « Finir le déplacement » passe la main au joueur suivant : vert dès
 //      qu'un vaisseau au moins a été déplacé (compteur joueur:<u>:deplaces,
-//      remis à zéro en finissant et à chaque changement de phase).
+//      remis à zéro en finissant et à chaque changement de phase). Il clôt
+//      aussi les activations de ce déplacement : leur marqueur reste sur la
+//      carte (marque « fini »), mais elles ne sont plus proposées ici.
+//
+// Un déplacement à la fois : tant qu'une activation est ouverte, activer
+// un autre système (Ctrl + clic) est signalé (Espace.jsx) — les
+// activations dues à un blocage, elles, s'ouvrent toutes seules. Tant
+// qu'aucun vaisseau n'a été déplacé, « Annuler l'activation » retire le
+// marqueur. Le trajet tracé est dessiné en flèches, d'une case à la
+// suivante (fleches).
 //
 // useDeplacement est appelé par Espace.jsx, qui affiche le panneau,
 // transmet les clics sur les cases et dessine le trajet (decor).
@@ -128,9 +139,15 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         .filter(c => !c.ref && c.jeton === MARQUEUR && c.proprio === moi && /^hex:\d+$/.test(c.zone || ""))
         .sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
 
+    // (toutes : partir d'un système déjà activé, même clos, dépense les agents)
     const activees = [...new Set(mesMarqueurs.map(c => Number(c.zone.slice(4))))];
 
-    const destination = activees.includes(cible) ? cible : (activees[activees.length - 1] ?? null);
+    // Activations du déplacement en cours : « Finir le déplacement » les clôt
+    // (marque « fini » : le marqueur reste sur la carte jusqu'à la fin de la phase)
+    const marqueursOuverts = mesMarqueurs.filter(c => !c.marques?.fini);
+    const ouvertes = [...new Set(marqueursOuverts.map(c => Number(c.zone.slice(4))))];
+
+    const destination = ouvertes.includes(cible) ? cible : (ouvertes[ouvertes.length - 1] ?? null);
 
     // --------------------------------------------------------
     // UNITÉS DU SYSTÈME DE DÉPART
@@ -434,8 +451,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                 {ouvert && (<>
                     <span>
                         Systèmes activés :{" "}
-                        {activees.length === 0 && <i>aucun (Ctrl + clic sur le système où vous allez)</i>}
-                        {activees.map(i => (
+                        {ouvertes.length === 0 && <i>aucun (Ctrl + clic sur le système où vous allez)</i>}
+                        {ouvertes.map(i => (
                             <button
                                 key={i}
                                 type="button"
@@ -464,6 +481,25 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                         <button type="button" onClick={() => reinitialiser()} style={styleMini}>Abandonner ce déplacement</button>
                     )}
 
+                    {/* Tant qu'aucun vaisseau n'a été déplacé : l'activation peut être annulée */}
+                    {destination !== null && !deplaces && enRoute.length === 0 && (
+                        <button
+                            type="button"
+                            data-action="annuler-activation"
+                            title="Aucun vaisseau n'a encore été déplacé : retire votre marqueur de ce système"
+                            onClick={() => {
+                                envoyer(
+                                    marqueursOuverts.filter(c => c.zone === "hex:" + destination).map(c => ({ type: "supprimer", c: c.id })),
+                                    `Activation annulée (${nomCase(destination)})`
+                                );
+                                reinitialiser();
+                            }}
+                            style={styleMini}
+                        >
+                            Annuler l'activation
+                        </button>
+                    )}
+
                     {/* Fin de mon déplacement : la main passe au joueur suivant */}
                     {enPhase && (
                         <BoutonRegle
@@ -475,10 +511,14 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                                 etat.joueurActif !== moi && "ce n'est pas votre tour",
                             ]}
                             faire={commentaire => {
-                                finirTour(deplaces ? [{ type: "compteur", id: compteurDeplaces(moi), valeur: 0 }] : [], commentaire);
+                                finirTour([
+                                    deplaces && { type: "compteur", id: compteurDeplaces(moi), valeur: 0 },
+                                    // Les activations de ce déplacement sont closes : le marqueur reste sur la carte
+                                    ...marqueursOuverts.map(c => ({ type: "marquer", c: c.id, marque: "fini", valeur: 1 })),
+                                ].filter(Boolean), commentaire);
                                 reinitialiser();
                             }}
-                            title="Votre déplacement est fini : la main passe au joueur suivant"
+                            title="Votre déplacement est fini : ses systèmes activés sont clos (leur marqueur reste sur la carte) et la main passe au joueur suivant"
                             style={{ ...styleMini, marginLeft: "auto", fontWeight: "bold" }}
                         >
                             Finir le déplacement{deplaces ? ` (${deplaces} vaisseau${deplaces > 1 ? "x" : ""} déplacé${deplaces > 1 ? "s" : ""})` : ""}
@@ -634,8 +674,77 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         </div>
     );
 
+    // --------------------------------------------------------
+    // TRAJET EN FLÈCHES, par-dessus la carte (Espace.jsx)
+    //
+    // Une flèche par étape, du centre d'une case vers la suivante ; en
+    // pointillé pour un trou de ver ou un saut. secondaire : la bande des
+    // systèmes secondaires (une étape qui change de groupe n'est pas dessinée).
+    // --------------------------------------------------------
+
+    function fleches(secondaire, anneaux) {
+
+        const estSecondaire = i => i >= 1000;
+        const segments = !actif || depart === null
+            ? []
+            : etapes.filter(e => estSecondaire(e.de) === secondaire && estSecondaire(e.a) === secondaire);
+
+        if (!segments.length) {
+            return null;
+        }
+
+        const centre = i => (secondaire ? centreCaseBande(i - 1000, COLONNES_BANDE) : centreCase(i, anneaux));
+        const pointe = "pointe-trajet-" + (secondaire ? "bande" : "carte");
+
+        return (
+            <svg
+                data-fleches-trajet={segments.length}
+                style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: "100%",
+                    height: "100%",
+                    overflow: "visible",
+                    pointerEvents: "none",
+                    zIndex: 30,
+                }}
+            >
+                <defs>
+                    <marker id={pointe} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto">
+                        <path d="M0,0 L10,5 L0,10 z" fill="#ff9800" stroke="#000" strokeWidth="0.8" />
+                    </marker>
+                </defs>
+
+                {segments.map((e, k) => {
+
+                    const a = centre(e.de);
+                    const b = centre(e.a);
+                    const d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+
+                    // (retrait aux deux bouts : le centre des cases reste lisible)
+                    const retrait = Math.min(24, d / 3);
+                    const [ux, uy] = [(b.x - a.x) / d, (b.y - a.y) / d];
+                    const [x1, y1, x2, y2] = [a.x + ux * retrait, a.y + uy * retrait, b.x - ux * retrait, b.y - uy * retrait];
+                    const pointille = e.sorte === "bord" ? undefined : "9 7";
+
+                    return (
+                        <g key={k}>
+                            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth={8} strokeLinecap="round" strokeDasharray={pointille} opacity={0.75} />
+                            <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#ff9800" strokeWidth={4.5} strokeLinecap="round" strokeDasharray={pointille} markerEnd={`url(#${pointe})`} />
+                        </g>
+                    );
+                })}
+            </svg>
+        );
+    }
+
     return {
         panneau,
+        // Trajet tracé, en flèches par-dessus la carte ou la bande
+        fleches,
+        // Systèmes que j'ai activés pour le déplacement en cours (pas encore finis)
+        ouvertes,
         // Mode en cours ("depart", "trajet" ou null) : la carte ne défile pas pendant un tracé
         mode: actif ? mode : null,
         clicCase,
