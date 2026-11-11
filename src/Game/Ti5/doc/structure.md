@@ -372,7 +372,7 @@ Onglet « Combat » : un sous-onglet par combat en cours (combat spatial, canons
 spatiaux, combat terrestre, bombardement), ouverts depuis la fiche d'un
 système (compteurs `combat:<lieu>`). Unités par faction, engagements ordonnés,
 « prêt au combat » de tous puis quatre phases (frappe en premier, ses dégâts,
-autres attaques, leurs dégâts), dés gardés sur les unités, dégâts encaissés
+autres attaques, leurs dégâts ; deux de plus pour les dernières attaques), dés gardés sur les unités, dégâts encaissés
 par le joueur visé (« ✹ Encaisser », surplus à l'engagement suivant) et
 d'office pour les neutres, neutres agressifs et défensifs engagés d'office.
 Détail dans `combat.md`.
@@ -1042,6 +1042,15 @@ sont effacées par « Terminer le combat ». Le « × » d'un engagement appelai
 retrait des unités détruites (deux fonctions `retirer`) : renommé
 `retirerEngagement`. Règles des unités : `regle(...)` dans `scripts.js` (section
 « mécaniques de combat »).
+
+Troupe de détournement (11 novembre) : un 3e temps d'attaque dans `Combat.jsx`.
+`attaqueEnDernier(v)` sort ces tireurs des `preventifs` et des `autres` vers
+`derniers` ; `etapeFinale` vaut 3 s'il y en a (sinon 2) et remplace `2` dans les
+conditions de l'écran (texte, « Prêt au combat », « Lancer les attaques ») ;
+l'étape 3 affiche les phases 5 et 6 de `PHASES_COMBAT`. `captureePar(v)` (camp de
+l'unité de la marque `degatPar` si son texte dit « attaque après toutes les
+autres ») change `retrait` : marques effacées, dégâts à 0, `deplacer` vers
+`joueur:<camp>:actif` avec `proprio`, bouton « Retirer (capturé) ».
 
 Cube noir d'un mercenaire (11 novembre, soir) : l'usure d'un mercenaire, c'est
 la place de son cube (`CUBE_MERCENAIRE`, `Interaction.jsx`). Posé sur la carte

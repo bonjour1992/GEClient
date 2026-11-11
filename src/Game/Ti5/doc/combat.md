@@ -56,7 +56,7 @@ Saisie : cocher ses unités, puis « Engager » (en-tête d'un bloc de cibles) o
 « Cibler » (ligne d'une cible). Les cibles spécifiques passent avant les
 factions. Chaque entrée a ↑ et ×.
 
-## quatre phases
+## quatre phases (six avec la Troupe de détournement)
 
 Affichées en tête du combat (`PHASES_COMBAT`, `data-phase-combat`), la phase
 en cours en gras :
@@ -64,7 +64,12 @@ en cours en gras :
 1. frappe en premier (unités `#fpre`) ;
 2. dégâts de la frappe en premier ;
 3. autres attaques ;
-4. dégâts.
+4. dégâts ;
+5. dernières attaques (unités qui attaquent « après toutes les autres » :
+   Troupe de détournement, étiquette « attaque en dernier ») ;
+6. dégâts des dernières attaques.
+
+Les phases 5 et 6 ne sont affichées que si une telle unité tire.
 
 Chaque joueur présent se dit « Prêt au combat ». Quand tous le sont, toutes les
 attaques de la phase partent en un seul coup, celles des neutres comprises :
@@ -73,7 +78,8 @@ attaques de la phase partent en un seul coup, celles des neutres comprises :
 |---|---|---|
 | 0 | 1 (ou 3 sans frappe en premier) | engagements ; au « prêt » de tous, la frappe en premier part |
 | 1 | 2 | frappe en premier lancée : chacun encaisse ; au « prêt » de tous, les autres attaques partent |
-| 2 | 4 | tout est lancé : chacun encaisse |
+| 2 | 4 | autres attaques lancées : chacun encaisse ; s'il reste des dernières attaques, au « prêt » de tous elles partent |
+| 3 | 6 | dernières attaques lancées : chacun encaisse |
 
 Sans unité à frappe en premier, on passe de 0 à 2 (les phases 1 et 2 sont
 barrées). Une unité détruite ne tire
@@ -155,6 +161,10 @@ Un neutre défensif furtif (Rebelle) ne répond qu'aux factions qui le ciblent.
   Memoria D (jet de 6, infanterie posée à bord, marque `memoria`) ; Duha Menaimon
   au bombardement (jet, Letani, marque `duha`) ; Épineux géant tire au
   bombardement de sa planète ; Mech aérien tire au combat spatial depuis sa planète.
+- **Troupe de détournement** (Pirate Mentak) : tire seule au 3e temps (étape 3,
+  phases 5 et 6) ; un vaisseau dont le dernier dégât vient d'elle (`degatPar`) a
+  « Retirer (capturé) » : marques de combat effacées, dégâts à 0, déplacé dans
+  `joueur:<camp>:actif` avec ce camp pour propriétaire.
 
 ## ce que l'engine ne fait pas
 
@@ -162,9 +172,7 @@ Un neutre défensif furtif (Rebelle) ne répond qu'aux factions qui le ciblent.
 - choisir à la place d'un joueur quelle unité encaisse : c'est lui qui répartit ;
 - appliquer les malus autres que le −2 et ceux des scripts (nébuleuse) ni le
   blocage des canons et des bombardements : Ctrl + clic sur les dés ;
-- la portée des canons au-delà de 1 hors scripts ;
-- l'attaque « après toutes les autres » et la capture de la Troupe de
-  détournement (Pirate Mentak).
+- la portée des canons au-delà de 1 hors scripts.
 
 ## choix faits sans réponse, à confirmer
 

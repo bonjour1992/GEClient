@@ -348,5 +348,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   combat terrestre, ciblage obligatoire, attaques en plus, annuler une touche, effets de destruction
   (frégate du khan, Armageddon, Camp de travail, Myru Vos, Memoria D), Olivier Dubois, Stratégie
   d'évitement, Prévision des combats. Détail : `combat.md`, « mécaniques d'unités ».
+- ☑ Troupe de détournement (2026-11-11) : 3e temps d'attaque (phases 5 et 6 « Dernières
+  attaques ») et capture des vaisseaux qu'elle détruit (« Retirer (capturé) »).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

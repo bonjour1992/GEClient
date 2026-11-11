@@ -48,7 +48,8 @@ import { Controles } from "./Controle";
 //   "41p0r"   raid sur la planète (#raid : bombardement spécial qui capture les infanteries)
 //
 // Compteurs : combat:<lieu> (1 = en cours),
-//   combat:<lieu>:etape     0 engagements, 1 frappe en premier lancée, 2 tout lancé
+//   combat:<lieu>:etape     0 engagements, 1 frappe en premier lancée, 2 autres attaques
+//                           lancées, 3 dernières attaques lancées (Troupe de détournement)
 //   combat:<lieu>:pret:<u>  le joueur u est prêt
 export const cleCombat = lieu => "combat:" + lieu;
 
@@ -158,11 +159,14 @@ const marquer = (id, marque, valeurs) => ({
 const styleBouton = { fontSize: 12, padding: "1px 6px" };
 
 // Les quatre phases d'un combat (voir « prêt au combat », plus bas)
+// (5 et 6 : seulement si une unité attaque en dernier, Troupe de détournement)
 const PHASES_COMBAT = [
     "Frappe en premier",
     "Dégâts de la frappe en premier",
     "Autres attaques",
     "Dégâts",
+    "Dernières attaques",
+    "Dégâts des dernières attaques",
 ];
 
 // Libellés selon la sorte de combat
@@ -893,12 +897,32 @@ function CombatSysteme({ lieu }) {
         return { actions, gains };
     }
 
+    // Troupe de détournement : un vaisseau qu'elle a détruit (marque « degatPar ») est capturé —
+    // il part dans les éléments actifs de son camp au lieu d'être retiré. -> camp ou null
+    function captureePar(v) {
+
+        const tireur = etat.composants[v.c.marques?.degatPar];
+        const camp = auteurDesDegats(v.c);
+
+        return estVaisseau(v) && tireur?.ref?.type === "unit" && ![null, NEUTRE, v.camp].includes(camp) &&
+            aScript(moi, "troupe-de-detournement") &&
+            /attaque après toutes les autres/i.test(contenuDe(tireur)?.habilite || "") ? camp : null;
+    }
+
     function butinDe(v) {
 
         const camp = auteurDesDegats(v.c);
 
         if (camp === null || camp === NEUTRE || camp === v.camp) {
             return null;
+        }
+
+        if (captureePar(v) !== null) {
+            return {
+                camp,
+                actions: [],
+                texte: `${nomElement(search, v.c.ref)} capturé(e) par ${nomCamp(camp)} (Troupe de détournement : éléments actifs)`,
+            };
         }
 
         const nomUnite = nomElement(search, v.c.ref);
@@ -969,12 +993,20 @@ function CombatSysteme({ lieu }) {
     // Retrait d'une unité détruite : elle garde la trace du combat (marque
     // « detruitA »), pour le Grappin de capture d'un combat résolu ; le
     // butin de sa destruction est donné à qui l'a détruite
-    const retrait = v => [
+    // (capturé par la Troupe de détournement : il part, réparé et sans ses marques de
+    // combat, dans les éléments actifs du camp qui l'a détruit)
+    const retrait = v => (captureePar(v) !== null ? [
+        ...Object.values(M).filter(m => v.c.marques?.[m] !== undefined).map(m => marquer(v.id, m, [])),
+        { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+        ...["degatDe", "degatPar"].filter(m => v.c.marques?.[m] !== undefined)
+            .map(m => ({ type: "marquer", c: v.id, marque: m, valeur: null })),
+        { type: "deplacer", c: v.id, vers: `joueur:${captureePar(v)}:actif`, proprio: captureePar(v) },
+    ] : [
         ...(butinDe(v)?.actions || []),
         { type: "marquer", c: v.id, marque: "detruitA", valeur: `${lieu}:${etat.tour}` },
         v.c.marques?.medecine && { type: "marquer", c: v.id, marque: "medecine", valeur: null },
         { type: "supprimer", c: v.id },
-    ].filter(Boolean);
+    ].filter(Boolean));
 
     // Retire ces unités, et dit le butin de chacune (journal, message orange)
     function retirer(liste) {
@@ -1265,8 +1297,13 @@ function CombatSysteme({ lieu }) {
     const tireurs = vaisseaux.filter(v =>
         v.tire && attaque(v) > 0 && nombreDes(v) > 0 && (engagement(v).length > 0 || sansInfanterie) && !estDetruit(v));
 
-    const preventifs = tireurs.filter(aFrappePreventive);
-    const autres = tireurs.filter(v => !aFrappePreventive(v));
+    // Troupe de détournement : elle attaque après toutes les autres unités (3e temps)
+    const attaqueEnDernier = v => /attaque après toutes les autres/i.test(v.u.habilite || "") &&
+        (sorte === "spatial" || sorte === "terrestre") && aScript(moi, "troupe-de-detournement");
+
+    const preventifs = tireurs.filter(v => aFrappePreventive(v) && !attaqueEnDernier(v));
+    const autres = tireurs.filter(v => !aFrappePreventive(v) && !attaqueEnDernier(v));
+    const derniers = tireurs.filter(attaqueEnDernier);
 
     // Un nouveau jet remplace l'ancien : ses dés inversés ou attribués sont oubliés
     const jets = ceux => ceux.flatMap(v => [
@@ -1280,15 +1317,17 @@ function CombatSysteme({ lieu }) {
     //
     // Chaque joueur qui a des vaisseaux dans le combat se dit prêt
     // (compteur combat:pret:<u>). Quand tous le sont, toutes les
-    // attaques partent, en deux temps (compteur combat:etape) :
+    // attaques partent, en deux ou trois temps (compteur combat:etape) :
     //
     //   0  engagements        -> la frappe en premier part (1)
     //   1  frappe en premier  -> les autres attaques partent (2)
-    //   2  tout est lancé
+    //   2  autres attaques    -> les dernières attaques partent (3), s'il y en a
+    //   3  tout est lancé
     //
-    // Sans vaisseau à frappe en premier, on passe de 0 à 2. Entre les
-    // deux temps, les joueurs répartissent les dégâts : un vaisseau
-    // détruit par la frappe en premier ne tire pas.
+    // Sans vaisseau à frappe en premier, on passe de 0 à 2 ; sans unité qui
+    // attaque en dernier (Troupe de détournement), tout est lancé à 2. Entre
+    // deux temps, les joueurs répartissent les dégâts : une unité détruite
+    // avant son temps ne tire pas.
     // --------------------------------------------------------
 
     const etape = Number(etat.compteurs[ETAPE]) || 0;
@@ -1296,26 +1335,33 @@ function CombatSysteme({ lieu }) {
     const tousPrets = campsJoueurs.length > 0 && campsJoueurs.every(estPret);
     const jeCombats = joueur && campsJoueurs.includes(moi);
 
-    const enPreventive = etape === 0 && preventifs.length > 0;
-    const prochains = enPreventive ? preventifs : autres;
+    // Dernière étape : 3 si une unité engagée et debout attaque en dernier
+    const etapeFinale = derniers.length > 0 || etape >= 3 ? 3 : 2;
+    const enDerniers = etape === 2 && etapeFinale === 3;
 
-    // Phase affichée (1 à 4, PHASES_COMBAT). Avant un lancement, c'est la
+    const enPreventive = etape === 0 && preventifs.length > 0;
+    const prochains = enPreventive ? preventifs : (enDerniers ? derniers : autres);
+
+    // Phase affichée (PHASES_COMBAT). Avant un lancement, c'est la
     // phase d'attaque qui va partir ; après, celle des dégâts.
     const phaseCombat = etape === 0 ? (enPreventive ? 1 : 3) : etape * 2;
 
     // Aucune unité du combat n'a la frappe en premier : les phases 1 et 2 n'ont pas lieu
-    const sansPreventive = !vaisseaux.some(v => v.tire && attaque(v) > 0 && aFrappePreventive(v));
+    const sansPreventive = !vaisseaux.some(v => v.tire && attaque(v) > 0 && aFrappePreventive(v) && !attaqueEnDernier(v));
+
+    // Une unité du combat attaque en dernier : les phases 5 et 6 sont affichées
+    const avecDerniers = etapeFinale === 3 || vaisseaux.some(v => v.tire && attaque(v) > 0 && attaqueEnDernier(v));
 
     // Toutes les attaques de l'étape, et plus personne n'est prêt
     const lancement = () => [
         ...campsJoueurs.filter(estPret).map(u => ({ type: "compteur", id: PRET + u, valeur: 0 })),
         // (si : refusé si un autre joueur vient de lancer la même étape —
         // les dés ne sont pas relancés par un double clic)
-        { type: "compteur", id: ETAPE, valeur: enPreventive ? 1 : 2, si: etape },
+        { type: "compteur", id: ETAPE, valeur: enPreventive ? 1 : (enDerniers ? 3 : 2), si: etape },
         ...jets(prochains),
     ];
 
-    const titreLancement = enPreventive ? "Combat : frappe en premier" : "Combat : attaques";
+    const titreLancement = enPreventive ? "Combat : frappe en premier" : (enDerniers ? "Combat : dernières attaques" : "Combat : attaques");
 
     function basculerPret() {
 
@@ -1781,8 +1827,12 @@ function CombatSysteme({ lieu }) {
 
                     {degat > 0 && <b style={{ color: "#c00" }}>✹{degat}</b>}
 
-                    {aFrappePreventive(v) && (
+                    {aFrappePreventive(v) && !attaqueEnDernier(v) && (
                         <span style={{ fontSize: 11, color: "#6a1b9a" }}>frappe en premier</span>
+                    )}
+
+                    {attaqueEnDernier(v) && (
+                        <span data-attaque-en-dernier style={{ fontSize: 11, color: "#6a1b9a" }}>attaque en dernier</span>
                     )}
 
                     {detruit && (
@@ -1903,7 +1953,7 @@ function CombatSysteme({ lieu }) {
                             title={butinDe(v)?.texte}
                             onClick={() => retirer([v])}
                         >
-                            Retirer{butinDe(v) ? " (butin)" : ""}
+                            Retirer{captureePar(v) !== null ? " (capturé)" : (butinDe(v) ? " (butin)" : "")}
                         </button>
                     )}
 
@@ -2126,7 +2176,7 @@ function CombatSysteme({ lieu }) {
                 {/* Les quatre phases du combat : celle en cours est en gras. Les
                     attaques d'une phase partent quand tout le monde est prêt. */}
                 <span data-phase-combat={phaseCombat} style={{ display: "inline-flex", flexWrap: "wrap", gap: 4 }}>
-                    {PHASES_COMBAT.map((nom, k) => (
+                    {PHASES_COMBAT.slice(0, avecDerniers ? 6 : 4).map((nom, k) => (
                         <span
                             key={nom}
                             style={{
@@ -2149,11 +2199,11 @@ function CombatSysteme({ lieu }) {
                 <span>
                     {etape === 0 && "Engagements, puis « Prêt au combat »."}
                     {etape > 0 && "Chacun encaisse les dégâts qu'il reçoit."}
-                    {etape < 2 && (
+                    {etape < etapeFinale && (
                         <>
                             {" "}Quand tout le monde est prêt :{" "}
                             <b>
-                                {enPreventive ? "frappe en premier" : "autres attaques"}
+                                {enPreventive ? "frappe en premier" : (enDerniers ? "dernières attaques" : "autres attaques")}
                                 {" "}({prochains.length} unité{prochains.length > 1 ? "s" : ""})
                             </b>
                             .
@@ -2162,7 +2212,7 @@ function CombatSysteme({ lieu }) {
                     {perdus > 0 && <span style={{ color: "#a15c00" }}> {perdus} dégât(s) perdu(s), sans cible.</span>}
                 </span>
 
-                {jeCombats && etape < 2 && (
+                {jeCombats && etape < etapeFinale && (
                     <button
                         type="button"
                         onClick={basculerPret}
@@ -2182,7 +2232,7 @@ function CombatSysteme({ lieu }) {
 
                 {/* Tout le monde est prêt mais rien n'est parti (deux « prêt »
                     en même temps) : n'importe qui lance */}
-                {joueur && etape < 2 && tousPrets && (
+                {joueur && etape < etapeFinale && tousPrets && (
                     <button
                         type="button"
                         style={{ fontWeight: "bold" }}
@@ -2347,7 +2397,7 @@ function CombatSysteme({ lieu }) {
                             <span style={{ color: "#666", fontSize: 12 }}> · initiative {rang(camp) === 99 ? "?" : rang(camp)}</span>
                         )}
 
-                        {camp !== NEUTRE && etape < 2 && (
+                        {camp !== NEUTRE && etape < etapeFinale && (
                             <b style={{ marginLeft: 8, fontSize: 12, color: estPret(camp) ? "#2e7d32" : "#a15c00" }}>
                                 {estPret(camp) ? "✔ prêt" : "pas encore prêt"}
                             </b>

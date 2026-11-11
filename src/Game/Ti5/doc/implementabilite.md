@@ -21,12 +21,12 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 93 | 74 | 2 | 17 | 30 | 22 | 32 |
 | Habilités | 48 | 26 | 2 | 20 | 15 | 7 | 11 |
-| Unités | 104 | 68 | 36 | 0 | 25 | 13 | 33 |
+| Unités | 104 | 69 | 35 | 0 | 25 | 13 | 34 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 11 | 6 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **333** | **214** | **62** | **57** | **109** | **77** | **82** |
+| **Total** | **333** | **215** | **61** | **57** | **109** | **77** | **83** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -281,7 +281,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 835 | Milice (Réfugiés) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 836 | Entrepôt d'aide (Réfugiés) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Commerce posé sur l'entrepôt : à prendre à la main. |
 | 845 | Croiseur (Pirate Mentak) | oui | — | Caractéristiques et précision déjà utilisées par l'outil. | — |
-| 846 | Troupe de détournement (Pirate Mentak) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Attaque en dernier et capture des vaisseaux détruits : écran de combat à étendre. (moyenne) |
+| 846 | Troupe de détournement (Pirate Mentak) | **oui** | automatique | Conflit, combats spatial et terrestre : elle attaque en dernier (phases 5 et 6 « Dernières attaques », après les dégâts des autres attaques) ; un vaisseau qu'elle détruit est capturé — « Retirer (capturé) » l'envoie, réparé, dans les éléments actifs de son camp, qui en devient propriétaire. | — |
 | 847 | Soleil de capturé (Pirate Mentak) | oui | — | Texte informatif (non productible) ; bombardement noté « 6\*\*\* » à vérifier. | — |
 | 849 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 850 | Armageddon | **oui** | automatique | Conflit, « Retirer » : son destructeur prend le contrôle d'un Armageddon (#490) avec 1 de résistance restante. | — |

@@ -1720,6 +1720,10 @@ export const SCRIPTS = [
         "Conflit : engagements",
         "Un engagement de groupe ne l'atteint jamais : elle doit être ciblée."),
 
+    regle("troupe-de-detournement", "unit", 846, 1794122783355, "Troupe de détournement", "auto",
+        "Conflit, combats spatial et terrestre : phases 5 et 6 « Dernières attaques »",
+        "Elle attaque après toutes les autres unités (un troisième « Prêt au combat », une fois les autres dégâts répartis). Un vaisseau qu'elle détruit est capturé : « Retirer (capturé) » l'envoie, réparé, dans les éléments actifs de son camp."),
+
     regle("camp-de-travail-destruction", "unit", 154, 1794049918192, "Camp de travail (destruction)", "auto",
         "Conflit : « Retirer » (butin)",
         "Détruit, il libère 2 esclaves de son propriétaire (ceux du destructeur d'abord) : posés sur sa planète, sous le contrôle de leur propriétaire."),
