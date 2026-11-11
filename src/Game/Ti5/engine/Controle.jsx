@@ -117,19 +117,29 @@ export function agentDeStation(planete, choix) {
     return ligne ? { nom: ligne[1], motif: ligne[2] } : null;
 }
 
-// Actions qui posent mon agent sur la station (et rendent celui qui s'y trouvait)
+// Actions qui posent mon agent sur la station, et rendent à la faction précédente
+// l'agent qui s'y trouvait : il retourne, usé, chez son propriétaire — celui que
+// porte l'agent, sinon le joueur qui possédait la station (sa carte était dans
+// ses éléments actifs ; idPlanete sert à la retrouver).
 // -> { actions, obstacles }
-export function actionsSatellite({ index, moi, search }, zonePlanete, voulu) {
+export function actionsSatellite({ etat, index, moi, search }, zonePlanete, voulu, idPlanete) {
 
     const agent = voulu ? agentDisponible({ index, moi, search }, voulu.motif) : null;
 
+    const carte = Object.values(etat?.composants || {})
+        .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");
+
+    const ancien = Number(/^joueur:(\d+):actif$/.exec(carte?.zone || "")?.[1]) || null;
+
+    const proprietaire = c => (Number.isInteger(c.proprio) && c.proprio > 0 ? c.proprio : ancien);
+
     const presents = (index.parZone.get(zonePlanete) || [])
-        .filter(c => !c.cache && c.ref?.type === "agent" && !c.sur && Number.isInteger(c.proprio) && c.proprio > 0);
+        .filter(c => !c.cache && c.ref?.type === "agent" && !c.sur && proprietaire(c));
 
     return {
         obstacles: [voulu && !agent && `vous n'avez pas de ${voulu.nom} disponible (aucun agent ne sera posé sur la station)`],
         actions: [
-            ...presents.map(c => ({ type: "deplacer", c: c.id, vers: `joueur:${c.proprio}:agentsUses` })),
+            ...presents.map(c => ({ type: "deplacer", c: c.id, vers: `joueur:${proprietaire(c)}:agentsUses` })),
             agent && { type: "deplacer", c: agent.id, vers: zonePlanete, proprio: moi },
         ].filter(Boolean),
     };
@@ -217,7 +227,7 @@ function Controle({ conflit }) {
 
     // Station : l'agent adapté y est posé
     const station = spatial
-        ? actionsSatellite({ index, moi, search }, zonePlanete, agentDeStation(planete, etat.compteurs[cle + ":agent"]))
+        ? actionsSatellite({ etat, index, moi, search }, zonePlanete, agentDeStation(planete, etat.compteurs[cle + ":agent"]), idPlanete)
         : { actions: [], obstacles: [] };
 
     function prendre(commentaire) {
@@ -361,9 +371,14 @@ function Controle({ conflit }) {
 // décide autrement. Le demandeur peut passer outre (bouton rouge gris)
 // ou renoncer.
 //
+// Station (satellite) : en plus du diplomate, l'agent adapté à la station y
+// est posé (actionsSatellite). C'est alors le demandeur qui conclut, une fois
+// tous d'accord : lui seul peut prendre un agent à son compte.
+//
 // Compteurs :
 //   accord:<case>p<planète>          joueur qui revendique (0 : clos)
 //   accord:<case>p<planète>:<camp>   2 accepte, 3 refuse
+//   accord:<case>p<planète>:agent    station spéciale : rang (1 à 6) de l'agent choisi
 // ============================================================
 
 export const cleAccord = (numero, k) => `accord:${numero}p${k}`;
@@ -419,6 +434,13 @@ function Accord({ conflit }) {
 
     const diplomate = agentDisponible({ index, moi: demandeur, search }, "diplomate");
 
+    // Station : l'agent adapté du demandeur y est posé
+    const estStation = planete?.type === "sat";
+
+    const station = estStation
+        ? actionsSatellite({ etat, index, moi: demandeur, search }, zonePlanete, agentDeStation(planete, etat.compteurs[cle + ":agent"]), idPlanete)
+        : { actions: [], obstacles: [] };
+
     const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
     const nomPlanete = planete?.name || "la planète";
     const estDemandeur = !!joueur && moi === demandeur;
@@ -432,10 +454,11 @@ function Accord({ conflit }) {
     function revendiquer(commentaire) {
 
         const { actions, messages } = actionsPossession(
-            { etat, moi: demandeur, aScript, nomDe }, zonePlanete, idPlanete, idInfanterie, false);
+            { etat, moi: demandeur, aScript, nomDe }, zonePlanete, idPlanete, estStation ? null : idInfanterie, false);
 
         envoyer([
             diplomate && { type: "deplacer", c: diplomate.id, vers: `joueur:${demandeur}:agentsUses`, de: diplomate.zone },
+            ...station.actions,
             ...actions,
             ...cloture(),
         ], [commentaire, ...messages].join(" — "));
@@ -448,7 +471,10 @@ function Accord({ conflit }) {
     function repondre(camp, valeur) {
 
         // Le dernier accord : la revendication se fait dans le même coup
-        const tousDAccord = valeur === 2 && idPlanete > 0 && camps.every(c => c === camp || choixDe(c) === 2);
+        // (station : seulement si c'est le demandeur qui répond — pour les neutres —,
+        // car lui seul peut poser son agent ; sinon il conclut avec son bouton)
+        const tousDAccord = valeur === 2 && idPlanete > 0 && camps.every(c => c === camp || choixDe(c) === 2) &&
+            (!estStation || moi === demandeur);
 
         if (tousDAccord) {
             revendiquer(`Accord de tous : ${nomCamp(demandeur)} revendique ${nomPlanete}`);
@@ -540,7 +566,9 @@ function Accord({ conflit }) {
                     : (muets.length > 0
                         ? <b style={{ color: "#a15c00" }}>En attente de {muets.map(nomCamp).join(", ")}.</b>
                         : <b style={{ color: "#1b5e20" }}>Tous d'accord.</b>)}
-                {" "}La revendication se fait dès que tous ont accepté.
+                {" "}{estStation
+                    ? `Station : une fois tous d'accord, ${nomCamp(demandeur)} conclut (son agent y est posé).`
+                    : "La revendication se fait dès que tous ont accepté."}
             </div>
 
             {estDemandeur && (
@@ -553,6 +581,7 @@ function Accord({ conflit }) {
                             ...refus.map(c => `${nomCamp(c)} refuse`),
                             ...muets.map(c => `${nomCamp(c)} n'a pas encore répondu`),
                             !diplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                            ...station.obstacles,
                         ]}
                         faire={revendiquer}
                         title="Use un diplomate ; la carte de la planète va dans vos éléments actifs ; le conflit est clos"

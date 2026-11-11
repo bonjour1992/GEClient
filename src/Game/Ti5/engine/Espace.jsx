@@ -1157,16 +1157,22 @@ function FicheSysteme({ numero, id, fermer }) {
     //
     // Les deux boutons restent utilisables si la condition d'unité manque
     // (ils sont alors rouge gris) : l'engine prévient, les joueurs décident.
-    function revendiquer(idPlanete, k, commentaire) {
+    //   station : contenu de la planète quand c'est une station (satellite) — en plus
+    //             du diplomate, l'agent adapté à la station y est posé
+    function revendiquer(idPlanete, k, commentaire, station = null) {
 
         // D'autres camps ont des unités militaires dans le système (espace, planète) :
         // leur accord est demandé, dans l'onglet Conflit (Controle.jsx)
         if (campsAConsulter(index, contenuEnCache, numero, k, moi).length) {
+
+            const cle = cleAccord(numero, k);
+
             ouvrirConflit(
-                cleAccord(numero, k),
-                accordsEnCours(etat).some(a => a.cle === cleAccord(numero, k)),
+                cle,
+                accordsEnCours(etat).some(a => a.cle === cle),
                 commentaire + " — accord demandé",
-                [],
+                // (station spéciale : l'agent choisi est retenu pour la fin du conflit)
+                station?.stationType === "spe" ? [{ type: "compteur", id: cle + ":agent", valeur: agentStation }] : [],
                 "D'autres camps ont des unités militaires dans le système : leur accord est demandé (onglet Conflit)."
             );
             return;
@@ -1175,8 +1181,12 @@ function FicheSysteme({ numero, id, fermer }) {
         const diplomate = agentDisponible({ index, moi, search }, "diplomate");
 
         // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
-        prendre(idPlanete, k, commentaire,
-            diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : [], false);
+        prendre(idPlanete, k, commentaire, [
+            ...(diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : []),
+            ...(station
+                ? actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(station, agentStation), idPlanete).actions
+                : []),
+        ], false, !!station);
     }
 
     //   militaire : prise de possession par les armes (script Pillage), et non revendication
@@ -1250,7 +1260,7 @@ function FicheSysteme({ numero, id, fermer }) {
             contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
 
         if (!opposants) {
-            const station = actionsSatellite({ index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation));
+            const station = actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation), idPlanete);
 
             prendre(idPlanete, k, commentaire, station.actions, true, true);
             return;
@@ -1517,13 +1527,28 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     obstacles={[
                                                         !enRevendication && "ce n'est pas la phase de revendication",
                                                         !mesUnitesIci && "il faut une de vos unités dans le système",
-                                                        ...actionsSatellite({ index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation)).obstacles,
+                                                        ...actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation), lien.id).obstacles,
                                                     ]}
                                                     faire={commentaire => demanderStation(lien.id, k, planete, commentaire)}
                                                     title="Station : il faut une de vos unités dans le système. L'agent adapté à la station y est posé (celui qui s'y trouvait est rendu, usé, à son joueur) et sa carte va dans vos éléments actifs. Si un autre camp a des unités militaires dans l'espace du système, un conflit de contrôle spatial s'ouvre d'abord (onglet Conflit)"
                                                 >
                                                     Prendre possession
                                                     {agentDeStation(planete, agentStation) ? ` (pose un ${agentDeStation(planete, agentStation).nom})` : ""}
+                                                </BoutonRegle>
+                                                <BoutonRegle
+                                                    data-action="revendiquer-station"
+                                                    nom={`Revendiquer ${nomPlanete(planete)}`}
+                                                    obstacles={[
+                                                        !enRevendication && "ce n'est pas la phase de revendication",
+                                                        !mesUnitesIci && "il faut une de vos unités dans le système",
+                                                        !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                                                        ...actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation), lien.id).obstacles,
+                                                    ]}
+                                                    faire={commentaire => revendiquer(lien.id, k, commentaire, planete)}
+                                                    title="Station : vous avez une unité dans le système. Use un diplomate et pose sur la station l'agent adapté (celui qui s'y trouvait est rendu, usé, à son joueur) ; sa carte va dans vos éléments actifs. Si d'autres camps ont des unités militaires dans le système, leur accord est d'abord demandé (onglet Conflit)"
+                                                >
+                                                    Revendiquer (use un diplomate
+                                                    {agentDeStation(planete, agentStation) ? `, pose un ${agentDeStation(planete, agentStation).nom}` : ""})
                                                 </BoutonRegle>
                                             </span>
                                         )}

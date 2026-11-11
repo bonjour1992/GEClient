@@ -245,9 +245,7 @@ export function Des({ nu }) {
 // joueurs. Les jetons déjà en place y restent.
 //
 // La mise en place se fait toute seule à « Nouveau tour »
-// (Partie.jsx). Un bouton de rattrapage n'apparaît que si elle
-// manque pour le tour en cours (partie commencée avant, retour en
-// arrière).
+// (Partie.jsx) : il n'y a pas de bouton.
 // ============================================================
 
 // Actions qui mettent en place le recrutement de ce tour ([] : rien à
@@ -277,7 +275,7 @@ export function actionsRecrutement(etat, index, deroule, nombreJoueurs, tour) {
 
 function Recrutement() {
 
-    const { etat, index, envoyer, joueur, partie } = useEngine();
+    const { etat, index, partie } = useEngine();
 
     const deroule = useElement(etat.references?.deroule);
 
@@ -288,10 +286,6 @@ function Recrutement() {
 
     // Une seule mise en place par tour : le compteur garde le tour de la dernière
     const dejaFait = etat.tour > 0 && Number(etat.compteurs[RECRUTEMENT_FAIT]) === etat.tour;
-
-    function mettreEnPlace(commentaire) {
-        envoyer(actionsRecrutement(etat, index, deroule, parCase, etat.tour), commentaire);
-    }
 
     return (
         <div style={styleBoite}>
@@ -313,18 +307,7 @@ function Recrutement() {
                 </span>
             )}
 
-            {/* Mis en place à « Nouveau tour ». Rattrapage : seulement s'il manque pour ce tour. */}
-            {joueur && etat.tour > 0 && !dejaFait && cases.length > 0 && reste > 0 && (
-                <BoutonRegle
-                    data-action="rattraper-recrutement"
-                    nom="Mettre en place le recrutement (rattrapage)"
-                    faire={mettreEnPlace}
-                    title="Le recrutement se met en place tout seul à chaque nouveau tour ; il manque pour celui-ci : tire du sac les agents du tour et les pose sur les cases du déroulé"
-                >
-                    Rattraper la mise en place
-                </BoutonRegle>
-            )}
-
+            {/* Mis en place à « Nouveau tour » : pas de bouton */}
             {dejaFait
                 ? <span style={{ color: "#1b5e20" }}>✔ mis en place</span>
                 : <span style={{ color: "#555" }}>mis en place automatiquement à chaque nouveau tour</span>}

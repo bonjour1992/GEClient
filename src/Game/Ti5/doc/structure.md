@@ -566,6 +566,11 @@ Station « spéciale » : agent au choix (liste de la fiche ; compteur
 `controle:<…>:agent` = son rang pendant un conflit). Si un autre camp a des
 unités militaires dans l'espace du système, c'est un **contrôle spatial** : même
 conflit, mais ce sont les unités de l'espace du système qui comptent.
+« Revendiquer » une station : un diplomate est utilisé **et** l'agent adapté
+posé ; avec un conflit d'accord, c'est le demandeur qui conclut (lui seul peut
+prendre l'agent à son compte), compteur `accord:<…>:agent` pour une station
+spéciale. Stations sans type en base : Canon ancien (#27) et Canon restauré
+(#30) — aucun agent n'y est posé.
 
 ### conflit d'accord (revendication)
 
@@ -824,8 +829,7 @@ Dans une partie, la ligne « Agenda » du déroulé a la place de 3 cartes de ha
 sur 2 de large (une carte tient dans une demi-colonne) et le plateau n'est plus
 tenu à la hauteur d'une page. Le recrutement est mis en place à « Nouveau tour »
 (`actionsRecrutement`, `PlateauGeneral.jsx`), une fois par tour (compteur
-`general:recrutement`) ; un bouton de rattrapage n'apparaît que s'il manque
-pour le tour en cours. Au lancement, tous les événements sont cachés, celui du
+`general:recrutement`) ; il n'y a plus de bouton. Au lancement, tous les événements sont cachés, celui du
 tour 1 compris.
 
 L'action `des` accepte `c` et `marque` : le jet est celui d'un composant et

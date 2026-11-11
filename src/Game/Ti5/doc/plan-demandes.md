@@ -280,7 +280,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Revendiquer : conflit d'accord quand d'autres camps ont des unités militaires dans le système.
 - ☑ Technologies : cadre vert des technologies acquises (éditeur et partie) ; zone « Éléments
   posés sur les technologies » retirée ; cadre « Recherche du tour ».
-- ☑ Recrutement mis en place à « Nouveau tour » (bouton de rattrapage seulement s'il manque).
+- ☑ Recrutement mis en place à « Nouveau tour » ; plus aucun bouton (le rattrapage a été retiré).
 - ☑ Production : pose hors système signalée, échec faute de ressources non compté, stations et
   planètes à `#prod` (« Produire ici »), logisticien utilisé.
 - ☑ Construction : case « Construction », non-structures grisées, doublons signalés, logisticien
@@ -293,5 +293,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   type : aucun agent posé ; station « spéciale » : agent au choix ; construction dans l'espace :
   un logisticien utilisé par structure ; « Finir le déplacement » ne compte que les vaisseaux
   déplacés avec l'assistant.
+- ☑ Complément : « Revendiquer » une station (use un diplomate et pose l'agent adapté) ;
+  stations sans type : Canon ancien (#27), Canon restauré (#30).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
