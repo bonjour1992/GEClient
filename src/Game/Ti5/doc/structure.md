@@ -569,8 +569,8 @@ conflit, mais ce sont les unités de l'espace du système qui comptent.
 « Revendiquer » une station : un diplomate est utilisé **et** l'agent adapté
 posé ; avec un conflit d'accord, c'est le demandeur qui conclut (lui seul peut
 prendre l'agent à son compte), compteur `accord:<…>:agent` pour une station
-spéciale. Stations sans type en base : Canon ancien (#27) et Canon restauré
-(#30) — aucun agent n'y est posé.
+spéciale. Une station sans type ne reçoit aucun agent : il n'y en a plus en
+base (Canon ancien #27 et Canon restauré #30 sont des stations militaires).
 
 ### conflit d'accord (revendication)
 

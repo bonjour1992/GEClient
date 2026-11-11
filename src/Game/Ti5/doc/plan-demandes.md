@@ -294,6 +294,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   un logisticien utilisé par structure ; « Finir le déplacement » ne compte que les vaisseaux
   déplacés avec l'assistant.
 - ☑ Complément : « Revendiquer » une station (use un diplomate et pose l'agent adapté) ;
-  stations sans type : Canon ancien (#27), Canon restauré (#30).
+  l'agent présent est rendu au possesseur précédent ; Canon ancien (#27) et Canon restauré
+  (#30), seules stations sans type, sont devenus des stations militaires (données,
+  `demandes-ti5/migrate-canons-stations.mjs`).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
