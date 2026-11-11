@@ -906,6 +906,37 @@ renvoie donc les agents des cases dans les agents usés, retire du jeu ceux
 des carrés et le reste, et remet le compteur à 0. En haut de l'onglet : la liste numérotée des lois du tour
 (cartes de `general:agenda:<tour>`).
 
+### scripts d'unités, de planètes et d'habilités
+
+Trois sortes de scripts de plus dans `engine/scripts.js` :
+
+- **revenu** (`engine/Revenus.jsx`, `useRevenus`) : ce que rapporte, à une phase,
+  une unité du joueur posée sur la carte, une planète ou station qu'il possède,
+  ou une habilité qui s'applique à lui — `gains` (`res`, `inf`, `commerce`,
+  `points`), `recherche` (notée au journal de recherche du tour, sorte `g` ;
+  `rechercheDeSource` en donne le type à l'affichage), `cree` (unités posées
+  dans l'espace du système, là où est la source, ou à son bord), ou `calcul`.
+  Au ravitaillement tout s'ajoute au bouton « Entretien » ; aux phases de
+  science et de production, bouton « Revenus de la phase » du bandeau « À
+  faire » (`RevenusDePhase`, compteur `joueur:<u>:revenus:<phase>` = tour).
+- **action** (`engine/ActionsScript.jsx`, `BoutonsScripts`) : un bouton décrit
+  par le script (phase, possession, agent utilisé ou dépensé, coût, gains,
+  recherche, unités créées, dégât, usé, activation, prise de la planète,
+  pioche, une fois par tour). Lieux : fiche d'une de mes unités, à côté d'une
+  planète ou en tête de la fiche d'un système, bandeau « À faire ».
+- **regle** : règle codée là où elle agit, comme un effet de technologie, mais
+  sans technologie à débloquer.
+
+`aScript(joueur, id)` : pour une unité ou une planète, le script est en
+service ; pour une **habilité**, elle s'applique au joueur — elle est sur sa
+feuille de faction ou dans ses éléments actifs, ou posée sur la table (elle
+vaut alors pour toutes les factions), ou (`feuille`) il a la feuille de
+technologie de ce type. Une habilité posée sur un système n'a pas de
+comportement par défaut. `connaissance(joueur, type)` donne le niveau de
+connaissance (calculé avec les technologies débloquées, `technologiesDe`).
+Ce qui a été laissé de côté est marqué « (passé) » dans
+`doc/implementabilite.md`.
+
 ### secret du vote : coup local
 
 Un coup qui pose un agent visible sur un plateau caché est reçu en entier par

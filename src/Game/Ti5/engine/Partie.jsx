@@ -57,6 +57,8 @@ import { Espace } from "./Espace";
 import { PlateauJoueur, SourcesIllimitees, CaseProduction, MesCompteurs } from "./PlateauJoueur";
 import { Technologie } from "./Technologie";
 import { effacerRecherches } from "./recherche";
+import { RevenusDePhase } from "./Revenus";
+import { BoutonsScripts } from "./ActionsScript";
 import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
@@ -250,6 +252,10 @@ export function Partie({ id }) {
 
     // Déroulé (surcoût du recrutement) et phases du jeu (numéro dans le tour)
     const deroule = useElement(p.etat?.references?.deroule);
+
+    // Feuilles de faction des joueurs, chargées d'avance : leurs habilités disent
+    // quels scripts s'appliquent à qui (aScript)
+    useElements((p.vue?.partie.joueurs || []).map(j => j.faction));
     const elementsPhase = getFromType(search, ["phase"]);
     const contenusPhase = useElements(elementsPhase.map(e => e.id));
 
@@ -345,9 +351,34 @@ export function Partie({ id }) {
         aScript: (userId, id) => {
             const script = SCRIPTS.find(s => s.id === id);
 
-            return !!script && !scriptsDesactives.includes(id) &&
-                [script.carte.id, ...(script.aussi || [])].some(tech => technologies[userId]?.has(tech));
+            // (une règle d'unité, de planète ou d'habilité n'a pas de technologie à
+            // débloquer : il suffit qu'elle soit en service)
+            if (!script || scriptsDesactives.includes(id)) {
+                return false;
+            }
+
+            if (script.carte.type === "tech") {
+                return [script.carte.id, ...(script.aussi || [])].some(tech => technologies[userId]?.has(tech));
+            }
+
+            // Habilité : elle s'applique au joueur si elle est sur sa feuille de faction
+            // ou dans ses éléments actifs ; posée sur la table, elle vaut pour toutes les
+            // factions. (feuille : ou il a la feuille de technologie de ce type, qui la porte.)
+            if (script.carte.type === "habilite") {
+
+                const estElle = c => !c.cache && c.ref?.type === "habilite" && c.ref.id === script.carte.id;
+
+                return (contenuEnCache(trouver(userId)?.faction)?.rules || []).some(lien => Number(lien?.id) === script.carte.id) ||
+                    (index.parZone.get(`joueur:${userId}:actif`) || []).some(estElle) ||
+                    (index.parZone.get("general:table") || []).some(estElle) ||
+                    (!!script.feuille && technologies[userId]?.connaissance?.[script.feuille] !== undefined);
+            }
+
+            return true;
         },
+
+        // Niveau de connaissance d'un joueur dans un type de technologie (« gen », « spa »…)
+        connaissance: (userId, type) => technologies[userId]?.connaissance?.[type] || 0,
 
         // Capacité logistique d'un joueur (taille d'une flotte, production d'un dock) :
         // 3, plus 1 par logisticien posé sur sa technologie « Logistique améliorée »
@@ -1235,6 +1266,12 @@ export function Partie({ id }) {
                         {!aideVide && (
                             <Text text={aideEnLigne} style={{ fontSize: 13, color: "#000" }} />
                         )}
+
+                        {/* Ce que rapportent à cette phase mes unités et mes planètes (Revenus.jsx) */}
+                        {estJoueur && <RevenusDePhase />}
+
+                        {/* Boutons d'action des habilités de cette phase (ActionsScript.jsx) */}
+                        {estJoueur && <BoutonsScripts lieu="bandeau" />}
 
                         {/* Phase de diplomatie : transaction entre deux factions */}
                         {enDiplomatie && estJoueur && (

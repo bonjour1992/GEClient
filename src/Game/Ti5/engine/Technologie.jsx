@@ -6,7 +6,7 @@ import { ModalPickerInput } from "../../../Input/ModalPickerInput";
 import { getFromType } from "../../../lib/store";
 import { lireJournal, noter, noterFinie } from "./recherche";
 import { useElement, useElements, chargerContenu } from "./sync";
-import { SCRIPTS } from "./scripts";
+import { SCRIPTS, rechercheDeSource } from "./scripts";
 
 // ============================================================
 // ONGLET TECHNOLOGIE
@@ -101,6 +101,17 @@ function RechercheDuTour({ base }) {
     const nom = l => (contenus[l.element]?.name || nomElement(search, { id: l.element }) || "…").replace(/^!([^!]*)!/, "");
     const macro = (type, n) => `#re${type}${n > 1 ? `(${n})` : ""}`;
 
+    // Recherche générée par une source : typée si son script le dit (SR-42 : spatiale)
+    const genere = l => {
+        const typee = rechercheDeSource(l.element);
+        const total = (typee || []).reduce((s, [, n]) => s + n, 0);
+        const fois = total ? l.n / total : 0;
+
+        return Number.isInteger(fois) && fois >= 1
+            ? typee.map(([type, n]) => macro(type || "ch", n * fois)).join(" ")
+            : macro("ch", l.n);
+    };
+
     // Lignes groupées par phase, dans l'ordre d'arrivée
     const groupes = [];
 
@@ -157,7 +168,7 @@ function RechercheDuTour({ base }) {
                             </>)}
 
                             {l.sorte === "g" && (<>
-                                {nom(l)} génère <Text text={l.n > 1 ? `#rech(${l.n})` : "#rech"} style={styleMacro} />
+                                {nom(l)} génère <Text text={genere(l)} style={styleMacro} />
                             </>)}
 
                             {l.sorte === "t" && (<>

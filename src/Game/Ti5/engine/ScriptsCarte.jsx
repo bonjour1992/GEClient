@@ -5,6 +5,7 @@ import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
 import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires } from "./miseEnPlace";
 import { LivraisonCommerciale } from "./Livraison";
+import { BoutonsScripts } from "./ActionsScript";
 
 // ============================================================
 // BOUTONS DES SCRIPTS SUR LA FICHE D'UNE CARTE
@@ -33,6 +34,17 @@ export function ScriptsCarte({ c, fermer }) {
         // Livraison commerciale : une de mes unités de la carte dont le texte porte #livr(n)
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi &&
             <LivraisonCommerciale key="livraison-commerciale" c={c} fermer={fermer} />,
+        // Boutons d'action de l'unité (scripts de sorte « action ») : une de mes unités de la carte
+        c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && /^hex:\d+/.test(c.zone || "") &&
+            <BoutonsScripts
+                key="actions-unite"
+                lieu="unite"
+                c={c}
+                idElement={c.ref.id}
+                numero={Number(/^hex:(\d+)/.exec(c.zone)[1])}
+                zone={c.zone}
+                apres={fermer}
+            />,
     ];
 }
 

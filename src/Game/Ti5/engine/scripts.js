@@ -12,7 +12,21 @@
 //                 (bouton « Mise en place », MiseEnPlaceJoueur.jsx) ;
 //   bouton        ajoute un bouton à la fiche de la carte (ScriptsCarte) ;
 //   effet         effet d'une technologie débloquée, codé là où il agit
-//                 (aScript, effets.js).
+//                 (aScript, effets.js) ;
+//   revenu        ce que rapporte une unité ou une planète possédée à une
+//                 phase (Revenus.jsx) : ajouté à « Entretien » au ravitaillement,
+//                 bouton « Revenus de la phase » aux autres phases ;
+//   regle         règle propre à une unité, une planète ou une habilité, codée là
+//                 où elle agit — comme un effet, mais sans technologie à
+//                 débloquer : aScript(joueur, id) dit seulement si elle est en service ;
+//   action        bouton d'une action qu'une unité, une planète ou une habilité
+//                 permet (ActionsScript.jsx).
+//
+// Habilités : aScript(joueur, id) est vrai si l'habilité s'applique à ce joueur —
+// elle est sur sa feuille de faction ou dans ses éléments actifs, ou sur la table
+// (elle vaut alors pour toutes les factions) ; `feuille` : ou il a la feuille de
+// technologie de ce type, qui la porte. Une habilité posée sur un système n'a
+// pas de comportement par défaut.
 //
 // Chaque script dit ce qu'il change à l'interface : `mode` — "nouveau"
 // (un bouton de plus), "modifie" (un bouton existant change de
@@ -52,6 +66,9 @@ const reductionAgent = (id, carte, ecritLe, nom, motif, pluriel) => ({
         ? { cout: -1, message: `${nom} : ${achat.nom} coûte 1 de moins` }
         : null),
 });
+
+// Agent utilisé par plusieurs boutons d'action
+const SCIENTIFIQUE = { motif: "scientifique", nom: "scientifique", depense: false };
 
 export const SCRIPTS = [
 
@@ -566,7 +583,307 @@ export const SCRIPTS = [
     effet("drain-spatial", 246, 1794343420982, "Drain spatial", "nouveau",
         "Conflit : cadre de blocage d'un déplacement",
         "Quand des vaisseaux vont entrer dans un système où vous avez un vaisseau amiral, un soleil de guerre ou un système de défense : vous exigez 1 ressource par vaisseau, ou vous laissez passer ; le joueur paie, ou ses vaisseaux restent sur la case précédente."),
+
+    // --------------------------------------------------------
+    // REVENUS DE PHASE : unités posées et planètes possédées (Revenus.jsx)
+    // --------------------------------------------------------
+
+    revenu("usine", "unit", 16, 1794049918179, "Usine", "ravit",
+        "Chaque usine que vous avez sur la carte rapporte 2 ressources.", { gains: { res: 2 }, aussi: [893] }),
+
+    revenu("statue-en-or", "unit", 23, 1794049918186, "Statue en or", "ravit",
+        "Chaque statue rapporte 1 point.", { gains: { points: 1 } }),
+
+    revenu("station-meteorologique", "unit", 444, 1794335055030, "Station météorologique", "ravit",
+        "Chaque station génère 2 de recherche tempête et 1 de recherche spatiale (notées au journal de recherche).",
+        { recherche: [["storm", 2], ["spa", 1]] }),
+
+    revenu("forge-du-vide", "unit", 868, 1794340035096, "Forge du vide", "ravit",
+        "S'il y a un trou de ver delta dans son système : 1 ressource, 1 influence et 1 de recherche.", {
+            calcul: (source, outils) => (outils.aDansLeSysteme(source.numero, /delta|hil colish/i)
+                ? { gains: { res: 1, inf: 1 }, recherche: [["", 1]] }
+                : { sans: "pas de trou de ver delta dans le système" }),
+        }),
+
+    revenu("centre-de-contrebande", "unit", 786, 1794335055083, "Centre de contrebande", "ravit",
+        "3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins.", {
+            calcul: (source, outils) => {
+                const n = Math.max(0, 3 - outils.autresProches(source, 3));
+
+                return n ? { gains: { res: n, inf: n } } : { sans: "trop de centres proches" };
+            },
+        }),
+
+    revenu("arbre-pere", "unit", 465, 1794335055035, "Arbre père", "ravit",
+        "Produit un Fruit de vie dans l'espace de son système.", { cree: { unite: 464, n: 1, ou: "espace" } }),
+
+    revenu("arbre-mere", "unit", 467, 1794335055037, "Arbre mère", "ravit",
+        "Produit autant de Letani que votre niveau de connaissance génétique, sur sa planète.", {
+            calcul: (source, outils) => (outils.connaissance("gen") > 0
+                ? { cree: { unite: 423, n: outils.connaissance("gen"), ou: "ici" } }
+                : { sans: "aucun niveau de connaissance génétique" }),
+        }),
+
+    revenu("colonie-ladaran", "unit", 590, 1794339608756, "Colonie Ladaran", "ravit",
+        "Produit une de vos infanteries, à son bord.", { cree: { unite: "inf", n: 1, ou: "bord" } }),
+
+    revenu("memoria-c", "unit", 770, 1794049918252, "Memoria C", "ravit",
+        "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
+
+    revenu("complexe-de-guerre", "unit", 164, 1794335054826, "Complexe de guerre", "ravit",
+        "Pose un de vos destroyeurs dans son système (si vous le contrôlez : non vérifié).",
+        { cree: { unite: "dest", n: 1, ou: "espace" }, note: "si vous contrôlez le système" }),
+
+    revenu("relique-reforgee", "planet", 131, 1794335054813, "Relique reforgée", "ravit",
+        "Rapporte 1 point à qui la possède.", { gains: { points: 1 } }),
+
+    revenu("anneau-arcturus", "planet", 784, 1794372893706, "Anneau Arcturus", "ravit",
+        "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
+
+    revenu("new-eden", "planet", 469, 1794054013171, "New eden", "ravit",
+        "Produit 2 Letani sur la planète.", { cree: { unite: 423, n: 2, ou: "ici" } }),
+
+    revenu("asteroide-d-or", "planet", 31, 1794335054748, "Astéroïde d'or", "production",
+        "Génère 3 commerce pour qui le possède.", { gains: { commerce: 3 } }),
+
+    revenu("sr-42", "planet", 33, 1794054013129, "SR-42", "science",
+        "Génère 2 de recherche spatiale pour qui la possède.", { recherche: [["spa", 2]] }),
+
+    revenu("sr-124", "planet", 47, 1794054013138, "SR-124", "science",
+        "Génère 2 de recherche sociale pour qui la possède.", { recherche: [["soc", 2]] }),
+
+    revenu("station-de-combat", "planet", 56, 1794335054765, "Station de combat", "science",
+        "Génère 2 de recherche militaire pour qui la possède.", { recherche: [["mil", 2]] }),
+
+    // --------------------------------------------------------
+    // RÈGLES D'UNITÉS ET DE PLANÈTES, codées là où elles agissent
+    // --------------------------------------------------------
+
+    regle("laboratoire", "unit", 176, 1794335054832, "Laboratoire", "modifie",
+        "Fiche d'un système : « Rechercher »",
+        "Rechercher sur une planète où vous avez un Laboratoire rapporte 1 de recherche de plus."),
+
+    regle("mecha-d-archeologie", "unit", 22, 1794339608703, "Mecha d'archéologie", "modifie",
+        "Fiche d'un système : « Fouiller la ruine »",
+        "Fouiller une ruine d'une planète où vous avez un Mecha d'archéologie n'use pas de scientifique."),
+
+    regle("wanno", "planet", 46, 1794054013137, "Wanno", "modifie",
+        "Fiche d'un système : « Prendre possession », « Revendiquer »",
+        "Prendre le contrôle de Wanno rapporte 1 infamie."),
+
+    regle("perimeter", "planet", 60, 1794054013149, "Perimeter", "modifie",
+        "Fiche d'une unité : « Livraison commerciale »",
+        "Vos livraisons valent 1 commerce de plus si vous possédez Perimeter."),
+
+    regle("avar", "planet", 61, 1794335054802, "Avar", "modifie",
+        "Fiche d'un système : « Revendiquer »",
+        "Avar ne peut pas être contrôlée sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris.", [783]),
+
+    regle("cormund", "planet", 49, 1794335054764, "Cormund", "modifie",
+        "Fiche d'un système : « Fouiller la ruine »",
+        "Il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines."),
+
+    regle("shar", "planet", 275, 1794335054888, "Shar", "auto",
+        "Déplacement assisté",
+        "Si vous possédez Shar, la nébuleuse de son système ne gêne pas vos déplacements."),
+
+    regle("soleil-de-guerre-production", "unit", 17, 1794335054746, "Soleil de guerre", "auto",
+        "Réserve : production d'un soleil de guerre",
+        "Produire un soleil de guerre sans la technologie « Soleil de guerre » demande une confirmation.", [199]),
+
+    regle("mech-geant", "unit", 516, 1794049918222, "Mech géant", "auto",
+        "Embarquement sur un vaisseau, déplacement assisté",
+        "Une unité dont le texte dit « Nécessite n de capacité » compte pour n dans la capacité du vaisseau."),
+
+    regle("jeollr", "planet", 59, 1794335054766, "Jeollr", "auto",
+        "Conflit : bombardement",
+        "Les bombardements contre Jeollr ont −2."),
+
+    regle("loki", "planet", 62, 1794054013150, "Loki", "auto",
+        "Conflit : combats sur la planète",
+        "Sur Loki, les attaques contre la faction qui possède la planète ont −1."),
+
+    // --------------------------------------------------------
+    // HABILITÉS (voir plus haut : à qui une habilité s'applique)
+    // --------------------------------------------------------
+
+    regle("seve-de-vie", "habilite", 427, 1793999783813, "Sève de vie", "modifie",
+        "Plateau joueur : « Entretien »",
+        "À l'entretien, vos unités biologiques posées sur la carte récupèrent 1 de résistance."),
+
+    regle("destin-legendaire", "habilite", 145, 1794335054818, "Destin légendaire", "modifie",
+        "Plateau joueur : « Entretien » ; fiche d'un système : prise de possession",
+        "L'entretien rapporte 1 point par planète légendaire possédée ; prendre une planète légendaire rapporte 1 point et 1 infamie."),
+
+    regle("conclave-secret", "habilite", 160, 1794335054825, "Conclave secret", "modifie",
+        "Plateau joueur : « Entretien »",
+        "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main."),
+
+    regle("signal", "habilite", 765, 1794042800728, "Signal", "modifie",
+        "Plateau joueur : « Entretien »",
+        "L'entretien pose un marqueur de signal sur un système tiré au hasard."),
+
+    regle("tempete-spatiale", "habilite", 442, 1793999783814, "Tempête spatiale", "auto",
+        "Déplacement assisté ; Conflit",
+        "Les vaisseaux ont −1 au mouvement ; les canons spatiaux et tous les combats ont −1."),
+
+    revenu("bdd-technique", "habilite", 487, 1793999783822, "BDD technique", "science",
+        "1 de recherche par fragment de relique que vous possédez.", {
+            calcul: (source, outils) => (outils.fragments > 0
+                ? { recherche: [["", outils.fragments]] }
+                : { sans: "aucun fragment de relique" }),
+        }),
+
+    // --------------------------------------------------------
+    // BOUTONS D'ACTION (ActionsScript.jsx)
+    // --------------------------------------------------------
+
+    action("hopeld", "planet", 72, 1794054013159, "Hopeld : produire un Mech géant", "planete",
+        "Production : dépensez un logisticien, un Mech géant est posé sur Hopeld (que vous possédez).", {
+            phase: "production",
+            possede: true,
+            agent: { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: true },
+            cree: { unite: 516, n: 1 },
+            libelle: "Produire un Mech géant (dépense un logisticien)",
+        }),
+
+    action("sig", "planet", 473, 1794054013172, "Obtenir la planète", "planete",
+        "Science : use un scientifique, la planète SIG est à vous.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            prendre: true,
+            visible: outils => !outils.possede,
+            libelle: "Obtenir (use un scientifique)",
+            aussi: [474, 475, 476],
+        }),
+
+    action("sphere-de-dyson", "unit", 178, 1794335054834, "Sphère de Dyson", "unite",
+        "Science : use un scientifique, 2 ressources par niveau de connaissance spatiale.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            calcul: outils => (outils.connaissance("spa") > 0
+                ? {
+                    gains: { res: 2 * outils.connaissance("spa") },
+                    libelle: `Sphère de Dyson : +${2 * outils.connaissance("spa")} ressources (use un scientifique)`,
+                }
+                : { sans: "aucun niveau de connaissance spatiale" }),
+            libelle: "Sphère de Dyson : ressources (use un scientifique)",
+        }),
+
+    action("arbre-de-vie-eternelle", "unit", 571, 1794335055060, "Arbre de vie éternelle : commerce", "unite",
+        "Production : l'arbre est usé et prend 1 dégât, vous gagnez 4 commerce.", {
+            phase: "production",
+            use: true,
+            degat: 1,
+            gains: { commerce: 4 },
+            libelle: "Arbre de vie : +4 commerce (usé, 1 dégât)",
+        }),
+
+    action("magmus", "unit", 598, 1794339608758, "Magmus", "unite",
+        "Quand un vaisseau est détruit dans son système : 1 de recherche militaire (notée au journal de recherche).", {
+            recherche: [["mil", 1]],
+            libelle: "Un vaisseau détruit ici : +1 recherche militaire",
+        }),
+
+    action("etude-des-tempetes", "habilite", 441, 1794335055029, "Étude des tempêtes", "systeme",
+        "Science : use un scientifique et active un système sans planète : 2 de recherche tempête (4 dans une nébuleuse).", {
+            feuille: "storm",
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            activer: true,
+            recherche: [["storm", 2]],
+            visible: outils => !!outils.systeme && !(outils.systeme.elems || []).some(lien => lien?.id > 0),
+            calcul: outils => (outils.systeme?.anomaly === "neb"
+                ? { recherche: [["storm", 4]], libelle: "Étude des tempêtes : +4 recherche tempête (nébuleuse, use un scientifique)" }
+                : {}),
+            libelle: "Étude des tempêtes : +2 recherche tempête (use un scientifique)",
+        }),
+
+    action("etude-des-failles", "habilite", 815, 1794044993528, "Étude des failles", "systeme",
+        "Science : use un scientifique et active une Faille : 2 de recherche de rupture.", {
+            feuille: "rupt",
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            activer: true,
+            recherche: [["rupt", 2]],
+            visible: outils => outils.idSysteme === 811,
+            libelle: "Étude des failles : +2 recherche de rupture (use un scientifique)",
+        }),
+
+    action("confrerie-de-mercenaire-pioche", "habilite", 764, 1794335055080, "Confrérie de mercenaire", "bandeau",
+        "Recrutement : piochez un mercenaire dans votre main, à poser sur la case de recrutement de votre choix (une fois par tour).", {
+            phase: "recrut",
+            nomPhase: "recrutement",
+            pioche: { de: "pioche:mercenaire", vers: "main" },
+            parTour: true,
+            visible: outils => /recrut/i.test(outils.phase),
+            libelle: "Confrérie de mercenaire : piocher un mercenaire (à poser sur une case de recrutement)",
+        }),
 ];
+
+// Bouton d'action d'une unité, d'une planète ou d'une habilité (ActionsScript.jsx)
+//   lieu : "unite", "planete", "systeme" ou "bandeau" ; spec : voir ActionsScript.jsx
+function action(id, type, carte, ecritLe, nom, lieu, description, spec) {
+
+    const { aussi = [], ...reste } = spec;
+
+    return {
+        id,
+        sorte: "action",
+        mode: "nouveau",
+        ou: {
+            unite: "Fiche de l'unité",
+            planete: "Fiche d'un système, à côté de la planète",
+            systeme: "Fiche d'un système, en tête",
+            bandeau: "Bandeau « À faire »",
+        }[lieu],
+        carte: { type, id: carte },
+        aussi,
+        ecritLe,
+        nom,
+        description,
+        lieu,
+        ...reste,
+    };
+}
+
+// Revenu de phase d'une unité ou d'une planète (Revenus.jsx)
+//   phase : "ravit", "science" ou "production" ; effet : { gains, recherche, cree, calcul, note, aussi }
+function revenu(id, type, carte, ecritLe, nom, phase, description, effet) {
+
+    const { aussi = [], ...reste } = effet;
+
+    return {
+        id,
+        sorte: "revenu",
+        mode: phase === "ravit" ? "modifie" : "nouveau",
+        ou: phase === "ravit"
+            ? "Plateau joueur : « Entretien »"
+            : `Bandeau « À faire », phase de ${phase} : « Revenus de la phase »`,
+        carte: { type, id: carte },
+        aussi,
+        ecritLe,
+        nom,
+        description: `${phase === "ravit" ? "Ravitaillement" : (phase === "science" ? "Science" : "Production")} : ${description}`,
+        phase,
+        ...reste,
+    };
+}
+
+// Règle d'une unité, d'une planète ou d'une habilité : sa description seule (son code est là où elle agit)
+//   aussi : autres éléments soumis à la même règle
+function regle(id, type, carte, ecritLe, nom, mode, ou, description, aussi = []) {
+    return { id, sorte: "regle", mode, ou, carte: { type, id: carte }, aussi, ecritLe, nom, description };
+}
+
+// Recherche typée que génère un élément (journal de recherche du tour) : [[type, n]…] ou null
+export function rechercheDeSource(idElement) {
+
+    const script = SCRIPTS.find(s => Array.isArray(s.recherche) &&
+        [s.carte.id, ...(s.aussi || [])].includes(idElement));
+
+    return script ? script.recherche : null;
+}
 
 // Script d'effet de technologie : sa description seule (son code est là où il agit)
 //   aussi : autres technologies qui donnent le même effet (version d'une faction)
@@ -623,6 +940,7 @@ export async function technologiesDe(etat, userId, charger) {
 
     const base = `joueur:${userId}`;
     const debloquees = new Map();
+    const connaissance = {};
 
     for (const feuille of Object.values(etat.composants)) {
 
@@ -631,6 +949,8 @@ export async function technologiesDe(etat, userId, charger) {
         }
 
         const contenu = await charger(feuille.ref.id);
+
+        let obtenues = 0;
 
         for (const [k, lien] of (contenu?.techs || []).entries()) {
 
@@ -648,6 +968,8 @@ export async function technologiesDe(etat, userId, charger) {
             const progres = Number(etat.compteurs[`${base}:tech:${feuille.id}:${k}`]) || 0;
 
             if (progres >= (Number(tech?.cout) || 1)) {
+                obtenues++;
+
                 debloquees.set(id, {
                     utilisee: `${base}:techUse:${feuille.id}:${k}`,
                     // Zone des éléments posés sur la technologie
@@ -655,7 +977,17 @@ export async function technologiesDe(etat, userId, charger) {
                 });
             }
         }
+
+        // Connaissance de la feuille : 2 points par technologie obtenue, plus les
+        // points recherchés ; un niveau par ligne pleine (connaissanceReq points)
+        const points = 2 * obtenues + (Number(etat.compteurs[`${base}:tech:${feuille.id}:connaissance`]) || 0);
+        const type = contenu?.techType || "";
+
+        connaissance[type] = Math.max(connaissance[type] || 0, Math.floor(points / (Number(contenu?.connaissanceReq) || 8)));
     }
+
+    // Niveaux de connaissance par type de technologie : { gen: 2, spa: 0… }
+    debloquees.connaissance = connaissance;
 
     return debloquees;
 }

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, nomElement, Pions } from "./Interaction";
-import { useElements } from "./sync";
+import { useElements, contenuEnCache } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
 import { centreCase, centreCaseBande } from "../plateauVue";
 import { COLONNES_BANDE } from "../hexSpirale";
-import { capaciteDe, depenserAgent, estDeplacementFurtif } from "./effets";
+import { capaciteDe, depenserAgent, estDeplacementFurtif, placePrise } from "./effets";
 import {
     TRAJET, DEPART, useCarte, sorteEtape, sorteJet, campsAdverses, rangArret, passagesEnCours, Passage,
 } from "./Blocage";
@@ -213,7 +213,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
 
     // (script Capsule de transport : capacité majorée)
     const sansPlace = selection.reduce((total, v) => total + Math.max(0,
-        Object.values(etat.composants).filter(c => c.sur === v.id && c.ref?.type === "unit").length -
+        Object.values(etat.composants).filter(c => c.sur === v.id && c.ref?.type === "unit")
+            .reduce((place, c) => place + (aScript(moi, "mech-geant") ? placePrise(contenuEnCache(c.ref.id)) : 1), 0) -
             capaciteDe(contenus[v.ref.id], moi, aScript)), 0);
 
     // Vaisseaux déplacés depuis mon dernier « Finir le déplacement »
@@ -257,7 +258,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const avecGravite = gravite && aScript(moi, "moteur-a-gravite");
 
     const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures +
-        (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0);
+        (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0) -
+        // Habilité Tempête spatiale : −1 au mouvement
+        (aScript(moi, "tempete-spatiale") ? 1 : 0);
 
     // Moteur à gravité : un scientifique par vaisseau seul, deux par flotte
     const scientifiquesGravite = avecGravite ? disponibles("scientifique").slice(0, coutEnAgents(selection.length)) : [];
@@ -269,6 +272,13 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     // --------------------------------------------------------
 
     const partent = selection;
+
+    // Règle de Shar : si je possède Shar, la nébuleuse de son système ne gêne pas mes déplacements
+    const possedeShar = aScript(moi, "shar") && (index.parZone.get(`joueur:${moi}:actif`) || [])
+        .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 275);
+
+    const sharIci = i => possedeShar &&
+        (systemes[tuiles[i]?.ref?.id]?.elems || []).some(lien => Number(lien?.id) === 275);
 
     const obstacles = [
         !enPhase && "ce n'est pas la phase de déplacement",
@@ -282,9 +292,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         // Champ d'astéroïdes : interdit, sauf avec le script Bouclier déflecteur
         ...(aScript(moi, "bouclier-deflecteur") ? [] : trajet.filter(i => anomalie(i) === "ast")
             .map(i => `${nomCase(i)} : champ d'astéroïdes, le déplacement y est interdit`)),
-        ...trajet.slice(0, -1).filter(i => anomalie(i) === "neb")
+        ...trajet.slice(0, -1).filter(i => anomalie(i) === "neb" && !sharIci(i))
             .map(i => `${nomCase(i)} : une nébuleuse met fin au mouvement de qui y entre`),
-        depart !== null && anomalie(depart) === "neb" && etapes.length > 1 && etapes[0].sorte === "bord" &&
+        depart !== null && anomalie(depart) === "neb" && !sharIci(depart) && etapes.length > 1 && etapes[0].sorte === "bord" &&
             "quitter une nébuleuse par un bord met fin au mouvement à la case suivante",
         ...horsLigne.map(x => `${nomCase(x.i)} : l'hyperlane ne relie pas ${nomCase(x.de)} à ${nomCase(x.vers)}`),
         arrivee !== null && carte.hyperlane(arrivee) && `${nomCase(arrivee)} : le trajet ne peut pas finir sur une hyperlane`,

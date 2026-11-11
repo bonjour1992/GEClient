@@ -1,6 +1,6 @@
 import { useEngine, BoutonRegle, nomCase, nomElement, agentDisponible } from "./Interaction";
-import { useElement, useElements } from "./sync";
-import { typeUnite } from "./miseEnPlace";
+import { useElement, useElements, contenuEnCache } from "./sync";
+import { typeUnite, actionsPiste } from "./miseEnPlace";
 import { controleDe } from "./effets";
 
 // ============================================================
@@ -69,12 +69,22 @@ export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, id
     const verrou = "planete:" + idPlanete;
     const prises = Number(etat.compteurs[verrou]) || 0;
 
+    // Règle de Wanno : en prendre le contrôle rapporte 1 infamie
+    const wanno = idPlanete === 46 && aScript(moi, "wanno") && ancien !== moi;
+
+    // Habilité Destin légendaire : prendre une planète légendaire rapporte 1 point et 1 infamie
+    const legendaire = ancien !== moi && !!contenuEnCache(idPlanete)?.legendary && aScript(moi, "destin-legendaire");
+
     return {
         messages: [
+            wanno && "Wanno : en prendre le contrôle vous rapporte 1 infamie.",
+            legendaire && "Destin légendaire : planète légendaire, 1 point et 1 infamie.",
             assimilation && "Assimilation : planète neutre obtenue, une infanterie y est posée.",
             butin > 0 && `Pillage : ${butin} commerce volé(s) à ${nomDe?.(ancien) ?? "son ancien possesseur"}.`,
         ].filter(Boolean),
         actions: [
+            ...(wanno || legendaire ? actionsPiste(etat, moi, "infamie", (wanno ? 1 : 0) + (legendaire ? 1 : 0)) : []),
+            ...(legendaire ? actionsPiste(etat, moi, "points", 1) : []),
             assimilation && { type: "creer", ref: { type: "unit", id: idInfanterie }, zone: zonePlanete, proprio: moi },
             butin > 0 && { type: "compteur", id: `joueur:${ancien}:commerce`, delta: -butin },
             butin > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: butin },

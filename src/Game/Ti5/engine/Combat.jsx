@@ -663,6 +663,11 @@ function CombatSysteme({ lieu }) {
             (sorte === "spatial" || sorte === "canons") && campVise(v) && aScript(campVise(v), "cartographie-de-l-espace") &&
                 systeme?.anomaly && !/^hpl/.test(systeme.anomaly) && [-1, "Cartographie de l'espace"],
             sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
+            // Règles de planètes : Jeollr (bombardements −2), Loki (−1 contre qui possède la planète)
+            sorte === "bombardement" && idPlanete === 59 && aScript(v.camp, "jeollr") && [-2, "Jeollr"],
+            idPlanete === 62 && possesseur !== null && campVise(v) === possesseur && aScript(v.camp, "loki") && [-1, "Loki"],
+            // Habilité Tempête spatiale : canons et combats ont −1
+            aScript(v.camp, "tempete-spatiale") && [-1, "Tempête spatiale"],
             (sorte === "canons" || sorte === "bombardement") && a("systeme-de-visee") && [1, "Système de visée"],
             sorte === "canons" && campVise(v) && aScript(campVise(v), "bouclier-deflecteur") && [-1, "Bouclier déflecteur"],
             sorte === "bombardement" && possesseur && possesseur !== v.camp && aScript(possesseur, "batiment-resistant") && [

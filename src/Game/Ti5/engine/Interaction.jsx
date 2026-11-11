@@ -5,7 +5,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { capaciteDe, victimesBombe, depenserAgent } from "./effets";
+import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -1889,10 +1889,15 @@ export function Plan({ children, style }) {
 
         const estUnite = c => c?.ref?.type === "unit";
 
-        const deja = Object.values(etat.composants)
-            .filter(c => c.sur === idPorteur && estUnite(c) && !embarques.includes(c.id)).length;
+        // (règle « Mech géant » : une unité peut prendre plusieurs places)
+        const place = c => (aScript(moi, "mech-geant") ? placePrise(contenuEnCache(c.ref.id)) : 1);
 
-        const portees = deja + embarques.filter(id => estUnite(etat.composants[id])).length + crees;
+        const deja = Object.values(etat.composants)
+            .filter(c => c.sur === idPorteur && estUnite(c) && !embarques.includes(c.id))
+            .reduce((total, c) => total + place(c), 0);
+
+        const portees = deja + crees +
+            embarques.map(id => etat.composants[id]).filter(estUnite).reduce((total, c) => total + place(c), 0);
         // (script Capsule de transport : capacité majorée)
         const capacite = capaciteDe(contenu, vaisseau.marques?.possession ?? vaisseau.proprio, aScript);
 
@@ -1963,6 +1968,13 @@ export function Plan({ children, style }) {
                     `${ouverte.nom} produit dans son système (${nomCase(ouverte.numero)}), pas ici`,
             );
         }
+
+        // Règle « Soleil de guerre » : il demande sa technologie
+        obstacles.push(
+            unites.some(ref => typeUnite(contenuEnCache(ref.id)) === "sun") &&
+            aScript(moi, "soleil-de-guerre-production") && !aScript(moi, "soleil-de-guerre") &&
+                "un soleil de guerre nécessite la technologie « Soleil de guerre »",
+        );
 
         // Phase de construction (case « Construction ») : on ne construit que des
         // structures, pas deux fois la même au même endroit. Sur une planète, la
@@ -2322,7 +2334,8 @@ export function Plan({ children, style }) {
                 poser([...paiement, { ...creation, sur: pionCible.dataset.composant }]);
 
                 if (!jeton && (a.source.type || "unit") === "unit") {
-                    signalerCapacite(pionCible.dataset.composant, [], 1);
+                    signalerCapacite(pionCible.dataset.composant, [],
+                        aScript(moi, "mech-geant") ? placePrise(contenuEnCache(a.source.id)) : 1);
                 }
             } else if (zone) {
                 poser([...paiement, { ...creation, zone }]);

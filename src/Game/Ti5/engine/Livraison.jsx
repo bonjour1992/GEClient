@@ -29,12 +29,17 @@ const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
 // Actions d'une livraison de `valeur` commerce à `cible` -> { actions, messages }
 export function livrer({ etat, index, moi, search, aScript, nomDe }, cible, valeur) {
 
+    // Règle de Perimeter : mes livraisons valent 1 commerce de plus si je possède la planète
+    const perimeter = aScript(moi, "perimeter") && Object.values(etat.composants).some(c =>
+        !c.cache && c.ref?.type === "planet" && c.ref.id === 60 && c.zone === `joueur:${moi}:actif`);
+
     const total = valeur +
+        (perimeter ? 1 : 0) +
         (aScript(moi, "commerce-profitable") ? 1 : 0) +
         (aScript(cible, "commerce-profitable") ? 1 : 0);
 
     const actions = [{ type: "compteur", id: `joueur:${cible}:commerce`, delta: total }];
-    const messages = [`Livraison commerciale : ${nomDe(cible)} gagne ${total} commerce${total !== valeur ? " (Commerce profitable)" : ""}.`];
+    const messages = [`Livraison commerciale : ${nomDe(cible)} gagne ${total} commerce${total !== valeur ? ` (${[perimeter && "Perimeter", total - valeur > (perimeter ? 1 : 0) && "Commerce profitable"].filter(Boolean).join(", ")})` : ""}.`];
 
     // Mes dettes envers cette faction, de la plus urgente à la plus lointaine
     const dettes = Object.values(etat.composants)

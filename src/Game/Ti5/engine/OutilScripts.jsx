@@ -24,6 +24,8 @@ const SORTES = {
     miseEnPlace: "Mise en place d'une faction",
     bouton: "Bouton de la fiche d'une carte",
     effet: "Effet de technologie",
+    revenu: "Revenu de phase (unité, planète)",
+    regle: "Règle d'une unité, d'une planète ou d'une habilité",
 };
 
 // Ce que le script change à l'interface (champ mode) : [libellé, couleur]

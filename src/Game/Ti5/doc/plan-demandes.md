@@ -308,5 +308,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Complément recherche : journal de recherche du tour par phase (effacé en fin de tour),
   recherche de connaissance (clic sur la grille d'une feuille), prérequis d'une technologie
   semi-bloquant (niveaux de connaissance).
+- ☑ Scripts des planètes, des unités et des habilités (quand c'est nécessaire) : revenus de
+  phase, boutons d'action, règles automatiques ; règle par défaut des habilités (feuille de
+  faction ou éléments actifs : cette faction ; table : toutes ; système : rien). Ce qui est
+  ambigu ou trop lourd est marqué « (passé) » dans `implementabilite.md`.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

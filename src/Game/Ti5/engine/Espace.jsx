@@ -28,6 +28,7 @@ import { depenserAgent } from "./effets";
 import { ProductionEnCours, lireProduction, ouvrirProductionLieu } from "./Production";
 import { zoneFouille } from "./Archeologie";
 import { noter } from "./recherche";
+import { BoutonsScripts } from "./ActionsScript";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter,
@@ -1048,14 +1049,40 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Phase de science, rechercher : active la planète et utilise un
     // scientifique. La recherche gagnée s'ajoute à la main (onglet Technologie).
+    // Une de mes unités de cet élément est-elle sur la planète k ?
+    const monUniteSur = (k, idUnite) => (index.parZone.get(zonePlanete(k)) || []).some(c =>
+        c.ref?.type === "unit" && c.proprio === moi && (idUnite === undefined || c.ref.id === idUnite));
+
     // La recherche est notée au journal de recherche du tour (onglet Technologie).
+    // Règle du Laboratoire : 1 de recherche de plus sur une planète où j'en ai un.
     function rechercher(k, idPlanete, commentaire) {
+
+        const laboratoire = aScript(moi, "laboratoire") && monUniteSur(k, 176);
+
         envoyer([
             utiliser("scientifique"),
             { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) },
-            noter(etat, moi, "p", idPlanete, 2),
+            noter(etat, moi, "p", idPlanete, laboratoire ? 3 : 2),
         ], commentaire);
+
+        if (laboratoire) {
+            aviser("Laboratoire : cette recherche rapporte 1 de plus.");
+        }
     }
+
+    // Règle du Mecha d'archéologie : fouiller là où j'en ai un n'use pas de scientifique
+    const mechaSur = k => aScript(moi, "mecha-d-archeologie") && monUniteSur(k, 22);
+
+    // Fouiller demande une unité dans le système et un scientifique ; sur Cormund,
+    // au moins 3 de mes infanteries (règles du Mecha d'archéologie et de Cormund)
+    const obstaclesFouille = (k, idPlanete) => [
+        !mesUnitesIci && "il faut une de vos unités dans le système",
+        !aScientifique && !mechaSur(k) && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+        aScript(moi, "cormund") && idPlanete === 49 &&
+            (index.parZone.get(zonePlanete(k)) || []).filter(c => c.ref?.type === "unit" && c.proprio === moi &&
+                typeUnite(contenuEnCache(c.ref.id)) === "inf").length < 3 &&
+            "il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines",
+    ];
 
     // Phase de science, fouiller une ruine : active la ruine, utilise un
     // scientifique et rapporte un fragment de relique — celui du type de la
@@ -1077,7 +1104,7 @@ function FicheSysteme({ numero, id, fermer }) {
         }
 
         envoyer([
-            utiliser("scientifique"),
+            !mechaSur(k) && utiliser("scientifique"),
             { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k), marques: { ruine } },
             fragment
                 ? { type: "creer", jeton: fragment[0], zone: vers }
@@ -1461,6 +1488,11 @@ function FicheSysteme({ numero, id, fermer }) {
                         </span>
                     )}
 
+                    {/* Boutons d'action des habilités qui visent un système (ActionsScript.jsx) */}
+                    <span style={{ display: "inline-flex", gap: 6, marginLeft: 8 }}>
+                        <BoutonsScripts lieu="systeme" numero={numero} zone={zoneEspace} systeme={systeme} idSysteme={id} />
+                    </span>
+
                     {/* La tuile elle-même : zone libre, réserve de tuiles... */}
                     {joueur && tuileDuSysteme && (
                         <span style={{ marginLeft: 8 }}>
@@ -1613,6 +1645,9 @@ function FicheSysteme({ numero, id, fermer }) {
                                                         !enRevendication && "ce n'est pas la phase de revendication",
                                                         !mesUnitesIci && "il faut une de vos unités dans le système",
                                                         !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                                                        // (règle d'Avar et d'Arcturus)
+                                                        aScript(moi, "avar") && [61, 783].includes(lien.id) && !monUniteSur(k) &&
+                                                            "cette planète ne peut pas être possédée sans unité dessus",
                                                     ]}
                                                     faire={commentaire => revendiquer(lien.id, k, commentaire)}
                                                     title="Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs. Si d'autres camps y ont des unités militaires, leur accord est d'abord demandé (onglet Conflit)"
@@ -1677,7 +1712,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     <BoutonRegle
                                                         key={ruine}
                                                         nom={`Fouiller une ruine de ${nomPlanete(planete)}`}
-                                                        obstacles={obstaclesScience}
+                                                        obstacles={obstaclesFouille(k, lien.id)}
                                                         faire={commentaire => fouiller(k, ruine, type, commentaire)}
                                                         title="Pose un marqueur d'activation sur la ruine, use un scientifique et rapporte un fragment de relique"
                                                     >
@@ -1688,6 +1723,15 @@ function FicheSysteme({ numero, id, fermer }) {
                                         ))}
 
                                         {/* PHASE DE PRODUCTION */}
+
+                                        {/* Boutons d'action de la planète (scripts de sorte « action ») */}
+                                        <BoutonsScripts
+                                            lieu="planete"
+                                            idElement={lien.id}
+                                            numero={numero}
+                                            zone={zonePlanete(k)}
+                                            possede={aMoi}
+                                        />
 
                                         {/* Élément à production qui n'est pas une unité (station, planète) */}
                                         {joueur && aMoi && lireProduction(planete) && (

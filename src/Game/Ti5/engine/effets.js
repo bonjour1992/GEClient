@@ -8,6 +8,11 @@
 // ============================================================
 
 // Capacité d'un vaisseau. Capsule de transport : +1, +2 pour un transporteur.
+// Place que prend une unité à bord d'un vaisseau : « Nécessite 3 de capacité »
+// dans son texte (Mech géant), sinon 1
+export const placePrise = contenu =>
+    Number(/n[ée]cessite\s+(\d+)\s+de\s+capacit/i.exec(String(contenu?.habilite || "").replace(/<[^>]+>/g, " "))?.[1]) || 1;
+
 export function capaciteDe(contenu, possesseur, aScript) {
 
     const base = Number(contenu?.capacite) || 0;

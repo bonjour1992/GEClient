@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, BoutonRegle } from "./Interaction";
+import { useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, BoutonRegle, aMotCle } from "./Interaction";
 import { useElement, useElements } from "./sync";
-import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite } from "./miseEnPlace";
+import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite, actionsPoints } from "./miseEnPlace";
 import { ActionsTechnologies } from "./ActionsTechnologies";
 import { ReserveProductible } from "./Production";
 import { useExploitationDuVide } from "./Controle";
+import { useRevenus } from "./Revenus";
 
 // ============================================================
 // ONGLET PLATEAU JOUEUR
@@ -253,7 +254,11 @@ export function PlateauJoueur({ vu }) {
     // nébuleuse) ; un système vide disputé demande un conflit de domination (Controle.jsx)
     const vide = useExploitationDuVide(u);
 
-    const ressources = somme("res") + vide.gain;
+    // Scripts de revenu : ce que rapportent au ravitaillement les unités posées
+    // et les planètes possédées (Revenus.jsx)
+    const revenus = useRevenus(u, "ravit");
+
+    const ressources = somme("res") + vide.gain + revenus.res;
 
     // Scripts d'entretien. Diversité : +1 influence par planète. Culture
     // courtisane : +1 influence par alliance en jeu chez moi (promesse de
@@ -270,7 +275,33 @@ export function PlateauJoueur({ vu }) {
         aScript(u, "culture-courtisane-alliances") && alliances > 0 && [alliances, "Culture courtisane"],
     ].filter(Boolean);
 
-    const influence = somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0);
+    const influence = somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0) + revenus.inf;
+
+    // Habilités qui jouent à l'entretien (scripts de sorte « regle »)
+    //   Sève de vie       mes unités biologiques de la carte récupèrent 1 de résistance
+    //   Destin légendaire 1 point par planète légendaire possédée
+    //   Conclave secret   aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire en main
+    //   Signal            un marqueur de signal sur un système tiré au hasard
+    const bioBlessees = !aScript(u, "seve-de-vie") ? [] : Object.values(etat.composants).filter(c =>
+        !c.cache && c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio) === u && /^hex:\d+/.test(c.zone || "") &&
+        Number(c.marques?.degat) > 0 && aMotCle(c, "bio"));
+
+    const legendaires = aScript(u, "destin-legendaire")
+        ? planetes.filter(c => contenuPlanetes[c.ref.id]?.legendary).length
+        : 0;
+
+    const conclave = aScript(u, "conclave-secret") && [1, 4, 6, 8, 9, 10].includes(etat.tour);
+
+    const systemesPoses = !aScript(u, "signal") ? [] : [...index.parZone]
+        .filter(([zone, contenu]) => /^hex:\d{1,3}$/.test(zone) && contenu.some(c => c.ref?.type === "system"))
+        .map(([zone]) => zone);
+
+    const entretienHabilites = [
+        bioBlessees.length > 0 && `Sève de vie : ${bioBlessees.length} unité(s) soignée(s)`,
+        legendaires > 0 && `Destin légendaire : +${legendaires} point(s)`,
+        conclave && "Conclave secret : 1 objectif militaire",
+        systemesPoses.length > 0 && "Signal : 1 marqueur sur un système au hasard",
+    ].filter(Boolean);
     const agentsUses = index.parZone.get(base + ":agentsUses") || [];
 
     const techsUtilisees = Object.keys(etat.compteurs)
@@ -303,6 +334,16 @@ export function PlateauJoueur({ vu }) {
             influence && { type: "compteur", id: base + ":inf", delta: influence },
             ...agentsUses.map(c => ({ type: "deplacer", c: c.id, vers: base + ":agents" })),
             ...techsUtilisees.map(id => ({ type: "compteur", id, valeur: 0 })),
+            ...revenus.actions,
+            ...bioBlessees.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: Number(c.marques.degat) - 1 })),
+            ...actionsPoints(etat, u, legendaires),
+            conclave && { type: "piocher", de: "pioche:militaire", vers: base + ":main" },
+            systemesPoses.length > 0 && {
+                type: "creer",
+                ref: { type: "token", id: 859 },
+                zone: systemesPoses[Math.floor(Math.random() * systemesPoses.length)],
+                proprio: u,
+            },
             possedeNatale && { type: "creer", jeton: FAVEUR, zone: base + ":faveurs", proprio: u },
         ].filter(Boolean), commentaire);
     }
@@ -355,7 +396,9 @@ export function PlateauJoueur({ vu }) {
                             `+${ressources} ressources${vide.gain ? ` (dont ${vide.gain} : Exploitation du vide)` : ""}, +${influence} influence` +
                             bonusInfluence.map(([n, nom]) => ` (dont ${n} : ${nom})`).join("") + ", " +
                             `${agentsUses.length} agent(s), ${techsUtilisees.length} technologie(s)` +
-                            (possedeNatale ? ", +1 faveur" : "")}
+                            (possedeNatale ? ", +1 faveur" : "") +
+                            (revenus.resume ? ` — ${revenus.resume}` : "") +
+                            entretienHabilites.map(texte => ` — ${texte}`).join("")}
                     </BoutonRegle>
                 )}
 
