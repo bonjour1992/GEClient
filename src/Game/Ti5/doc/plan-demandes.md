@@ -344,5 +344,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Lot « faciles et moyens » (2026-11-11) : 34 scripts — 14 technologies, 5 habilités (réfugiés,
   rebelles), 9 unités, Mecatol Rex (spécial). Les éléments passés et les mécaniques manquantes :
   voir `implementabilite.md` (lignes « non »).
+- ☑ Mécaniques de combat (2026-11-11) : raid (combat « Raid », capture des infanteries), furtif au
+  combat terrestre, ciblage obligatoire, attaques en plus, annuler une touche, effets de destruction
+  (frégate du khan, Armageddon, Camp de travail, Myru Vos, Memoria D), Olivier Dubois, Stratégie
+  d'évitement, Prévision des combats. Détail : `combat.md`, « mécaniques d'unités ».
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

@@ -1026,6 +1026,23 @@ milices (amiral sur la Promesse 454), Générateur de tempête
 (`general:tempete:<case>`), Adaptation de la visée. `Deplacement.jsx` : marque
 `reliqueSpa` = +3 mouvement et furtif.
 
+Mécaniques de combat (11 novembre, nuit) : nouvelle sorte de combat `raid`
+(lieu `<case>p<k>r`, suffixe de marques `R`, `lireLieu`, `SORTES`, bouton
+« Raid » d'`Espace.jsx`, `Journal.jsx`) : les tireurs ont `#raid`, les cibles
+sont les infanteries, `attribution` les déplace dans les éléments actifs du
+raideur. `Combat.jsx` : `bombe` / `bombarde(v)` (effets des bombardements),
+`attaquesScripts` et `doubleAttaque` (nombre de dés), `prevision` (frappe en
+premier), `malus` (Palais du khan), `furtifDeNature` et `ciblageObligatoire`
+(engagements), `annuleurs` / `annuler` (un dé attribué sans dégât, 1
+ressource), `permis` (touches pirates), marque `degatPar` posée avec `degatDe`,
+`consequences` (Myru Vos, Armageddon, Camp de travail, données avec le butin),
+riposte du khan, Memoria D, `boutonsUnites` (Olivier Dubois, Stratégie
+d'évitement, esclave du raid, Duha Menaimon). Les marques de ces choix et jets
+sont effacées par « Terminer le combat ». Le « × » d'un engagement appelait le
+retrait des unités détruites (deux fonctions `retirer`) : renommé
+`retirerEngagement`. Règles des unités : `regle(...)` dans `scripts.js` (section
+« mécaniques de combat »).
+
 Cube noir d'un mercenaire (11 novembre, soir) : l'usure d'un mercenaire, c'est
 la place de son cube (`CUBE_MERCENAIRE`, `Interaction.jsx`). Posé sur la carte
 (`cubeDeMercenaire`), le mercenaire est disponible ; `actionsUserCarte` envoie

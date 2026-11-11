@@ -155,12 +155,12 @@ export function decrire(action, { search, jeu, nomDe }) {
 
                 const morceaux = String(action.id).split(":");
 
-                // Lieu : "41" spatial, "41c" canons, "41p0" terrestre, "41p0b" bombardement
-                const m = /^(\d+)(?:p(\d+))?([bc])?$/.exec(morceaux[1]);
+                // Lieu : "41" spatial, "41c" canons, "41p0" terrestre, "41p0b" bombardement, "41p0r" raid
+                const m = /^(\d+)(?:p(\d+))?([bcr])?$/.exec(morceaux[1]);
 
                 const lieu = !m ? "" : `, ${nomCase(m[1])}` +
                     (m[2] !== undefined ? `, planète ${Number(m[2]) + 1}` : "") +
-                    (m[3] === "b" ? " (bombardement)" : m[3] === "c" ? " (canons)" : "");
+                    (m[3] === "b" ? " (bombardement)" : m[3] === "c" ? " (canons)" : m[3] === "r" ? " (raid)" : "");
 
                 if (morceaux[2] === "etape") {
                     return ([

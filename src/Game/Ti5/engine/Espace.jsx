@@ -1698,6 +1698,12 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     "Ouvre un combat entre les unités de cette planète")}
                                                 {boutonCombat(`${numero}p${k}b`, "Bombardement",
                                                     "Les unités à bombardement de l'espace du système tirent sur cette planète")}
+                                                {/* Raid (#raid, Kabal de l'ombre) : une unité à raid est dans l'espace du système */}
+                                                {(combats.includes(`${numero}p${k}r`) || (index.parZone.get("hex:" + numero) || []).some(c =>
+                                                    c.ref?.type === "unit" && ([152, 153].includes(c.ref.id) ||
+                                                        /#raid\b/i.test(contenuEnCache(c.ref.id)?.habilite || "")))) &&
+                                                    boutonCombat(`${numero}p${k}r`, "Raid",
+                                                        "Après les bombardements : les unités à raid de l'espace du système tirent sur les infanteries de cette planète, et capturent celles qu'elles touchent")}
                                             </span>
                                         )}
 

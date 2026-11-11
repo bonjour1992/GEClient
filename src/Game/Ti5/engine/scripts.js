@@ -1634,35 +1634,110 @@ export const SCRIPTS = [
     // ---- unités ----
 
     action("destroyeur-double-attaque", "unit", 163, 1794339608720, "Destroyeur : deux attaques", "unite",
-        "Combat spatial : dépensez 1 influence, ce destroyeur effectue deux attaques au lieu d'une (la seconde : à lancer à la main).", {
+        "Combat spatial : dépensez 1 influence, ce destroyeur effectue deux attaques au lieu d'une ce tour (écran de combat : deux fois plus de dés).", {
             phase: "combat spatial",
             cout: { inf: 1 },
-            avis: "Destroyeur : lancez sa seconde attaque à la main.",
+            calcul: outils => (outils.c ? { actions: [{ type: "marquer", c: outils.c.id, marque: "deuxAttaques", valeur: outils.etat.tour }] } : {}),
             libelle: "Deux attaques (1 influence)",
         }),
 
-    action("jns-hylarim-annuler", "unit", 172, 1794335054831, "J.N.S. Hylarim : annuler une touche", "unite",
-        "Combat spatial : dépensez 1 ressource, une touche subie par une autre unité du système est annulée (à retirer à la main).", {
+    regle("jns-hylarim-annuler", "unit", 172, 1794335054831, "J.N.S. Hylarim : annuler une touche", "nouveau",
+        "Conflit, combat spatial : « Annuler 1 » sur une unité qui doit encaisser",
+        "Une autre de vos unités du système doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
+
+    regle("bouclier-mobile-annuler", "unit", 175, 1794335054831, "Bouclier mobile : annuler une touche", "nouveau",
+        "Conflit, combat terrestre : « Annuler 1 » sur une unité qui doit encaisser",
+        "Une autre de vos unités de la planète doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
+
+    regle("systeme-de-defense-annuler", "unit", 177, 1794341902859, "Système de défense : annuler une touche", "nouveau",
+        "Conflit, bombardement et raid : « Annuler 1 » sur une unité qui doit encaisser",
+        "Une autre de vos unités de la planète doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
+
+    // ---- mécaniques de combat (Combat.jsx) ----
+
+    regle("raid", "unit", 152, 1794049918190, "Raid", "nouveau",
+        "Fiche d'un système, à côté d'une planète : « Raid » ; conflit : combat « Raid »",
+        "Bombardement spécial (#raid) des unités de l'espace du système, après les bombardements : seules les infanteries sont des cibles (s'il y a d'autres unités militaires sur la planète, il faut cibler) ; chaque infanterie touchée est capturée et part dans les éléments actifs du raideur. Sans infanterie, une réussite capture un esclave de qui possède la planète. Les effets des bombardements s'appliquent.",
+        [153, 156]),
+
+    regle("salai-sai-corian", "unit", 148, 1794049918188, "Salai Sai Corian", "auto",
+        "Conflit, combat spatial",
+        "+1 au combat par vaisseau adverse que visent ses engagements."),
+
+    regle("complexe-de-guerre-destroyers", "unit", 164, 1794335054826, "Complexe de guerre : destroyers", "auto",
+        "Conflit, combat spatial",
+        "Vos destroyers ont +1 (non cumulable) dans le système d'un de vos complexes de guerre et dans les systèmes adjacents."),
+
+    regle("mech-aerien", "unit", 171, 1794335054830, "Mech aérien", "auto",
+        "Conflit, combat spatial",
+        "Depuis une planète du système, il tire au combat spatial (il n'en est pas une cible)."),
+
+    regle("vaisseau-pirate", "unit", 407, 1794049918205, "Vaisseau pirate", "auto",
+        "Conflit, combat spatial",
+        "Ses touches vont d'abord aux vaisseaux de commerce du camp visé ; furtif dans un système à anomalie."),
+
+    regle("epineux-geant", "unit", 466, 1794335055036, "Épineux géant", "auto",
+        "Conflit, bombardement",
+        "Au bombardement de sa planète, il attaque aussi les unités terrestres de la planète, avec sa valeur de combat."),
+
+    regle("duha-menaimon-attaques", "unit", 472, 1794049918214, "Duha Menaimon : attaques", "auto",
+        "Conflit, combat spatial",
+        "Autant d'attaques que votre niveau de connaissance génétique (aucune à 0)."),
+
+    regle("duha-menaimon-letani", "unit", 472, 1794049918214, "Duha Menaimon : Letani", "nouveau",
+        "Conflit, bombardement : « Duha Menaimon : jet »",
+        "Un dé : s'il fait au plus votre niveau de connaissance génétique, un Letani est posé sur la planète bombardée."),
+
+    regle("fregate-du-khan", "unit", 524, 1794049918223, "Frégate du khan", "nouveau",
+        "Conflit : « Riposte du khan » sur la frégate détruite",
+        "Son destructeur lance un dé : 6 ou moins (4 ou moins si l'unité qui l'a détruite a #fpre), il encaisse 1 dégât sur une de ses unités du combat. La frégate se retire ensuite."),
+
+    regle("palais-du-khan", "unit", 525, 1794049918224, "Palais du khan", "auto",
+        "Conflit : malus pour toucher",
+        "L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan du combat, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage."),
+
+    regle("myru-vos", "unit", 597, 1794339608757, "Myru Vos", "auto",
+        "Conflit : « Retirer » (butin)",
+        "Un vaisseau de commerce qu'il a détruit rapporte 2 commerce."),
+
+    regle("nekro-acidos", "unit", 600, 1794339608760, "Nekro Acidos", "auto",
+        "Conflit, combat terrestre",
+        "Autant d'attaques que votre niveau de connaissance militaire (aucune à 0)."),
+
+    regle("olivier-dubois", "unit", 745, 1794339608765, "Olivier Dubois", "nouveau",
+        "Conflit, combat terrestre : « Olivier Dubois : +2 aux infanteries cochées »",
+        "Jusqu'à votre capacité logistique de vos infanteries cochées ont +2 pour ce combat."),
+
+    regle("memoria-d", "unit", 769, 1794335055081, "Memoria D", "nouveau",
+        "Conflit : « Memoria D : jet » sur une de vos infanteries détruites",
+        "Un dé : 6 ou moins, l'infanterie est sauvée et posée à bord de votre Memoria D."),
+
+    regle("armageddon-capture", "unit", 850, 1794339608774, "Armageddon (destruction)", "auto",
+        "Conflit : « Retirer » (butin)",
+        "Celui qui le détruit prend le contrôle d'un Armageddon (#490), avec 1 de résistance restante."),
+
+    regle("lune-noire", "unit", 856, 1794335055092, "Lune noire", "auto",
+        "Conflit : engagements",
+        "Un engagement de groupe ne l'atteint jamais : elle doit être ciblée."),
+
+    regle("camp-de-travail-destruction", "unit", 154, 1794049918192, "Camp de travail (destruction)", "auto",
+        "Conflit : « Retirer » (butin)",
+        "Détruit, il libère 2 esclaves de son propriétaire (ceux du destructeur d'abord) : posés sur sa planète, sous le contrôle de leur propriétaire."),
+
+    effet("strategie-d-evitement", 788, 1794343421174, "Stratégie d'évitement", "nouveau",
+        "Conflit, combat spatial : « Stratégie d'évitement : vaisseaux cochés »",
+        "Au début du combat, vos vaisseaux militaires cochés ont −1 au combat ; un tireur dont le premier engagement ne vise qu'eux a −1."),
+
+    action("prevision-des-combats", "tech", 803, 1794343421177, "Prévision des combats", "systeme",
+        "Combat spatial : la technologie et un scientifique sont usés — votre flotte de ce système a la frappe en premier ce tour (écran de combat).", {
             phase: "combat spatial",
-            cout: { res: 1 },
-            avis: "J.N.S. Hylarim : retirez la touche annulée à la main.",
-            libelle: "Annuler une touche (1 ressource)",
-        }),
-
-    action("bouclier-mobile-annuler", "unit", 175, 1794335054831, "Bouclier mobile : annuler une touche", "unite",
-        "Combat terrestre : dépensez 1 ressource, une touche subie par une autre unité de la planète est annulée (à retirer à la main).", {
-            phase: "combat terrestre",
-            cout: { res: 1 },
-            avis: "Bouclier mobile : retirez la touche annulée à la main.",
-            libelle: "Annuler une touche (1 ressource)",
-        }),
-
-    action("systeme-de-defense-annuler", "unit", 177, 1794341902859, "Système de défense : annuler une touche", "unite",
-        "Bombardement : dépensez 1 ressource, une touche subie par une autre unité est annulée (à retirer à la main).", {
-            phase: "bombardement",
-            cout: { res: 1 },
-            avis: "Système de défense : retirez la touche annulée à la main.",
-            libelle: "Annuler une touche (1 ressource)",
+            use: true,
+            agent: SCIENTIFIQUE,
+            special: atelier => ({
+                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:prevision`, valeur: atelier.etat.tour * 1000 + atelier.numero + 1 }],
+                avis: "Prévision des combats : vos vaisseaux de ce système ont la frappe en premier ce tour (écran de combat).",
+            }),
+            libelle: "Prévision des combats : frappe en premier (use la technologie et un scientifique)",
         }),
 
     action("centre-d-expansion", "unit", 165, 1794335054827, "Centre d'expansion", "systeme",

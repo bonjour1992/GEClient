@@ -15,6 +15,7 @@ case du système et `k` une de ses planètes :
 | `41c` | canons spatiaux | unités qui ont `#can(a,n)`, dans le système ou un système voisin (portée 1), planètes comprises | les vaisseaux du système |
 | `41p0` | combat terrestre | unités militaires de la planète | les unités de la planète |
 | `41p0b` | bombardement | unités de l'espace du système qui ont `#bomb(a,n)` | les unités de la planète |
+| `41p0r` | raid | unités de l'espace du système qui ont `#raid(a,n)` (« 5\*\* ») | les infanteries de la planète (capturées) |
 
 Compteurs : `combat:<lieu>` (1 = en cours), `combat:<lieu>:etape`,
 `combat:<lieu>:pret:<u>`.
@@ -121,13 +122,49 @@ Engagement calculé, recalculé à chaque changement :
 - **défensifs** (`def`) : seulement les factions qui engagent les neutres,
   jamais leurs non-militaires.
 
+Un neutre défensif furtif (Rebelle) ne répond qu'aux factions qui le ciblent.
+
+## mécaniques d'unités (11 novembre)
+
+- **raid** (Kabal de l'ombre) : bouton « Raid » à côté d'une planète quand une
+  unité à raid est dans l'espace. Seules les infanteries sont des cibles ; s'il y
+  a d'autres unités militaires sur la planète, un engagement de groupe est
+  refusé : il faut cibler. Une infanterie touchée part dans les éléments actifs
+  du raideur (esclave). Sans infanterie, les raideurs tirent sans engager et une
+  réussite permet de capturer un esclave du possesseur (compteur
+  `combat:<lieu>:esclave`). Les effets des bombardements s'appliquent (Jeollr,
+  Système de visée, Bâtiment résistant ; Système de défense annule).
+- **furtif** : aussi au combat terrestre ; Vaisseau pirate furtif dans une
+  anomalie ; Lune noire (« doit être ciblée ») jamais atteinte par un groupe.
+- **attaques** : Destroyeur de la Volée argentée ×2 (marque `deuxAttaques` du
+  tour, posée par son bouton) ; Duha Menaimon et Nekro Acidos : niveau de
+  connaissance génétique / militaire (0 : pas d'attaque).
+- **bonus et malus** : Salai Sai Corian (+1 par vaisseau adverse visé), Complexe
+  de guerre (destroyers à 1 système ou moins, +1), Olivier Dubois (+2 aux
+  infanteries cochées, marque `dubois`), Stratégie d'évitement (vaisseaux cochés,
+  marque `evitement` : −1, et −1 pour qui ne vise qu'eux), Palais du khan (−1 par
+  frégate du khan pour qui l'engage, à la place du −2), Prévision des combats
+  (compteur `joueur:<u>:prevision` : frappe en premier).
+- **dégâts** : « Annuler 1 » (J.N.S. Hylarim, Bouclier mobile, Système de
+  défense : 1 ressource, le dé est attribué sans dégât) ; touches du Vaisseau
+  pirate d'abord aux vaisseaux de commerce ; marque `degatPar` (unité qui a
+  infligé le dernier dégât).
+- **destruction** : Frégate du khan (jet de riposte, marques `khan`,
+  `khanPris`, retrait bloqué avant), Armageddon (#490 créé pour le destructeur,
+  1 de résistance), Camp de travail (2 esclaves libérés), Myru Vos (+2 commerce),
+  Memoria D (jet de 6, infanterie posée à bord, marque `memoria`) ; Duha Menaimon
+  au bombardement (jet, Letani, marque `duha`) ; Épineux géant tire au
+  bombardement de sa planète ; Mech aérien tire au combat spatial depuis sa planète.
+
 ## ce que l'engine ne fait pas
 
 - vérifier l'ordre d'initiative des annonces ni la stabilité des engagements ;
 - choisir à la place d'un joueur quelle unité encaisse : c'est lui qui répartit ;
-- appliquer les malus autres que le −2 (nébuleuse, unités à malus) ni le
+- appliquer les malus autres que le −2 et ceux des scripts (nébuleuse) ni le
   blocage des canons et des bombardements : Ctrl + clic sur les dés ;
-- la portée des canons au-delà de 1, et la furtivité pour les neutres.
+- la portée des canons au-delà de 1 hors scripts ;
+- l'attaque « après toutes les autres » et la capture de la Troupe de
+  détournement (Pirate Mentak).
 
 ## choix faits sans réponse, à confirmer
 

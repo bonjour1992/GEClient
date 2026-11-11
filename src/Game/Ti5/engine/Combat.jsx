@@ -6,7 +6,7 @@ import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe } from "./effets";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
-import { MARQUEUR, ACTIVATION, actionsPiste } from "./miseEnPlace";
+import { MARQUEUR, ACTIVATION, actionsPiste, typeUnite } from "./miseEnPlace";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
@@ -45,19 +45,21 @@ import { Controles } from "./Controle";
 //   "41c"     canons spatiaux sur les vaisseaux du système
 //   "41p0"    combat terrestre sur la planète
 //   "41p0b"   bombardement de la planète
+//   "41p0r"   raid sur la planète (#raid : bombardement spécial qui capture les infanteries)
 //
 // Compteurs : combat:<lieu> (1 = en cours),
 //   combat:<lieu>:etape     0 engagements, 1 frappe en premier lancée, 2 tout lancé
 //   combat:<lieu>:pret:<u>  le joueur u est prêt
 export const cleCombat = lieu => "combat:" + lieu;
 
-const RE_LIEU = /^(\d+)(?:p(\d+))?([bc])?$/;
+const RE_LIEU = /^(\d+)(?:p(\d+))?([bcr])?$/;
 
 export const SORTES = {
     spatial: "Combat spatial",
     canons: "Canons spatiaux",
     terrestre: "Combat terrestre",
     bombardement: "Bombardement",
+    raid: "Raid",
 };
 
 // { numero, planete (ou null), sorte, zone des cibles }
@@ -77,7 +79,7 @@ export function lireLieu(lieu) {
         planete,
         sorte: planete === null
             ? (m[3] === "c" ? "canons" : "spatial")
-            : (m[3] === "b" ? "bombardement" : "terrestre"),
+            : (m[3] === "b" ? "bombardement" : (m[3] === "r" ? "raid" : "terrestre")),
         zone: planete === null ? "hex:" + numero : `hex:${numero}:planete:${planete}`,
     };
 }
@@ -105,7 +107,7 @@ export function aDesUnites(index, lieu, userId) {
         return false;
     }
 
-    const zones = l.sorte === "bombardement" ? [l.zone, "hex:" + l.numero] : [l.zone];
+    const zones = ["bombardement", "raid"].includes(l.sorte) ? [l.zone, "hex:" + l.numero] : [l.zone];
 
     return zones.some(zone => (index.parZone.get(zone) || [])
         .some(c => c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio) === userId));
@@ -137,7 +139,7 @@ const liste = valeur => String(valeur ?? "").split(",").filter(x => x !== "");
 // Marques d'un combat sur une unité. Chaque sorte de combat a les siennes
 // (engage, engageC, engageT, engageB...) : une unité peut être dans un
 // combat spatial et dans un bombardement sans que les deux se mélangent.
-const SUFFIXE = { spatial: "", canons: "C", terrestre: "T", bombardement: "B" };
+const SUFFIXE = { spatial: "", canons: "C", terrestre: "T", bombardement: "B", raid: "R" };
 
 // ajust, ajustN : bonus ou malus manuel à la valeur de combat et au nombre
 // d'attaques de l'unité, pour ce combat.
@@ -164,8 +166,8 @@ const PHASES_COMBAT = [
 ];
 
 // Libellés selon la sorte de combat
-const NOM_ATTAQUE = { spatial: "att.", terrestre: "att.", bombardement: "bomb.", canons: "canon" };
-const NOM_TIREURS = { spatial: "Tirent", terrestre: "Tirent", bombardement: "Bombardent", canons: "Canons" };
+const NOM_ATTAQUE = { spatial: "att.", terrestre: "att.", bombardement: "bomb.", canons: "canon", raid: "raid" };
+const NOM_TIREURS = { spatial: "Tirent", terrestre: "Tirent", bombardement: "Bombardent", canons: "Canons", raid: "Raid" };
 
 // D'où tire une unité à distance : « case 12 », « case 12, planète 1 »
 const nomLieu = zone => {
@@ -259,10 +261,16 @@ export function Combat() {
 
 function CombatSysteme({ lieu }) {
 
-    const { etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser } = useEngine();
+    const {
+        etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser,
+        connaissance, capaciteLogistique,
+    } = useEngine();
 
     // zone : celle des cibles (espace du système, ou planète)
     const { numero, planete, sorte, zone } = lireLieu(lieu);
+
+    // Bombardement ou raid (un raid subit les effets qui touchent les bombardements)
+    const bombe = sorte === "bombardement" || sorte === "raid";
 
     // Compteurs de ce combat
     const COMBAT = cleCombat(lieu);
@@ -297,8 +305,17 @@ function CombatSysteme({ lieu }) {
 
     const aDistance = [];
 
-    if (sorte === "bombardement") {
+    if (bombe) {
         aDistance.push(...unitesDe("hex:" + numero));
+    }
+
+    // Mech aérien : depuis une planète du système, il attaque au combat spatial
+    if (sorte === "spatial" && aScript(moi, "mech-aerien")) {
+        for (const z of index.parZone.keys()) {
+            if (z.startsWith(`hex:${numero}:planete:`)) {
+                aDistance.push(...unitesDe(z).filter(c => c.ref.id === 171));
+            }
+        }
     }
 
     if (sorte === "canons") {
@@ -314,6 +331,9 @@ function CombatSysteme({ lieu }) {
 
     const unites = [...new Map([...unitesDe(zone), ...aDistance].map(c => [c.id, c])).values()];
     const contenus = useElements(unites.map(c => c.ref.id));
+
+    // Armageddon (#850) détruit : son destructeur prend le contrôle d'un Armageddon (#490)
+    const armageddon = useElement(unites.some(c => c.ref.id === 850) ? 490 : -1);
 
     // Fiches des factions des joueurs : une unité qui n'est pas sur la fiche
     // de son joueur (mercenaire, relique, spéciale) a un liseré doré
@@ -375,17 +395,23 @@ function CombatSysteme({ lieu }) {
 
             if (sorte === "spatial" || sorte === "terrestre") {
                 cible = ici && (sorte === "terrestre" || mots.includes("ship"));
-                tire = cible && militaire;
+                // (Mech aérien : il tire depuis sa planète sans être une cible du combat spatial)
+                tire = (cible || (sorte === "spatial" && c.ref.id === 171)) && militaire;
                 [att, nb] = [u.combat, u.combat_touche];
             } else {
-                const tir = sorte === "bombardement" ? capacite(u, "bomb") : canonDe(c);
+                // Raid (#raid) : bombardement spécial ; Épineux géant : au bombardement de sa
+                // planète, il attaque aussi les unités terrestres, avec sa valeur de combat
+                const epineux = sorte === "bombardement" && ici && c.ref.id === 466 && aScript(moi, "epineux-geant");
+                const tir = epineux ? [u.combat, u.combat_touche]
+                    : (sorte === "bombardement" ? capacite(u, "bomb") : (sorte === "raid" ? capacite(u, "raid") : canonDe(c)));
 
                 // Un canon spatial ne tire que s'il a été choisi (marque « canon » : un
                 // amiral est usé, un marqueur d'activation posé dessus) ; ceux des
                 // neutres tirent d'office, à portée 1
                 tire = !!tir && (sorte !== "canons" ||
                     (campDe(c) === NEUTRE ? distanceDe(c) <= 1 : !!c.marques?.canon));
-                cible = ici && (sorte === "bombardement" || mots.includes("ship"));
+                // (raid : seules les infanteries sont des cibles)
+                cible = ici && (sorte === "bombardement" || (sorte === "raid" ? typeUnite(u) === "inf" : mots.includes("ship")));
                 [att, nb] = tir || [0, 1];
             }
 
@@ -470,10 +496,14 @@ function CombatSysteme({ lieu }) {
             ];
         }
 
+        // (un défensif furtif — Rebelle — ne répond qu'à ceux qui le ciblent)
         if (mots.includes("def")) {
+            const furtif = (sorte === "spatial" || sorte === "terrestre") && furtifDeNature(v);
+
             return campsJoueurs
-                .filter(u => vaisseaux.some(x => x.camp === u && lireEngagement(x.c).some(e =>
-                    e === "n" || e === "N" || (e.startsWith("@") && parId[e.slice(1)]?.camp === NEUTRE))))
+                .filter(u => vaisseaux.some(x => x.camp === u && lireEngagement(x.c).some(e => (furtif
+                    ? e === "@" + v.id
+                    : e === "n" || e === "N" || (e.startsWith("@") && parId[e.slice(1)]?.camp === NEUTRE)))))
                 .map(u => "j" + u);
         }
 
@@ -518,6 +548,13 @@ function CombatSysteme({ lieu }) {
         const militaires = code === "N" ? "n" : (code[0] === "J" ? "j" + code.slice(1) : null);
         const campVise = code === "N" ? NEUTRE : Number(code.slice(1));
 
+        // Raid : des unités militaires autres que des infanteries défendent la planète — il faut cibler
+        if (sorte === "raid" && !code.startsWith("@") && unitesDe(zone).some(c => campDe(c) === campVise &&
+            (contenus[c.ref.id]?.mot_cle || []).includes("mil") && typeUnite(contenus[c.ref.id]) !== "inf")) {
+            signaler("Raid : des unités militaires autres que des infanteries défendent la planète — il faut cibler les infanteries une à une.");
+            return;
+        }
+
         // Une faction sans vaisseau militaire : ses non-militaires s'engagent directement
         const aDesMilitaires = vaisseaux.some(x => x.camp === campVise && x.cible && x.militaire);
         const actions = [];
@@ -545,7 +582,8 @@ function CombatSysteme({ lieu }) {
         jouer(actions);
     }
 
-    function retirer(v, code) {
+    // (nom distinct de « retirer », le retrait des unités détruites)
+    function retirerEngagement(v, code) {
 
         // Sans ses militaires, plus d'engagement de ses non-militaires
         const lies = code === "n" ? ["N"] : (code[0] === "j" ? ["J" + code.slice(1)] : []);
@@ -576,7 +614,20 @@ function CombatSysteme({ lieu }) {
     const ajustN = v => Number(v.c.marques?.[M.ajustN]) || 0;
 
     const attaque = v => v.att;
-    const nombreDes = v => Math.max(1, v.nb + ajustN(v));
+
+    // Nombre d'attaques fixé par une unité (sinon null) : Duha Menaimon au combat spatial
+    // (niveau de connaissance génétique), Nekro Acidos au combat terrestre (militaire)
+    const attaquesScripts = v => (v.camp === NEUTRE ? null
+        : (v.c.ref?.id === 472 && sorte === "spatial" && aScript(v.camp, "duha-menaimon-attaques") ? connaissance(v.camp, "gen")
+            : (v.c.ref?.id === 600 && sorte === "terrestre" && aScript(v.camp, "nekro-acidos") ? connaissance(v.camp, "mil") : null)));
+
+    // Destroyeur de la Volée argentée : 1 influence dépensée ce tour (marque « deuxAttaques »),
+    // deux attaques au lieu d'une
+    const doubleAttaque = v => sorte === "spatial" && Number(v.c.marques?.deuxAttaques) === etat.tour;
+
+    // (0 attaque fixée par une unité : elle ne tire pas)
+    const nombreDes = v => (attaquesScripts(v) === 0 ? 0
+        : Math.max(1, (attaquesScripts(v) ?? v.nb) * (doubleAttaque(v) ? 2 : 1) + ajustN(v)));
 
     const ajuster = (v, marque, delta) => jouer({
         type: "marquer",
@@ -596,22 +647,37 @@ function CombatSysteme({ lieu }) {
     const aSaute = v => sorte === "spatial" && Number(v.c.marques?.saut) === etat.tour &&
         v.camp !== NEUTRE && aScript(v.camp, "strategie-de-saut");
 
-    // (scripts : Avantage aérien pour les infanteries au combat terrestre, Stratégie de saut)
-    const aFrappePreventive = v => aCapacite(v, "fpre") || aSaute(v) ||
+    // Script Prévision des combats : la flotte du joueur dans ce système a la frappe en premier
+    // ce tour (compteur joueur:<u>:prevision = tour × 1000 + case + 1)
+    const prevision = v => sorte === "spatial" && v.camp !== NEUTRE && (v.u.mot_cle || []).includes("ship") &&
+        Number(etat.compteurs[`joueur:${v.camp}:prevision`]) === etat.tour * 1000 + numero + 1;
+
+    // (scripts : Avantage aérien pour les infanteries au combat terrestre, Stratégie de saut,
+    // Prévision des combats)
+    const aFrappePreventive = v => aCapacite(v, "fpre") || aSaute(v) || prevision(v) ||
         (sorte === "terrestre" && v.u.type === "inf" && v.camp !== NEUTRE && aScript(v.camp, "avantage-aerien"));
 
     // Cible spécifique : -2 pour toucher, sauf capacité de précision
     // (script Stratégie dominante de la cible : -2 de plus)
+    // Palais du khan : l'engager (ciblé ou dans un groupe) coûte −1 par frégate du khan du
+    // combat, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage
     const malus = v => {
-        const cible = engagement(v).find(e => e.startsWith("@"));
+        const codes = engagement(v);
+        const cible = codes.find(e => e.startsWith("@"));
+        const precis = aCapacite(v, "prec");
 
-        if (!cible || aCapacite(v, "prec")) {
-            return 0;
+        const fregates = vaisseaux.filter(x => x.c.ref?.id === 524 && x.cible).length;
+        const palais = fregates > 0 && aScript(moi, "palais-du-khan") &&
+            codes.some(code => ciblesDe(code).some(x => x.c.ref?.id === 525));
+        const visePalais = palais ? (precis ? Math.ceil(fregates / 2) : fregates) : 0;
+
+        if (!cible || precis || parId[cible.slice(1)]?.c.ref?.id === 525) {
+            return visePalais;
         }
 
         const camp = parId[cible.slice(1)]?.camp;
 
-        return 2 + (camp && aScript(camp, "strategie-dominante") ? 2 : 0);
+        return visePalais + 2 + (camp && aScript(camp, "strategie-dominante") ? 2 : 0);
     };
 
     // --------------------------------------------------------
@@ -661,6 +727,30 @@ function CombatSysteme({ lieu }) {
     // Rang d'une unité parmi celles de son camp qui tirent (Sharsiss : les N premières)
     const rangDansCamp = v => vaisseaux.filter(x => x.camp === v.camp && x.tire).findIndex(x => x.id === v.id);
 
+    // Salai Sai Corian : vaisseaux adverses que visent ses engagements
+    const salai = v => new Set(engagement(v).flatMap(code => ciblesDe(code))
+        .filter(x => x.camp !== v.camp && estVaisseau(x)).map(x => x.id)).size;
+
+    // Complexe de guerre d'un camp dans ce système ou un système adjacent
+    const complexeProche = camp => Object.values(etat.composants).some(c => {
+        const m = /^hex:(\d+)/.exec(c.zone || "");
+        return !!m && c.ref?.type === "unit" && c.ref.id === 164 && campDe(c) === camp && distanceCases(numero, Number(m[1])) <= 1;
+    });
+
+    // Choix faits sur l'écran de ce combat, pour ce tour (Olivier Dubois, Stratégie d'évitement)
+    const CE_COMBAT = `${lieu}:${etat.tour}`;
+    const evitant = x => x.c.marques?.evitement === CE_COMBAT;
+
+    // Stratégie d'évitement : le premier engagement du tireur ne vise que des vaisseaux « évitants »
+    const viseEvitement = v => {
+        const code = engagement(v)[0];
+        const cibles = code ? ciblesDe(code) : [];
+        return cibles.length > 0 && cibles.every(evitant);
+    };
+
+    // Tireur d'un bombardement ou d'un raid (pas l'Épineux géant, qui tire depuis la planète)
+    const bombarde = v => bombe && v.c.zone !== zone;
+
     function bonusScripts(v) {
 
         if (!v.tire) {
@@ -690,6 +780,16 @@ function CombatSysteme({ lieu }) {
                 Number(etat.compteurs[`joueur:${v.camp}:expansion`]) === etat.tour * 1000 + numero + 1 && [1, "Centre d'expansion"],
             // Vaisseau relique : un fragment militaire dépensé ce tour, +3
             sorte === "spatial" && v.c.ref?.id === 854 && Number(v.c.marques?.reliqueMil) === etat.tour && [3, "Vaisseau relique"],
+            // Salai Sai Corian : +1 par vaisseau adverse engagé
+            sorte === "spatial" && v.c.ref?.id === 148 && aScript(moi, "salai-sai-corian") && salai(v) > 0 && [salai(v), "Salai Sai Corian"],
+            // Complexe de guerre : destroyers de ce système ou d'un système adjacent, +1 (non cumulable)
+            sorte === "spatial" && v.u.type === "dest" && v.camp !== NEUTRE && aScript(v.camp, "complexe-de-guerre-destroyers") &&
+                complexeProche(v.camp) && [1, "Complexe de guerre"],
+            // Olivier Dubois : infanteries choisies sur l'écran du combat, +2
+            sorte === "terrestre" && v.c.marques?.dubois === CE_COMBAT && [2, "Olivier Dubois"],
+            // Stratégie d'évitement : vaisseaux choisis, −1 ; qui ne vise qu'eux, −1
+            sorte === "spatial" && evitant(v) && [-1, "Stratégie d'évitement"],
+            sorte === "spatial" && viseEvitement(v) && [-1, "Stratégie d'évitement (cible)"],
             // Habilités des neutres : Armer les rebelles (+1 aux Rebelles ce tour), Entraîner les milices (+2 aux Milices)
             v.c.ref?.id === 557 && Number(etat.compteurs["general:armer-rebelles"]) === etat.tour && [1, "Armer les rebelles"],
             v.c.ref?.id === 835 && milicesEntrainees && [2, "Entraîner les milices"],
@@ -705,14 +805,14 @@ function CombatSysteme({ lieu }) {
             sorte === "spatial" && v.camp !== NEUTRE &&
                 Number(etat.compteurs[`joueur:${v.camp}:mirik`]) === numero + 1 && [1, "Mirik Aun Sissiri"],
             // Règles de planètes : Jeollr (bombardements −2), Loki (−1 contre qui possède la planète)
-            sorte === "bombardement" && idPlanete === 59 && aScript(v.camp, "jeollr") && [-2, "Jeollr"],
+            bombarde(v) && idPlanete === 59 && aScript(v.camp, "jeollr") && [-2, "Jeollr"],
             idPlanete === 62 && possesseur !== null && campVise(v) === possesseur && aScript(v.camp, "loki") && [-1, "Loki"],
             // Habilité Tempête spatiale : canons et combats ont −1
             // (Adaptation de la visée : le malus de la tempête est ignoré)
             aScript(v.camp, "tempete-spatiale") && !a("adaptation-de-la-visee") && [-1, "Tempête spatiale"],
-            (sorte === "canons" || sorte === "bombardement") && a("systeme-de-visee") && [1, "Système de visée"],
+            (sorte === "canons" || bombarde(v)) && a("systeme-de-visee") && [1, "Système de visée"],
             sorte === "canons" && campVise(v) && aScript(campVise(v), "bouclier-deflecteur") && [-1, "Bouclier déflecteur"],
-            sorte === "bombardement" && possesseur && possesseur !== v.camp && aScript(possesseur, "batiment-resistant") && [
+            bombarde(v) && possesseur && possesseur !== v.camp && aScript(possesseur, "batiment-resistant") && [
                 unitesDe(zone).some(c => campDe(c) === possesseur && contenuDe(c)?.mot_cle?.includes("struc")) ? -2 : -1,
                 "Bâtiment résistant",
             ],
@@ -720,7 +820,7 @@ function CombatSysteme({ lieu }) {
     }
 
     // Script Bombe bactériologique : au bombardement, les dégâts de ce tireur sont verts
-    const degatsVerts = v => sorte === "bombardement" && v.camp !== NEUTRE && aScript(v.camp, "bombe-bacteriologique");
+    const degatsVerts = v => sorte === "bombardement" && bombarde(v) && v.camp !== NEUTRE && aScript(v.camp, "bombe-bacteriologique");
 
     // Le dé touche s'il fait le seuil ou moins
     const seuil = v => attaque(v) - malus(v) + ajust(v) + bonusScripts(v).reduce((s, [n]) => s + n, 0);
@@ -744,6 +844,54 @@ function CombatSysteme({ lieu }) {
     //   non militaire détruite.
     // -> { camp, texte, actions } ou null
     // --------------------------------------------------------
+
+    // Esclaves d'un joueur : infanteries d'un autre camp dans ses éléments actifs
+    const esclavesDe = u => (index.parZone.get(`joueur:${u}:actif`) || []).filter(x => !x.cache && x.ref?.type === "unit" &&
+        campDe(x) !== u && typeUnite(contenuEnCache(x.ref.id)) === "inf");
+
+    // Conséquences d'une destruction, données avec le butin (pas de pillage nécessaire) :
+    //   Myru Vos : un vaisseau de commerce qu'il détruit (marque « degatPar ») rapporte 2 commerce ;
+    //   Armageddon (#850) : son destructeur prend le contrôle d'un Armageddon (#490), 1 de résistance restante ;
+    //   Camp de travail : 2 esclaves de son propriétaire sont libérés sur sa planète (ceux du destructeur d'abord).
+    // -> { actions, gains }
+    function consequences(v, camp) {
+
+        const actions = [];
+        const gains = [];
+        const mots = v.u.mot_cle || [];
+
+        if (mots.includes("ship") && mots.includes("com") && etat.composants[v.c.marques?.degatPar]?.ref?.id === 597 &&
+            aScript(camp, "myru-vos")) {
+            actions.push({ type: "compteur", id: `joueur:${camp}:commerce`, delta: 2 });
+            gains.push("2 commerce (Myru Vos)");
+        }
+
+        if (v.c.ref?.id === 850 && aScript(camp, "armageddon-capture")) {
+            const local = "t" + (String(v.id).replace(/\D/g, "").slice(-11) || "1");
+            const resistance = Number(armageddon?.PV) || 1;
+
+            actions.push({ type: "creer", ref: { type: "unit", id: 490 }, zone: v.c.zone, proprio: camp, idLocal: local });
+
+            if (resistance > 1) {
+                actions.push({ type: "marquer", c: local, marque: "degat", valeur: resistance - 1 });
+            }
+
+            gains.push("il prend le contrôle de l'Armageddon (1 de résistance restante)");
+        }
+
+        if (v.c.ref?.id === 154 && v.camp !== NEUTRE && aScript(v.camp, "camp-de-travail-destruction")) {
+            const liberes = esclavesDe(v.camp)
+                .sort((a, b) => (campDe(b) === camp) - (campDe(a) === camp))
+                .slice(0, 2);
+
+            actions.push(...liberes.map(x => ({ type: "deplacer", c: x.id, vers: v.c.zone })));
+            gains.push(liberes.length
+                ? `${liberes.length} esclave(s) libéré(s) sur la planète, sous le contrôle de leur propriétaire`
+                : "aucun esclave à libérer");
+        }
+
+        return { actions, gains };
+    }
 
     function butinDe(v) {
 
@@ -809,6 +957,10 @@ function CombatSysteme({ lieu }) {
             gains.push(`1 infiltration${v.camp !== NEUTRE ? " envers " + nomCamp(v.camp) : ""}`);
         }
 
+        const suites = consequences(v, camp);
+        actions.push(...suites.actions);
+        gains.push(...suites.gains);
+
         return gains.length
             ? { camp, actions: actions.filter(Boolean), texte: `${nomUnite} détruit(e) par ${nomCamp(camp)} : ${gains.join(", ")}` }
             : null;
@@ -850,8 +1002,29 @@ function CombatSysteme({ lieu }) {
     const medecine = v => v.camp === moi && (v.u.mot_cle || []).includes("bio") && aScript(moi, "medecine");
     const jetMedecine = v => Number(v.c.marques?.medecine) || 0;
 
+    // Frégate du khan détruite : un dé pour son destructeur — 6 ou moins (4 si l'unité qui l'a
+    // détruite a #fpre) = 1 dégât qu'il répartit sur ses unités du combat. Marques de la
+    // frégate : « khan » (le jet), « khanPris » (le dégât encaissé). Retirée ensuite.
+    const estFregateKhan = v => v.c.ref?.id === 524 && aScript(moi, "fregate-du-khan");
+    const tueurKhan = v => parId[v.c.marques?.degatPar];
+    const seuilKhan = v => (tueurKhan(v) && aCapacite(tueurKhan(v), "fpre") ? 4 : 6);
+    const jetKhan = v => Number(v.c.marques?.khan) || 0;
+    const riposteDue = v => estFregateKhan(v) && estDetruit(v) && jetKhan(v) > 0 && jetKhan(v) <= seuilKhan(v) && !v.c.marques?.khanPris;
+    const khanEnAttente = v => estFregateKhan(v) && estDetruit(v) && ![null, NEUTRE].includes(auteurDesDegats(v.c)) &&
+        (!jetKhan(v) || riposteDue(v));
+    const ripostesKhan = camp => vaisseaux.filter(v => riposteDue(v) && auteurDesDegats(v.c) === camp);
+
+    // Memoria D : une de mes infanteries détruites est sauvée sur un jet de 6 ou moins
+    // (marque « memoria ») — elle est posée à bord de mon Memoria D
+    const memoriaD = Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "unit" && c.ref.id === 769 &&
+        campDe(c) === moi && /^hex:\d+/.test(c.zone || ""));
+    const sauvableMemoria = v => v.camp === moi && !!memoriaD && typeUnite(v.u) === "inf" && aScript(moi, "memoria-d");
+    const jetMemoria = v => Number(v.c.marques?.memoria) || 0;
+    const sauveeMemoria = v => sauvableMemoria(v) && jetMemoria(v) > 0 && jetMemoria(v) <= 6;
+
     // Unités détruites à retirer du jeu (bouton « Retirer tous les détruits »)
-    const aRetirer = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes"));
+    // (pas une frégate du khan dont la riposte n'est pas faite)
+    const aRetirer = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes") && !khanEnAttente(v));
 
     // --------------------------------------------------------
     // DÉGÂTS À ENCAISSER
@@ -868,8 +1041,17 @@ function CombatSysteme({ lieu }) {
     // Unités visées par un engagement
     // Furtif (#furtif, script Camouflage) : tant qu'elle n'a engagé personne,
     // l'unité ne peut qu'être ciblée — un engagement de faction ne l'atteint pas
-    const estFurtif = x => sorte === "spatial" && x.cible && engagement(x).length === 0 &&
-        (aCapacite(x, "furtif") || (x.camp !== NEUTRE && aScript(x.camp, "camouflage")));
+    // (aussi au combat terrestre : Rebelle ; Vaisseau pirate : furtif dans une anomalie)
+    const furtifDeNature = x => aCapacite(x, "furtif") ||
+        (sorte === "spatial" && x.camp !== NEUTRE && aScript(x.camp, "camouflage")) ||
+        (sorte === "spatial" && x.c.ref?.id === 407 && aScript(moi, "vaisseau-pirate") &&
+            !!systeme?.anomaly && !/^hpl/.test(systeme.anomaly));
+
+    const estFurtif = x => (sorte === "spatial" || sorte === "terrestre") && x.cible && engagement(x).length === 0 &&
+        furtifDeNature(x);
+
+    // Lune noire : elle doit être ciblée pour être engagée (même après avoir engagé)
+    const ciblageObligatoire = x => /doit être ciblée/i.test(x.u.habilite || "") && aScript(moi, "lune-noire");
 
     const ciblesDe = code => {
 
@@ -880,7 +1062,7 @@ function CombatSysteme({ lieu }) {
         const militaire = code === "n" || code[0] === "j";
         const camp = code === "n" || code === "N" ? NEUTRE : Number(code.slice(1));
 
-        return vaisseaux.filter(x => x.cible && x.camp === camp && x.militaire === militaire && !estFurtif(x));
+        return vaisseaux.filter(x => x.cible && x.camp === camp && x.militaire === militaire && !estFurtif(x) && !ciblageObligatoire(x));
     };
 
     const cibleActuelle = v => engagement(v).find(code => ciblesDe(code).some(debout)) ?? null;
@@ -917,8 +1099,19 @@ function CombatSysteme({ lieu }) {
     }
 
     // Dégâts que cette unité peut encaisser : ceux qui la ciblent, puis ceux de son groupe
+    // Vaisseau pirate : ses touches sur un camp vont d'abord à ses vaisseaux de commerce
+    const estCommerce = x => estVaisseau(x) && (x.u.mot_cle || []).includes("com");
+    const dePirate = d => d.v.c.ref?.id === 407 && aScript(moi, "vaisseau-pirate");
+    const permis = (x, d) => !(dePirate(d) && !estCommerce(x) &&
+        vaisseaux.some(y => y.camp === x.camp && y.cible && debout(y) && estCommerce(y)));
+
     const aEncaisser = x => (x.cible && debout(x)
-        ? [...(enAttente["@" + x.id] || []), ...(enAttente[codeCamp(x.camp, x.militaire)] || [])]
+        ? [
+            ...(enAttente["@" + x.id] || []),
+            ...(enAttente[codeCamp(x.camp, x.militaire)] || []),
+            // (un vaisseau de commerce prend aussi les touches pirates destinées à l'autre groupe de son camp)
+            ...(estCommerce(x) ? (enAttente[codeCamp(x.camp, !x.militaire)] || []).filter(dePirate) : []),
+        ].filter(d => permis(x, d))
         : []);
 
     // Résistance qu'il reste à une unité (sans résistance : elle encaisse tout)
@@ -935,13 +1128,29 @@ function CombatSysteme({ lieu }) {
         const parTireur = new Map();
         const parCible = new Map();
 
-        // Paternité des dégâts : camp du dernier tireur, par unité touchée
+        // Paternité des dégâts : camp et unité du dernier tireur, par unité touchée
         const auteurs = new Map();
+        const tueurs = new Map();
 
         for (const { x, v, k } of couples) {
             parTireur.set(v.id, [...(parTireur.get(v.id) || lireIndices(v.c, M.desA)), k]);
             parCible.set(x.id, (parCible.get(x.id) || 0) + 1);
             auteurs.set(x.id, v.camp);
+            tueurs.set(x.id, v.id);
+        }
+
+        const desAttribues = [...parTireur].map(([id, indices]) => ({
+            ...marquer(id, M.desA, indices),
+            si: parId[id].c.marques?.[M.desA] ?? 0,
+        }));
+
+        // Raid : chaque infanterie touchée est capturée — elle part dans les éléments actifs du
+        // raideur (un esclave), sans dégât
+        if (sorte === "raid" && [...auteurs.values()].every(camp => camp !== NEUTRE)) {
+            return [
+                ...desAttribues,
+                ...[...auteurs].map(([id, camp]) => ({ type: "deplacer", c: id, vers: `joueur:${camp}:actif` })),
+            ];
         }
 
         // Script Bombe bactériologique : une infanterie biologique détruite par un
@@ -953,12 +1162,11 @@ function CombatSysteme({ lieu }) {
 
         return [
             ...epidemie,
-            ...[...parTireur].map(([id, indices]) => ({
-                ...marquer(id, M.desA, indices),
-                si: parId[id].c.marques?.[M.desA] ?? 0,
-            })),
-            // (noté avant le dégât lui-même : le pillage lit qui a détruit l'unité)
+            ...desAttribues,
+            // (noté avant le dégât lui-même : le pillage lit qui a détruit l'unité ; « degatPar » :
+            // l'unité qui a tiré — Myru Vos, frégate du khan)
             ...[...auteurs].map(([id, camp]) => ({ type: "marquer", c: id, marque: "degatDe", valeur: "c" + camp })),
+            ...[...tueurs].map(([id, tireur]) => ({ type: "marquer", c: id, marque: "degatPar", valeur: tireur })),
             ...[...parCible].map(([id, n]) => {
                 const degat = Number(parId[id].c.marques?.degat) || 0;
                 return { type: "marquer", c: id, marque: "degat", valeur: degat + n, si: degat };
@@ -973,6 +1181,27 @@ function CombatSysteme({ lieu }) {
 
         if (du) {
             jouer(attribution([{ x, ...du }]));
+        }
+    }
+
+    // Annuler une touche : J.N.S. Hylarim (combat spatial), Bouclier mobile (combat terrestre),
+    // Système de défense (bombardement, raid) — une autre de mes unités de ce lieu, encore debout ;
+    // 1 ressource, le dégât est attribué sans être subi
+    const annuleurs = x => unites.filter(c => campDe(c) === moi && c.id !== x.id && c.zone === zone &&
+        (Number(c.marques?.degat) || 0) < (Number(contenus[c.ref.id]?.PV) || 1) && (
+        (sorte === "spatial" && c.ref.id === 172 && aScript(moi, "jns-hylarim-annuler")) ||
+        (sorte === "terrestre" && c.ref.id === 175 && aScript(moi, "bouclier-mobile-annuler")) ||
+        (bombe && c.ref.id === 177 && aScript(moi, "systeme-de-defense-annuler"))));
+
+    function annuler(x, commentaire) {
+
+        const [du] = aEncaisser(x);
+
+        if (du) {
+            envoyer([
+                { ...marquer(du.v.id, M.desA, [...lireIndices(du.v.c, M.desA), du.k]), si: du.v.c.marques?.[M.desA] ?? 0 },
+                { type: "compteur", id: `joueur:${moi}:res`, delta: -1 },
+            ], commentaire);
         }
     }
 
@@ -1029,8 +1258,12 @@ function CombatSysteme({ lieu }) {
 
     // Ceux qui tirent : les militaires engagés et pas détruits, de toutes
     // les factions et des neutres
+    // (raid sur une planète sans infanterie : les raideurs tirent sans engagement — une
+    // réussite capture un esclave du possesseur de la planète)
+    const sansInfanterie = sorte === "raid" && !vaisseaux.some(v => v.cible);
+
     const tireurs = vaisseaux.filter(v =>
-        v.tire && attaque(v) > 0 && engagement(v).length > 0 && !estDetruit(v));
+        v.tire && attaque(v) > 0 && nombreDes(v) > 0 && (engagement(v).length > 0 || sansInfanterie) && !estDetruit(v));
 
     const preventifs = tireurs.filter(aFrappePreventive);
     const autres = tireurs.filter(v => !aFrappePreventive(v));
@@ -1165,11 +1398,16 @@ function CombatSysteme({ lieu }) {
             ...effacer([M.engage, M.des, M.desF, M.desA, M.ajust, M.ajustN]),
             ...remiseEtape,
             ...(gain ? cochees.map(u => ({ type: "compteur", id: `joueur:${u}:res`, delta: epaves })) : []),
-            // Compteurs des scripts de ce combat (Écoles militaires, Récupération)
+            // Compteurs des scripts de ce combat (Écoles militaires, Récupération, esclave du raid)
             ...Object.keys(etat.compteurs)
-                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup|perdus|merc\d+):\d+$|:detruits$/.test(id) && etat.compteurs[id])
+                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup|perdus|merc\d+):\d+$|:(detruits|esclave)$/.test(id) && etat.compteurs[id])
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
             ...unites.filter(c => c.marques?.canon).map(c => ({ type: "marquer", c: c.id, marque: "canon", valeur: null })),
+            // Marques des choix et des jets de ce combat (Olivier Dubois, Stratégie d'évitement,
+            // frégate du khan, Memoria D, Duha Menaimon)
+            ...unites.flatMap(c => ["dubois", "evitement", "khan", "khanPris", "memoria", "duha"]
+                .filter(m => c.marques?.[m] !== undefined)
+                .map(m => ({ type: "marquer", c: c.id, marque: m, valeur: null }))),
             // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
             { type: "compteur", id: COMBAT, valeur: 2 },
         ], commentaire + (gain ? ` — Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}` : ""));
@@ -1334,6 +1572,105 @@ function CombatSysteme({ lieu }) {
     ].filter(Boolean);
 
     // --------------------------------------------------------
+    // BOUTONS D'UNITÉS ET DE TECHNOLOGIES (scripts.js)
+    //
+    //   Olivier Dubois (combat terrestre) : +2 à mes infanteries cochées, au plus ma
+    //     capacité logistique (marque « dubois » = <lieu>:<tour>)
+    //   Stratégie d'évitement (combat spatial, au début) : mes vaisseaux cochés (marque
+    //     « evitement »), −1 au combat et −1 pour qui ne vise qu'eux
+    //   Raid sans infanterie : une réussite capture un esclave du possesseur de la planète
+    //     (compteur combat:<lieu>:esclave)
+    //   Duha Menaimon (bombardement) : un dé, au plus mon niveau de connaissance génétique —
+    //     un Letani est posé sur la planète (marque « duha » : le jet, puis « pose »)
+    // --------------------------------------------------------
+
+    const cochees = maSelection.map(id => parId[id]).filter(Boolean);
+    const remplacerMarque = (marque, choisis) => [
+        ...vaisseaux.filter(v => v.camp === moi && v.c.marques?.[marque] === CE_COMBAT && !choisis.includes(v))
+            .map(v => ({ type: "marquer", c: v.id, marque, valeur: null })),
+        ...choisis.map(v => ({ type: "marquer", c: v.id, marque, valeur: CE_COMBAT })),
+    ];
+
+    const infCochees = cochees.filter(v => typeUnite(v.u) === "inf");
+    const clog = capaciteLogistique(moi);
+
+    const ESCLAVE = COMBAT + ":esclave";
+    const reussitesRaid = sansInfanterie
+        ? vaisseaux.filter(v => v.camp === moi).reduce((n, v) => n + touchesLibres(v).length, 0)
+        : 0;
+    const esclavePris = possesseur && possesseur !== moi ? esclavesDe(possesseur)[0] : null;
+
+    const duha = sorte === "bombardement" && aScript(moi, "duha-menaimon-letani")
+        ? unitesDe("hex:" + numero).find(c => c.ref.id === 472 && campDe(c) === moi) : null;
+    const jetDuha = duha ? Number(duha.marques?.duha) || 0 : 0;
+    const niveauGen = connaissance(moi, "gen");
+
+    const boutonsUnites = !joueur ? [] : [
+
+        jeCombats && sorte === "terrestre" && aScript(moi, "olivier-dubois") && dansLeSysteme(moi).some(c => c.ref?.id === 745) && {
+            action: "olivier-dubois",
+            nom: `Olivier Dubois : +2 au combat pour ${infCochees.length} infanterie(s) cochée(s)`,
+            libelle: `Olivier Dubois : +2 aux infanteries cochées (au plus ${clog})`,
+            titre: "Combat terrestre : jusqu'à votre capacité logistique de vos infanteries cochées ont +2 pour ce combat (un nouveau choix remplace le précédent)",
+            obstacles: [
+                etape > 0 && "le combat a déjà commencé",
+                !infCochees.length && "cochez d'abord vos infanteries",
+                infCochees.length > clog && `au plus ${clog} infanteries (votre capacité logistique)`,
+            ],
+            faire: commentaire => envoyer(remplacerMarque("dubois", infCochees), commentaire),
+        },
+
+        jeCombats && sorte === "spatial" && aScript(moi, "strategie-d-evitement") && {
+            action: "strategie-d-evitement",
+            nom: `Stratégie d'évitement : ${cochees.length} vaisseau(x) coché(s)`,
+            libelle: "Stratégie d'évitement : vaisseaux cochés",
+            titre: "Début du combat spatial : vos vaisseaux militaires cochés ont −1 au combat, et −1 pour être touchés (le tireur dont le premier engagement ne vise qu'eux a −1). Un nouveau choix remplace le précédent.",
+            obstacles: [
+                etape > 0 && "le combat a déjà commencé",
+                !cochees.length && "cochez d'abord vos vaisseaux militaires",
+            ],
+            faire: commentaire => envoyer(remplacerMarque("evitement", cochees), commentaire),
+        },
+
+        sansInfanterie && reussitesRaid > 0 && !etat.compteurs[ESCLAVE] && {
+            action: "raid-esclave",
+            nom: `Raid : capturer un esclave de ${possesseur ? nomDe(possesseur) : "personne"}`,
+            libelle: "Raid : capturer un esclave",
+            titre: "Raid sur une planète sans infanterie : au moins une réussite, un esclave de qui possède la planète passe dans vos éléments actifs",
+            obstacles: [
+                !possesseur && "personne ne possède cette planète",
+                possesseur === moi && "vous possédez cette planète",
+                possesseur && possesseur !== moi && !esclavePris && `${nomDe(possesseur)} n'a pas d'esclave`,
+            ],
+            faire: commentaire => envoyer([
+                esclavePris && { type: "deplacer", c: esclavePris.id, vers: `joueur:${moi}:actif` },
+                { type: "compteur", id: ESCLAVE, valeur: 1 },
+            ].filter(Boolean), commentaire),
+        },
+
+        duha && !jetDuha && duha.marques?.duha === undefined && {
+            action: "duha-menaimon-jet",
+            nom: `Duha Menaimon : jet (au plus ${niveauGen}, votre connaissance génétique)`,
+            libelle: `Duha Menaimon : jet (au plus ${niveauGen})`,
+            titre: "Bombardement : un dé ; s'il fait au plus votre niveau de connaissance génétique, un Letani est posé sur la planète",
+            obstacles: [niveauGen === 0 && "aucun niveau de connaissance génétique : le jet ne peut pas réussir"],
+            faire: commentaire => envoyer([{ type: "des", n: 1, faces: FACES, c: duha.id, marque: "duha" }], commentaire),
+        },
+
+        duha && jetDuha > 0 && jetDuha <= niveauGen && {
+            action: "duha-menaimon-letani",
+            nom: "Duha Menaimon : poser un Letani sur la planète",
+            libelle: `Duha Menaimon (${jetDuha}) : poser un Letani`,
+            titre: "Le jet a réussi : un Letani est posé sur la planète bombardée",
+            obstacles: [],
+            faire: commentaire => envoyer([
+                { type: "creer", ref: { type: "unit", id: 423 }, zone, proprio: moi },
+                { type: "marquer", c: duha.id, marque: "duha", valeur: "pose" },
+            ], commentaire),
+        },
+    ].filter(Boolean);
+
+    // --------------------------------------------------------
     // UNE LIGNE DE VAISSEAU
     // --------------------------------------------------------
 
@@ -1393,9 +1730,9 @@ function CombatSysteme({ lieu }) {
                     </span>
 
                     <span style={{ fontSize: 12, color: "#444" }}>
-                        {v.tire && attaque(v) > 0
+                        {v.tire && attaque(v) > 0 && nombreDes(v) > 0
                             ? `${NOM_ATTAQUE[sorte]} ${attaque(v)}${nombreDes(v) > 1 ? " ×" + nombreDes(v) : ""}`
-                            : "sans attaque"}
+                            : (v.tire && attaque(v) > 0 ? "aucune attaque (niveau de connaissance à 0)" : "sans attaque")}
                         {" · "}rés. {blindage
                             ? <b data-resistance-modifiee title={`Blindage en duranium : ${resistance - blindage} + ${blindage}`} style={{ color: "#1b5e20" }}>{resistance} (+{blindage})</b>
                             : resistance}
@@ -1484,7 +1821,82 @@ function CombatSysteme({ lieu }) {
                         </button>
                     )}
 
-                    {joueur && detruit && !indestructible && !(medecine(v) && jetMedecine(v) > 0 && jetMedecine(v) <= 5) && (
+                    {/* Memoria D : une de mes infanteries détruites, sauvée sur un jet de 6 ou moins */}
+                    {joueur && detruit && sauvableMemoria(v) && !jetMemoria(v) && (
+                        <button
+                            type="button"
+                            data-action="memoria-jet"
+                            style={styleBouton}
+                            onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: "memoria" }], "Memoria D : jet de sauvetage")}
+                        >
+                            Memoria D : jet (6 ou moins)
+                        </button>
+                    )}
+
+                    {joueur && detruit && sauvableMemoria(v) && jetMemoria(v) > 0 && (
+                        <b style={{ color: sauveeMemoria(v) ? "#1b5e20" : "#b71c1c" }}>Memoria D : {jetMemoria(v)}</b>
+                    )}
+
+                    {joueur && detruit && sauveeMemoria(v) && (
+                        <button
+                            type="button"
+                            data-action="memoria-sauver"
+                            style={styleBouton}
+                            onClick={() => envoyer([
+                                { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+                                { type: "marquer", c: v.id, marque: "memoria", valeur: null },
+                                { type: "deplacer", c: v.id, sur: memoriaD.id },
+                            ], `Memoria D : ${v.nom} sauvée, posée à bord`)}
+                        >
+                            Poser sur Memoria D
+                        </button>
+                    )}
+
+                    {/* Frégate du khan détruite : son destructeur lance la riposte */}
+                    {detruit && khanEnAttente(v) && !jetKhan(v) && (joueur && auteurDesDegats(v.c) === moi
+                        ? (
+                            <button
+                                type="button"
+                                data-action="riposte-khan-jet"
+                                style={styleBouton}
+                                onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: "khan" }],
+                                    `Frégate du khan : riposte contre ${nomDe(moi)}`)}
+                            >
+                                Riposte du khan : jet ({seuilKhan(v)} ou moins)
+                            </button>
+                        )
+                        : <i style={{ fontSize: 12 }}>riposte du khan à lancer par {nomCamp(auteurDesDegats(v.c))}</i>)}
+
+                    {estFregateKhan(v) && detruit && jetKhan(v) > 0 && (
+                        <b data-riposte-khan={jetKhan(v)} style={{ color: jetKhan(v) <= seuilKhan(v) ? "#b71c1c" : "#1b5e20" }}>
+                            Riposte du khan : {jetKhan(v)}{jetKhan(v) <= seuilKhan(v)
+                                ? (v.c.marques?.khanPris ? " (encaissée)" : ` — 1 dégât pour ${nomCamp(auteurDesDegats(v.c))}`)
+                                : " (manquée)"}
+                        </b>
+                    )}
+
+                    {joueur && aMoi && v.cible && !detruit && ripostesKhan(moi).length > 0 && (
+                        <button
+                            type="button"
+                            data-action="riposte-khan-encaisser"
+                            title="Cette unité prend le dégât de la riposte d'une frégate du khan"
+                            onClick={() => {
+                                const fregate = ripostesKhan(moi)[0];
+
+                                envoyer([
+                                    { type: "marquer", c: v.id, marque: "degatDe", valeur: "c" + fregate.camp },
+                                    { type: "marquer", c: v.id, marque: "degat", valeur: degat + 1, si: degat },
+                                    { type: "marquer", c: fregate.id, marque: "khanPris", valeur: 1 },
+                                ], `Riposte du khan : ${v.nom} encaisse 1 dégât`);
+                            }}
+                            style={{ ...styleBouton, backgroundColor: "#6a1b9a", color: "#fff", fontWeight: "bold" }}
+                        >
+                            ✹ Riposte du khan
+                        </button>
+                    )}
+
+                    {joueur && detruit && !indestructible && !khanEnAttente(v) && !sauveeMemoria(v) &&
+                        !(medecine(v) && jetMedecine(v) > 0 && jetMedecine(v) <= 5) && (
                         <button
                             type="button"
                             style={styleBouton}
@@ -1518,6 +1930,20 @@ function CombatSysteme({ lieu }) {
                         >
                             ✹ Encaisser 1 (sur {aEncaisser(v).length})
                         </button>
+                    )}
+
+                    {/* J.N.S. Hylarim, Bouclier mobile, Système de défense : annuler une touche */}
+                    {joueur && aMoi && aEncaisser(v).length > 0 && annuleurs(v).length > 0 && (
+                        <BoutonRegle
+                            data-action="annuler-touche"
+                            nom={`Annuler une touche sur ${v.nom} (${nomElement(search, annuleurs(v)[0].ref)}, 1 ressource)`}
+                            obstacles={[(Number(etat.compteurs[`joueur:${moi}:res`]) || 0) < 1 && "vous n'avez pas de ressource"]}
+                            faire={commentaire => annuler(v, commentaire)}
+                            title={`${nomElement(search, annuleurs(v)[0].ref)} : 1 ressource, un des dégâts qui visent cette unité est annulé`}
+                            style={styleBouton}
+                        >
+                            Annuler 1 (1 ressource)
+                        </BoutonRegle>
                     )}
                 </div>
 
@@ -1553,7 +1979,7 @@ function CombatSysteme({ lieu }) {
                                             type="button"
                                             title="Ne plus engager"
                                             style={{ ...styleBouton, padding: "0 3px" }}
-                                            onClick={() => retirer(v, code)}
+                                            onClick={() => retirerEngagement(v, code)}
                                         >
                                             ×
                                         </button>
@@ -1562,7 +1988,7 @@ function CombatSysteme({ lieu }) {
                             </span>
                         ))}
 
-                        {malus(v) > 0 && <span style={{ color: "#a15c00" }}>(−2 pour toucher)</span>}
+                        {malus(v) > 0 && <span data-malus-visee={malus(v)} style={{ color: "#a15c00" }}>(−{malus(v)} pour toucher)</span>}
                     </div>
                 )}
 
@@ -1792,6 +2218,24 @@ function CombatSysteme({ lieu }) {
                             </BoutonRegle>
                         ))}
 
+                        {/* Unités et technologies : Olivier Dubois, Stratégie d'évitement, raid, Duha Menaimon */}
+                        {boutonsUnites.map(b => (
+                            <BoutonRegle
+                                key={b.action}
+                                data-action={b.action}
+                                nom={b.nom}
+                                obstacles={b.obstacles}
+                                faire={b.faire}
+                                title={b.titre}
+                            >
+                                {b.libelle}
+                            </BoutonRegle>
+                        ))}
+
+                        {/* Duha Menaimon : jet manqué, ou Letani posé */}
+                        {duha && jetDuha > niveauGen && <b data-jet-duha={jetDuha} style={{ color: "#b71c1c" }}>Duha Menaimon : {jetDuha} (manqué)</b>}
+                        {duha && duha.marques?.duha === "pose" && <b style={{ color: "#1b5e20" }}>Duha Menaimon : Letani posé</b>}
+
                         {/* Script Récupération : une case par joueur qui a la technologie */}
                         <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                             {recuperateurs.map(u => (
@@ -1826,6 +2270,16 @@ function CombatSysteme({ lieu }) {
                 sur ses unités visées ; le surplus passe à l'engagement suivant du tireur. Les neutres
                 encaissent d'office. Le dégât rouge d'un dé se glisse toujours à la main sur une unité.
             </div>
+
+            {/* Raid : bombardement spécial (#raid) */}
+            {sorte === "raid" && (
+                <div data-raid style={{ fontSize: 13, marginBottom: 6, padding: "4px 8px", border: "1px solid #6a1b9a", borderRadius: 6 }}>
+                    <b>Raid</b> (après les bombardements) : seules les infanteries sont des cibles, et chaque
+                    infanterie touchée est capturée — elle part dans les éléments actifs du raideur (un esclave).
+                    S'il y a sur la planète des unités militaires qui ne sont pas des infanteries, il faut cibler.
+                    {sansInfanterie && " Aucune infanterie : les raideurs tirent sans engager ; une réussite capture un esclave de qui possède la planète."}
+                </div>
+            )}
 
             {vaisseaux.length === 0 && (
                 <i style={{ color: "#666" }}>Aucune unité dans ce combat.</i>
