@@ -23,8 +23,9 @@ import {
 //      système, rangées par planète : on les glisse sur le vaisseau qui
 //      les embarque (c'est fait tout de suite, comme sur la carte). Les
 //      vaisseaux sont rangés par agent
-//      (amiral : militaires et transports ; négociant : commerce ;
-//      logisticien : civils ; scientifique : scientifiques) et en
+//      (amiral : militaires ; négociant : commerce ; logisticien :
+//      civils ; scientifique : scientifiques ; transports : amiral ou
+//      logisticien, au choix du joueur) et en
 //      flottes de 3 : un vaisseau seul coûte un agent, une flotte
 //      deux. Les agents sont utilisés, ou dépensés si le système de
 //      départ est déjà activé ;
@@ -67,11 +68,18 @@ const AGENTS = {
     scientifique: { nom: "scientifique", pluriel: "scientifiques", motif: "scientifique" },
 };
 
-function agentDe(contenu) {
+// Un transport (sans « mil ») est déplacé par un amiral ou un logisticien : transport
+const estTransport = contenu => (contenu?.mot_cle || []).includes("trans") && !(contenu?.mot_cle || []).includes("mil");
+
+function agentDe(contenu, transport = "amiral") {
 
     const mots = contenu?.mot_cle || [];
 
-    return mots.includes("mil") || mots.includes("trans") ? "amiral"
+    if (estTransport(contenu)) {
+        return transport;
+    }
+
+    return mots.includes("mil") ? "amiral"
         : (mots.includes("com") ? "negociant"
             : (mots.includes("science") ? "scientifique"
                 : (mots.includes("civ") ? "logisticien" : "amiral")));
@@ -119,6 +127,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const [choisis, setChoisis] = useState([]);     // vaisseaux qui partent
     const [trajet, setTrajet] = useState([]);       // cases traversées, après le départ
     const [gravite, setGravite] = useState(false);  // script Moteur à gravité : +1 mouvement
+    const [transport, setTransport] = useState("amiral"); // agent des transports : amiral ou logisticien
 
     const actif = joueur && ouvert && (enPhase || depart !== null);
 
@@ -201,7 +210,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
 
     const besoins = Object.keys(AGENTS)
         .map(cle => {
-            const n = selection.filter(c => agentDe(contenus[c.ref.id]) === cle).length;
+            const n = selection.filter(c => agentDe(contenus[c.ref.id], transport) === cle).length;
             return { cle, ...AGENTS[cle], n, cout: coutEnAgents(n), dispo: disponibles(AGENTS[cle].motif) };
         })
         .filter(b => b.n > 0);
@@ -318,6 +327,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         setChoisis([]);
         setTrajet([]);
         setGravite(false);
+        setTransport("amiral");
         setMode(nouveauDepart === null ? null : "trajet");
     }
 
@@ -559,7 +569,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                                 <span
                                     key={v.id}
                                     data-vaisseau={v.id}
-                                    title={`${nom(v)} : mouvement ${Number(contenus[v.ref.id]?.move) || 0}, ${AGENTS[agentDe(contenus[v.ref.id])].nom}`}
+                                    title={`${nom(v)} : mouvement ${Number(contenus[v.ref.id]?.move) || 0}, ${estTransport(contenus[v.ref.id]) ? "amiral ou logisticien" : AGENTS[agentDe(contenus[v.ref.id])].nom}`}
                                     style={{
                                         display: "inline-flex",
                                         alignItems: "center",
@@ -598,6 +608,16 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                     )}
 
                     {/* AGENTS */}
+                    {/* Transports choisis : déplacés par un amiral ou par un logisticien */}
+                    {selection.some(v => estTransport(contenus[v.ref.id])) && (
+                        <label data-agent-transport>
+                            <b>Transports déplacés par</b>{" "}
+                            <select value={transport} onChange={e => setTransport(e.target.value)} style={{ fontSize: 12 }}>
+                                <option value="amiral">un amiral</option>
+                                <option value="logisticien">un logisticien</option>
+                            </select>
+                        </label>
+                    )}
                     {besoins.length > 0 && (
                         <div data-besoins-agents>
                             <b>Agents {depuisActive ? "dépensés (■)" : "utilisés (□)"} :</b>{" "}

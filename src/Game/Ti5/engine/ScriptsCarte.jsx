@@ -1,5 +1,5 @@
 import { useEngine, BoutonRegle, nomElement, distanceCases, agentDisponible } from "./Interaction";
-import { chargerContenu, useElement } from "./sync";
+import { chargerContenu, useElement, useElements } from "./sync";
 import { normaliserPlateau } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
@@ -12,7 +12,9 @@ import { BoutonsScripts } from "./ActionsScript";
 //
 // Les scripts de sorte « bouton » (scripts.js) rattachés à la
 // carte ajoutent chacun un bouton à sa fiche ; de même le script
-// d'effet Réparation improvisée, sur la fiche d'un de mes vaisseaux.
+// d'effet Réparation improvisée, sur la fiche d'un de mes vaisseaux,
+// et « Réparer » sur la fiche d'une de mes unités endommagées d'un
+// système où j'ai une unité à réparation illimitée (Dock).
 // ============================================================
 
 export function ScriptsCarte({ c, fermer }) {
@@ -31,6 +33,10 @@ export function ScriptsCarte({ c, fermer }) {
                 : null)),
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && aScript(moi, "reparation-improvisee") &&
             <ReparationImprovisee key="reparation-improvisee" c={c} fermer={fermer} />,
+        // Réparation illimitée (#rep, Dock) : une de mes unités endommagées de la carte
+        c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && /^hex:\d+/.test(c.zone || "") &&
+            Number(c.marques?.degat) > 0 &&
+            <ReparationIllimitee key="reparation-illimitee" c={c} fermer={fermer} />,
         // Livraison commerciale : une de mes unités de la carte dont le texte porte #livr(n)
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi &&
             <LivraisonCommerciale key="livraison-commerciale" c={c} fermer={fermer} />,
@@ -91,6 +97,64 @@ function ReparationImprovisee({ c, fermer }) {
             title="Réparation improvisée : use un logisticien et répare ce vaisseau, 1 ressource par dégât (le vaisseau ne doit pas être bloqué)"
         >
             Réparation improvisée ({degat} ressource{degat > 1 ? "s" : ""}, use un logisticien)
+        </BoutonRegle>
+    );
+}
+
+// ------------------------------------------------------------
+// RÉPARATION ILLIMITÉE (fiche d'une de mes unités endommagées)
+//
+// Une de mes unités du système porte #rep sans nombre (Dock ; « #Rep 2 »,
+// réparation limitée, ne compte pas) : l'unité est réparée, 1 ressource par
+// dégât, à la phase de production (rouge gris sinon). Pas d'agent. Une unité
+// biologique ne se répare pas.
+// ------------------------------------------------------------
+
+const REPARATION_ILLIMITEE = /#rep\b(?!\s*\(?\s*\d)/i;
+
+function ReparationIllimitee({ c, fermer }) {
+
+    const { etat, envoyer, moi, search } = useEngine();
+
+    const numero = /^hex:(\d+)/.exec(c.zone || "")?.[1];
+    const zoneEspace = "hex:" + numero;
+
+    // Mes unités du système (espace, planètes, embarquées)
+    const duSysteme = Object.values(etat.composants).filter(x =>
+        !x.cache && x.ref?.type === "unit" && (x.marques?.possession ?? x.proprio) === moi &&
+        (x.zone === zoneEspace || x.zone?.startsWith(zoneEspace + ":")));
+
+    const contenus = useElements([...new Set([c.ref.id, ...duSysteme.map(x => x.ref.id)])]);
+
+    const reparatrice = duSysteme.find(x => REPARATION_ILLIMITEE.test(contenus[x.ref.id]?.habilite || ""));
+    const degat = Number(c.marques?.degat) || 0;
+
+    if (!reparatrice || !degat || contenus[c.ref.id]?.mot_cle?.includes("bio")) {
+        return null;
+    }
+
+    const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
+    const nomReparatrice = nomElement(search, reparatrice.ref);
+
+    return (
+        <BoutonRegle
+            data-action="reparation-illimitee"
+            nom={`Réparer : ${nomElement(search, c.ref)} (${degat} dégât${degat > 1 ? "s" : ""}, ${nomReparatrice})`}
+            obstacles={[
+                !/production/i.test(etat.phase) && "ce n'est pas la phase de production",
+                ressources < degat && `ressources insuffisantes : ${degat} à payer, vous en avez ${ressources}`,
+            ]}
+            faire={commentaire => {
+                envoyer([
+                    { type: "compteur", id: `joueur:${moi}:res`, delta: -degat },
+                    // (si : refusé si les dégâts ont changé entre-temps)
+                    { type: "marquer", c: c.id, marque: "degat", valeur: 0, si: degat },
+                ], commentaire);
+                fermer?.();
+            }}
+            title={`Réparation illimitée (${nomReparatrice} dans le système) : à la phase de production, 1 ressource par dégât`}
+        >
+            Réparer ({degat} ressource{degat > 1 ? "s" : ""})
         </BoutonRegle>
     );
 }

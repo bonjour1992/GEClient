@@ -1002,6 +1002,14 @@ vaisseau capturé va dans les éléments actifs. Mirik Aun Sissiri : compteur
 `joueur:<u>:mirik` = case + 1, posé depuis la fiche du système à la phase de
 mandat et effacé en revenant à cette phase (`changerPhase`).
 
+Réparation illimitée et transports (11 novembre) : `ReparationIllimitee`
+(`ScriptsCarte.jsx`) ajoute « Réparer » à la fiche d'une de mes unités
+endommagées (non bio) quand une de mes unités du même système porte `#rep`
+sans nombre (`REPARATION_ILLIMITEE`) ; 1 ressource par dégât, rouge gris hors
+production. Déplacement assisté (`Deplacement.jsx`) : un vaisseau `trans` sans
+`mil` (`estTransport`) est compté avec l'agent choisi dans « Transports
+déplacés par » (état `transport`, amiral par défaut, remis à zéro avec le départ).
+
 Cube noir d'un mercenaire (11 novembre, soir) : l'usure d'un mercenaire, c'est
 la place de son cube (`CUBE_MERCENAIRE`, `Interaction.jsx`). Posé sur la carte
 (`cubeDeMercenaire`), le mercenaire est disponible ; `actionsUserCarte` envoie

@@ -339,5 +339,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Cube des mercenaires (2026-11-11) : un mercenaire utilisé envoie son cube noir dans les agents
   usés ; sans cube sur sa carte il n'est plus utilisable ; l'entretien rend les cubes aux cartes.
   Ahk Ravin : donnée modifiée (`demandes-ti5/migrate-ahk-ravin.mjs`), fenêtre à la fouille.
+- ☑ Correctifs (2026-11-11) : Dock (réparation illimitée) — « Réparer » sur la fiche de chaque unité
+  endommagée du système en production ; transporteurs déplacés par un amiral ou un logisticien, au choix.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
