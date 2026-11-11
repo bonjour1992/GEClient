@@ -1298,6 +1298,19 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const enRevendication = /revendication/i.test(etat.phase);
 
+    // Abandonner une planète ou une station que je possède : sa carte quitte mes
+    // éléments actifs (mon drapeau disparaît de la carte : il en découle) ; sur une
+    // station, mes agents posés dessus reviennent, usés, dans mes agents.
+    const mesAgentsSur = k => (index.parZone.get(zonePlanete(k)) || []).filter(c =>
+        !c.cache && c.ref?.type === "agent" && !c.sur && (c.proprio === moi || !(c.proprio > 0)));
+
+    function abandonner(carte, k, planete, commentaire) {
+        envoyer([
+            { type: "supprimer", c: carte.id },
+            ...(planete?.type === "sat" ? mesAgentsSur(k).map(c => ({ type: "deplacer", c: c.id, vers: uses })) : []),
+        ], commentaire);
+    }
+
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
 
     // Script Manipulation mentale : use un diplomate, pose une de mes infanteries
@@ -1508,6 +1521,21 @@ function FicheSysteme({ numero, id, fermer }) {
                                             : <i>Sans propriétaire</i>}
 
                                         {activee && <b style={{ color: "#555" }}>■ Planète activée</b>}
+
+                                        {/* Abandonner ce que je possède (phase de revendication) */}
+                                        {joueur && aMoi && carte && (
+                                            <BoutonRegle
+                                                data-action="abandonner-planete"
+                                                nom={`Abandonner ${nomPlanete(planete)}`}
+                                                obstacles={[!enRevendication && "ce n'est pas la phase de revendication"]}
+                                                faire={commentaire => abandonner(carte, k, planete, commentaire)}
+                                                title={"Retire votre drapeau : la carte quitte vos éléments actifs" +
+                                                    (planete?.type === "sat" ? " et votre agent posé sur la station revient, usé, dans vos agents" : "")}
+                                            >
+                                                Abandonner
+                                                {planete?.type === "sat" && mesAgentsSur(k).length > 0 ? " (récupère votre agent, usé)" : ""}
+                                            </BoutonRegle>
+                                        )}
 
                                         {/* Toujours utilisables ; rouge gris si la condition manque */}
                                         {joueur && !aMoi && planete?.type === "sat" && (

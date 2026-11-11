@@ -297,5 +297,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   l'agent présent est rendu au possesseur précédent ; Canon ancien (#27) et Canon restauré
   (#30), seules stations sans type, sont devenus des stations militaires (données,
   `demandes-ti5/migrate-canons-stations.mjs`).
+- ☑ Complément : bouton « Abandonner » (phase de revendication) — retire le drapeau, la carte
+  quitte les éléments actifs, l'agent d'une station revient dans les agents usés.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

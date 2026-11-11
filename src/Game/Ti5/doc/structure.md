@@ -586,7 +586,9 @@ non militaire) ; le demandeur peut passer outre (rouge gris) ou renoncer.
 ### semi-blocages et drapeau
 
 « Prendre possession », « Revendiquer » : rouge gris hors de la phase de
-revendication. Ouvrir un combat : rouge gris sans unité dans le système.
+revendication. « Abandonner » (même règle), sur ce que je possède : la carte
+quitte mes éléments actifs (`supprimer` : hors jeu — le drapeau en découle) et,
+sur une station, mes agents posés dessus reviennent dans mes agents usés. Ouvrir un combat : rouge gris sans unité dans le système.
 « Mobiliser » : planètes seulement (`type` `pla`), pas les stations. Le
 drapeau — une planète ou une station du système que je possède — compte comme
 une unité pour rechercher, fouiller, revendiquer, prendre une station et
