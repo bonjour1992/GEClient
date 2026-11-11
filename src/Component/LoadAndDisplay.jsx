@@ -11,11 +11,19 @@ export function LoadAndDisplay({ link, style, displayeur, context }) {
     const handler = link?.type ? getHandler(jeu, link.type) : null
     const classe = handler?.classe
 
-    // Le hook est toujours créé
-    const [elem, setElem] = useState(() => classe ? new classe() : null)
+    // Le hook est toujours créé.
+    // Le contenu est gardé avec le type d'élément auquel il appartient : quand
+    // le lien change de type (sélecteur qui passe d'une relique à une feuille de
+    // technologie...), le contenu précédent reste là jusqu'à la fin du chargement,
+    // et ne doit pas être donné à l'affichage du nouveau type.
+    const [charge, setCharge] = useState(() => ({ type: link?.type, elem: classe ? new classe() : null }))
+
+    const elem = charge.type === link?.type ? charge.elem : null
 
     useEffect(() => {
         let cancelled = false;
+
+        const setElem = contenu => setCharge({ type: link?.type, elem: contenu })
 
         async function charger() {
             if (!handler || !classe) {

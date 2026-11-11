@@ -29,7 +29,7 @@ class TechSheet extends aggregation(ElementContent, TypeLienCarac) {
 
 function techPoint(content) {
 
-    return content.unlocked.reduce((res, e) => e ? res + 2 : res, 0)
+    return (content?.unlocked || []).reduce((res, e) => e ? res + 2 : res, 0)
 }
 
 function Display({ content, explication, style = {} }) {
@@ -37,7 +37,7 @@ function Display({ content, explication, style = {} }) {
     function TechDisplayeur({ i, style }) {
         return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: 155, ...style }}>
             {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
-                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
+                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked?.[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
         </div>)
     }
 
@@ -134,7 +134,7 @@ function SmallDisplay({ content, explication, style = {} }) {
     function TechDisplayeur({ i, style }) {
         return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: 143, ...style }}>
             {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
-                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
+                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked?.[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
         </div>)
     }
 
