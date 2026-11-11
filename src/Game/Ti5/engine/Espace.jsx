@@ -1742,6 +1742,11 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     !enProduction && "ce n'est pas la phase de production",
                                                     activee && "elle est déjà activée",
                                                     !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+                                                    // (règle de l'Anneau monde : sa production est celle de l'amiral posé dessus)
+                                                    lien.id === 45 && aScript(moi, "anneau-monde-amiral") &&
+                                                        !(index.parZone.get(zonePlanete(k)) || []).some(c => c.ref?.type === "agent" &&
+                                                            /amiral/i.test(search.find(e => e.id === c.ref.id)?.name || "")) &&
+                                                        "il faut un amiral posé sur l'Anneau monde",
                                                 ]}
                                                 faire={commentaire => produireAvec(k, lien.id, planete, commentaire)}
                                                 title="Use un logisticien, pose un marqueur d'activation et ouvre une production : glissez ensuite les unités depuis votre réserve"

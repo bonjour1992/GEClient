@@ -103,7 +103,7 @@ function RechercheDuTour({ base }) {
 
     // Recherche générée par une source : typée si son script le dit (SR-42 : spatiale)
     const genere = l => {
-        const typee = rechercheDeSource(l.element);
+        const typee = rechercheDeSource(l.element, l.sorte);
         const total = (typee || []).reduce((s, [, n]) => s + n, 0);
         const fois = total ? l.n / total : 0;
 
@@ -167,7 +167,7 @@ function RechercheDuTour({ base }) {
                                 {(contenus[l.element]?.techSpe || []).length > 0 && ` spé ${contenus[l.element].techSpe.join(", ")}`}
                             </>)}
 
-                            {l.sorte === "g" && (<>
+                            {(l.sorte === "g" || l.sorte === "a") && (<>
                                 {nom(l)} génère <Text text={genere(l)} style={styleMacro} />
                             </>)}
 
@@ -184,7 +184,7 @@ function RechercheDuTour({ base }) {
                             </>)}
 
                             {/* Recherche gagnée : la quantité se corrige ici */}
-                            {joueur && (l.sorte === "p" || l.sorte === "g") && (
+                            {joueur && (l.sorte === "p" || l.sorte === "g" || l.sorte === "a") && (
                                 <span style={{ marginLeft: 6 }}>
                                     <button type="button" title="Un point de moins" style={styleMini} onClick={() => ajuster(l, -1)}>−</button>{" "}
                                     <button type="button" title="Un point de plus" style={styleMini} onClick={() => ajuster(l, 1)}>+</button>{" "}

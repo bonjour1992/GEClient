@@ -22,8 +22,8 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Technologies | 93 | 60 | 0 | 33 | 19 | 19 | 28 |
 | Habilités | 46 | 11 | 1 | 34 | 4 | 5 | 4 |
 | Unités | 104 | 46 | 58 | 0 | 9 | 13 | 17 |
-| Planètes | 29 | 11 | 6 | 12 | 7 | 8 | 3 |
-| **Total** | **272** | **128** | **65** | **79** | **39** | **45** | **52** |
+| Planètes | 29 | 23 | 2 | 4 | 14 | 11 | 6 |
+| **Total** | **272** | **140** | **61** | **71** | **46** | **48** | **55** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -291,35 +291,35 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
-| 27 | Canon ancien | non | — (passé) | Station militaire : prise de possession avec un amiral. | Réparer ; transformation en Canon restauré contre un scientifique et 2 fragments militaires. (moyenne) |
-| 30 | Canon restauré | non | — (passé) | Station militaire : prise de possession avec un amiral. | Réparer ; 1 point au décompte. (moyenne) |
+| 27 | Canon ancien | **oui** | nouveau bouton | Fiche du système : « Réparer » (use un logisticien, 1 ressource par dégât : vos unités du système et le canon) ; « Restaurer le canon » (dépense un scientifique et 2 fragments militaires : l'unité devient un Canon restauré, sa carte arrive dans les éléments actifs, +2 points). | — |
+| 30 | Canon restauré | **partiel** | nouveau bouton | Fiche du système : « Réparer » (use un logisticien, 1 ressource par dégât). | 1 point au décompte. |
 | 31 | Astéroïde d'or | **oui** | nouveau bouton | Phase de production, « Revenus de la phase » : +3 commerce pour qui le possède. | — |
-| 33 | SR-42 | **partiel** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche spatiale, notées au journal de recherche. | Seconde ligne (usée, 3 ressources : 1 de recherche militaire, génétique et sociale). |
-| 34 | Mecatol Rex (Winnu) | non | — (passé) | — | Dissoudre la Garde impériale contre 12 influence : texte à préciser. (moyenne) |
+| 33 | SR-42 | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche spatiale. Fiche du système : « SR-42 : 3 ressources » — la station est activée (une fois), 1 de recherche militaire, génétique et sociale. | — |
+| 34 | Mecatol Rex (Winnu) | **oui** | nouveau bouton + bouton existant modifié | Fiche du système, combat terrestre : « Dissoudre la Garde impériale » (12 influence, les Gardes de la planète sont retirées). Prendre possession de Mecatol Rex donne aussi la carte Mecatol Rex spéciale. | Faveurs des autres factions comptées 4 : à la main. |
 | 38 | Station de mercenaire | non | — (passé) | — | Marché de mercenaires, achats par livraison : actions de commerce à créer. (difficile) |
-| 41 | Atlas | non | — (passé) | — | Ajout d'un Ravageur neutre à chaque ravitaillement : qui le déclenche n'est pas dit. (moyenne) |
-| 45 | Anneau monde | non | — (passé) | Station spéciale : prise de possession avec l'agent de son choix. | Un effet par type d'agent posé : six actions à écrire. (difficile) |
+| 41 | Atlas | **oui** | automatique | « Nouveau tour » : un Ravageur neutre est ajouté sur Atlas. | — |
+| 45 | Anneau monde | **oui** | nouveau bouton + bouton existant modifié | Selon l'agent posé sur la station : logisticien — « Entretien » +2 ressources et +2 commerce ; scientifique — « Revenus de la phase » de science, 3 de recherche ; négociant — « Revenus de la phase » de production, 2 frégates marchandes ; diplomate — bouton « une faveur (4 commerce) » ; politique — bouton « piocher 3 lois » ; amiral — « Produire ici » (2 unités). | Ajouter une des lois piochées à l'agenda : à la main. |
 | 46 | Wanno | **oui** | bouton existant modifié | Prendre possession ou revendiquer Wanno : +1 infamie. | — |
 | 47 | SR-124 | **partiel** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche sociale, notées au journal de recherche. | Votes au prévote avec l'accord du possesseur. |
-| 49 | Cormund | **partiel** | bouton existant modifié | « Fouiller la ruine » : rouge gris sans 3 infanteries du joueur sur la planète. | Attaque de force 4 contre toutes les unités à chaque ravitaillement. (moyenne) |
-| 56 | Station de combat | **partiel** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche militaire, notées au journal de recherche. | Réparer en usant un logisticien. |
+| 49 | Cormund | **oui** | bouton existant modifié + automatique | « Fouiller la ruine » : rouge gris sans 3 infanteries du joueur. « Nouveau tour » : chaque unité présente subit une attaque de force 4 (un dé par unité, 1 dégât sur 4 ou moins). | — |
+| 56 | Station de combat | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche militaire. Fiche du système, production : « Réparer » (use un logisticien, 1 ressource par dégât). | — |
 | 59 | Jeollr | **oui** | automatique | Conflit : les bombardements contre Jeollr ont −2. | — |
 | 60 | Perimeter | **oui** | bouton existant modifié | « Livraison commerciale » : +1 commerce si le joueur possède Perimeter. | — |
 | 61 | Avar | **oui** | bouton existant modifié | « Revendiquer » : rouge gris sans unité du joueur sur la planète. | Perte de la possession quand la dernière unité part : à la main (« Abandonner »). |
 | 62 | Loki | **oui** | automatique | Conflit, combats sur la planète : −1 aux attaques contre la faction qui la possède. | — |
-| 69 | Relique | non | — (passé) | — | Forge de la relique contre des fragments, remplacement par la Relique reforgée. (moyenne) |
-| 71 | Starpoint | non | — (passé) | — | « Faveur neutre » : de quelle faction neutre ? à préciser. (facile ensuite) |
+| 69 | Relique | **oui** | nouveau bouton | Fiche du système, science : « Forger la relique » (3 fragments et 1 fragment ancien) — la carte de la Relique reforgée arrive dans les éléments actifs. | — |
+| 71 | Starpoint | **oui** | nouveau bouton | Fiche du système, diplomatie : use un diplomate, 3 influence, une faveur neutre (jeton sans propriétaire). | — |
 | 72 | Hopeld | **oui** | nouveau bouton | Fiche du système, phase de production : dépense un logisticien, pose un Mech géant sur la planète (que l'on possède). | — |
 | 74 | Velnor | non | — (passé) | — | Fragments posés sur la planète, déplacement d'une flotte : texte à préciser. (difficile) |
-| 75 | Elysium | non | — (passé) | — | Scientifiques posés sur la carte, recherche de chaque type par scientifique. (moyenne) |
+| 75 | Elysium | **oui** | nouveau bouton + bouton existant modifié | Fiche du système, science : « Poser un scientifique » (la planète est activée, il y reste). « Entretien » : 1 de recherche militaire, spatiale, génétique et sociale par scientifique posé. | — |
 | 131 | Relique reforgée | **oui** | bouton existant modifié | « Entretien » : +1 point pour qui la possède. | — |
 | 229 | Mecatol Rex (spécial) | non | — (passé) | — | Dépenser un agent au choix pour obtenir un politique : choix de l'agent à faire. (facile) |
 | 275 | Shar | **oui** | automatique | Déplacement assisté : la nébuleuse du système de Shar ne gêne pas les déplacements de qui possède Shar. | — |
 | 469 | New eden | **oui** | bouton existant modifié | « Entretien » : 2 Letani posés sur la planète. | — |
 | 473 | SIG-1 à SIG-4 | **oui** | nouveau bouton | Fiche du système, phase de science : « Obtenir » use un scientifique, la carte va dans les éléments actifs. | — |
 | 508 | Université polytechnique | non | — (passé) | — | Agent tiré au ravitaillement, achats par commerce ou livraison. (difficile) |
-| 783 | Arcturus | **partiel** | bouton existant modifié | « Revendiquer » : rouge gris sans unité du joueur sur la planète. | Recherche spatiale et génétique exigées pour y poser des unités. |
-| 784 | Anneau Arcturus | **partiel** | bouton existant modifié + nouveau bouton | « Entretien » : une frégate marchande créée dans le système ; production par « Produire ici » (`#prod`). | Recherche en usant un scientifique. |
+| 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. | — |
+| 784 | Anneau Arcturus | **oui** | bouton existant modifié + nouveau bouton | « Entretien » : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (use un scientifique). | — |
 
 ## Mots-clés d'unité
 

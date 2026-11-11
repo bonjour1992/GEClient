@@ -67,8 +67,9 @@ const reductionAgent = (id, carte, ecritLe, nom, motif, pluriel) => ({
         : null),
 });
 
-// Agent utilisé par plusieurs boutons d'action
+// Agents utilisés par plusieurs boutons d'action
 const SCIENTIFIQUE = { motif: "scientifique", nom: "scientifique", depense: false };
+const LOGISTICIEN = { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: false };
 
 export const SCRIPTS = [
 
@@ -824,6 +825,158 @@ export const SCRIPTS = [
             libelle: "Étude des failles : +2 recherche de rupture (use un scientifique)",
         }),
 
+    // ---- planètes et stations ----
+
+    action("canon-reparer", "planet", 27, 1794377940419, "Canon : réparer", "planete",
+        "Use un logisticien : vos unités du système et le canon sont réparés, 1 ressource par dégât.", {
+            possede: true,
+            agent: LOGISTICIEN,
+            reparer: true,
+            libelle: "Réparer (use un logisticien)",
+            aussi: [30],
+        }),
+
+    action("canon-ancien-restaurer", "planet", 27, 1794377940419, "Canon ancien : restaurer", "planete",
+        "Dépensez un scientifique et 2 fragments militaires : le canon devient un Canon restauré (l'unité est remplacée, sa carte arrive dans vos éléments actifs) et vous gagnez 2 points.", {
+            possede: true,
+            agent: { motif: "scientifique", nom: "scientifique", depense: true },
+            fragments: { mil: 2 },
+            remplace: [[513, 514]],
+            donneCarte: 30,
+            gains: { points: 2 },
+            libelle: "Restaurer le canon (dépense un scientifique et 2 fragments militaires) : +2 points",
+        }),
+
+    action("station-de-combat-reparer", "planet", 56, 1794335054765, "Station de combat : réparer", "planete",
+        "Production : use un logisticien, vos unités du système sont réparées, 1 ressource par dégât.", {
+            phase: "production",
+            possede: true,
+            agent: LOGISTICIEN,
+            reparer: true,
+            libelle: "Réparer (use un logisticien)",
+        }),
+
+    action("mecatol-dissoudre-la-garde", "planet", 34, 1794383527582, "Mecatol Rex : dissoudre la Garde impériale", "planete",
+        "Combat terrestre : dépensez 12 influence, les Gardes impériales de la planète sont retirées. (Les faveurs des autres factions, qui valent 4, se comptent à la main.)", {
+            phase: "terrestre",
+            nomPhase: "combat terrestre",
+            cout: { inf: 12 },
+            retire: 511,
+            libelle: "Dissoudre la Garde impériale (12 influence)",
+        }),
+
+    action("starpoint", "planet", 71, 1794054013158, "Starpoint : faveur neutre", "planete",
+        "Diplomatie : use un diplomate et dépensez 3 influence, vous obtenez une faveur neutre.", {
+            phase: "diplomatie",
+            possede: true,
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            cout: { inf: 3 },
+            faveurNeutre: 1,
+            libelle: "Faveur neutre (use un diplomate, 3 influence)",
+        }),
+
+    action("relique-forger", "planet", 69, 1794335054805, "Relique : forger", "planete",
+        "Science : dépensez 3 fragments et 1 fragment ancien, la carte de la Relique reforgée arrive dans vos éléments actifs.", {
+            phase: "science",
+            possede: true,
+            fragments: { ancien: 1, autres: 3 },
+            donneCarte: 131,
+            libelle: "Forger la relique (3 fragments et 1 fragment ancien)",
+        }),
+
+    action("elysium-scientifique", "planet", 75, 1794383732780, "Elysium : poser un scientifique", "planete",
+        "Science : la planète est activée et un de vos scientifiques y est posé ; il y reste (il n'est jamais récupéré).", {
+            phase: "science",
+            possede: true,
+            activer: true,
+            agent: { motif: "scientifique", nom: "scientifique", pose: true },
+            libelle: "Poser un scientifique sur Elysium (il y reste)",
+        }),
+
+    revenu("elysium", "planet", 75, 1794383732780, "Elysium", "ravit",
+        "1 de recherche militaire, spatiale, génétique et sociale par scientifique posé sur Elysium.", {
+            recherche: [["mil", 1], ["spa", 1], ["gen", 1], ["soc", 1]],
+            calcul: (source, outils) => {
+                const n = outils.agentsSur(source, "scientifique");
+
+                return n
+                    ? { recherche: [["mil", n], ["spa", n], ["gen", n], ["soc", n]] }
+                    : { sans: "aucun scientifique sur Elysium" };
+            },
+        }),
+
+    action("sr-42-recherche", "planet", 33, 1794054013129, "SR-42 : recherche", "planete",
+        "La station est activée (une fois) : dépensez 3 ressources, 1 de recherche militaire, génétique et sociale.", {
+            possede: true,
+            activer: true,
+            cout: { res: 3 },
+            recherche: [["mil", 1], ["gen", 1], ["soc", 1]],
+            libelle: "SR-42 : 3 ressources → recherche militaire, génétique et sociale",
+        }),
+
+    action("anneau-arcturus-recherche", "planet", 784, 1794372893706, "Anneau Arcturus : recherche", "planete",
+        "Science : use un scientifique, 1 de recherche sociale, 1 spatiale et 1 libre.", {
+            phase: "science",
+            possede: true,
+            agent: SCIENTIFIQUE,
+            recherche: [["soc", 1], ["spa", 1], ["", 1]],
+            libelle: "Recherche sociale, spatiale et libre (use un scientifique)",
+        }),
+
+    // Anneau monde : l'effet dépend de l'agent posé sur la station
+    revenu("anneau-monde-logisticien", "planet", 45, 1794335054763, "Anneau monde (logisticien)", "ravit",
+        "Avec un logisticien posé sur la station : 2 ressources et 2 commerce.", {
+            calcul: (source, outils) => (outils.agentsSur(source, "logisticien") ? { gains: { res: 2, commerce: 2 } } : null),
+        }),
+
+    revenu("anneau-monde-scientifique", "planet", 45, 1794335054763, "Anneau monde (scientifique)", "science",
+        "Avec un scientifique posé sur la station : 3 de recherche, dans la technologie de votre choix.", {
+            calcul: (source, outils) => (outils.agentsSur(source, "scientifique") ? { recherche: [["", 3]] } : null),
+        }),
+
+    revenu("anneau-monde-negociant", "planet", 45, 1794335054763, "Anneau monde (négociant)", "production",
+        "Avec un négociant posé sur la station : 2 frégates marchandes gratuites dans le système.", {
+            calcul: (source, outils) => (outils.agentsSur(source, "n[ée]gociant") ? { cree: { unite: "com", n: 2, ou: "espace" } } : null),
+        }),
+
+    action("anneau-monde-diplomate", "planet", 45, 1794335054763, "Anneau monde (diplomate) : faveur", "planete",
+        "Avec un diplomate posé sur la station : dépensez 4 commerce, vous gagnez une de vos faveurs.", {
+            possede: true,
+            visible: outils => outils.agentIci("diplomate"),
+            cout: { commerce: 4 },
+            faveur: 1,
+            libelle: "Anneau monde : une faveur (4 commerce)",
+        }),
+
+    action("anneau-monde-politique", "planet", 45, 1794335054763, "Anneau monde (politique) : lois", "planete",
+        "Avec un politique posé sur la station : piochez 3 lois dans votre main (vous pouvez en ajouter une à l'agenda), une fois par tour.", {
+            possede: true,
+            visible: outils => outils.agentIci("politi"),
+            pioche: { de: "pioche:Agenda", vers: "main", n: 3 },
+            parTour: true,
+            libelle: "Anneau monde : piocher 3 lois",
+        }),
+
+    regle("anneau-monde-amiral", "planet", 45, 1794335054763, "Anneau monde (amiral)", "modifie",
+        "Fiche d'un système : « Produire ici »",
+        "La production de l'Anneau monde (2 unités) demande un amiral posé sur la station."),
+
+    regle("mecatol-rex", "planet", 34, 1794383527582, "Mecatol Rex", "modifie",
+        "Fiche d'un système : « Prendre possession », « Revendiquer »",
+        "Prendre possession de Mecatol Rex vous donne aussi la carte Mecatol Rex spéciale (#229)."),
+
+    regle("arcturus", "planet", 783, 1794376304858, "Arcturus", "auto",
+        "Glisser une unité sur Arcturus",
+        "Poser des unités sur Arcturus sans 2 niveaux de connaissance spatiale (et 2 de connaissance génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher."),
+
+    regle("atlas", "planet", 41, 1794054013133, "Atlas", "auto",
+        "En-tête : « Nouveau tour »",
+        "À chaque nouveau tour (ravitaillement), un Ravageur neutre est ajouté sur Atlas."),
+
+    regle("cormund-attaque", "planet", 49, 1794335054764, "Cormund : attaque", "auto",
+        "En-tête : « Nouveau tour »",
+        "À chaque nouveau tour (ravitaillement), chaque unité présente sur Cormund subit une attaque de force 4 : un dé à 10 faces par unité, 1 dégât sur 4 ou moins."),
+
     action("confrerie-de-mercenaire-pioche", "habilite", 764, 1794335055080, "Confrérie de mercenaire", "bandeau",
         "Recrutement : piochez un mercenaire dans votre main, à poser sur la case de recrutement de votre choix (une fois par tour).", {
             phase: "recrut",
@@ -891,9 +1044,10 @@ function regle(id, type, carte, ecritLe, nom, mode, ou, description, aussi = [])
 }
 
 // Recherche typée que génère un élément (journal de recherche du tour) : [[type, n]…] ou null
-export function rechercheDeSource(idElement) {
+//   sorte : "g" (revenu de phase) ou "a" (bouton d'action)
+export function rechercheDeSource(idElement, sorte = "g") {
 
-    const script = SCRIPTS.find(s => Array.isArray(s.recherche) &&
+    const script = SCRIPTS.find(s => Array.isArray(s.recherche) && (s.sorte === "action") === (sorte === "a") &&
         [s.carte.id, ...(s.aussi || [])].includes(idElement));
 
     return script ? script.recherche : null;

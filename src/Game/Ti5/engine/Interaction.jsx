@@ -1857,7 +1857,7 @@ export function Plan({ children, style }) {
 
     const {
         etat, index, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
-        search, aScript, factionDe,
+        search, aScript, factionDe, connaissance, aviser,
     } = useEngine();
 
     const appui = useRef(null);
@@ -1874,6 +1874,37 @@ export function Plan({ children, style }) {
     };
 
     const REFUS_HYPERLANE = "Une hyperlane n'est pas une case : aucune unité ne peut y être posée.";
+
+    // Règle d'Arcturus : y poser des unités demande 2 niveaux de connaissance spatiale,
+    // et 2 de connaissance génétique pour des unités biologiques. Simple avertissement :
+    // les unités sont posées quand même.
+    //   contenus : contenus des unités qu'on vient d'y poser
+    function avertirArcturus(zone, contenus) {
+
+        const m = /^hex:(\d+):planete:(\d+)$/.exec(zone || "");
+
+        if (!m || !contenus.length || !aScript(moi, "arcturus")) {
+            return;
+        }
+
+        const tuile = Object.values(etat.composants).find(c => c.zone === "hex:" + m[1] && c.ref?.type === "system");
+
+        if (Number(contenuEnCache(tuile?.ref.id)?.elems?.[Number(m[2])]?.id) !== 783) {
+            return;
+        }
+
+        const [spatiale, genetique] = [connaissance(moi, "spa"), connaissance(moi, "gen")];
+
+        const manques = [
+            spatiale < 2 && `2 niveaux de connaissance spatiale (vous en avez ${spatiale})`,
+            genetique < 2 && contenus.some(u => u?.mot_cle?.includes("bio")) &&
+                `2 niveaux de connaissance génétique pour les unités biologiques (vous en avez ${genetique})`,
+        ].filter(Boolean);
+
+        if (manques.length) {
+            aviser?.(`Arcturus : pour y poser des unités il faut ${manques.join(", et ")}. Les unités sont posées : à vous de corriger si besoin.`);
+        }
+    }
 
     // Message non bloquant : après un embarquement, dit si le vaisseau porte
     // plus d'unités que sa capacité (l'embarquement est fait quand même).
@@ -2347,6 +2378,10 @@ export function Plan({ children, style }) {
                 }
             } else if (zone) {
                 poser([...paiement, { ...creation, zone }]);
+
+                if (!jeton && (a.source.type || "unit") === "unit") {
+                    avertirArcturus(zone, [contenuEnCache(a.source.id)]);
+                }
             }
 
             return;
@@ -2500,6 +2535,11 @@ export function Plan({ children, style }) {
             })),
             ...(position === "melanger" && aDeplacer.length ? [{ type: "melanger", zone }] : []),
         ]);
+
+        avertirArcturus(zone, aDeplacer
+            .map(id => etat.composants[id])
+            .filter(c => c?.ref?.type === "unit" && c.zone !== zone)
+            .map(c => contenuEnCache(c.ref.id)));
     }
 
     function onPointerCancel() {

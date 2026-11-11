@@ -72,6 +72,13 @@ export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, id
     // Règle de Wanno : en prendre le contrôle rapporte 1 infamie
     const wanno = idPlanete === 46 && aScript(moi, "wanno") && ancien !== moi;
 
+    // Règle de Mecatol Rex : qui la possède prend aussi la carte Mecatol Rex spéciale (#229)
+    const autreMecatol = idPlanete === 34 && aScript(moi, "mecatol-rex")
+        ? Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 229 && c.zone !== "horsJeu")
+        : null;
+
+    const prendreAutre = idPlanete === 34 && aScript(moi, "mecatol-rex") && autreMecatol?.zone !== zone;
+
     // Habilité Destin légendaire : prendre une planète légendaire rapporte 1 point et 1 infamie
     const legendaire = ancien !== moi && !!contenuEnCache(idPlanete)?.legendary && aScript(moi, "destin-legendaire");
 
@@ -79,12 +86,16 @@ export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, id
         messages: [
             wanno && "Wanno : en prendre le contrôle vous rapporte 1 infamie.",
             legendaire && "Destin légendaire : planète légendaire, 1 point et 1 infamie.",
+            prendreAutre && "Mecatol Rex : la carte Mecatol Rex spéciale arrive aussi dans vos éléments actifs.",
             assimilation && "Assimilation : planète neutre obtenue, une infanterie y est posée.",
             butin > 0 && `Pillage : ${butin} commerce volé(s) à ${nomDe?.(ancien) ?? "son ancien possesseur"}.`,
         ].filter(Boolean),
         actions: [
             ...(wanno || legendaire ? actionsPiste(etat, moi, "infamie", (wanno ? 1 : 0) + (legendaire ? 1 : 0)) : []),
             ...(legendaire ? actionsPiste(etat, moi, "points", 1) : []),
+            prendreAutre && (autreMecatol
+                ? { type: "deplacer", c: autreMecatol.id, vers: zone }
+                : { type: "creer", ref: { type: "planet", id: 229 }, zone, proprio: moi }),
             assimilation && { type: "creer", ref: { type: "unit", id: idInfanterie }, zone: zonePlanete, proprio: moi },
             butin > 0 && { type: "compteur", id: `joueur:${ancien}:commerce`, delta: -butin },
             butin > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: butin },

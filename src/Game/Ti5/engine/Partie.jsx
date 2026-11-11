@@ -256,6 +256,12 @@ export function Partie({ id }) {
     // Feuilles de faction des joueurs, chargées d'avance : leurs habilités disent
     // quels scripts s'appliquent à qui (aScript)
     useElements((p.vue?.partie.joueurs || []).map(j => j.faction));
+
+    // Systèmes posés sur la carte, chargés d'avance eux aussi : ils disent où est
+    // chaque planète (automatismes de début de tour : Atlas, Cormund)
+    useElements([...new Set(Object.values(p.etat?.composants || {})
+        .filter(c => !c.cache && c.ref?.type === "system" && /^hex:\d+$/.test(c.zone || ""))
+        .map(c => c.ref.id))]);
     const elementsPhase = getFromType(search, ["phase"]);
     const contenusPhase = useElements(elementsPhase.map(e => e.id));
 
@@ -650,9 +656,44 @@ export function Partie({ id }) {
         }
     }
 
-    // Tour suivant : on repart de la première phase
+    // Zones d'une planète posée sur la carte (« hex:<case>:planete:<k> ») : une par
+    // exemplaire de son système
+    function zonesDePlanete(idPlanete) {
+
+        const zones = [];
+
+        for (const [zone, contenu] of index.parZone) {
+
+            const tuile = /^hex:\d+$/.test(zone) && contenu.find(c => c.ref?.type === "system");
+
+            const k = tuile
+                ? (contenuEnCache(tuile.ref.id)?.elems || []).findIndex(lien => Number(lien?.id) === idPlanete)
+                : -1;
+
+            if (k >= 0) {
+                zones.push(`${zone}:planete:${k}`);
+            }
+        }
+
+        return zones;
+    }
+
+    // Tour suivant : on repart de la première phase.
+    // Automatismes du ravitaillement qui commence (scripts de sorte « regle ») :
+    //   Atlas    un Ravageur neutre est ajouté sur la planète ;
+    //   Cormund  chaque unité qui s'y trouve subit une attaque de force 4 — un dé
+    //            à 10 faces par unité, lancé par le serveur dans ce coup ; les
+    //            dégâts (4 ou moins) sont appliqués dans un second coup.
     function nouveauTour(commentaire = "") {
+
+        const atlas = ctx.aScript(moi, "atlas") ? zonesDePlanete(41) : [];
+
+        const surCormund = (ctx.aScript(moi, "cormund-attaque") ? zonesDePlanete(49) : [])
+            .flatMap(zone => (index.parZone.get(zone) || []).filter(c => !c.cache && c.ref?.type === "unit"));
+
         p.envoyer(commentaire, [
+            ...atlas.map(zone => ({ type: "creer", ref: { type: "unit", id: 574 }, zone })),
+            ...surCormund.map(c => ({ type: "des", n: 1, faces: 10, c: c.id, marque: "jetCormund" })),
             ...retraitMarqueurs,
             ...retraitUse,
             ...remiseDesPasses,
@@ -669,7 +710,35 @@ export function Partie({ id }) {
                 phase: phases[0]?.nom ?? "",
                 joueurActif: ordreSuivant[0] ?? null,
             },
-        ]);
+        ]).then(reponse => {
+
+            const messages = [atlas.length > 0 && reponse && "Atlas : un Ravageur est ajouté sur la planète."];
+
+            // Cormund : les jets sont dans la réponse du serveur
+            const jets = surCormund
+                .map(c => reponse?.etat?.composants?.[c.id])
+                .filter(c => c?.marques?.jetCormund !== undefined);
+
+            if (jets.length) {
+
+                const touchees = jets.filter(c => Number(c.marques.jetCormund) <= 4);
+
+                p.envoyer(
+                    `Cormund : attaque de force 4 — ${touchees.length} unité(s) touchée(s) sur ${jets.length}`,
+                    jets.flatMap(c => [
+                        Number(c.marques.jetCormund) <= 4 &&
+                            { type: "marquer", c: c.id, marque: "degat", valeur: (Number(c.marques?.degat) || 0) + 1 },
+                        { type: "marquer", c: c.id, marque: "jetCormund", valeur: null },
+                    ])
+                );
+
+                messages.push(`Cormund : attaque de force 4 contre chaque unité de la planète — ${touchees.length} touchée(s) sur ${jets.length} (jets : ${jets.map(c => c.marques.jetCormund).join(", ")}).`);
+            }
+
+            if (messages.some(Boolean)) {
+                setAvis(messages.filter(Boolean).join(" "));
+            }
+        });
     }
 
     // Pendant le recrutement, Ctrl + clic sur un agent d'une case de

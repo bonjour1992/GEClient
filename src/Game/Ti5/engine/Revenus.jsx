@@ -107,6 +107,9 @@ export function useRevenus(userId, phase) {
                     !c.cache && c.ref && (c.zone === "hex:" + numero || c.zone?.startsWith(`hex:${numero}:`)) &&
                     motif.test(nomElement(search, c.ref)));
         },
+        // Nombre d'agents de ce nom posés sur la source (station, planète)
+        agentsSur: (source, motif) => (source.zone ? (index.parZone.get(source.zone) || []) : []).filter(c =>
+            !c.cache && c.ref?.type === "agent" && new RegExp(motif, "i").test(nomElement(search, c.ref))).length,
         // Autres unités de cet élément, à cette distance au plus (cases)
         autresProches: (source, distance) => Object.values(etat.composants).filter(c =>
             c.id !== source.c?.id && !c.cache && c.ref?.type === "unit" && c.ref.id === source.ref.id &&
@@ -133,8 +136,8 @@ export function useRevenus(userId, phase) {
                     /^hex:\d+/.test(c.zone || ""))
                 .map(c => ({ c, ref: c.ref, numero: Number(/^hex:(\d+)/.exec(c.zone)[1]), zone: c.zone }))
             : ids.filter(id => possedees.has(id))
-                .map(id => ({ ref: { type: "planet", id }, ...lieuPlanete(id) }))
-                .filter(s => s.zone);
+                // (une planète possédée qui n'est pas sur la carte rapporte quand même : Relique reforgée)
+                .map(id => ({ ref: { type: "planet", id }, ...(lieuPlanete(id) || { numero: null, zone: null }) }));
 
         for (const source of sources) {
 
@@ -194,7 +197,7 @@ export function useRevenus(userId, phase) {
             const cree = effet.cree;
             const idUnite = cree && (Number.isInteger(cree.unite) ? cree.unite : uniteDeType(cree.unite));
 
-            if (cree && cree.n > 0 && idUnite) {
+            if (cree && cree.n > 0 && idUnite && source.numero !== null) {
 
                 morceaux.push(`${cree.n} × ${nomElement(search, { type: "unit", id: idUnite })}`);
 

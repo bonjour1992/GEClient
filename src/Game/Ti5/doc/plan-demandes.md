@@ -315,5 +315,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Pillage (#pill) : l'auteur de chaque dégât est gardé sur l'unité touchée ; à « Retirer », le
   camp du dernier dégât gagne le pillage s'il a une unité dans le système (explication du mot-clé
   complétée en base) ; habilités Maître du pillage et Libre échange.
+- ☑ Planètes (consignes du 2026-11-11 au soir) : canons, Mecatol Rex, Starpoint, Atlas et Cormund
+  automatiques, Anneau monde, Relique, Elysium, SR-42, Station de combat, Arcturus, Anneau
+  Arcturus. Restent passées : Station de mercenaire, Velnor, Mecatol Rex spécial, Université
+  polytechnique.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

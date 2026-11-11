@@ -927,6 +927,19 @@ Trois sortes de scripts de plus dans `engine/scripts.js` :
 - **regle** : règle codée là où elle agit, comme un effet de technologie, mais
   sans technologie à débloquer.
 
+Planètes (lot du 11 novembre au soir) : boutons de la fiche du système pour les
+canons (réparer, restaurer), Mecatol Rex (dissoudre la Garde), Starpoint
+(faveur neutre : jeton `faveur` sans propriétaire), la Relique (forger), Elysium
+(scientifique posé, jamais récupéré), SR-42, la Station de combat, l'Anneau
+Arcturus ; l'Anneau monde agit selon l'agent posé dessus (`agentsSur`,
+`agentIci`). Automatismes de « Nouveau tour » (`nouveauTour`, `Partie.jsx`) :
+un Ravageur sur chaque Atlas, et pour Cormund un dé à 10 faces par unité
+présente (action `des` avec la marque `jetCormund`, lue dans la réponse du
+serveur ; les dégâts partent dans un second coup). Arcturus : avertissement
+non bloquant à la pose d'unités (`avertirArcturus`, `Interaction.jsx`). Une
+recherche obtenue par un bouton d'action est notée au journal sous la sorte
+`a` (`g` pour un revenu de phase).
+
 `aScript(joueur, id)` : pour une unité ou une planète, le script est en
 service ; pour une **habilité**, elle s'applique au joueur — elle est sur sa
 feuille de faction ou dans ses éléments actifs, ou posée sur la table (elle

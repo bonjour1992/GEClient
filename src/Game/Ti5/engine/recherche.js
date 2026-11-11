@@ -10,7 +10,9 @@
 //   rang     ordre d'arrivée de la ligne (1, 2, 3…)
 //   phase    numéro de la phase (« 11.Phase de science » -> 11)
 //   sorte    p  recherche sur une planète (points gagnés)
-//            g  autre source qui génère de la recherche (ligne ajoutée à la main)
+//            g  autre source qui génère de la recherche (revenu de phase, ou ligne
+//               ajoutée à la main)
+//            a  recherche obtenue par un bouton d'action (ActionsScript.jsx)
 //            t  cases de recherche cochées sur une technologie
 //            c  points de connaissance recherchés sur une feuille
 //   élément  identifiant de la planète, de la source, de la technologie
