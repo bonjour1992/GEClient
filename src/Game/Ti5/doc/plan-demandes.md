@@ -312,5 +312,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   phase, boutons d'action, règles automatiques ; règle par défaut des habilités (feuille de
   faction ou éléments actifs : cette faction ; table : toutes ; système : rien). Ce qui est
   ambigu ou trop lourd est marqué « (passé) » dans `implementabilite.md`.
+- ☑ Pillage (#pill) : l'auteur de chaque dégât est gardé sur l'unité touchée ; à « Retirer », le
+  camp du dernier dégât gagne le pillage s'il a une unité dans le système (explication du mot-clé
+  complétée en base) ; habilités Maître du pillage et Libre échange.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

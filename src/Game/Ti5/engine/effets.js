@@ -8,6 +8,69 @@
 // ============================================================
 
 // Capacité d'un vaisseau. Capsule de transport : +1, +2 pour un transporteur.
+// ------------------------------------------------------------
+// PILLAGE (#pill)
+//
+// Qui détruit l'unité gagne ce que dit son texte : « #pill 2 » ou
+// « #pill(4) » — du commerce ; « #pill(#point(1)) », « #Pill(#Infa(1)
+// et #Point(1)) », « #pill #rerupt(3) » — des points, de l'infamie, de
+// la recherche. -> { commerce, points, infamie, recherche: [[type, n]…],
+// aLaMain } ou null si l'unité n'a pas de pillage.
+// (aLaMain : butin que l'outil ne sait pas compter, « #com ici ».)
+// ------------------------------------------------------------
+
+export function lirePillage(contenu) {
+
+    const texte = String(contenu?.habilite || "")
+        .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
+
+    const butin = { commerce: 0, points: 0, infamie: 0, recherche: [], aLaMain: false };
+    let trouve = false;
+
+    for (const m of texte.matchAll(/#pill\s*(?:\(((?:[^()]|\([^()]*\))*)\)|(\d+)|((?:\s*#re[a-z]+(?:\(\d+\))?)+))?/gi)) {
+
+        trouve = true;
+
+        const argument = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+
+        if (/^\d+$/.test(argument)) {
+            butin.commerce += Number(argument);
+            continue;
+        }
+
+        if (/\bici\b/i.test(argument)) {
+            butin.aLaMain = true;
+            continue;
+        }
+
+        for (const g of argument.matchAll(/#(point|infa|com|re[a-z]+)\s*(?:\((\d+)\))?/gi)) {
+
+            const n = Number(g[2]) || 1;
+            const cle = g[1].toLowerCase();
+
+            if (cle === "point") {
+                butin.points += n;
+            } else if (cle === "infa") {
+                butin.infamie += n;
+            } else if (cle === "com") {
+                butin.commerce += n;
+            } else {
+                butin.recherche.push([cle.slice(2), n]);
+            }
+        }
+    }
+
+    return trouve ? butin : null;
+}
+
+// Camp qui a infligé le dernier dégât à cette unité (marque « degatDe » : « c<camp> ») ou null
+export function auteurDesDegats(c) {
+
+    const m = /^c(\d+)$/.exec(String(c?.marques?.degatDe ?? ""));
+
+    return m ? Number(m[1]) : null;
+}
+
 // Place que prend une unité à bord d'un vaisseau : « Nécessite 3 de capacité »
 // dans son texte (Mech géant), sinon 1
 export const placePrise = contenu =>

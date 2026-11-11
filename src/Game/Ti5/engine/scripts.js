@@ -695,6 +695,20 @@ export const SCRIPTS = [
         "Embarquement sur un vaisseau, déplacement assisté",
         "Une unité dont le texte dit « Nécessite n de capacité » compte pour n dans la capacité du vaisseau."),
 
+    // Pillage (#pill) : rattaché à la frégate marchande, il vaut pour toute unité dont
+    // le texte porte #pill
+    regle("pillage-unite", "unit", 11, 1794049918173, "Pillage (#pill)", "auto",
+        "Conflit : « Retirer » une unité détruite",
+        "Le camp qui a infligé le dernier dégât à une unité à pillage gagne ce que dit son texte (commerce, points, infamie, recherche) quand elle est retirée — s'il a encore une unité dans le système."),
+
+    regle("maitre-du-pillage", "habilite", 844, 1794049435795, "Maître du pillage", "auto",
+        "Conflit : « Retirer » une unité détruite",
+        "Chaque pillage vous rapporte 1 commerce de plus."),
+
+    regle("libre-echange", "habilite", 24, 1787854389709, "Libre échange", "auto",
+        "Conflit : « Retirer » une unité détruite",
+        "Détruire une unité commerciale non militaire vous rapporte 1 infamie."),
+
     regle("jeollr", "planet", 59, 1794335054766, "Jeollr", "auto",
         "Conflit : bombardement",
         "Les bombardements contre Jeollr ont −2."),

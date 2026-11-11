@@ -937,6 +937,22 @@ connaissance (calculé avec les technologies débloquées, `technologiesDe`).
 Ce qui a été laissé de côté est marqué « (passé) » dans
 `doc/implementabilite.md`.
 
+### paternité des dégâts et pillage
+
+Chaque dégât appliqué à une unité note d'abord son auteur sur elle : marque
+`degatDe` = `c<camp>` du tireur (`attribution` de `Combat.jsx`, et dépôt d'un
+dégât à la main dans `Interaction.jsx`), posée dans le même coup, avant le
+dégât. `auteurDesDegats` (`effets.js`) la relit. À « Retirer » une unité
+détruite (`butinDe`, `retirer`, `Combat.jsx`), le camp du dernier dégât gagne
+le **pillage** de l'unité — `lirePillage` lit « #pill 2 », « #pill(#point(1)) »,
+« #Pill(#Infa(1) et #Point(1)) », « #pill #rerupt(3) » : commerce, points,
+infamie, recherche (notée au journal de recherche) — seulement s'il a encore
+une unité dans le système. Habilités : Maître du pillage (+1 commerce par
+pillage), Libre échange (1 infamie pour une unité commerciale non militaire
+détruite). Le bouton annonce le butin (« Retirer (butin) »), le coup et un
+message orange le disent. Script `pillage-unite` (l'identifiant `pillage` est
+celui de la technologie).
+
 ### secret du vote : coup local
 
 Un coup qui pose un agent visible sur un plateau caché est reçu en entier par

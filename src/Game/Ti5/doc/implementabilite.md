@@ -20,10 +20,10 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 93 | 60 | 0 | 33 | 19 | 19 | 28 |
-| Habilités | 46 | 9 | 1 | 36 | 4 | 5 | 2 |
-| Unités | 104 | 41 | 63 | 0 | 9 | 13 | 3 |
+| Habilités | 46 | 11 | 1 | 34 | 4 | 5 | 4 |
+| Unités | 104 | 46 | 58 | 0 | 9 | 13 | 17 |
 | Planètes | 29 | 11 | 6 | 12 | 7 | 8 | 3 |
-| **Total** | **272** | **121** | **70** | **81** | **39** | **45** | **36** |
+| **Total** | **272** | **128** | **65** | **79** | **39** | **45** | **52** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -129,7 +129,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
-| 24 | Libre échange | non | automatique (prévu) | — | À la destruction d'une unité commerciale non militaire : +1 infamie au destructeur. (moyenne) |
+| 24 | Libre échange | **oui** | automatique | Conflit, « Retirer » : détruire une unité commerciale non militaire rapporte 1 infamie à qui a infligé le dernier dégât. | — |
 | 36 | Vente au Bazaar | non | à définir (prévu) | — | Marché public avec achats par les autres factions : transactions non gérées. (difficile) |
 | 144 | Clé de l'empire | non | nouveau bouton (prévu) | — | Bouton : détruit un logisticien, répare le système de défense de Mecatol Rex. (moyenne) |
 | 145 | Destin légendaire | **oui** | bouton existant modifié | « Entretien » : +1 point par planète légendaire possédée. Prendre une planète légendaire (possession, revendication) : +1 point et +1 infamie. | — |
@@ -174,7 +174,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 837 | Réfugiés | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : crée 2 « Milice » sur chaque planète des réfugiés. (moyenne) |
 | 838 | Entraîner les milices | non | nouveau bouton (prévu) | — | Bouton unique : −4 ressources, amiral posé sur la carte ; +2 des milices au combat. (moyenne) |
 | 839 | Enrôlement des milices | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, donne 3 « Milice » d'une planète choisie au joueur. (moyenne) |
-| 844 | Maître du pillage | non | bouton existant modifié (prévu) | — | Suppose une action « pillage » à créer ; un script y ajouterait +1 commerce. (moyenne) |
+| 844 | Maître du pillage | **oui** | automatique | Chaque pillage rapporte 1 commerce de plus. | — |
 
 ## Unités
 
@@ -184,17 +184,17 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 8 | Croiseur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 9 | Transporteur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 10 | Destroyeur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 11 | Frégate marchande | **partiel** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. | Pillage. |
+| 11 | Frégate marchande | **oui** | nouveau bouton + automatique | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
 | 12 | Infanterie | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 13 | Mech | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 14 | Dock | **partiel** | nouveau bouton | Phase de production : Ctrl + clic sur le dock ouvre une production comptée (un logisticien utilisé ; capacité logistique du joueur, vaisseaux et mechs ; le reste de la réserve est cerclé de rouge ; pose dans le système du dock). | Réparation et comptoir non contrôlés selon le système du dock. |
 | 15 | Système de défense | **oui** | nouveau bouton | Conflit, canons spatiaux : listé dans « Mes canons spatiaux à portée » (notation « 6** » lue : 6, 2 dés) ; le choisir use un amiral et pose un marqueur d'activation. | — |
 | 16 | Usine | **oui** | bouton existant modifié | « Entretien » : +2 ressources par usine posée sur la carte. | — |
 | 17 | Soleil de guerre | **oui** | automatique | Produire un soleil de guerre sans la technologie « Soleil de guerre » demande une confirmation. | — |
-| 20 | Frégate marchande (Conglomérat mercantile d'Hacan) | **partiel** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. | Pillage. |
-| 21 | Soleil d'or (Conglomérat mercantile d'Hacan) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −2 commerce au déplacement ; comptoir et pillage supposent des actions à créer. (moyenne) |
+| 20 | Frégate marchande (Conglomérat mercantile d'Hacan) | **oui** | nouveau bouton + automatique | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
+| 21 | Soleil d'or (Conglomérat mercantile d'Hacan) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | −2 commerce au déplacement ; comptoir. |
 | 22 | Mecha d'archéologie (Conglomérat mercantile d'Hacan) | **oui** | bouton existant modifié | « Fouiller la ruine » n'use pas de scientifique sur une planète où le joueur a un Mecha d'archéologie. | — |
-| 23 | Statue en or (Conglomérat mercantile d'Hacan) | **partiel** | bouton existant modifié | « Entretien » : +1 point par statue. | Pillage. |
+| 23 | Statue en or (Conglomérat mercantile d'Hacan) | **oui** | bouton existant modifié + automatique | « Entretien » : +1 point par statue. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
 | 35 | Bazaar (Conglomérat mercantile d'Hacan) | partiel | à définir (prévu) | Caractéristiques de l'unité déjà utilisées. | Renvoie à « Vente au Bazaar » : marché et transactions non gérés. (difficile) |
 | 148 | Salai Sai Corian (Héritiers de Winnu) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bonus à l'écran de combat : +1 par vaisseau adverse engagé ; production 1 non suivie. (moyenne) |
 | 151 | Gloire au juste (Héritiers de Winnu) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement selon le possesseur de Mecatol Rex ; texte à clarifier. (moyenne) |
@@ -202,7 +202,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 153 | Arche de l'ombre (Kabal de l’ombre) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Raid et furtif : mots-clés à ajouter à l'écran de combat. (moyenne) |
 | 154 | Camp de travail (Kabal de l’ombre) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use le camp, dépense un esclave, +4 ressources ; effet de destruction manuel. (moyenne) |
 | 155 | Portail de repli (Kabal de l’ombre) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement : replace ici les « Raideur » détruits au tour précédent. (moyenne) |
-| 162 | Quetzalcoalt (Volée argentée) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de fin de combat : +1 point si trois vaisseaux militaires engagés et survie. (moyenne) |
+| 162 | Quetzalcoalt (Volée argentée) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Point de fin de combat avec trois vaisseaux militaires engagés. |
 | 163 | Destroyeur (Volée argentée) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −1 influence ; la seconde attaque se relance à l'écran de combat. (facile) |
 | 164 | Complexe de guerre (Volée argentée) | **partiel** | bouton existant modifié | « Entretien » : un destroyeur de la faction est posé dans le système du complexe. | Contrôle du système non vérifié ; +1 des destroyeurs des systèmes adjacents au combat. |
 | 165 | Centre d'expansion (Volée argentée) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : marque un système choisi ; +1 au combat spatial là pour ce tour. (moyenne) |
@@ -216,7 +216,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 178 | Sphère de dyson (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, phase de science : use un scientifique, +2 ressources par niveau de connaissance spatiale. | Règle de pose (nébuleuse, supernova) non vérifiée. |
 | 199 | Soleil de guerre (Université de Jol-Nar) | **oui** | automatique | Confirmation à la production sans la technologie ; valeur de contrôle lue par `#con`. | — |
 | 243 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 407 | Vaisseau pirate (Pirate) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Touches visant les vaisseaux de commerce, furtif en anomalie : écran de combat à étendre. (moyenne) |
+| 407 | Vaisseau pirate (Pirate) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Touches visant d'abord les vaisseaux de commerce ; furtif dans une anomalie. |
 | 423 | Letani (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 428 | Arbre gardien (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 431 | Transporteur (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -231,7 +231,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 470 | Graine d'eden (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Jet et nombre d'attaques selon la connaissance génétique : écran de combat à étendre. (moyenne) |
 | 490 | Armageddon | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : dépense 3 fragments militaires et un scientifique ; portée du canon non gérée. (moyenne) |
-| 496 | Cuirassé impérial | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
+| 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
 | 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 512 | Station de combat | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
@@ -239,9 +239,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 514 | Canon restauré | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 516 | Mech géant | **oui** | automatique | Compte pour 3 dans la capacité d'un vaisseau (avertissement à l'embarquement, déplacement assisté) ; valeur de contrôle lue par `#con`. | — |
 | 524 | frégate du khan (Invasion du grand Khan) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | À sa destruction : touche de 6 ou 4 infligée au destructeur. (moyenne) |
-| 525 | Palais du khan (Invasion du grand Khan) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Malus de visée par frégate : ciblage non géré à l'écran de combat. (moyenne) |
+| 525 | Palais du khan (Invasion du grand Khan) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Malus de visée par frégate du khan. |
 | 527 | Soldat du Khan (Invasion du grand Khan) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 554 | Monument éternel | partiel | à définir (prévu) | Caractéristiques de l'unité déjà utilisées. | Comptoir, pillage et points par contributions : actions de commerce à créer. (moyenne) |
+| 554 | Monument éternel | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer ; points par contributions. |
 | 557 | Rebelle (Rébellion inter-planétaire) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Furtif : mot-clé à ajouter à l'écran de combat. (moyenne) |
 | 568 | Indigène | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un diplomate, lance 4 dés à 3 contre cette unité. (moyenne) |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
@@ -250,11 +250,11 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 572 | Étoile de mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique ; valeur de contrôle non calculée. (moyenne) |
 | 573 | Vaisseau gigantesque | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 574 | Ravageur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 575 | Corsaire | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Pillage : suppose une action « pillage » à créer. (moyenne) |
-| 576 | Vaisseau antique | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Pillage : suppose une action « pillage » à créer. (moyenne) |
+| 575 | Corsaire | **oui** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
+| 576 | Vaisseau antique | **oui** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. (4 commerce et 1 point) | — |
 | 578 | Canon de Meer | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 582 | Telluran | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Furtif : mot-clé à ajouter à l'écran de combat. (moyenne) |
-| 590 | Colonie Ladaran | **partiel** | bouton existant modifié | « Entretien » : une infanterie de la faction est créée à bord. | Pillage ; points du décompte. |
+| 590 | Colonie Ladaran | **partiel** | bouton existant modifié + automatique | « Entretien » : une infanterie de la faction est créée à bord. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Points du décompte. |
 | 591 | Destroyeur Tak'Qav | oui | — | Bombardement noté `#bomb(6)` sans nombre de dés : notation à vérifier. | — |
 | 597 | Myru Vos | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Furtif à ajouter ; +2 commerce à la destruction d'un vaisseau de commerce. (moyenne) |
 | 598 | Magmus | **oui** | nouveau bouton | Fiche de l'unité : « Un vaisseau détruit ici » — +1 de recherche militaire, notée au journal de recherche. | — |
@@ -272,9 +272,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 769 | Memoria D (Le Nomade) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton signal facile ; jet de 6 par infanterie détruite pour la sauver. (moyenne) |
 | 770 | Memoria C (Le Nomade) | **partiel** | bouton existant modifié | « Entretien » : une frégate marchande est créée dans le système. | Dépense d'un signal ; revendication. |
 | 786 | Centre de contrebande (Le Nomade) | **oui** | bouton existant modifié | « Entretien » : 3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins. | — |
-| 810 | Nef de la rupture (Rupture de l'espace-temps) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Ignore blocage et trous de ver oméga : à brancher sur le déplacement assisté. (difficile) |
+| 810 | Nef de la rupture (Rupture de l'espace-temps) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Ignore blocage et trous de ver oméga. |
 | 835 | Milice (Réfugiés) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 836 | Entrepôt d'aide (Réfugiés) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Compteur de commerce sur l'entrepôt, alimenté par les livraisons à la planète. (moyenne) |
+| 836 | Entrepôt d'aide (Réfugiés) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Commerce posé sur l'entrepôt : à prendre à la main. |
 | 845 | Croiseur (Pirate Mentak) | oui | — | Caractéristiques et précision déjà utilisées par l'outil. | — |
 | 846 | Troupe de détournement (Pirate Mentak) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Attaque en dernier et capture des vaisseaux détruits : écran de combat à étendre. (moyenne) |
 | 847 | Soleil de capturé (Pirate Mentak) | oui | — | Texte informatif (non productible) ; bombardement noté « 6\*\*\* » à vérifier. | — |
@@ -336,7 +336,7 @@ Deux sortes : les **capacités** écrites dans le texte d'une unité (`#furtif`,
 | `#con` contrôle | Valeur de contrôle de l'unité (1 par défaut). | 16 | **oui** | automatique | Blocage d'un déplacement, conflits de contrôle et de domination : chaque unité militaire vaut la valeur écrite (`#con(3)`), sinon 1 ; +1 avec Rayon tracteur. | Test de domination hors Exploitation du vide. (moyenne) |
 | `#furtif` furtif | Tant qu'ils n'ont engagé personne, ces vaisseaux doivent être ciblés. | 7 | **oui** | automatique | Conflit, combat spatial : un engagement de faction n'atteint pas une unité furtive qui n'a rien engagé ; il faut la cibler. | — |
 | `#deplfurtif` déplacement furtif | Ne peut pas être bloqué par des vaisseaux adverses en se déplaçant. | 4 | **oui** | automatique | Cadre de blocage : ces vaisseaux ne comptent pas parmi ceux à arrêter ; un groupe entièrement furtif ne s'arrête pas pour des unités. | — |
-| `#pill` pillage | Qui détruit l'unité gagne le commerce indiqué. | 16 | non | automatique (prévu) | — | Conflit : à « Retirer », donner le commerce au camp qui a détruit l'unité (à désigner s'ils sont plusieurs). (moyenne) |
+| `#pill` pillage | Qui détruit l'unité gagne le commerce indiqué (ou ce que dit le texte) — sauf s'il n'a aucune unité dans le système. | 16 | **oui** | automatique | Chaque dégât note son auteur sur l'unité touchée (marque `degatDe`). Conflit, « Retirer » : le camp du dernier dégât gagne le pillage lu dans le texte — commerce, points, infamie, recherche (notée au journal) — s'il a encore une unité dans le système ; le bouton l'annonce (« Retirer (butin) »). | Pillage hors de l'écran de combat (unité retirée à la main) : non géré. |
 | `#comp` comptoir commercial | Permet de recevoir une livraison. | 11 | **oui** | automatique | Livraison commerciale : seules les factions qui ont une unité à comptoir dans le système peuvent être livrées. | — |
 | `#livr` livraison commerciale | L'unité, non bloquée, livre du commerce à une faction qui a un comptoir dans le système. | 6 | **oui** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (n) » — choix de la faction s'il y a plusieurs comptoirs, commerce donné, dettes réduites, négociant utilisé et unité dépensée selon son texte. | « Non bloquée » : non vérifié. |
 | `#rep` réparation | Permet de réparer : 1 ressource par point de résistance. | 4 | **partiel** | — | Fiche d'un système : « Réparer » paie 1 ressource par dégât. | Le bouton ne vérifie pas qu'une unité à réparation est dans le système. (facile) |

@@ -4,7 +4,9 @@ import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe } from "./effets";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
-import { MARQUEUR, ACTIVATION } from "./miseEnPlace";
+import { MARQUEUR, ACTIVATION, actionsPiste } from "./miseEnPlace";
+import { lirePillage, auteurDesDegats } from "./effets";
+import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
 import { Controles } from "./Controle";
 
@@ -255,7 +257,7 @@ export function Combat() {
 
 function CombatSysteme({ lieu }) {
 
-    const { etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript } = useEngine();
+    const { etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser } = useEngine();
 
     // zone : celle des cibles (espace du système, ou planète)
     const { numero, planete, sorte, zone } = lireLieu(lieu);
@@ -691,13 +693,99 @@ function CombatSysteme({ lieu }) {
         return resistance > 0 && (Number(v.c.marques?.degat) || 0) >= resistance;
     };
 
+    // --------------------------------------------------------
+    // PILLAGE (#pill, effets.js) et autres gains à la destruction
+    //
+    // Le camp qui a infligé le dernier dégât à l'unité (marque « degatDe »,
+    // posée avec chaque dégât) gagne son pillage quand elle est retirée —
+    // seulement s'il a encore une unité dans le système.
+    //   Maître du pillage (habilité) : 1 commerce de plus par pillage ;
+    //   Libre échange (habilité) : 1 infamie pour une unité commerciale
+    //   non militaire détruite.
+    // -> { camp, texte, actions } ou null
+    // --------------------------------------------------------
+
+    function butinDe(v) {
+
+        const camp = auteurDesDegats(v.c);
+
+        if (camp === null || camp === NEUTRE || camp === v.camp) {
+            return null;
+        }
+
+        const nomUnite = nomElement(search, v.c.ref);
+        const actions = [];
+        const gains = [];
+
+        const pillage = aScript(camp, "pillage-unite") ? lirePillage(v.u) : null;
+        const present = dansLeSysteme(camp).length > 0;
+
+        if (pillage && !present) {
+            gains.push("pas de pillage (plus aucune unité dans le système)");
+        } else if (pillage) {
+
+            const commerce = pillage.commerce + (aScript(camp, "maitre-du-pillage") ? 1 : 0);
+            const recherche = pillage.recherche.reduce((total, [, n]) => total + n, 0);
+
+            if (commerce > 0) {
+                actions.push({ type: "compteur", id: `joueur:${camp}:commerce`, delta: commerce });
+                gains.push(`${commerce} commerce` + (commerce > pillage.commerce ? " (dont 1 : Maître du pillage)" : ""));
+            }
+
+            if (pillage.points > 0) {
+                actions.push(...actionsPiste(etat, camp, "points", pillage.points));
+                gains.push(`${pillage.points} point(s)`);
+            }
+
+            if (pillage.infamie > 0) {
+                actions.push(...actionsPiste(etat, camp, "infamie", pillage.infamie));
+                gains.push(`${pillage.infamie} infamie`);
+            }
+
+            if (recherche > 0) {
+                actions.push(noter(etat, camp, "g", v.c.ref.id, recherche));
+                gains.push(`${recherche} de recherche (${pillage.recherche.map(([type, n]) => `${type} ${n}`).join(", ")})`);
+            }
+
+            if (pillage.aLaMain) {
+                gains.push("butin posé sur l'unité : à prendre à la main");
+            }
+        }
+
+        if ((v.u.mot_cle || []).includes("com") && !(v.u.mot_cle || []).includes("mil") && aScript(camp, "libre-echange")) {
+            actions.push(...actionsPiste(etat, camp, "infamie", 1));
+            gains.push("1 infamie (Libre échange)");
+        }
+
+        return gains.length
+            ? { camp, actions: actions.filter(Boolean), texte: `${nomUnite} détruit(e) par ${nomCamp(camp)} : ${gains.join(", ")}` }
+            : null;
+    }
+
     // Retrait d'une unité détruite : elle garde la trace du combat (marque
-    // « detruitA »), pour le Grappin de capture d'un combat résolu
+    // « detruitA »), pour le Grappin de capture d'un combat résolu ; le
+    // butin de sa destruction est donné à qui l'a détruite
     const retrait = v => [
+        ...(butinDe(v)?.actions || []),
         { type: "marquer", c: v.id, marque: "detruitA", valeur: `${lieu}:${etat.tour}` },
         v.c.marques?.medecine && { type: "marquer", c: v.id, marque: "medecine", valeur: null },
         { type: "supprimer", c: v.id },
     ].filter(Boolean);
+
+    // Retire ces unités, et dit le butin de chacune (journal, message orange)
+    function retirer(liste) {
+
+        const butins = liste.map(butinDe).filter(Boolean).map(b => b.texte);
+
+        envoyer(
+            [...liste.flatMap(retrait), { type: "compteur", id: DETRUITS, delta: liste.length }],
+            [`Combat : ${liste.length} unité(s) détruite(s) retirée(s)`, ...butins].join(" — ")
+        );
+
+        if (butins.length) {
+            aviser(butins.join(" ; "));
+        }
+    }
 
     // Script Médecine : une de mes unités biologiques, et son jet de capture
     const medecine = v => v.camp === moi && (v.u.mot_cle || []).includes("bio") && aScript(moi, "medecine");
@@ -788,9 +876,13 @@ function CombatSysteme({ lieu }) {
         const parTireur = new Map();
         const parCible = new Map();
 
+        // Paternité des dégâts : camp du dernier tireur, par unité touchée
+        const auteurs = new Map();
+
         for (const { x, v, k } of couples) {
             parTireur.set(v.id, [...(parTireur.get(v.id) || lireIndices(v.c, M.desA)), k]);
             parCible.set(x.id, (parCible.get(x.id) || 0) + 1);
+            auteurs.set(x.id, v.camp);
         }
 
         // Script Bombe bactériologique : une infanterie biologique détruite par un
@@ -806,6 +898,8 @@ function CombatSysteme({ lieu }) {
                 ...marquer(id, M.desA, indices),
                 si: parId[id].c.marques?.[M.desA] ?? 0,
             })),
+            // (noté avant le dégât lui-même : le pillage lit qui a détruit l'unité)
+            ...[...auteurs].map(([id, camp]) => ({ type: "marquer", c: id, marque: "degatDe", valeur: "c" + camp })),
             ...[...parCible].map(([id, n]) => {
                 const degat = Number(parId[id].c.marques?.degat) || 0;
                 return { type: "marquer", c: id, marque: "degat", valeur: degat + n, si: degat };
@@ -1179,9 +1273,10 @@ function CombatSysteme({ lieu }) {
                         <button
                             type="button"
                             style={styleBouton}
-                            onClick={() => jouer([...retrait(v), { type: "compteur", id: DETRUITS, delta: 1 }])}
+                            title={butinDe(v)?.texte}
+                            onClick={() => retirer([v])}
                         >
-                            Retirer
+                            Retirer{butinDe(v) ? " (butin)" : ""}
                         </button>
                     )}
 
@@ -1463,13 +1558,7 @@ function CombatSysteme({ lieu }) {
                             type="button"
                             disabled={!aRetirer.length}
                             title="Retire du jeu toutes les unités détruites de ce combat (pas les unités indestructibles, qui sont seulement désactivées)"
-                            onClick={() => envoyer(
-                                [
-                                    ...aRetirer.flatMap(retrait),
-                                    { type: "compteur", id: DETRUITS, delta: aRetirer.length },
-                                ],
-                                `Combat : ${aRetirer.length} unité(s) détruite(s) retirée(s)`
-                            )}
+                            onClick={() => retirer(aRetirer)}
                         >
                             Retirer tous les détruits{aRetirer.length ? ` (${aRetirer.length})` : ""}
                         </button>

@@ -2215,6 +2215,14 @@ export function Plan({ children, style }) {
 
                 jouer([
                     ...epidemie,
+                    // Paternité du dégât : le camp du tireur, gardé sur l'unité touchée
+                    // (pillage à sa destruction, Combat.jsx)
+                    {
+                        type: "marquer",
+                        c: touchee.id,
+                        marque: "degatDe",
+                        valeur: "c" + (tireur.marques?.possession ?? tireur.proprio ?? 0),
+                    },
                     {
                         type: "marquer",
                         c: touchee.id,
