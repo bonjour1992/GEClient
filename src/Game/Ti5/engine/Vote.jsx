@@ -16,19 +16,19 @@ import { PlayerColor } from "../ti5Const";
 // ils n'en reçoivent rien, pas même le nombre d'éléments posés.
 //
 //   Prêt à révéler  (décompte) tous les plateaux sont révélés ensemble
-//   Réinitialiser   les agents du carré de droite (utilisés) vont dans les
-//                   agents usés ; ceux de la case (dépensés) et les autres
+//   Réinitialiser   les agents de la case (utilisés) vont dans les agents
+//                   usés ; ceux du carré de droite (dépensés) et les autres
 //                   éléments sont retirés du jeu ; le plateau est caché
 // ============================================================
 
 // Chaque case a deux emplacements : la case elle-même (pions en bas à
 // gauche) et sa partie droite, le carré blanc (zone « ...:d », pions centrés).
 //
-//   carré de droite : le politicien est utilisé  -> 1 voix, il sera usé
-//   case (à gauche) : le politicien est dépensé  -> 2 voix, il sera retiré
+//   case (à gauche) : le politicien est utilisé  -> 1 voix, il sera usé
+//   carré de droite : le politicien est dépensé  -> 2 voix, il sera retiré
 //
-// À la réinitialisation, un agent du carré va donc dans les agents usés,
-// et un agent du reste de la case est retiré du jeu.
+// À la réinitialisation, un agent de la case va donc dans les agents usés,
+// et un agent du carré de droite est retiré du jeu.
 const estPartieDroite = zone => zone.endsWith(":d");
 
 const stylePions = zone => (estPartieDroite(zone)
@@ -54,7 +54,7 @@ const stylePions = zone => (estPartieDroite(zone)
 // Pour chaque loi du tour (ligne du plateau de vote) et chaque
 // colonne (Contre, Pour, 1 à 6), les voix de chaque joueur :
 //
-//   - seuls les politiciens comptent : 2 voix dans la case, 1 voix
+//   - seuls les politiciens comptent : 1 voix dans la case, 2 voix
 //     dans sa partie droite ; les autres agents valent 0 ;
 //   - plus un ajustement manuel (compteur vote:<tour>:<loi>:<col>:<u>),
 //     possible à tout moment : voix annoncées au prévote, effets
@@ -123,7 +123,7 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
 
         const cle = `${m[2]}:${m[3]}:${m[1]}`;
 
-        posees[cle] = (posees[cle] || 0) + politiciens * (m[4] ? 1 : 2) + scientifiques * 2;
+        posees[cle] = (posees[cle] || 0) + politiciens * (m[4] ? 2 : 1) + scientifiques * 2;
         nombreLois = Math.max(nombreLois, Number(m[2]));
     }
 
@@ -242,7 +242,7 @@ function Decompte({ lois }) {
                 <b>Décompte des votes</b>
 
                 <span style={{ fontSize: 12, color: "#444" }}>
-                    Un politicien vaut 2 voix dans la case, 1 dans sa partie droite ; les autres agents 0
+                    Un politicien vaut 1 voix dans la case (utilisé), 2 dans sa partie droite (dépensé) ; les autres agents 0
                     (un scientifique : 2 voix avec « Réseau d'ingérence »).
                 </span>
 
@@ -299,12 +299,12 @@ function Decompte({ lois }) {
                     <button
                         type="button"
                         data-action="reinitialiser-votes"
-                        title="Tous les plateaux de vote sont vidés et cachés (agents des carrés : agents usés ; le reste : retiré du jeu), les ajustements manuels effacés. Fait aussi à chaque nouveau tour."
+                        title="Tous les plateaux de vote sont vidés et cachés (agents des cases : agents usés ; ceux des carrés de droite et le reste : retirés du jeu), les ajustements manuels effacés. Fait aussi à chaque nouveau tour."
                         style={{ marginLeft: "auto" }}
                         onClick={() => window.confirm(
                             "Réinitialiser le décompte des votes pour tous les joueurs ?\n" +
-                            "Tous les plateaux de vote sont vidés et cachés : les agents des carrés de droite " +
-                            "(utilisés) vont dans les agents usés, ceux des cases (dépensés) sont retirés du jeu. " +
+                            "Tous les plateaux de vote sont vidés et cachés : les agents des cases " +
+                            "(utilisés) vont dans les agents usés, ceux des carrés de droite (dépensés) sont retirés du jeu. " +
                             "Les ajustements manuels sont effacés."
                         ) && envoyer([{ type: "reinitialiserVotes" }], "Vote : décompte réinitialisé")}
                     >
@@ -461,17 +461,17 @@ export function Vote({ vu }) {
 
     function reinitialiser() {
 
-        // Retire du jeu les agents des cases (dépensés) et tout ce qui n'est pas un agent
+        // Retire du jeu les agents des carrés de droite (dépensés) et tout ce qui n'est pas un agent
         if (poses.length && !window.confirm(
-            "Réinitialiser votre plateau de vote ? Les agents des carrés de droite (1 voix, utilisés) vont " +
-            "dans vos agents usés ; ceux des cases (2 voix, dépensés) sont retirés du jeu."
+            "Réinitialiser votre plateau de vote ? Les agents des cases (1 voix, utilisés) vont " +
+            "dans vos agents usés ; ceux des carrés de droite (2 voix, dépensés) sont retirés du jeu."
         )) {
             return;
         }
 
         jouer([
             ...poses.filter(c => !c.cache).map(c => (
-                c.ref?.type === "agent" && estPartieDroite(c.zone)
+                c.ref?.type === "agent" && !estPartieDroite(c.zone)
                     ? { type: "deplacer", c: c.id, vers: base + ":agentsUses" }
                     : { type: "supprimer", c: c.id }
             )),
@@ -596,14 +596,14 @@ export function Vote({ vu }) {
                 </b>
 
                 <span style={{ fontSize: 13, color: "#444" }}>
-                    Carré de droite : politicien utilisé, 1 voix. Case : politicien dépensé, 2 voix.
+                    Case : politicien utilisé, 1 voix. Carré de droite : politicien dépensé, 2 voix.
                 </span>
 
                 {joueur && u === moi && (
                     <button
                         type="button"
                         onClick={reinitialiser}
-                        title="Agents des carrés : dans vos agents usés. Agents des cases et autres éléments : retirés du jeu. Le plateau est caché."
+                        title="Agents des cases : dans vos agents usés. Agents des carrés de droite et autres éléments : retirés du jeu. Le plateau est caché."
                     >
                         Réinitialiser
                     </button>

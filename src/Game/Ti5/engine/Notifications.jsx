@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEngine } from "./Interaction";
 import { combatsActifs, aDesUnites } from "./Combat";
 import { passagesEnCours } from "./Blocage";
-import { controlesEnCours } from "./Controle";
+import { controlesEnCours, accordsEnCours } from "./Controle";
 
 // ============================================================
 // NOTIFICATIONS DU NAVIGATEUR (case à cocher de l'en-tête)
@@ -14,7 +14,8 @@ import { controlesEnCours } from "./Controle";
 //   - un combat s'ouvre là où il a des unités ;
 //   - un déplacement est arrêté sur une case où il a des unités
 //     (blocage : bloquer, aider ou s'abstenir) ;
-//   - un conflit de contrôle s'ouvre sur une planète où il a des unités.
+//   - un conflit de contrôle s'ouvre sur une planète où il a des unités ;
+//   - une revendication demande son accord (il a des unités dans le système).
 //
 // Rien n'est notifié tant que la page de la partie est au premier
 // plan : la notification sert quand on regarde ailleurs. Le choix
@@ -66,6 +67,13 @@ export function Notifications() {
             if (p.mover !== moi && aDesUnites(index, String(p.numero), moi)) {
                 attentes["blocage:" + p.cle] =
                     `${nomDe(p.mover)} traverse un système où vous avez des unités : bloquer, aider ou vous abstenir.`;
+            }
+        }
+
+        for (const a of accordsEnCours(etat)) {
+            if (a.demandeur !== moi && (aDesUnites(index, String(a.numero), moi) || aDesUnites(index, `${a.numero}p${a.k}`, moi))) {
+                attentes["accord:" + a.cle] =
+                    `${nomDe(a.demandeur)} veut revendiquer une planète d'un système où vous avez des unités : accepter ou refuser.`;
             }
         }
 

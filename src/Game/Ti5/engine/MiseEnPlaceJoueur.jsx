@@ -1,6 +1,6 @@
-import { useEngine, BoutonRegle, nomCase, DECALAGE_SECONDAIRE } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, DECALAGE_SECONDAIRE, agentDisponible } from "./Interaction";
 import { chargerContenu } from "./sync";
-import { normaliserPlateau, nombreCases } from "../hexSpirale";
+import { normaliserPlateau, COLONNES_BANDE } from "../hexSpirale";
 import { typeUnite } from "./miseEnPlace";
 import { scriptsActifs, concerne } from "./scripts";
 
@@ -26,13 +26,13 @@ import { scriptsActifs, concerne } from "./scripts";
 
 const compteurFait = u => `joueur:${u}:miseEnPlace`;
 
-// Taille du groupe des systèmes secondaires (voir Espace.jsx)
-const ANNEAUX_SECONDAIRES = "espace:secondaire:anneaux";
+// Nombre de lignes de la bande des systèmes secondaires (voir Espace.jsx)
+const LIGNES_SECONDAIRES = "espace:secondaire:lignes";
 
 export function MiseEnPlaceJoueur() {
 
     const {
-        etat, index, envoyer, moi, joueur, partie, factionDe, signaler, aviser, scriptsDesactives,
+        etat, index, envoyer, moi, joueur, partie, factionDe, signaler, aviser, scriptsDesactives, search,
     } = useEngine();
 
     if (!joueur || etat.tour !== 0) {
@@ -86,7 +86,7 @@ export function MiseEnPlaceJoueur() {
 
         // Script « porte » (Creuss) : c'est une autre tuile, la porte, qui va
         // sur la case natale ; le système natal va dans les systèmes
-        // secondaires, sur la première case libre (le groupe s'agrandit au besoin)
+        // secondaires, sur la première case libre (la bande gagne une ligne au besoin)
         const porte = scripts.find(s => s.porte)?.porte;
         const tuilePorte = porte ? miens.find(c => c.ref?.type === "system" && c.ref.id === porte) : null;
 
@@ -106,10 +106,10 @@ export function MiseEnPlaceJoueur() {
                 j++;
             }
 
-            const anneaux2 = Number(etat.compteurs[ANNEAUX_SECONDAIRES] ?? 1);
+            const lignes2 = Number(etat.compteurs[LIGNES_SECONDAIRES]) || 3;
 
-            if (j >= nombreCases(anneaux2)) {
-                actions.push({ type: "compteur", id: ANNEAUX_SECONDAIRES, valeur: anneaux2 + 1 });
+            if (j >= COLONNES_BANDE * lignes2) {
+                actions.push({ type: "compteur", id: LIGNES_SECONDAIRES, valeur: Math.floor(j / COLONNES_BANDE) + 1 });
             }
 
             hex = "hex:" + (DECALAGE_SECONDAIRE + j);
@@ -170,6 +170,8 @@ export function MiseEnPlaceJoueur() {
                 const p = planetes.find(x => x.id === id);
                 return p ? `${hex}:planete:${p.k}` : null;
             },
+            // Un de mes agents disponibles dont le nom contient ce motif (ou null)
+            agent: motif => agentDisponible({ index, moi, search }, motif),
             // Zone d'une habilité de la feuille de faction (emplacement habilite:<rang>)
             habilite: id => {
                 const i = (faction.rules || []).findIndex(lien => Number(lien?.id) === id);

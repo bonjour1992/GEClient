@@ -95,7 +95,8 @@ export const SCRIPTS = [
     //                        ou null (elle reste dans les éléments actifs)
     //   unite : { c (composant), contenu, type (typeUnite), vaisseau, terrestre }
     //   plan  : { u, hex, planetes: [{ k, id }], unites, zonePlanete(idPlanete),
-    //             vaisseaux, habilite(idHabilite) -> zone de l'habilité sur la feuille }
+    //             vaisseaux, habilite(idHabilite) -> zone de l'habilité sur la feuille,
+    //             agent(motif) -> un de mes agents disponibles }
     // actions(plan) -> actions ajoutées au coup
     // --------------------------------------------------------
 
@@ -154,16 +155,26 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 763 },
-        ecritLe: 1794333998562,
+        ecritLe: 1794372978756,
         nom: "Mise en place du Nomade",
-        description: "4 mercenaires piochés en main (en garder deux) ; les infanteries embarquent dans Memoria.",
+        description: "4 mercenaires piochés en main (en garder deux) ; les infanteries embarquent dans Memoria ; un négociant est posé sur l'Anneau Arcturus (la station est à vous, pas la planète Arcturus).",
         placer: (unite, plan) => {
             const memoria = plan.vaisseaux.find(v => v.c.ref.id === 766);
 
             return unite.type === "inf" && memoria ? { sur: memoria.c.id } : undefined;
         },
-        actions: plan => [{ type: "piocher", de: "pioche:mercenaire", vers: `joueur:${plan.u}:main`, n: 4 }],
-        message: "4 mercenaires piochés : gardez-en deux, défaussez les deux autres.",
+        actions: plan => {
+
+            // L'Anneau Arcturus (#784) est une station commerciale : un négociant la tient
+            const negociant = plan.agent("n[ée]gociant");
+            const anneau = plan.zonePlanete(784);
+
+            return [
+                { type: "piocher", de: "pioche:mercenaire", vers: `joueur:${plan.u}:main`, n: 4 },
+                negociant && anneau && { type: "deplacer", c: negociant.id, vers: anneau, proprio: plan.u },
+            ].filter(Boolean);
+        },
+        message: "4 mercenaires piochés : gardez-en deux, défaussez les deux autres. Un négociant tient l'Anneau Arcturus ; vous ne possédez pas la planète Arcturus.",
     },
 
     {

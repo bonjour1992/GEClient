@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState } from "react";
 import { useDeplacement } from "./Deplacement";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
-import { PlateauView } from "../plateauVue";
+import { PlateauView, BandeView } from "../plateauVue";
 import { systemSize } from "../systeme";
-import { nombreCases, anneauDeIndex, distanceIndex } from "../hexSpirale";
+import { nombreCases, anneauDeIndex, distanceIndex, COLONNES_BANDE } from "../hexSpirale";
 import { techType } from "../ti5Const";
 import {
     useEngine, Emplacements, Pions, Zone, Defilable, agentDisponible, aMotCle, tokenTreve,
@@ -25,9 +25,12 @@ import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync"
 import { cleCombat, combatsActifs, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
-import { ProductionEnCours } from "./Production";
+import { ProductionEnCours, lireProduction, ouvrirProductionLieu } from "./Production";
 import { zoneFouille } from "./Archeologie";
-import { actionsPossession, cleControle, controlesEnCours } from "./Controle";
+import {
+    actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
+    cleAccord, accordsEnCours, campsAConsulter,
+} from "./Controle";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -184,20 +187,27 @@ export function Espace() {
     // SYSTÈMES SECONDAIRES
     //
     // Second groupe de cases, sous la carte : zones hex:<1000 + j>
-    // (Interaction.jsx). Sa taille est le compteur
-    // espace:secondaire:anneaux (1 par défaut : 7 cases). Hors du mode
+    // (Interaction.jsx), rangées en une longue bande de 12 colonnes
+    // (BandeView). Le nombre de lignes est le compteur
+    // espace:secondaire:lignes (3 par défaut : 36 cases). Hors du mode
     // « Modifier la carte », seules les cases qui ont un système sont
     // visibles : chaque îlot de cases voisines est un groupe.
     // --------------------------------------------------------
 
-    const ANNEAUX_SECONDAIRES = "espace:secondaire:anneaux";
-    const anneaux2 = Math.max(0, Math.min(6, Number(etat.compteurs[ANNEAUX_SECONDAIRES] ?? 1)));
+    const LIGNES_SECONDAIRES = "espace:secondaire:lignes";
+    const MAX_LIGNES = 10;
 
     const aDesSecondaires = Object.keys(tuiles).some(estSecondaire);
 
+    // (un système posé plus bas que le nombre de lignes reste visible)
+    const lignesOccupees = Object.keys(tuiles).filter(estSecondaire)
+        .reduce((max, i) => Math.max(max, Math.floor((Number(i) - DECALAGE_SECONDAIRE) / COLONNES_BANDE) + 1), 0);
+
+    const lignes2 = Math.max(1, lignesOccupees, Math.min(MAX_LIGNES, Number(etat.compteurs[LIGNES_SECONDAIRES]) || 3));
+
     const content2 = useMemo(() => {
 
-        const n = nombreCases(anneaux2);
+        const n = COLONNES_BANDE * lignes2;
         const type = Array(n).fill("vide");
         const systems = Array(n).fill(null);
         const rotates = Array(n).fill(0);
@@ -213,33 +223,37 @@ export function Espace() {
             }
         }
 
-        return { anneaux: anneaux2, type, systems, rotates };
+        return { colonnes: COLONNES_BANDE, lignes: lignes2, type, systems, rotates };
 
-    }, [anneaux2, signature]);
+    }, [lignes2, signature]);
 
-    function changerAnneaux2(delta) {
+    function changerLignes2(delta) {
 
-        const nouveau = Math.max(0, Math.min(6, anneaux2 + delta));
+        const nouveau = Math.max(1, Math.min(MAX_LIGNES, lignes2 + delta));
 
         // (une case occupée ne disparaît pas de l'écran sans prévenir)
         const occupe = delta < 0 && [...index.parZone.keys()].some(zone => {
             const m = /^hex:(\d+)/.exec(zone);
-            return m && estSecondaire(m[1]) && Number(m[1]) - DECALAGE_SECONDAIRE >= nombreCases(nouveau);
+            return m && estSecondaire(m[1]) && Number(m[1]) - DECALAGE_SECONDAIRE >= COLONNES_BANDE * nouveau;
         });
 
         if (occupe) {
-            signaler(`L'anneau ${anneaux2} des systèmes secondaires n'est pas vide : retirez d'abord ce qui s'y trouve.`);
+            signaler(`La ligne ${lignes2} des systèmes secondaires n'est pas vide : retirez d'abord ce qui s'y trouve.`);
             return;
         }
 
-        jouer({ type: "compteur", id: ANNEAUX_SECONDAIRES, valeur: nouveau });
+        jouer({ type: "compteur", id: LIGNES_SECONDAIRES, valeur: nouveau });
     }
 
-    // Cases où j'ai au moins une unité (dans l'espace, sur une planète ou embarquée)
-    const mesCases =[...new Set(Object.values(etat.composants)
-        .filter(c => c.ref?.type === "unit" && c.proprio === moi)
-        .map(c => /^hex:(\d+)/.exec(c.zone || "")?.[1])
-        .filter(Boolean))]
+    // Cases où j'ai au moins une unité (dans l'espace, sur une planète ou embarquée),
+    // ou mon drapeau : une planète ou une station que je possède
+    const mesCases =[...new Set([
+        ...Object.values(etat.composants)
+            .filter(c => c.ref?.type === "unit" && c.proprio === moi)
+            .map(c => /^hex:(\d+)/.exec(c.zone || "")?.[1]),
+        ...Object.keys(tuiles)
+            .filter(i => (systemes[tuiles[i].ref.id]?.elems || []).some(lien => proprietaires[lien?.id] === moi)),
+    ].filter(Boolean))]
         .sort()
         .join(",");
 
@@ -690,10 +704,10 @@ export function Espace() {
                             <button type="button" onClick={() => changerAnneaux(1)}>+</button>
                         </span>
 
-                        <span title="Taille du groupe des systèmes secondaires, sous la carte">
-                            <button type="button" onClick={() => changerAnneaux2(-1)} disabled={anneaux2 === 0}>−</button>
-                            {" "}{anneaux2} anneaux secondaires{" "}
-                            <button type="button" onClick={() => changerAnneaux2(1)} disabled={anneaux2 === 6}>+</button>
+                        <span title="Systèmes secondaires, sous la carte : une bande de 12 colonnes, dont on règle le nombre de lignes">
+                            <button type="button" onClick={() => changerLignes2(-1)} disabled={lignes2 <= 1}>−</button>
+                            {" "}{lignes2} lignes secondaires{" "}
+                            <button type="button" onClick={() => changerLignes2(1)} disabled={lignes2 >= MAX_LIGNES}>+</button>
                         </span>
 
                         {caseChoisie === null && <span>Cliquer sur une case de la carte.</span>}
@@ -770,7 +784,7 @@ export function Espace() {
                             style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
                         >
                             <Emplacements stylePions={stylePions} extra={etendard} petit>
-                                <PlateauView
+                                <BandeView
                                     content={content2}
                                     decalage={DECALAGE_SECONDAIRE}
                                     renduCase={renduCase}
@@ -889,10 +903,13 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const {
         etat, index, jouer, envoyer, joueur, moi, nomDe, search, signaler, factionDe, allerA, setCombatVu,
-        aScript, aviser,
+        aScript, aviser, setProduction, capaciteLogistique,
     } = useEngine();
 
     const systeme = useElement(id);
+
+    // Station spéciale : agent choisi pour la tenir (rang 1 à 6 dans AGENTS_STATION)
+    const [agentStation, setAgentStation] = useState(1);
 
     // Combats : ce lieu s'ajoute aux combats de l'onglet Conflit, pour toute
     // la table. Envoyé tout de suite, comme toute action.
@@ -928,6 +945,12 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const enCombatPhase = /combat|canon|bombard/i.test(etat.phase);
 
+    // Ai-je une unité dans le système (espace, planètes, embarquée) ?
+    // Ouvrir un combat le demande.
+    const mesUnitesReelles = Object.values(etat.composants).some(c =>
+        c.ref?.type === "unit" && c.proprio === moi &&
+        (c.zone === "hex:" + numero || c.zone?.startsWith(`hex:${numero}:`)));
+
     // Bouton d'un combat : « voir » (bouton simple) s'il est déjà ouvert ;
     // sinon l'ouvrir est un effet du jeu, attendu aux phases de combat
     const boutonCombat = (lieu, libelle, titre) => (combats.includes(lieu)
@@ -946,7 +969,10 @@ function FicheSysteme({ numero, id, fermer }) {
             <BoutonRegle
                 key={lieu}
                 nom={`${libelle} (${nomCase(numero)})`}
-                obstacles={[!enCombatPhase && "ce n'est pas une phase de combat"]}
+                obstacles={[
+                    !enCombatPhase && "ce n'est pas une phase de combat",
+                    !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
+                ]}
                 faire={commentaire => envoyerAuCombat(lieu, commentaire)}
                 title={titre}
             >
@@ -965,11 +991,13 @@ function FicheSysteme({ numero, id, fermer }) {
     const zonePlanete = k => `${zoneEspace}:planete:${k}`;
     const uses = `joueur:${moi}:agentsUses`;
 
-    // Ai-je une unité dans le système (espace, planètes, embarquée) ?
-    // Rechercher, fouiller et revendiquer le demandent.
-    const mesUnitesIci = Object.values(etat.composants).some(c =>
-        c.ref?.type === "unit" && c.proprio === moi &&
-        (c.zone === zoneEspace || c.zone?.startsWith(zoneEspace + ":")));
+    // Mon drapeau (je possède une planète ou une station du système) compte
+    // comme une unité pour ce qui demande une unité dans le système :
+    // rechercher, fouiller, revendiquer, prendre une station.
+    const monDrapeauIci = (systeme?.elems || []).some(lien => lien?.id > 0 && Object.values(etat.composants).some(c =>
+        !c.cache && c.ref?.type === "planet" && c.ref.id === lien.id && c.zone === `joueur:${moi}:actif`));
+
+    const mesUnitesIci = mesUnitesReelles || monDrapeauIci;
 
     // Ai-je une infanterie sur la planète k ? Prendre possession le demande.
     const monInfanterieSur = k => (index.parZone.get(zonePlanete(k)) || []).some(c =>
@@ -1007,8 +1035,13 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Phase de science, rechercher : active la planète et utilise un
     // scientifique. La recherche gagnée s'ajoute à la main (onglet Technologie).
-    function rechercher(k, commentaire) {
-        envoyer([utiliser("scientifique"), { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) }], commentaire);
+    // La recherche est notée dans le cadre « Recherche du tour » de l'onglet Technologie.
+    function rechercher(k, idPlanete, commentaire) {
+        envoyer([
+            utiliser("scientifique"),
+            { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) },
+            { type: "compteur", id: `joueur:${moi}:rechTour:${idPlanete}`, valeur: 2 },
+        ], commentaire);
     }
 
     // Phase de science, fouiller une ruine : active la ruine, utilise un
@@ -1126,6 +1159,19 @@ function FicheSysteme({ numero, id, fermer }) {
     // (ils sont alors rouge gris) : l'engine prévient, les joueurs décident.
     function revendiquer(idPlanete, k, commentaire) {
 
+        // D'autres camps ont des unités militaires dans le système (espace, planète) :
+        // leur accord est demandé, dans l'onglet Conflit (Controle.jsx)
+        if (campsAConsulter(index, contenuEnCache, numero, k, moi).length) {
+            ouvrirConflit(
+                cleAccord(numero, k),
+                accordsEnCours(etat).some(a => a.cle === cleAccord(numero, k)),
+                commentaire + " — accord demandé",
+                [],
+                "D'autres camps ont des unités militaires dans le système : leur accord est demandé (onglet Conflit)."
+            );
+            return;
+        }
+
         const diplomate = agentDisponible({ index, moi, search }, "diplomate");
 
         // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
@@ -1134,11 +1180,12 @@ function FicheSysteme({ numero, id, fermer }) {
     }
 
     //   militaire : prise de possession par les armes (script Pillage), et non revendication
-    function prendre(idPlanete, k, commentaire, avant = [], militaire = true) {
+    //   station   : pas d'infanterie posée (script Assimilation) sur une station
+    function prendre(idPlanete, k, commentaire, avant = [], militaire = true, station = false) {
 
         // (Controle.jsx ; scripts Assimilation et Pillage)
         const { actions, messages } = actionsPossession(
-            { etat, moi, aScript, nomDe }, zonePlanete(k), idPlanete, idInfanterie, militaire);
+            { etat, moi, aScript, nomDe }, zonePlanete(k), idPlanete, station ? null : idInfanterie, militaire);
 
         if (messages.length) {
             aviser(messages.join(" "));
@@ -1164,20 +1211,82 @@ function FicheSysteme({ numero, id, fermer }) {
 
         const cle = cleControle(numero, k);
 
-        if (!controlesEnCours(etat).some(c => c.cle === cle)) {
+        ouvrirConflit(
+            cle,
+            controlesEnCours(etat).some(c => c.cle === cle),
+            commentaire + " — conflit de contrôle ouvert",
+            [],
+            "D'autres unités militaires sont sur la planète : un conflit de contrôle est ouvert (onglet Conflit)."
+        );
+    }
+
+    // Ouvre un conflit de l'onglet Conflit (contrôle, accord) s'il ne l'est pas
+    // déjà, et y va. extra : compteurs propres à ce conflit.
+    function ouvrirConflit(cle, dejaOuvert, commentaire, extra, avis) {
+
+        if (!dejaOuvert) {
             envoyer([
                 // (les choix d'un conflit précédent sur cette planète sont oubliés)
                 ...Object.keys(etat.compteurs).filter(id => id.startsWith(cle + ":") && etat.compteurs[id])
                     .map(id => ({ type: "compteur", id, valeur: 0 })),
+                ...extra,
                 { type: "compteur", id: cle, valeur: moi },
-            ], commentaire + " — conflit de contrôle ouvert");
+            ], commentaire);
 
-            aviser("D'autres unités militaires sont sur la planète : un conflit de contrôle est ouvert (onglet Conflit).");
+            aviser(avis);
         }
 
         fermer();
         allerA("combat");
     }
+
+    // Prendre possession d'une station (satellite) : l'agent adapté à son type y
+    // est posé. Si un autre camp a des unités militaires dans l'espace du système,
+    // un conflit de contrôle spatial s'ouvre d'abord (Controle.jsx).
+    function demanderStation(idPlanete, k, planete, commentaire) {
+
+        const opposants = (index.parZone.get(zoneEspace) || []).some(c =>
+            c.ref?.type === "unit" && !c.sur && (c.marques?.possession ?? c.proprio ?? 0) !== moi &&
+            contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
+
+        if (!opposants) {
+            const station = actionsSatellite({ index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation));
+
+            prendre(idPlanete, k, commentaire, station.actions, true, true);
+            return;
+        }
+
+        const cle = cleControle(numero, k);
+
+        ouvrirConflit(
+            cle,
+            controlesEnCours(etat).some(c => c.cle === cle),
+            commentaire + " — conflit de contrôle spatial ouvert",
+            planete?.stationType === "spe" ? [{ type: "compteur", id: cle + ":agent", valeur: agentStation }] : [],
+            "D'autres unités militaires sont dans l'espace du système : un conflit de contrôle spatial est ouvert (onglet Conflit)."
+        );
+    }
+
+    // Production d'un élément qui n'est pas une unité (une station, une planète
+    // dont l'habilité porte #prod) : même production qu'avec un dock (Production.jsx)
+    function produireAvec(k, idPlanete, planete, commentaire) {
+
+        ouvrirProductionLieu(
+            { index, moi, search, envoyer, setProduction, capaciteLogistique },
+            {
+                source: "planete:" + idPlanete,
+                nom: nomPlanete(planete),
+                numero,
+                capacite: lireProduction(planete),
+                activation: { zone: zonePlanete(k) },
+            },
+            commentaire
+        );
+
+        fermer();
+    }
+
+    const enRevendication = /revendication/i.test(etat.phase);
 
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
 
@@ -1391,11 +1500,42 @@ function FicheSysteme({ numero, id, fermer }) {
                                         {activee && <b style={{ color: "#555" }}>■ Planète activée</b>}
 
                                         {/* Toujours utilisables ; rouge gris si la condition manque */}
-                                        {joueur && !aMoi && (
+                                        {joueur && !aMoi && planete?.type === "sat" && (
+                                            <span style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                                                {planete.stationType === "spe" && (
+                                                    <select
+                                                        value={agentStation}
+                                                        onChange={e => setAgentStation(Number(e.target.value))}
+                                                        title="Station spéciale : agent à y poser"
+                                                    >
+                                                        {AGENTS_STATION.map((a, i) => <option key={a[0]} value={i + 1}>{a[1]}</option>)}
+                                                    </select>
+                                                )}
+                                                <BoutonRegle
+                                                    data-action="prendre-station"
+                                                    nom={`Prendre possession de ${nomPlanete(planete)}`}
+                                                    obstacles={[
+                                                        !enRevendication && "ce n'est pas la phase de revendication",
+                                                        !mesUnitesIci && "il faut une de vos unités dans le système",
+                                                        ...actionsSatellite({ index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation)).obstacles,
+                                                    ]}
+                                                    faire={commentaire => demanderStation(lien.id, k, planete, commentaire)}
+                                                    title="Station : il faut une de vos unités dans le système. L'agent adapté à la station y est posé (celui qui s'y trouvait est rendu, usé, à son joueur) et sa carte va dans vos éléments actifs. Si un autre camp a des unités militaires dans l'espace du système, un conflit de contrôle spatial s'ouvre d'abord (onglet Conflit)"
+                                                >
+                                                    Prendre possession
+                                                    {agentDeStation(planete, agentStation) ? ` (pose un ${agentDeStation(planete, agentStation).nom})` : ""}
+                                                </BoutonRegle>
+                                            </span>
+                                        )}
+
+                                        {joueur && !aMoi && planete?.type !== "sat" && (
                                             <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 6 }}>
                                                 <BoutonRegle
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
-                                                    obstacles={[!monInfanterieSur(k) && "il faut une de vos infanteries sur la planète"]}
+                                                    obstacles={[
+                                                        !enRevendication && "ce n'est pas la phase de revendication",
+                                                        !monInfanterieSur(k) && "il faut une de vos infanteries sur la planète",
+                                                    ]}
                                                     faire={commentaire => demanderPossession(lien.id, k, commentaire)}
                                                     title="Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs. Si un autre camp y a des unités militaires, un conflit de contrôle s'ouvre d'abord (onglet Conflit)"
                                                 >
@@ -1404,11 +1544,12 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Revendiquer ${nomPlanete(planete)}`}
                                                     obstacles={[
+                                                        !enRevendication && "ce n'est pas la phase de revendication",
                                                         !mesUnitesIci && "il faut une de vos unités dans le système",
                                                         !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
                                                     ]}
                                                     faire={commentaire => revendiquer(lien.id, k, commentaire)}
-                                                    title="Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs"
+                                                    title="Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs. Si d'autres camps y ont des unités militaires, leur accord est d'abord demandé (onglet Conflit)"
                                                 >
                                                     Revendiquer (use un diplomate)
                                                 </BoutonRegle>
@@ -1449,15 +1590,16 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Rechercher sur ${nomPlanete(planete)}`}
                                                     obstacles={obstaclesScience}
-                                                    faire={commentaire => rechercher(k, commentaire)}
+                                                    faire={commentaire => rechercher(k, lien.id, commentaire)}
                                                     title="Pose un marqueur d'activation sur la planète et use un scientifique"
                                                 >
                                                     Rechercher
                                                 </BoutonRegle>
                                                 <span style={{ fontSize: 12, color: "#444" }}>
                                                     Gagnez 2 de technologie au choix
-                                                    {specialites ? `, doublé en ${specialites}` : ""} : à
-                                                    ajouter dans l'onglet Technologie.
+                                                    {specialites ? `, doublé en ${specialites}` : ""} : la
+                                                    recherche est notée dans l'onglet Technologie, où
+                                                    vous cochez les cases.
                                                 </span>
                                             </>
                                         )}
@@ -1481,7 +1623,26 @@ function FicheSysteme({ numero, id, fermer }) {
 
                                         {/* PHASE DE PRODUCTION */}
 
-                                        {joueur && enProduction && aMoi && !activee && idInfanterie && prodInfanterie > 0 && (
+                                        {/* Élément à production qui n'est pas une unité (station, planète) */}
+                                        {joueur && aMoi && lireProduction(planete) && (
+                                            <BoutonRegle
+                                                data-action="produire-planete"
+                                                nom={`Produire avec ${nomPlanete(planete)} (${nomCase(numero)})`}
+                                                obstacles={[
+                                                    !enProduction && "ce n'est pas la phase de production",
+                                                    activee && "elle est déjà activée",
+                                                    !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+                                                ]}
+                                                faire={commentaire => produireAvec(k, lien.id, planete, commentaire)}
+                                                title="Use un logisticien, pose un marqueur d'activation et ouvre une production : glissez ensuite les unités depuis votre réserve"
+                                            >
+                                                Produire ici (use un logisticien)
+                                            </BoutonRegle>
+                                        )}
+
+                                        {/* (mobiliser : sur une planète, pas sur un satellite) */}
+                                        {joueur && enProduction && aMoi && !activee && idInfanterie && prodInfanterie > 0 &&
+                                            (planete?.type || "pla") === "pla" && (
                                             <Mobilisation
                                                 max={prodInfanterie}
                                                 cout={coutInfanterie}

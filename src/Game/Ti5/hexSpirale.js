@@ -85,6 +85,30 @@ export function distanceAxiale(a, b) {
     );
 }
 
+// ------------------------------------------------------------
+// BANDE (systèmes secondaires de l'outil de partie)
+//
+// Une bande de COLONNES_BANDE colonnes et d'autant de lignes qu'on
+// veut : la case j est à la colonne j % 12 de la ligne ⌊j / 12⌋.
+// Les colonnes impaires sont décalées d'une demi-case vers le bas.
+// ------------------------------------------------------------
+
+export const COLONNES_BANDE = 12;
+
+// Coordonnées axiales d'une case de la bande
+export function coordonneesBande(index) {
+
+    const colonne = index % COLONNES_BANDE;
+    const ligne = Math.floor(index / COLONNES_BANDE);
+
+    return { q: colonne, r: ligne - Math.floor(colonne / 2), colonne, ligne };
+}
+
+// Distance entre deux cases de la bande
+export function distanceBande(index1, index2) {
+    return distanceAxiale(coordonneesBande(index1), coordonneesBande(index2));
+}
+
 // Distance entre deux cases à partir de leurs indices.
 export function distanceIndex(index1, index2) {
     return distanceAxiale(

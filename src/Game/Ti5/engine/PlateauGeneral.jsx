@@ -243,7 +243,37 @@ export function Des({ nu }) {
 // les cases du haut à remplir (ex. "3,4,5"). Chacune reçoit
 // autant de jetons, tirés au hasard dans le sac, qu'il y a de
 // joueurs. Les jetons déjà en place y restent.
+//
+// La mise en place se fait toute seule à « Nouveau tour »
+// (Partie.jsx). Un bouton de rattrapage n'apparaît que si elle
+// manque pour le tour en cours (partie commencée avant, retour en
+// arrière).
 // ============================================================
+
+// Actions qui mettent en place le recrutement de ce tour ([] : rien à
+// faire — déjà en place, aucune case prévue, sac vide)
+export function actionsRecrutement(etat, index, deroule, nombreJoueurs, tour) {
+
+    const cases = casesRecrutement(deroule?.recru?.[tour - 1]);
+    const fait = Number(etat.compteurs[RECRUTEMENT_FAIT]) || 0;
+
+    if (!cases.length || fait === tour || !(index.parZone.get(SAC) || []).length) {
+        return [];
+    }
+
+    return [
+        // (si : refusé si un autre joueur vient de le faire — pas de double tirage)
+        { type: "compteur", id: RECRUTEMENT_FAIT, valeur: tour, si: fait },
+        { type: "melanger", zone: SAC },
+        ...cases.map(n => ({
+            type: "piocher",
+            de: SAC,
+            vers: "general:boite:" + n,
+            n: nombreJoueurs,
+            remplacements: REMPLACEMENTS,
+        })),
+    ];
+}
 
 function Recrutement() {
 
@@ -260,18 +290,7 @@ function Recrutement() {
     const dejaFait = etat.tour > 0 && Number(etat.compteurs[RECRUTEMENT_FAIT]) === etat.tour;
 
     function mettreEnPlace(commentaire) {
-        envoyer([
-            // (si : refusé si un autre joueur vient de le faire — pas de double tirage)
-            { type: "compteur", id: RECRUTEMENT_FAIT, valeur: etat.tour, si: Number(etat.compteurs[RECRUTEMENT_FAIT]) || 0 },
-            { type: "melanger", zone: SAC },
-            ...cases.map(n => ({
-                type: "piocher",
-                de: SAC,
-                vers: "general:boite:" + n,
-                n: parCase,
-                remplacements: REMPLACEMENTS,
-            })),
-        ], commentaire);
+        envoyer(actionsRecrutement(etat, index, deroule, parCase, etat.tour), commentaire);
     }
 
     return (
@@ -294,23 +313,21 @@ function Recrutement() {
                 </span>
             )}
 
-            {joueur && (
+            {/* Mis en place à « Nouveau tour ». Rattrapage : seulement s'il manque pour ce tour. */}
+            {joueur && etat.tour > 0 && !dejaFait && cases.length > 0 && reste > 0 && (
                 <BoutonRegle
-                    nom="Mettre en place le recrutement"
-                    obstacles={[
-                        !/ravitaill/i.test(etat.phase) && "ce n'est pas la phase de ravitaillement",
-                        dejaFait && "le recrutement de ce tour est déjà en place",
-                        !cases.length && "le déroulé ne prévoit aucune case pour ce tour",
-                        !reste && "le sac d'agents est vide",
-                    ]}
+                    data-action="rattraper-recrutement"
+                    nom="Mettre en place le recrutement (rattrapage)"
                     faire={mettreEnPlace}
-                    title="Tire du sac les agents du tour et les pose sur les cases du déroulé"
+                    title="Le recrutement se met en place tout seul à chaque nouveau tour ; il manque pour celui-ci : tire du sac les agents du tour et les pose sur les cases du déroulé"
                 >
-                    Mettre en place le recrutement
+                    Rattraper la mise en place
                 </BoutonRegle>
             )}
 
-            {dejaFait && <span style={{ color: "#1b5e20" }}>✔ déjà mis en place ce tour</span>}
+            {dejaFait
+                ? <span style={{ color: "#1b5e20" }}>✔ mis en place</span>
+                : <span style={{ color: "#555" }}>mis en place automatiquement à chaque nouveau tour</span>}
         </div>
     );
 }

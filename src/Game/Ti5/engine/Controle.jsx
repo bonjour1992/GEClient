@@ -1,4 +1,4 @@
-import { useEngine, BoutonRegle, nomCase, nomElement } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, nomElement, agentDisponible } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { typeUnite } from "./miseEnPlace";
 import { controleDe } from "./effets";
@@ -15,9 +15,15 @@ import { controleDe } from "./effets";
 // soutient d'office ; les neutres s'opposent, sauf si un joueur en
 // décide autrement.
 //
+// Station (satellite) : le conflit est un contrôle spatial — ce sont
+// les unités militaires de l'espace du système qui comptent — et la
+// prise de possession pose sur la station l'agent adapté à son type
+// (agentDeStation, actionsSatellite).
+//
 // Compteurs :
 //   controle:<case>p<planète>          joueur qui veut prendre possession (0 : clos)
 //   controle:<case>p<planète>:<camp>   1 s'abstient, 2 soutient, 3 s'oppose
+//   controle:<case>p<planète>:agent    station spéciale : rang (1 à 6) de l'agent choisi
 // ============================================================
 
 const NEUTRE = 0;
@@ -83,6 +89,53 @@ export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, id
 }
 
 // ------------------------------------------------------------
+// STATIONS (satellites)
+//
+// On prend possession d'une station en y posant l'agent adapté à son
+// type (un amiral sur une station militaire…) ; il y reste tant qu'on
+// la tient. L'agent qui s'y trouvait est rendu, usé, à son joueur.
+// ------------------------------------------------------------
+
+// [type de station, nom de l'agent, motif de son nom]
+export const AGENTS_STATION = [
+    ["mil", "amiral", "amiral"],
+    ["log", "logisticien", "logisticien|g[ée]n[ée]ticien"],
+    ["scien", "scientifique", "scientifique"],
+    ["com", "négociant", "n[ée]gociant"],
+    ["diplo", "diplomate", "diplomate"],
+    ["pol", "politique", "politi"],
+];
+
+// Agent à poser sur cette station : { nom, motif }, ou null (station sans type).
+// Station « spéciale » : n'importe quel agent — choix : son rang (1 à 6).
+export function agentDeStation(planete, choix) {
+
+    const ligne = planete?.stationType === "spe"
+        ? AGENTS_STATION[(Number(choix) || 1) - 1]
+        : AGENTS_STATION.find(a => a[0] === planete?.stationType);
+
+    return ligne ? { nom: ligne[1], motif: ligne[2] } : null;
+}
+
+// Actions qui posent mon agent sur la station (et rendent celui qui s'y trouvait)
+// -> { actions, obstacles }
+export function actionsSatellite({ index, moi, search }, zonePlanete, voulu) {
+
+    const agent = voulu ? agentDisponible({ index, moi, search }, voulu.motif) : null;
+
+    const presents = (index.parZone.get(zonePlanete) || [])
+        .filter(c => !c.cache && c.ref?.type === "agent" && !c.sur && Number.isInteger(c.proprio) && c.proprio > 0);
+
+    return {
+        obstacles: [voulu && !agent && `vous n'avez pas de ${voulu.nom} disponible (aucun agent ne sera posé sur la station)`],
+        actions: [
+            ...presents.map(c => ({ type: "deplacer", c: c.id, vers: `joueur:${c.proprio}:agentsUses` })),
+            agent && { type: "deplacer", c: agent.id, vers: zonePlanete, proprio: moi },
+        ].filter(Boolean),
+    };
+}
+
+// ------------------------------------------------------------
 // Les conflits de contrôle en cours
 // ------------------------------------------------------------
 
@@ -92,11 +145,13 @@ export function Controles() {
 
     const conflits = controlesEnCours(etat);
     const dominations = dominationsEnCours(etat);
+    const accords = accordsEnCours(etat);
 
-    return conflits.length + dominations.length > 0 && (
+    return conflits.length + dominations.length + accords.length > 0 && (
         <div data-controles style={{ marginBottom: 10 }}>
             <b style={{ fontSize: 15 }}>Conflits de contrôle</b>
             {conflits.map(c => <Controle key={c.cle} conflit={c} />)}
+            {accords.map(a => <Accord key={a.cle} conflit={a} />)}
             {dominations.map(d => <Domination key={d.cle} conflit={d} />)}
         </div>
     );
@@ -114,8 +169,12 @@ function Controle({ conflit }) {
     const idPlanete = Number(systeme?.elems?.[k]?.id) || -1;
     const planete = useElement(idPlanete);
 
-    // Unités militaires de la planète, par camp : 1 de contrôle chacune
-    const unites = (index.parZone.get(zonePlanete) || []).filter(c => !c.cache && c.ref?.type === "unit");
+    // Station : contrôle spatial (les unités de l'espace du système comptent)
+    const spatial = planete?.type === "sat";
+
+    // Unités militaires de la planète (ou de l'espace, pour une station), par camp : 1 de contrôle chacune
+    const unites = (index.parZone.get(spatial ? "hex:" + numero : zonePlanete) || [])
+        .filter(c => !c.cache && c.ref?.type === "unit" && (!spatial || !c.sur));
     const contenus = useElements([...new Set(unites.map(c => c.ref.id))]);
 
     const parCamp = new Map();
@@ -152,15 +211,21 @@ function Controle({ conflit }) {
     const estDemandeur = !!joueur && moi === demandeur;
 
     // Clôt le conflit : le compteur et les choix sont remis à zéro
-    const cloture = () => [cle, ...camps.map(c => cleChoix(c.camp))]
+    const cloture = () => [cle, cle + ":agent", ...camps.map(c => cleChoix(c.camp))]
         .filter(id => etat.compteurs[id])
         .map(id => ({ type: "compteur", id, valeur: 0 }));
 
+    // Station : l'agent adapté y est posé
+    const station = spatial
+        ? actionsSatellite({ index, moi, search }, zonePlanete, agentDeStation(planete, etat.compteurs[cle + ":agent"]))
+        : { actions: [], obstacles: [] };
+
     function prendre(commentaire) {
 
-        const { actions, messages } = actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, idPlanete, idInfanterie);
+        const { actions, messages } = actionsPossession(
+            { etat, moi, aScript, nomDe }, zonePlanete, idPlanete, spatial ? null : idInfanterie);
 
-        envoyer([...actions, ...cloture()], [commentaire, ...messages].join(" — "));
+        envoyer([...station.actions, ...actions, ...cloture()], [commentaire, ...messages].join(" — "));
 
         if (messages.length) {
             aviser(messages.join(" "));
@@ -198,6 +263,7 @@ function Controle({ conflit }) {
             <div>
                 {pastille(demandeur)}
                 <b>{nomCamp(demandeur)}</b> veut prendre possession de <b>{nomPlanete}</b> ({nomCase(numero)}).
+                {spatial && " Station : contrôle spatial, les unités militaires de l'espace du système comptent."}
             </div>
 
             {camps.map(c => {
@@ -255,6 +321,7 @@ function Controle({ conflit }) {
                         obstacles={[
                             ...camps.filter(c => !choixDe(c.camp)).map(c => `${nomCamp(c.camp)} n'a pas encore choisi (compté comme une abstention)`),
                             pour <= contre && `contrôle insuffisant : ${pour} pour, ${contre} contre`,
+                            ...station.obstacles,
                         ]}
                         faire={prendre}
                         title="La carte de la planète va dans vos éléments actifs ; le conflit est clos"
@@ -277,6 +344,231 @@ function Controle({ conflit }) {
             {!estDemandeur && (
                 <div style={{ marginTop: 4, color: "#555" }}>
                     Les camps présents choisissent ; {nomCamp(demandeur)} prend ensuite possession, ou renonce.
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================================
+// CONFLIT D'ACCORD (revendication)
+//
+// « Revendiquer » une planète alors que d'autres camps ont des unités
+// militaires dans le système (son espace, ou la planète) demande leur
+// accord : chacun accepte ou refuse. La revendication se fait dès que
+// tous ont accepté (le diplomate du demandeur est alors utilisé) ; un
+// seul refus la bloque. Les neutres refusent, sauf si un joueur en
+// décide autrement. Le demandeur peut passer outre (bouton rouge gris)
+// ou renoncer.
+//
+// Compteurs :
+//   accord:<case>p<planète>          joueur qui revendique (0 : clos)
+//   accord:<case>p<planète>:<camp>   2 accepte, 3 refuse
+// ============================================================
+
+export const cleAccord = (numero, k) => `accord:${numero}p${k}`;
+
+// Conflits d'accord en cours : [{ cle, numero, k, demandeur }]
+export function accordsEnCours(etat) {
+    return Object.keys(etat.compteurs)
+        .map(id => /^accord:(\d+)p(\d+)$/.exec(id))
+        .filter(m => m && etat.compteurs[m[0]])
+        .map(m => ({ cle: m[0], numero: Number(m[1]), k: Number(m[2]), demandeur: Number(etat.compteurs[m[0]]) }));
+}
+
+// Camps (autres que le demandeur) qui ont des unités militaires dans l'espace
+// du système ou sur la planète : ce sont eux qui peuvent refuser.
+// (Une unité dont le contenu n'est pas encore connu est comptée comme militaire.)
+export function campsAConsulter(index, contenuDe, numero, k, demandeur) {
+
+    const unites = [...(index.parZone.get("hex:" + numero) || []), ...(index.parZone.get(`hex:${numero}:planete:${k}`) || [])]
+        .filter(c => !c.cache && c.ref?.type === "unit" && contenuDe(c.ref.id)?.mot_cle?.includes("mil") !== false);
+
+    return [...new Set(unites.map(campDe))].filter(camp => camp !== demandeur);
+}
+
+function Accord({ conflit }) {
+
+    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aviser, aScript, factionDe } = useEngine();
+
+    const { cle, numero, k, demandeur } = conflit;
+    const zonePlanete = `hex:${numero}:planete:${k}`;
+
+    const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+    const systeme = useElement(tuile ? tuile.ref.id : -1);
+    const idPlanete = Number(systeme?.elems?.[k]?.id) || -1;
+    const planete = useElement(idPlanete);
+
+    const unites = [...(index.parZone.get("hex:" + numero) || []), ...(index.parZone.get(zonePlanete) || [])]
+        .filter(c => !c.cache && c.ref?.type === "unit");
+
+    const contenus = useElements([...new Set(unites.map(c => c.ref.id))]);
+
+    const camps = campsAConsulter(index, id => contenus[id], numero, k, demandeur);
+
+    const cleChoix = camp => `${cle}:${camp}`;
+
+    // (les neutres refusent, sauf si un joueur en décide autrement)
+    const choixDe = camp => Number(etat.compteurs[cleChoix(camp)]) || (camp === NEUTRE ? 3 : 0);
+
+    // Infanterie du demandeur (script Assimilation)
+    const faction = useElement(factionDe(demandeur) ?? -1);
+    const liens = (faction?.units || []).filter(lien => lien?.id > 0);
+    const sesUnites = useElements(liens.map(lien => lien.id));
+    const idInfanterie = liens.find(lien => typeUnite(sesUnites[lien.id]) === "inf")?.id ?? null;
+
+    const diplomate = agentDisponible({ index, moi: demandeur, search }, "diplomate");
+
+    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+    const nomPlanete = planete?.name || "la planète";
+    const estDemandeur = !!joueur && moi === demandeur;
+
+    const cloture = () => Object.keys(etat.compteurs)
+        .filter(id => (id === cle || id.startsWith(cle + ":")) && etat.compteurs[id])
+        .map(id => ({ type: "compteur", id, valeur: 0 }));
+
+    // La revendication elle-même : le diplomate du demandeur est utilisé, la carte
+    // de la planète va dans ses éléments actifs, le conflit est clos
+    function revendiquer(commentaire) {
+
+        const { actions, messages } = actionsPossession(
+            { etat, moi: demandeur, aScript, nomDe }, zonePlanete, idPlanete, idInfanterie, false);
+
+        envoyer([
+            diplomate && { type: "deplacer", c: diplomate.id, vers: `joueur:${demandeur}:agentsUses`, de: diplomate.zone },
+            ...actions,
+            ...cloture(),
+        ], [commentaire, ...messages].join(" — "));
+
+        if (messages.length) {
+            aviser(messages.join(" "));
+        }
+    }
+
+    function repondre(camp, valeur) {
+
+        // Le dernier accord : la revendication se fait dans le même coup
+        const tousDAccord = valeur === 2 && idPlanete > 0 && camps.every(c => c === camp || choixDe(c) === 2);
+
+        if (tousDAccord) {
+            revendiquer(`Accord de tous : ${nomCamp(demandeur)} revendique ${nomPlanete}`);
+            return;
+        }
+
+        envoyer(
+            [{ type: "compteur", id: cleChoix(camp), valeur }],
+            `Revendication de ${nomPlanete} : ${nomCamp(camp)} ${valeur === 2 ? "accepte" : "refuse"}`
+        );
+    }
+
+    const pastille = camp => (
+        <span
+            style={{
+                display: "inline-block",
+                width: 10,
+                height: 10,
+                marginRight: 4,
+                borderRadius: "50%",
+                border: "1px solid #000",
+                backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
+            }}
+        />
+    );
+
+    const refus = camps.filter(c => choixDe(c) === 3);
+    const muets = camps.filter(c => !choixDe(c));
+
+    return (
+        <div
+            data-accord={cle}
+            style={{
+                marginTop: 6,
+                padding: "6px 10px",
+                border: "2px solid #00695c",
+                borderRadius: 8,
+                backgroundColor: "#e0f2f1",
+                color: "#000",
+                fontFamily: "Arial, sans-serif",
+                fontSize: 13,
+            }}
+        >
+            <div>
+                {pastille(demandeur)}
+                <b>{nomCamp(demandeur)}</b> veut revendiquer <b>{nomPlanete}</b> ({nomCase(numero)}) : accord des camps
+                qui ont des unités militaires dans le système.
+            </div>
+
+            {camps.map(camp => {
+
+                const choix = choixDe(camp);
+
+                // Chacun répond pour son camp ; tout joueur peut répondre pour les neutres
+                const repond = !!joueur && (camp === moi || camp === NEUTRE);
+
+                return (
+                    <div key={camp} data-camp={camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
+                        <span>{pastille(camp)}<b>{nomCamp(camp)}</b></span>
+
+                        {repond
+                            ? [[2, "Accepter"], [3, "Refuser"]].map(([valeur, libelle]) => (
+                                <button
+                                    key={valeur}
+                                    type="button"
+                                    data-choix={valeur}
+                                    onClick={() => repondre(camp, valeur)}
+                                    style={{
+                                        ...styleMini,
+                                        fontWeight: choix === valeur ? "bold" : "normal",
+                                        backgroundColor: choix === valeur ? "#80cbc4" : undefined,
+                                    }}
+                                >
+                                    {libelle}
+                                </button>
+                            ))
+                            : <b style={{ color: choix === 2 ? "#1b5e20" : "#b71c1c" }}>
+                                {choix === 2 ? "accepte" : (choix === 3 ? "refuse" : "n'a pas encore répondu")}
+                            </b>}
+                    </div>
+                );
+            })}
+
+            {camps.length === 0 && <div style={{ marginTop: 2 }}><i>Plus aucun autre camp n'a d'unité militaire ici.</i></div>}
+
+            <div data-bilan-accord style={{ marginTop: 4 }}>
+                {refus.length > 0
+                    ? <b style={{ color: "#b71c1c" }}>Refusée par {refus.map(nomCamp).join(", ")}.</b>
+                    : (muets.length > 0
+                        ? <b style={{ color: "#a15c00" }}>En attente de {muets.map(nomCamp).join(", ")}.</b>
+                        : <b style={{ color: "#1b5e20" }}>Tous d'accord.</b>)}
+                {" "}La revendication se fait dès que tous ont accepté.
+            </div>
+
+            {estDemandeur && (
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                    <BoutonRegle
+                        data-action="revendiquer-accord"
+                        disabled={idPlanete < 0}
+                        nom={`Revendiquer ${nomPlanete}`}
+                        obstacles={[
+                            ...refus.map(c => `${nomCamp(c)} refuse`),
+                            ...muets.map(c => `${nomCamp(c)} n'a pas encore répondu`),
+                            !diplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                        ]}
+                        faire={revendiquer}
+                        title="Use un diplomate ; la carte de la planète va dans vos éléments actifs ; le conflit est clos"
+                        style={{ padding: "3px 14px" }}
+                    >
+                        Revendiquer (use un diplomate)
+                    </BoutonRegle>
+
+                    <button
+                        type="button"
+                        data-action="renoncer-accord"
+                        style={styleMini}
+                        onClick={() => envoyer(cloture(), `Revendication de ${nomPlanete} abandonnée`)}
+                    >
+                        Renoncer
+                    </button>
                 </div>
             )}
         </div>

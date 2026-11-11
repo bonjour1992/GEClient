@@ -86,9 +86,11 @@ function CasePlateau({
     styleCase,
     contenuSupplementaire,
     decalage = 0,
+    position,
 }) {
 
     // Coordonnées axiales : le centre (0, 0) est au milieu du plateau
+    // (position : { left, top } imposés — cases d'une bande)
     const { q, r } = coordonneesIndex(index);
 
     const couleur =
@@ -100,8 +102,8 @@ function CasePlateau({
             data-type={type}
             style={{
                 position: "absolute",
-                left: (q + anneaux) * PAS_X,
-                top: (r + q / 2 + anneaux) * HAUTEUR_HEX,
+                left: position ? position.left : (q + anneaux) * PAS_X,
+                top: position ? position.top : (r + q / 2 + anneaux) * HAUTEUR_HEX,
                 width: LARGEUR_HEX,
                 height: HAUTEUR_HEX,
                 backgroundColor: "#000000",
@@ -240,6 +242,70 @@ export function PlateauView({
                 position: "relative",
                 width: largeur,
                 height: hauteur,
+                flexShrink: 0,
+                overflow: "hidden",
+                ...style,
+            }}
+        >
+            {cases}
+        </div>
+    );
+}
+
+// ============================================================
+// BANDE
+//
+// Même affichage pur, pour un groupe de cases rangé en bande :
+// content = { colonnes, lignes, type, systems, rotates }. La case
+// j est à la colonne j % colonnes de la ligne ⌊j / colonnes⌋ ; les
+// colonnes impaires sont décalées d'une demi-case vers le bas
+// (hexSpirale.js, coordonneesBande). Mêmes props que PlateauView.
+// ============================================================
+
+export function BandeView({
+    content,
+    style = {},
+    styleCase,
+    renduCase,
+    systemesInertes = false,
+    decalage = 0,
+}) {
+
+    const colonnes = Math.max(1, Number(content?.colonnes) || 1);
+    const lignes = Math.max(1, Number(content?.lignes) || 1);
+
+    const cases = [];
+
+    for (let index = 0; index < colonnes * lignes; index++) {
+
+        const colonne = index % colonnes;
+        const ligne = Math.floor(index / colonnes);
+
+        cases.push(
+            <CasePlateau
+                key={index}
+                index={index}
+                anneaux={0}
+                position={{ left: colonne * PAS_X, top: (ligne + (colonne % 2) / 2) * HAUTEUR_HEX }}
+                type={content.type?.[index] || "vide"}
+                system={content.systems?.[index]}
+                rotate={content.rotates?.[index]}
+                systemesInertes={systemesInertes}
+                decalage={decalage}
+                styleCase={styleCase?.(decalage + index)}
+                contenuSupplementaire={renduCase?.(decalage + index)}
+            />
+        );
+    }
+
+    return (
+        <div
+            data-plateau=""
+            data-bande=""
+            style={{
+                position: "relative",
+                width: LARGEUR_HEX + (colonnes - 1) * PAS_X,
+                height: HAUTEUR_HEX * (lignes + 0.5),
                 flexShrink: 0,
                 overflow: "hidden",
                 ...style,

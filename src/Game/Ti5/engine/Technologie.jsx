@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
-import { useEngine, Zone, Emplacements } from "./Interaction";
+import { useEngine, Emplacements } from "./Interaction";
+import { Text } from "../../../Component/Text";
+import { techType } from "../ti5Const";
 import { useElement, useElements, chargerContenu } from "./sync";
 import { SCRIPTS } from "./scripts";
 
@@ -37,7 +39,91 @@ const stylePions = () => ({
 });
 
 const estFeuille = c => c.ref?.type === "techsheet";
-const pasFeuille = c => !estFeuille(c);
+
+// ------------------------------------------------------------
+// RECHERCHE DU TOUR (cadre en haut de l'onglet)
+//
+//   <base>:rechTour:<planète>   points de recherche gagnés ce tour en
+//                               recherchant sur cette planète (fiche du
+//                               système, « Rechercher ») ;
+//   <base>:rechFait:<type>      cases de recherche cochées ce tour, par
+//                               type de technologie.
+//
+// Les deux sont remis à zéro à la fin de la phase de science (Partie.jsx).
+// ------------------------------------------------------------
+
+const RE_RECHERCHES = /^joueur:\d+:(rechTour|rechFait):/;
+
+// Actions qui effacent les recherches du tour de tous les joueurs
+export const effacerRecherches = etat => Object.keys(etat.compteurs)
+    .filter(id => RE_RECHERCHES.test(id) && etat.compteurs[id])
+    .map(id => ({ type: "compteur", id, valeur: 0 }));
+
+const styleMacro = { display: "inline-block", verticalAlign: "middle" };
+
+function RechercheDuTour({ base }) {
+
+    const { etat, jouer, joueur } = useEngine();
+
+    const lire = prefixe => Object.keys(etat.compteurs)
+        .filter(id => id.startsWith(prefixe) && Number(etat.compteurs[id]) > 0)
+        .map(id => ({ id, cle: id.slice(prefixe.length), n: Number(etat.compteurs[id]) }));
+
+    const recherches = lire(base + ":rechTour:");
+    const appliquees = lire(base + ":rechFait:");
+
+    const planetes = useElements(recherches.map(r => Number(r.cle)));
+
+    const nomPlanete = r => (planetes[Number(r.cle)]?.name || "une planète").replace(/^!([^!]*)!/, "");
+
+    const specialites = r => (planetes[Number(r.cle)]?.techSpe || [])
+        .map(t => (techType[t] || t).toLowerCase())
+        .join(", ");
+
+    return (
+        <div
+            data-recherche-du-tour
+            style={{
+                padding: "6px 10px",
+                border: "2px solid #1565c0",
+                borderRadius: 8,
+                backgroundColor: "#e3f2fd",
+                color: "#000",
+                fontSize: 13,
+            }}
+        >
+            <b>Recherche du tour</b>
+
+            {recherches.length === 0 && <i style={{ marginLeft: 8 }}>aucune recherche lancée (fiche d'un système, « Rechercher »).</i>}
+
+            {recherches.map(r => (
+                <div key={r.id} data-recherche={r.cle}>
+                    Recherche sur {nomPlanete(r)} <Text text={`#rech(${r.n})`} style={styleMacro} />
+                    {specialites(r) && ` (spécialité ${specialites(r)})`}
+                    {joueur && (
+                        <button
+                            type="button"
+                            title="Retirer cette ligne"
+                            onClick={() => jouer({ type: "compteur", id: r.id, valeur: 0 })}
+                            style={{ marginLeft: 6, fontSize: 11, padding: "0 4px" }}
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+            ))}
+
+            <div data-recherche-appliquee style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #90caf9" }}>
+                <b>Recherche appliquée à ce tour</b> :{" "}
+                {appliquees.length === 0
+                    ? <i>aucune case cochée.</i>
+                    : appliquees.map(a => (
+                        <Text key={a.id} text={`#re${a.cle}${a.n > 1 ? `(${a.n})` : ""}`} style={{ ...styleMacro, marginRight: 6 }} />
+                    ))}
+            </div>
+        </div>
+    );
+}
 
 // Feuille « small » (ex. Signal, Tempête) : seules les cases 8 à 15 sont
 // utilisées. Retourne l'affichage à utiliser pour cette feuille.
@@ -152,7 +238,16 @@ function Feuille({ composant, base }) {
             return;
         }
 
-        const avance = { type: "compteur", id: idProgres(k), valeur };
+        // Recherche appliquée à ce tour : cases cochées, par type de technologie
+        const type = techs[liens[k]?.id]?.techType;
+        const idFait = `${base}:rechFait:${type}`;
+        const fait = Number(etat.compteurs[idFait]) || 0;
+
+        const avance = [
+            { type: "compteur", id: idProgres(k), valeur },
+            /^\w+$/.test(type || "") && (valeur > progres(k) || fait > 0) &&
+                { type: "compteur", id: idFait, valeur: Math.max(0, fait + (valeur > progres(k) ? 1 : -1)) },
+        ].filter(Boolean);
 
         // Une case de moins : rien d'autre
         if (valeur < progres(k)) {
@@ -167,7 +262,7 @@ function Feuille({ composant, base }) {
                 return;
             }
 
-            envoyer([avance, ...actions], messages.join(" — "));
+            envoyer([...avance, ...actions], messages.join(" — "));
             aviser(messages.join(" "));
         });
     }
@@ -286,7 +381,7 @@ export function Technologie({ vu }) {
                 )}
             </div>
 
-            <Zone zone={base + ":tech"} titre="Éléments posés sur les technologies" filtre={pasFeuille} />
+            <RechercheDuTour base={base} />
 
             {feuilles.length === 0 && <div>Aucune feuille de technologie.</div>}
 

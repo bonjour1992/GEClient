@@ -167,7 +167,7 @@ Marques utilisées par l'interface : `degat` (nombre), `use` (usé), `rotation`
 | `creer` | `ref` ou `jeton`, `zone`, `proprio?`, `n?` | ajoute un composant (unité, jeton, tuile système) | oui |
 | `reveler` | `zone` | retourne face visible les cartes posées face cachée dans une zone publique (Ctrl + clic sur la carte) | oui |
 | `supprimer` | `c` | envoie un composant dans `horsJeu` | |
-| `reinitialiserVotes` | | vide et cache tous les plateaux de vote (agents des carrés : agents usés ; le reste : `horsJeu`), efface `voteRevele`, `votePret` et les compteurs `vote:<tour>:…` ; bouton « Réinitialiser le décompte » de l'onglet Vote, et à chaque « Nouveau tour » | oui |
+| `reinitialiserVotes` | | vide et cache tous les plateaux de vote (agents des cases : agents usés ; ceux des carrés de droite et le reste : `horsJeu`), efface `voteRevele`, `votePret` et les compteurs `vote:<tour>:…` ; bouton « Réinitialiser le décompte » de l'onglet Vote, et à chaque « Nouveau tour » | oui |
 | `partie` | `tour?`, `phase?`, `joueurActif?`, `anneaux?` | change l'en-tête ou la taille de la carte | |
 
 Une action sur un composant que l'auteur ne voit pas est refusée, sauf `piocher`.
@@ -291,7 +291,10 @@ Chaque joueur reçoit une version filtrée d'un coup :
    `homePlanet` est la faction, sinon la première). Sans système natal, elles
    vont dans `joueur:<u>:reserve`. D'autres unités s'ajoutent à la réserve
    depuis le plateau joueur.
-   Les planètes du système natal sont posées dans `joueur:<u>:actif`.
+   Les planètes du système natal liées à la faction (`homePlanet`, ou type de
+   lien « faction » vers elle) sont posées dans `joueur:<u>:actif` ; une planète
+   du système qui ne lui est pas liée (Arcturus pour le Nomade, un trou de ver)
+   n'est à personne au départ.
    Agents de départ (`agents` × `agentSetup`) : dans `joueur:<u>:agents`.
 4. Feuilles de technologie : pour chaque type (`gen`, `mil`, `soc`, `spa`), celle
    de la faction (`techsheet.faction`), sinon la feuille commune. Les
@@ -555,6 +558,74 @@ possession si le contrôle pour dépasse le contrôle contre (`BoutonRegle`), ou
 renonce. `actionsPossession` est la prise de possession elle-même, partagée
 avec la fiche d'un système.
 
+Station (planète de type `sat`) : « Prendre possession » demande une unité (ou
+le drapeau) dans le système et pose sur la station l'agent adapté à son
+`stationType` (`AGENTS_STATION`, `agentDeStation`, `actionsSatellite` : il y
+reste, avec `proprio` ; l'agent qui s'y trouvait est rendu, usé, à son joueur).
+Station « spéciale » : agent au choix (liste de la fiche ; compteur
+`controle:<…>:agent` = son rang pendant un conflit). Si un autre camp a des
+unités militaires dans l'espace du système, c'est un **contrôle spatial** : même
+conflit, mais ce sont les unités de l'espace du système qui comptent.
+
+### conflit d'accord (revendication)
+
+`engine/Controle.jsx` (`Accord`, `accordsEnCours`, `campsAConsulter`).
+« Revendiquer » alors que d'autres camps ont des unités militaires dans le
+système (son espace, ou la planète) ouvre un conflit d'accord : compteurs
+`accord:<case>p<planète>` = joueur qui revendique, et
+`accord:<case>p<planète>:<camp>` = 2 accepte, 3 refuse (les neutres refusent
+sauf si un joueur en décide autrement). La revendication se fait dans le coup
+du dernier « Accepter » (diplomate du demandeur utilisé, `actionsPossession`
+non militaire) ; le demandeur peut passer outre (rouge gris) ou renoncer.
+
+### semi-blocages et drapeau
+
+« Prendre possession », « Revendiquer » : rouge gris hors de la phase de
+revendication. Ouvrir un combat : rouge gris sans unité dans le système.
+« Mobiliser » : planètes seulement (`type` `pla`), pas les stations. Le
+drapeau — une planète ou une station du système que je possède — compte comme
+une unité pour rechercher, fouiller, revendiquer, prendre une station et
+explorer (`monDrapeauIci`, `mesCases`), pas pour ouvrir un combat.
+
+### déplacement assisté : pions, chargement, fin
+
+Le panneau montre le **pion** de chaque vaisseau du système de départ (dégâts
+et unités embarquées visibles) et, sous « Charger », les unités transportables
+du système rangées par lieu (espace, chaque planète) : glissées sur le pion
+d'un vaisseau, elles embarquent tout de suite (glisser-déposer de `Plan`). Le
+bouton du départ n'apparaît qu'une fois un système activé. « Finir le
+déplacement » (`finirTour` du contexte) passe la main : vert dès qu'un vaisseau
+a été déplacé (compteur `joueur:<u>:deplaces`, remis à zéro en finissant et à
+chaque changement de phase).
+
+### recherche du tour
+
+Onglet Technologie (`RechercheDuTour`) : `joueur:<u>:rechTour:<planète>` =
+points gagnés en recherchant sur cette planète (« Rechercher » de la fiche du
+système), `joueur:<u>:rechFait:<type>` = cases cochées ce tour, par type de
+technologie. Les deux sont effacés en quittant la phase de science
+(`effacerRecherches`) et à « Nouveau tour ». Une technologie acquise est
+encadrée de vert (`tech.jsx`, `context.unlocked`). La zone « Éléments posés
+sur les technologies » n'est plus affichée.
+
+### construction
+
+Phase de construction : la case de la réserve s'appelle « Construction »
+(`CaseProduction`) ; `payerProduction` (`Interaction.jsx`) ne construit que
+des structures (le reste est grisé : `ReserveProductible`), signale une
+structure déjà présente au même endroit, et, à la première construction de la
+phase sur une planète, pose un marqueur d'activation et utilise un logisticien
+— le dépense si la planète portait déjà une structure. Dans l'espace : un
+logisticien utilisé par structure.
+
+### production : logisticien, stations, lieu
+
+Ouvrir une production use un logisticien (`ouvrirProductionLieu`). Une station
+ou une planète dont l'habilité porte `#prod` produit aussi : « Produire ici »
+de la fiche du système. Poser une unité hors du système de la production
+demande une confirmation ; une production refusée faute de ressources ne
+compte pas dans la quantité produite.
+
 ### mécaniques du chantier « toutes les technologies »
 
 Écrites pour les technologies jusqu'à la 419 (plan : `doc/plan-demandes.md`),
@@ -631,10 +702,13 @@ sa fiche.
 
 Zones `hex:<1000 + j>` (`DECALAGE_SECONDAIRE`, `estSecondaire`, `nomCase`,
 `distanceCases`, `Interaction.jsx`) : un second groupe de cases sous la carte
-de l'onglet Espace (`PlateauView` avec `decalage`), pour des systèmes hors du
-plan central. Taille : compteur `espace:secondaire:anneaux` (1 par défaut),
-réglée en mode « Modifier la carte » ; hors de ce mode, seules les cases qui
-ont un système sont visibles. Fiche, planètes, unités et combats comme tout
+de l'onglet Espace, pour des systèmes hors du plan central. C'est une longue
+bande de 12 colonnes (`BandeView` de `plateauVue.jsx`, `COLONNES_BANDE`,
+`coordonneesBande`, `distanceBande` de `hexSpirale.js`) : la case j est à la
+colonne j % 12 de la ligne ⌊j / 12⌋. Nombre de lignes : compteur
+`espace:secondaire:lignes` (3 par défaut, 10 au plus), réglé en mode
+« Modifier la carte » ; hors de ce mode, seules les cases qui ont un système
+sont visibles. Fiche, planètes, unités et combats comme tout
 système ; deux cases ne sont voisines que dans le même groupe.
 
 ### exemplaires
@@ -748,8 +822,11 @@ reste sur la dernière case) ; l'infamie s'arrête à la dernière case.
 
 Dans une partie, la ligne « Agenda » du déroulé a la place de 3 cartes de haut
 sur 2 de large (une carte tient dans une demi-colonne) et le plateau n'est plus
-tenu à la hauteur d'une page. « Mettre en place le recrutement » ne se fait
-qu'une fois par tour (compteur `general:recrutement`).
+tenu à la hauteur d'une page. Le recrutement est mis en place à « Nouveau tour »
+(`actionsRecrutement`, `PlateauGeneral.jsx`), une fois par tour (compteur
+`general:recrutement`) ; un bouton de rattrapage n'apparaît que s'il manque
+pour le tour en cours. Au lancement, tous les événements sont cachés, celui du
+tour 1 compris.
 
 L'action `des` accepte `c` et `marque` : le jet est celui d'un composant et
 son résultat est écrit dans cette marque. Une marque peut faire jusqu'à
@@ -794,10 +871,10 @@ décompte : tous les plateaux sont révélés ensemble ; il n'y a plus de bouton
 pour révéler son plateau seul) :
 les autres n'en reçoivent rien, ni les pions, ni leur nombre, ni les coups qui
 y posent quelque chose. Chaque case a une partie droite (zone
-`…:vote:<ligne>:<colonne>:d`) : le carré. Un politicien dans le carré est
-utilisé (1 voix) ; dans la case, il est dépensé (2 voix). « Réinitialiser »
-renvoie donc les agents des carrés dans les agents usés, retire du jeu ceux
-des cases et le reste, et remet le compteur à 0. En haut de l'onglet : la liste numérotée des lois du tour
+`…:vote:<ligne>:<colonne>:d`) : le carré. Un politicien dans la case est
+utilisé (1 voix) ; dans le carré, il est dépensé (2 voix). « Réinitialiser »
+renvoie donc les agents des cases dans les agents usés, retire du jeu ceux
+des carrés et le reste, et remet le compteur à 0. En haut de l'onglet : la liste numérotée des lois du tour
 (cartes de `general:agenda:<tour>`).
 
 ### éléments posés sur une technologie

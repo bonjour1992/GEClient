@@ -491,8 +491,14 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
             ajouter(etat, { ref: { type: "system", id: faction.system.id }, zone: actifs, proprio: u });
 
-            // Le joueur contrôle les planètes de son système natal
-            for (const planete of await planetesDe(await lire(faction.system.id))) {
+            // Le joueur possède les planètes de son système natal qui sont liées à
+            // sa faction (planète natale, ou type de lien « faction »). Une planète
+            // du système qui ne lui est pas liée — Arcturus pour le Nomade, un trou
+            // de ver — n'est à personne au départ.
+            const estLiee = contenu => Number(contenu?.homePlanet?.id) === Number(joueur.faction) ||
+                (contenu?.lienType === "faction" && Number(contenu?.lienElement?.id) === Number(joueur.faction));
+
+            for (const planete of (await planetesDe(await lire(faction.system.id))).filter(p => estLiee(p.contenu))) {
                 ajouter(etat, {
                     ref: { type: "planet", id: planete.id },
                     zone: actifs,
@@ -760,12 +766,11 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
         }
 
         // Événements : pour chaque tour, une carte du type prévu (mineur ou
-        // majeur) tirée de la pioche. Le premier est visible, les autres cachés.
+        // majeur) tirée de la pioche. Tous sont cachés, celui du tour 1 compris :
+        // un événement se révèle à sa phase.
         const typeEvenement = new Map(
             (await lister("evenement")).map(e => [e.id, e.content?.type || "min"])
         );
-
-        premier = true;
 
         for (const [tour, type] of (deroule.evenement || []).entries()) {
 
@@ -784,8 +789,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
             carte.zone = "general:evenement:" + (tour + 1);
             carte.ordre = etat.prochainOrdre++;
-            carte.face = premier ? "recto" : "cache";
-            premier = false;
+            carte.face = "cache";
         }
 
         // Postes de ministre : pour chaque tour, le nombre prévu d'agendas de

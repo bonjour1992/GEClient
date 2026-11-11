@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, nomCase, nomElement } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, nomElement, Pions } from "./Interaction";
 import { useElements } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
 import { capaciteDe, depenserAgent, estDeplacementFurtif } from "./effets";
@@ -16,8 +16,11 @@ import {
 //   1. un système est activé (Ctrl + clic : mon marqueur y est posé) :
 //      c'est la destination ;
 //   2. un système de départ (bouton, puis clic sur la carte) ;
-//   3. les vaisseaux qui partent, et les unités transportables du
-//      système qu'ils chargent. Les vaisseaux sont rangés par agent
+//   3. les vaisseaux qui partent (leur pion : dégâts et unités
+//      embarquées y sont visibles), et les unités transportables du
+//      système, rangées par planète : on les glisse sur le vaisseau qui
+//      les embarque (c'est fait tout de suite, comme sur la carte). Les
+//      vaisseaux sont rangés par agent
 //      (amiral : militaires et transports ; négociant : commerce ;
 //      logisticien : civils ; scientifique : scientifiques) et en
 //      flottes de 3 : un vaisseau seul coûte un agent, une flotte
@@ -35,7 +38,10 @@ import {
 //      spatiales d'un autre camp, rupture gravitationnelle, trou de ver
 //      oméga — ou jusqu'à l'arrivée. Sur une case à risque, le
 //      déplacement se poursuit dans le cadre « Déplacements en cours »
-//      (ici et dans l'onglet Conflit).
+//      (ici et dans l'onglet Conflit) ;
+//   7. « Finir le déplacement » passe la main au joueur suivant : vert dès
+//      qu'un vaisseau au moins a été déplacé (compteur joueur:<u>:deplaces,
+//      remis à zéro en finissant et à chaque changement de phase).
 //
 // useDeplacement est appelé par Espace.jsx, qui affiche le panneau,
 // transmet les clics sur les cases et dessine le trajet (decor).
@@ -80,9 +86,14 @@ const NOMS_TROU = { alpha: "alpha", beta: "bêta", gamma: "gamma", delta: "delta
 
 const styleMini = { fontSize: 12, padding: "1px 6px" };
 
-export function useDeplacement({ tuiles }) {
+// Vaisseaux déplacés par le joueur depuis son dernier « Finir le déplacement »
+export const compteurDeplaces = u => `joueur:${u}:deplaces`;
 
-    const { etat, index, envoyer, joueur, moi, search, aviser, nomDe, aScript, capaciteLogistique } = useEngine();
+export function useDeplacement({ tuiles, systemes = {} }) {
+
+    const {
+        etat, index, envoyer, joueur, moi, search, aviser, nomDe, aScript, capaciteLogistique, finirTour,
+    } = useEngine();
 
     // Taille d'une flotte : la capacité logistique du joueur (script Logistique améliorée)
     const TAILLE_FLOTTE = capaciteLogistique(moi);
@@ -95,7 +106,6 @@ export function useDeplacement({ tuiles }) {
     const [depart, setDepart] = useState(null);
     const [mode, setMode] = useState(null);         // "depart" ou "trajet" : ce que choisit un clic sur la carte
     const [choisis, setChoisis] = useState([]);     // vaisseaux qui partent
-    const [charges, setCharges] = useState([]);     // unités transportables à charger
     const [trajet, setTrajet] = useState([]);       // cases traversées, après le départ
     const [gravite, setGravite] = useState(false);  // script Moteur à gravité : +1 mouvement
 
@@ -140,8 +150,26 @@ export function useDeplacement({ tuiles }) {
     const vaisseaux = miennes.filter(c => c.zone === zoneDepart && !c.sur && aMot(c, "ship") && !c.marques?.[TRAJET]);
     const selection = vaisseaux.filter(c => choisis.includes(c.id));
 
-    // Unités transportables du système qui ne sont pas déjà dans un vaisseau qui part
-    const transportables = miennes.filter(c => aMot(c, "transportable") && !choisis.includes(c.sur));
+    // Unités transportables du système qui ne sont pas embarquées, par lieu
+    // (espace du système, puis chaque planète) : on les glisse sur un vaisseau
+    const transportable = c => c.ref?.type === "unit" && !c.sur &&
+        (c.marques?.possession ?? c.proprio) === moi && aMot(c, "transportable");
+
+    const elemsDepart = depart === null ? [] : (systemes[tuiles[depart]?.ref?.id]?.elems || []);
+
+    const lieuxCharge = depart === null ? [] : [...new Set(miennes.filter(transportable).map(c => c.zone))]
+        .sort()
+        .map(zone => {
+            const k = /:planete:(\d+)$/.exec(zone)?.[1];
+            const idPlanete = k === undefined ? null : Number(elemsDepart[Number(k)]?.id);
+
+            return {
+                zone,
+                nom: k === undefined
+                    ? "Espace"
+                    : (idPlanete > 0 ? nomElement(search, { type: "planet", id: idPlanete }) : `Planète ${Number(k) + 1}`),
+            };
+        });
 
     const nom = c => nomElement(search, c.ref);
 
@@ -162,36 +190,17 @@ export function useDeplacement({ tuiles }) {
         .filter(b => b.n > 0);
 
     // --------------------------------------------------------
-    // CHARGEMENT : les unités cochées montent dans les vaisseaux qui
-    // partent, selon la place qu'il leur reste
+    // CHARGEMENT : les unités se glissent sur le pion du vaisseau (elles
+    // embarquent tout de suite). Ici, seulement ce qui dépasse la capacité.
     // --------------------------------------------------------
 
-    const aCharger = transportables.filter(c => charges.includes(c.id));
-    const chargement = [];      // [{ unite, vaisseau }]
-    let sansPlace = 0;
+    // (script Capsule de transport : capacité majorée)
+    const sansPlace = selection.reduce((total, v) => total + Math.max(0,
+        Object.values(etat.composants).filter(c => c.sur === v.id && c.ref?.type === "unit").length -
+            capaciteDe(contenus[v.ref.id], moi, aScript)), 0);
 
-    {
-        const place = new Map(selection.map(v => [
-            v.id,
-            // (script Capsule de transport : capacité majorée)
-            capaciteDe(contenus[v.ref.id], moi, aScript) - Object.values(etat.composants).filter(c => c.sur === v.id).length,
-        ]));
-
-        for (const unite of aCharger) {
-            const vaisseau = selection.find(v => place.get(v.id) > 0) || selection[selection.length - 1];
-
-            if (!vaisseau) {
-                break;
-            }
-
-            if (place.get(vaisseau.id) <= 0) {
-                sansPlace++;
-            }
-
-            place.set(vaisseau.id, place.get(vaisseau.id) - 1);
-            chargement.push({ unite, vaisseau });
-        }
-    }
+    // Vaisseaux déplacés depuis mon dernier « Finir le déplacement »
+    const deplaces = Number(etat.compteurs[compteurDeplaces(moi)]) || 0;
 
     // --------------------------------------------------------
     // TRAJET
@@ -267,7 +276,7 @@ export function useDeplacement({ tuiles }) {
         ...besoins.filter(b => b.dispo.length < b.cout)
             .map(b => `il faut ${b.cout} ${b.cout > 1 ? b.pluriel : b.nom}, ${b.dispo.length} disponible(s) : ` +
                 (b.dispo.length ? `seuls ceux-là seront ${depuisActive ? "dépensés" : "utilisés"}` : "aucun agent ne sera pris")),
-        sansPlace > 0 && `${sansPlace} unité(s) chargée(s) au-delà de la capacité des vaisseaux`,
+        sansPlace > 0 && `${sansPlace} unité(s) embarquée(s) au-delà de la capacité des vaisseaux`,
         avecGravite && scientifiquesGravite.length < coutEnAgents(selection.length) &&
             `Moteur à gravité : il faut ${coutEnAgents(selection.length)} scientifique(s), ${scientifiquesGravite.length} disponible(s)`,
         !carte.pret && "la carte du trajet n'est pas encore chargée (les risques de blocage ne sont pas connus)",
@@ -280,13 +289,12 @@ export function useDeplacement({ tuiles }) {
     function reinitialiser(nouveauDepart = null) {
         setDepart(nouveauDepart);
         setChoisis([]);
-        setCharges([]);
         setTrajet([]);
         setGravite(false);
         setMode(nouveauDepart === null ? null : "trajet");
     }
 
-    // Départ : agents, chargement, puis les vaisseaux vont jusqu'à la première
+    // Départ : agents, puis les vaisseaux vont jusqu'à la première
     // case à risque (ils y gardent leur trajet restant : Blocage.jsx prend la
     // suite), ou jusqu'à l'arrivée s'il n'y en a pas
     function partir(commentaire) {
@@ -306,9 +314,9 @@ export function useDeplacement({ tuiles }) {
             ...besoins.flatMap(b => b.dispo.slice(0, b.cout).flatMap(agent => (depuisActive
                 ? depenserAgent({ aScript, moi, etat }, agent, `${b.nom} (départ d'un système déjà activé)`)
                 : [{ type: "deplacer", c: agent.id, vers: uses }]))),
-            // Chargement, avant le départ : les unités suivent leur vaisseau
-            ...chargement.map(x => ({ type: "deplacer", c: x.unite.id, sur: x.vaisseau.id })),
             ...scientifiquesGravite.map(agent => ({ type: "deplacer", c: agent.id, vers: uses })),
+            // (compte des vaisseaux déplacés : « Finir le déplacement »)
+            { type: "compteur", id: compteurDeplaces(moi), delta: partent.length },
             ...partent.flatMap(v => [
                 saut && { type: "marquer", c: v.id, marque: "saut", valeur: etat.tour },
                 k >= 0 && { type: "deplacer", c: v.id, vers: "hex:" + trajet[k], de: zoneDepart },
@@ -440,17 +448,41 @@ export function useDeplacement({ tuiles }) {
                         ))}
                     </span>
 
-                    <button
-                        type="button"
-                        data-action="choisir-depart"
-                        onClick={() => setMode(mode === "depart" ? null : "depart")}
-                        style={{ ...styleMini, fontWeight: "bold", backgroundColor: mode === "depart" ? "#81d4fa" : undefined }}
-                    >
-                        {mode === "depart" ? "Cliquer le système de départ sur la carte…" : (depart === null ? "Choisir le système de départ" : "Changer de départ")}
-                    </button>
+                    {/* Le départ ne se choisit qu'une fois la destination connue (un système activé) */}
+                    {(destination !== null || depart !== null) && (
+                        <button
+                            type="button"
+                            data-action="choisir-depart"
+                            onClick={() => setMode(mode === "depart" ? null : "depart")}
+                            style={{ ...styleMini, fontWeight: "bold", backgroundColor: mode === "depart" ? "#81d4fa" : undefined }}
+                        >
+                            {mode === "depart" ? "Cliquer le système de départ sur la carte…" : (depart === null ? "Choisir le système de départ" : "Changer de départ")}
+                        </button>
+                    )}
 
                     {depart !== null && (
                         <button type="button" onClick={() => reinitialiser()} style={styleMini}>Abandonner ce déplacement</button>
+                    )}
+
+                    {/* Fin de mon déplacement : la main passe au joueur suivant */}
+                    {enPhase && (
+                        <BoutonRegle
+                            data-action="finir-deplacement"
+                            nom="Finir le déplacement"
+                            obstacles={[
+                                !deplaces && "vous n'avez déplacé aucun vaisseau avec l'assistant",
+                                enRoute.length > 0 && `${enRoute.length} déplacement(s) encore en route (blocage à résoudre)`,
+                                etat.joueurActif !== moi && "ce n'est pas votre tour",
+                            ]}
+                            faire={commentaire => {
+                                finirTour(deplaces ? [{ type: "compteur", id: compteurDeplaces(moi), valeur: 0 }] : [], commentaire);
+                                reinitialiser();
+                            }}
+                            title="Votre déplacement est fini : la main passe au joueur suivant"
+                            style={{ ...styleMini, marginLeft: "auto", fontWeight: "bold" }}
+                        >
+                            Finir le déplacement{deplaces ? ` (${deplaces} vaisseau${deplaces > 1 ? "x" : ""} déplacé${deplaces > 1 ? "s" : ""})` : ""}
+                        </BoutonRegle>
                     )}
                 </>)}
             </div>
@@ -470,28 +502,48 @@ export function useDeplacement({ tuiles }) {
                                 {choisis.length === vaisseaux.length ? "Aucun" : "Tous"}
                             </button>
                         )}
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px" }}>
+                        {/* Le pion du vaisseau : ses dégâts et ce qu'il transporte y sont visibles ;
+                            une unité glissée dessus embarque */}
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 14px", marginTop: 2 }}>
                             {vaisseaux.map(v => (
-                                <label key={v.id} data-vaisseau={v.id}>
-                                    <input type="checkbox" checked={choisis.includes(v.id)} onChange={() => basculer(choisis, setChoisis, v.id)} />{" "}
-                                    {nom(v)} <span style={{ color: "#555" }}>(mouvement {Number(contenus[v.ref.id]?.move) || 0}, {AGENTS[agentDe(contenus[v.ref.id])].nom})</span>
-                                </label>
+                                <span
+                                    key={v.id}
+                                    data-vaisseau={v.id}
+                                    title={`${nom(v)} : mouvement ${Number(contenus[v.ref.id]?.move) || 0}, ${AGENTS[agentDe(contenus[v.ref.id])].nom}`}
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 3,
+                                        padding: "1px 4px",
+                                        borderRadius: 6,
+                                        border: "1px solid " + (choisis.includes(v.id) ? "#0277bd" : "transparent"),
+                                        backgroundColor: choisis.includes(v.id) ? "#b3e5fc" : undefined,
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        aria-label={nom(v)}
+                                        checked={choisis.includes(v.id)}
+                                        onChange={() => basculer(choisis, setChoisis, v.id)}
+                                    />
+                                    <Pions zone={zoneDepart} filtre={c => c.id === v.id} separes petit />
+                                    <span style={{ fontSize: 11, color: "#555" }}>{Number(contenus[v.ref.id]?.move) || 0}⇢</span>
+                                </span>
                             ))}
                         </div>
                     </div>
 
-                    {/* CHARGEMENT */}
-                    {selection.length > 0 && transportables.length > 0 && (
-                        <div>
-                            <b>Charger</b> (unités transportables du système) :{" "}
-                            <span style={{ display: "inline-flex", flexWrap: "wrap", gap: "2px 12px" }}>
-                                {transportables.map(c => (
-                                    <label key={c.id}>
-                                        <input type="checkbox" checked={charges.includes(c.id)} onChange={() => basculer(charges, setCharges, c.id)} />{" "}
-                                        {nom(c)}
-                                    </label>
-                                ))}
-                            </span>
+                    {/* CHARGEMENT : les unités transportables, par lieu, à glisser sur un vaisseau */}
+                    {vaisseaux.length > 0 && lieuxCharge.length > 0 && (
+                        <div data-charger style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "2px 14px" }}>
+                            <b>Charger</b>
+                            {lieuxCharge.map(lieu => (
+                                <span key={lieu.zone} data-lieu-charge={lieu.zone} style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                    {lieu.nom} :
+                                    <Pions zone={lieu.zone} filtre={transportable} separes petit />
+                                </span>
+                            ))}
+                            <i style={{ color: "#555" }}>glissez une unité sur le vaisseau qui l'embarque.</i>
                         </div>
                     )}
 

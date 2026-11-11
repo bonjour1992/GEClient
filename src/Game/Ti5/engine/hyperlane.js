@@ -1,4 +1,4 @@
-import { coordonneesIndex } from "../hexSpirale";
+import { coordonneesIndex, coordonneesBande } from "../hexSpirale";
 
 // ============================================================
 // HYPERLANES
@@ -28,7 +28,8 @@ const LIGNES = {
 // Voisine de chaque bord, en coordonnées axiales (q, r)
 const BORDS = [[0, -1], [1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0]];
 
-// (les systèmes secondaires, cases 1000 et plus, forment un groupe à part)
+// (les systèmes secondaires, cases 1000 et plus, forment un groupe à part,
+// rangé en bande et non en spirale)
 const GROUPE = 1000;
 
 export const estHyperlane = anomalie => /^hpl/.test(anomalie || "");
@@ -40,8 +41,10 @@ export function bordVers(a, b) {
         return -1;
     }
 
-    const ca = coordonneesIndex(a % GROUPE);
-    const cb = coordonneesIndex(b % GROUPE);
+    const coordonnees = a >= GROUPE ? coordonneesBande : coordonneesIndex;
+
+    const ca = coordonnees(a % GROUPE);
+    const cb = coordonnees(b % GROUPE);
 
     return BORDS.findIndex(([q, r]) => cb.q - ca.q === q && cb.r - ca.r === r);
 }

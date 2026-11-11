@@ -261,3 +261,37 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Non testés un par un à l'écran : dégâts verts de la Bombe bactériologique, Stargate,
   Stratégie de saut, Camouflage au combat, Canon et Laser longue portée, Cuve de clonage,
   Réseau d'ingérence, Pillage, paiement du Drain spatial par le joueur qui se déplace.
+
+## Lot « partie 2 » (consignes du 2026-11-11, `demandes-ti5/2026-11-11/instructions-partie-2.txt`)
+
+- ☑ Nomade : au lancement, un joueur ne possède que les planètes de son système natal liées à
+  sa faction ; Arcturus (#783) n'est plus liée (données) ; la mise en place pose un négociant
+  sur l'Anneau Arcturus.
+- ☑ L'événement du tour 1 est caché au départ.
+- ☑ Déplacement assisté : « Finir le déplacement » (vert dès qu'un vaisseau est déplacé), départ
+  masqué tant qu'aucun système n'est activé, pions des vaisseaux (dégâts, unités embarquées),
+  « Charger » par planète avec glisser-déposer sur le vaisseau.
+- ☑ Semi-blocages : ouvrir un combat sans unité dans le système ; prendre possession et
+  revendiquer hors de la phase de revendication ; mobiliser sur les planètes seulement.
+- ☑ Systèmes secondaires : bande de 12 colonnes × 3 lignes (lignes réglables).
+- ☑ « Mes agents » : un pion par type d'agent, toujours.
+- ☑ Le drapeau (planète ou station possédée) compte comme une unité dans le système.
+- ☑ Stations : prise de possession avec l'agent adapté posé dessus, conflit de contrôle spatial.
+- ☑ Revendiquer : conflit d'accord quand d'autres camps ont des unités militaires dans le système.
+- ☑ Technologies : cadre vert des technologies acquises (éditeur et partie) ; zone « Éléments
+  posés sur les technologies » retirée ; cadre « Recherche du tour ».
+- ☑ Recrutement mis en place à « Nouveau tour » (bouton de rattrapage seulement s'il manque).
+- ☑ Production : pose hors système signalée, échec faute de ressources non compté, stations et
+  planètes à `#prod` (« Produire ici »), logisticien utilisé.
+- ☑ Construction : case « Construction », non-structures grisées, doublons signalés, logisticien
+  utilisé ou dépensé et planète activée automatiquement.
+- ☑ Vote : case = utilisé, 1 voix ; carré de droite = dépensé, 2 voix.
+- Choix faits sans consigne : le conflit d'accord consulte les camps qui ont des unités
+  **militaires** dans l'espace du système ou sur la planète (règle de la phase), les neutres
+  refusent par défaut et tout joueur peut répondre pour eux ; la revendication se fait dans le
+  coup du dernier « Accepter » ; le drapeau ne compte pas pour ouvrir un combat ; station sans
+  type : aucun agent posé ; station « spéciale » : agent au choix ; construction dans l'espace :
+  un logisticien utilisé par structure ; « Finir le déplacement » ne compte que les vaisseaux
+  déplacés avec l'assistant.
+- geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
+  (lancement : événement caché, planètes natales) tournent côté serveur.

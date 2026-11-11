@@ -55,8 +55,8 @@ import {
 import { Preparation } from "./Preparation";
 import { Espace } from "./Espace";
 import { PlateauJoueur, SourcesIllimitees, CaseProduction, MesCompteurs } from "./PlateauJoueur";
-import { Technologie } from "./Technologie";
-import { PlateauGeneral, Des } from "./PlateauGeneral";
+import { Technologie, effacerRecherches } from "./Technologie";
+import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
 import { Vote, tradingFinDeVote } from "./Vote";
@@ -65,7 +65,7 @@ import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
 import { Combat, combatsEnCours, combatsActifs, cleCombat, aDesUnites, COULEUR_COMBAT } from "./Combat";
 import { passagesEnCours } from "./Blocage";
-import { controlesEnCours, dominationsEnCours } from "./Controle";
+import { controlesEnCours, dominationsEnCours, accordsEnCours } from "./Controle";
 import { Notifications } from "./Notifications";
 import { ouvrirProduction, lireProduction } from "./Production";
 import { ChoixFouille, PiocherPlan } from "./Archeologie";
@@ -314,6 +314,8 @@ export function Partie({ id }) {
         nomDe: userId => trouver(userId)?.nom || "personne",
         factionDe: userId => trouver(userId)?.faction ?? null,
         cliquer: (id, event) => cliquer(id, event),
+        // Fin de mon tour : ces actions, puis la main au joueur suivant (un seul coup)
+        finirTour: (actions, commentaire) => finirTour(actions, commentaire),
         ouvrirCachee: setCachee,
 
         // Fenêtre d'un marqueur libre (texte, couleur), et message privé du chat
@@ -381,12 +383,15 @@ export function Partie({ id }) {
         .map(lieu => ({ type: "compteur", id: cleCombat(lieu), valeur: 0 }));
     const controles = controlesEnCours(etat);
     const dominations = dominationsEnCours(etat);
-    const conflits = combats.length + passages.length + controles.length + dominations.length;
+    const accords = accordsEnCours(etat);
+    const conflits = combats.length + passages.length + controles.length + dominations.length + accords.length;
     const combatEnCours = conflits > 0;
     const combatAvecMoi = combats.some(n => aDesUnites(index, n, moi)) ||
         passages.some(p => p.mover === moi || aDesUnites(index, String(p.numero), moi)) ||
         controles.some(c => c.demandeur === moi || aDesUnites(index, `${c.numero}p${c.k}`, moi)) ||
-        dominations.some(d => aDesUnites(index, String(d.numero), moi));
+        dominations.some(d => aDesUnites(index, String(d.numero), moi)) ||
+        accords.some(a => a.demandeur === moi || aDesUnites(index, String(a.numero), moi) ||
+            aDesUnites(index, `${a.numero}p${a.k}`, moi));
 
     // Encaissement des faveurs : l'onglet Faveurs n'apparaît qu'à la phase
     // d'événement d'un tour qui en prévoit
@@ -442,6 +447,7 @@ export function Partie({ id }) {
     const enDiplomatie = /diplomatie/i.test(etat.phase);
     const enScience = /science/i.test(etat.phase);
     const enProduction = /production/i.test(etat.phase);
+    const enConstruction = /construction/i.test(etat.phase);
     const enProposition = /proposition/i.test(etat.phase);
     const enTreve = /tr[eê]ve/i.test(etat.phase);
     const enRecrutement = /recrut/i.test(etat.phase);
@@ -506,10 +512,11 @@ export function Partie({ id }) {
 
     const suivantId = joueurApres(etat.joueurActif);
 
-    // À chaque nouvelle phase, plus personne n'a passé
-    const remiseDesPasses = joueurs
-        .filter(j => aPasse(j.userId))
-        .map(j => ({ type: "compteur", id: `joueur:${j.userId}:passe`, valeur: 0 }));
+    // À chaque nouvelle phase, plus personne n'a passé (et le compte des
+    // vaisseaux déplacés — « Finir le déplacement » — repart de zéro)
+    const remiseDesPasses = joueurs.flatMap(j => [`joueur:${j.userId}:passe`, `joueur:${j.userId}:deplaces`])
+        .filter(id => etat.compteurs[id])
+        .map(id => ({ type: "compteur", id, valeur: 0 }));
 
     // Phases d'un tour, dans l'ordre de leur numéro (les phases spéciales
     // n'en font pas partie)
@@ -571,6 +578,8 @@ export function Partie({ id }) {
             p.envoyer([commentaire, ...trading.messages].filter(Boolean).join(" — "), [
                 ...trading.actions,
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
+                // On quitte la phase de science : les recherches du tour sont effacées (Technologie.jsx)
+                ...(pas > 0 && enScience ? effacerRecherches(etat) : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
                 ...remiseDesPasses,
@@ -614,8 +623,11 @@ export function Partie({ id }) {
             ...retraitUse,
             ...remiseDesPasses,
             ...figerOrdre,
+            ...effacerRecherches(etat),
             // Le vote du tour qui s'achève est remis à zéro (etat.js)
             { type: "reinitialiserVotes" },
+            // Le recrutement du nouveau tour est mis en place (PlateauGeneral.jsx)
+            ...(dernierTour ? [] : actionsRecrutement(etat, index, deroule, joueurs.length, etat.tour + 1)),
             {
                 type: "partie",
                 tour: etat.tour + 1,
@@ -816,6 +828,11 @@ export function Partie({ id }) {
         })();
 
         return true;
+    }
+
+    // Fin de mon tour : la main passe au joueur suivant de l'ordre d'initiative
+    function finirTour(actions = [], commentaire = "") {
+        p.envoyer(commentaire, [...actions, { type: "partie", joueurActif: suivantId }]);
     }
 
     function passer() {
@@ -1204,7 +1221,7 @@ export function Partie({ id }) {
                 )}
 
                 {etat.tour > 0 && (!aideVide ||
-                    ((enDeplacement || enDiplomatie || enScience || enProduction || enProposition || enTreve || enRecrutement) && estJoueur)) && (
+                    ((enDeplacement || enDiplomatie || enScience || enProduction || enConstruction || enProposition || enTreve || enRecrutement) && estJoueur)) && (
                     <div style={styleAide}>
                         <BoutonRepli ferme={aideReduite} basculer={basculerAide} />
                         <b>À faire — {etat.phase}</b>
@@ -1266,11 +1283,23 @@ export function Partie({ id }) {
                         {/* Phase de production */}
                         {enProduction && estJoueur && (
                             <div style={{ marginTop: 4, fontSize: 13 }}>
-                                <b>Produire :</b> Ctrl + clic sur une de vos unités à production (un dock…),
-                                puis glisser les unités depuis la réserve : leur coût est retiré de vos
-                                ressources (ou cocher « Production » dans la réserve, pour produire librement).{" "}
+                                <b>Produire :</b> Ctrl + clic sur une de vos unités à production (un dock…) —
+                                ou, pour une station ou une planète qui produit, « Produire ici » dans la
+                                fiche du système : un logisticien est utilisé. Glissez ensuite les unités
+                                depuis la réserve, dans le système de la production : leur coût est retiré de
+                                vos ressources (ou cocher « Production » dans la réserve, pour produire librement).{" "}
                                 <b>Mobiliser :</b> cliquer sur un système, le bouton est à côté
                                 de chaque planète que vous possédez.
+                            </div>
+                        )}
+
+                        {/* Phase de construction */}
+                        {enConstruction && estJoueur && (
+                            <div style={{ marginTop: 4, fontSize: 13 }}>
+                                <b>Construire :</b> cochez « Construction » dans votre réserve, puis glissez la
+                                structure vers la planète ou le système : son coût est retiré de vos ressources,
+                                la planète est activée et un logisticien est utilisé — dépensé si la planète
+                                porte déjà une structure. Pas deux fois la même structure au même endroit.
                             </div>
                         )}
 

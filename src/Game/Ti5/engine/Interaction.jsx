@@ -5,7 +5,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { capaciteDe, victimesBombe } from "./effets";
+import { capaciteDe, victimesBombe, depenserAgent } from "./effets";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -24,7 +24,7 @@ import {
     estUniteMercenaire,
 } from "./miseEnPlace";
 import { joueurDeMain, estPioche } from "./etat";
-import { distanceIndex } from "../hexSpirale";
+import { distanceIndex, distanceBande } from "../hexSpirale";
 import { ICONE_MERCENAIRE } from "../Component/Nom";
 
 // ============================================================
@@ -326,7 +326,7 @@ export const nomCase = numero => (estSecondaire(numero)
 // Distance entre deux cases, en pas d'hexagone ; infinie d'un groupe à l'autre
 export const distanceCases = (a, b) => (estSecondaire(a) !== estSecondaire(b)
     ? Infinity
-    : distanceIndex(Number(a) % DECALAGE_SECONDAIRE, Number(b) % DECALAGE_SECONDAIRE));
+    : (estSecondaire(a) ? distanceBande : distanceIndex)(Number(a) % DECALAGE_SECONDAIRE, Number(b) % DECALAGE_SECONDAIRE));
 
 // Nom lisible d'une zone, pour le journal et les menus
 export function nomZone(zone, nomDe) {
@@ -522,6 +522,10 @@ function grouper(liste, index) {
             cle = `cache|${c.dos}|${c.proprio}`;
         } else if (index.parPorteur.has(c.id)) {
             cle = c.id;
+        } else if (c.ref?.type === "agent" && /^joueur:\d+:agents(Uses)?$/.test(c.zone || "")) {
+            // Agents d'un joueur (disponibles, usés) : toujours un seul pion par
+            // type d'agent, d'où qu'ils viennent (départ, recrutement, réserve)
+            cle = "agent|" + c.ref.id;
         } else {
             cle = [
                 c.ref?.type, c.ref?.id, c.jeton, c.proprio, c.face,
@@ -1852,7 +1856,7 @@ const estCarteCible = c => !!c?.ref && !c.cache && c.ref.type !== "agent" && c.r
 export function Plan({ children, style }) {
 
     const {
-        etat, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
+        etat, index, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
         search, aScript, factionDe,
     } = useEngine();
 
@@ -1922,61 +1926,117 @@ export function Plan({ children, style }) {
         }
     }
 
-    // Case « Production » cochée : poser ces unités coûte leur coût en
-    // ressources. Retourne les actions de paiement ([] s'il n'y a rien à
-    // payer), ou null si les ressources ne suffisent pas.
-    function payerProduction(refs) {
+    // Case « Production » (ou « Construction ») cochée : poser ces unités coûte
+    // leur coût en ressources. Retourne les actions de paiement ([] s'il n'y a
+    // rien à payer), ou null si les ressources ne suffisent pas ou si le
+    // joueur renonce.
+    //   zone : là où les unités sont posées (celle du vaisseau qui les embarque)
+    function payerProduction(refs, zone) {
 
         if (!production) {
             return [];
         }
 
         const unites = refs.filter(ref => ref?.type === "unit");
+        const noms = liste => liste.map(ref => nomElement(search, ref)).join(", ");
 
-        // Production ouverte avec une unité (Production.jsx) : ce qu'elle ne
-        // peut pas produire, ou une unité de trop, demande une confirmation ;
-        // la quantité produite est comptée, et la réduction d'IA industrielle
-        // vient en déduction du coût.
+        const obstacles = [];
+
+        // Ce qui s'ajoute au paiement une fois la pose confirmée (logisticien, activation)
+        let apres = () => [];
+
+        // Production ouverte avec une unité ou une station (Production.jsx) : ce
+        // qu'elle ne peut pas produire, une unité de trop ou posée hors de son
+        // système demande une confirmation ; la quantité produite est comptée,
+        // et la réduction d'IA industrielle vient en déduction du coût.
         const ouverte = production !== true ? production : null;
 
         if (ouverte && unites.length) {
 
             const refusees = unites.filter(ref => !estProductible(contenuEnCache(ref.id), ouverte.types));
 
-            const obstacles = [
-                refusees.length > 0 &&
-                    `${ouverte.nom} ne produit pas : ${refusees.map(ref => nomElement(search, ref)).join(", ")}`,
+            obstacles.push(
+                refusees.length > 0 && `${ouverte.nom} ne produit pas : ${noms(refusees)}`,
                 ouverte.max !== null && ouverte.fait + unites.length > ouverte.max &&
                     `${ouverte.nom} produit ${ouverte.max} unité(s) au plus (${ouverte.fait} déjà)`,
-            ].filter(Boolean);
+                !new RegExp(`^hex:${ouverte.numero}(:|$)`).test(zone || "") &&
+                    `${ouverte.nom} produit dans son système (${nomCase(ouverte.numero)}), pas ici`,
+            );
+        }
 
-            if (obstacles.length && !window.confirm(
-                `Production normalement impossible :\n- ${obstacles.join("\n- ")}\n\nProduire quand même ?`)) {
-                return null;
-            }
+        // Phase de construction (case « Construction ») : on ne construit que des
+        // structures, pas deux fois la même au même endroit. Sur une planète, la
+        // première construction de la phase l'active : un logisticien est utilisé,
+        // ou dépensé si la planète portait déjà une structure. Dans l'espace, un
+        // logisticien est utilisé par structure.
+        const construction = !ouverte && unites.length > 0 &&
+            /construction/i.test(etat.phase) && /^hex:\d+/.test(zone || "");
+
+        if (construction) {
+
+            const estStructure = id => !!contenuEnCache(id)?.mot_cle?.includes("struc");
+            const sorte = id => typeUnite(contenuEnCache(id)) || id;
+
+            const ici = Object.values(etat.composants).filter(c => c.zone === zone && !c.sur);
+            const presentes = ici.filter(c => c.ref?.type === "unit" && estStructure(c.ref.id));
+            const construites = unites.filter(ref => estStructure(ref.id));
+
+            const doubles = construites.filter((ref, i) =>
+                presentes.some(c => sorte(c.ref.id) === sorte(ref.id)) ||
+                construites.findIndex(x => sorte(x.id) === sorte(ref.id)) !== i);
+
+            const surPlanete = estPlanete(zone);
+            const activee = ici.some(c => !c.ref && c.jeton === ACTIVATION && !c.marques?.ruine);
+            const besoin = construites.length > 0 && (!surPlanete || !activee);
+            const depense = surPlanete && presentes.length > 0;
+            const logisticien = besoin ? agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien") : null;
+
+            obstacles.push(
+                construites.length < unites.length &&
+                    `ce n'est pas une structure : ${noms(unites.filter(ref => !estStructure(ref.id)))}`,
+                doubles.length > 0 && `cette structure est déjà construite ici : ${noms(doubles)}`,
+                besoin && !logisticien &&
+                    `vous n'avez pas de logisticien disponible (aucun ne sera ${depense ? "dépensé" : "usé"})`,
+            );
+
+            apres = () => [
+                ...(!logisticien ? [] : (depense
+                    // (dépensé : le script Bio stimulant propose de l'user à la place)
+                    ? depenserAgent({ aScript, moi, etat }, logisticien, "le logisticien (la planète porte déjà une structure)")
+                    : [{ type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` }])),
+                ...(besoin && surPlanete ? [{ type: "creer", jeton: ACTIVATION, zone }] : []),
+            ];
+        }
+
+        const messages = obstacles.filter(Boolean);
+
+        if (messages.length && !window.confirm(
+            `${construction ? "Construction" : "Production"} normalement impossible :\n- ${messages.join("\n- ")}\n\n` +
+            `${construction ? "Construire" : "Produire"} quand même ?`)) {
+            return null;
         }
 
         const brut = unites.reduce((total, ref) => total + (Number(contenuEnCache(ref.id)?.cout) || 0), 0);
         const reduction = Math.min(brut, ouverte?.reduction || 0);
         const cout = brut - reduction;
 
+        const compteur = `joueur:${moi}:res`;
+        const dispo = Number(etat.compteurs[compteur]) || 0;
+
+        // (une production qui échoue faute de ressources ne compte pas dans la quantité produite)
+        if (cout && dispo < cout) {
+            signaler?.(`Ressources insuffisantes : cette ${construction ? "construction" : "production"} coûte ${cout}, vous avez ${dispo}.`);
+            return null;
+        }
+
         if (ouverte && unites.length) {
             setProduction({ ...ouverte, fait: ouverte.fait + unites.length, reduction: ouverte.reduction - reduction });
         }
 
-        if (!cout) {
-            return [];
-        }
-
-        const compteur = `joueur:${moi}:res`;
-        const dispo = Number(etat.compteurs[compteur]) || 0;
-
-        if (dispo < cout) {
-            signaler?.(`Ressources insuffisantes : cette production coûte ${cout}, vous avez ${dispo}.`);
-            return null;
-        }
-
-        return [{ type: "compteur", id: compteur, delta: -cout }];
+        return [
+            ...(cout ? [{ type: "compteur", id: compteur, delta: -cout }] : []),
+            ...apres(),
+        ];
     }
 
     // Icône d'un compteur glissée (volet de droite) : un jeton portant
@@ -2241,7 +2301,9 @@ export function Plan({ children, style }) {
                 return;
             }
 
-            const paiement = jeton || a.source.neutre ? [] : payerProduction([a.source]);
+            const paiement = jeton || a.source.neutre
+                ? []
+                : payerProduction([a.source], embarque ? etat.composants[pionCible.dataset.composant]?.zone : zone);
 
             if (!paiement) {
                 return;
@@ -2295,7 +2357,7 @@ export function Plan({ children, style }) {
                     : payerProduction(ids
                         .map(id => etat.composants[id])
                         .filter(c => c?.zone === reserveDepart)
-                        .map(c => c.ref));
+                        .map(c => c.ref), etat.composants[porteur.dataset.composant]?.zone);
 
                 if (!paiement) {
                     return;
@@ -2396,7 +2458,7 @@ export function Plan({ children, style }) {
             : payerProduction(aDeplacer
                 .map(id => etat.composants[id])
                 .filter(c => c.zone === reserve)
-                .map(c => c.ref));
+                .map(c => c.ref), zone);
 
         if (!paiement) {
             return;

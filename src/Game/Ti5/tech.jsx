@@ -55,9 +55,11 @@ function Display({ content, context = { unlocked: false }, style, explication })
         color: "white",
         ...style,
         ...fullBorder,
+        // Technologie acquise : cadre vert
+        ...(context.unlocked ? { borderColor: "#2ecc40", boxShadow: "0 0 0 2px #2ecc40, 0 0 7px 2px #2ecc40" } : {}),
         position: "relative",
         paddingTop:1
-    }}>
+    }} data-tech-acquise={context.unlocked ? "" : undefined}>
         <Text text={("#re" + content.techType).repeat(content.tier - 1) + " " + content.name} style={{
             ...bottomBorder(2),
             paddingLeft: 7,

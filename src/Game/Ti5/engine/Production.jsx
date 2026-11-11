@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useEngine, nomCase, nomElement } from "./Interaction";
+import { useEngine, nomCase, nomElement, agentDisponible } from "./Interaction";
 import { contenuEnCache, chargerContenu } from "./sync";
 import { ACTIVATION, typeUnite } from "./miseEnPlace";
 
@@ -8,13 +8,17 @@ import { ACTIVATION, typeUnite } from "./miseEnPlace";
 //
 // Phase de production : Ctrl + clic sur une de mes unités qui a la
 // capacité « #prod(quantité, types) » ouvre une production. Un
-// marqueur d'activation est posé sur l'unité, un bandeau au-dessus
-// de l'espace dit où l'on en est (« Dock, case 59 : 1/3 ») et
-// « Terminer la production » la clôt.
+// logisticien est utilisé, un marqueur d'activation est posé sur
+// l'unité, un bandeau au-dessus de l'espace dit où l'on en est
+// (« Dock, case 59 : 1/3 ») et « Terminer la production » la clôt.
+// Un élément qui n'est pas une unité (une station, une planète dont
+// l'habilité porte #prod) produit de même : bouton « Produire ici »
+// de la fiche du système (ouvrirProductionLieu).
 //
 // Tant qu'elle est ouverte :
 //   - glisser une unité hors de ma réserve la paie en ressources et
-//     compte dans la quantité produite ;
+//     compte dans la quantité produite (pas si les ressources manquent) ;
+//   - la poser hors du système de la production demande une confirmation ;
 //   - dans la réserve, ce que cette unité ne peut pas produire est
 //     cerclé de rouge (le produire quand même demande une confirmation) ;
 //   - une unité capturée (une unité d'un autre joueur dans mes éléments
@@ -32,6 +36,9 @@ import { ACTIVATION, typeUnite } from "./miseEnPlace";
 // logistique), IA industrielle (docks : +2 ; sur une planète
 // militaire, le coût total baisse de 2).
 // ============================================================
+
+// Le Généticien d'Arborec produit comme un logisticien
+const LOGISTICIEN = "logisticien|g[ée]n[ée]ticien";
 
 const sansAccent = texte => String(texte || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
@@ -77,6 +84,7 @@ export async function ouvrirProduction(ctx, c, confirmer) {
 
     const { etat, index, moi, search, envoyer, setProduction, capaciteLogistique, aScript } = ctx;
 
+
     const m = /^hex:(\d+)(?::planete:(\d+))?$/.exec(c.zone || "");
 
     if (!m || c.ref?.type !== "unit" || (c.marques?.possession ?? c.proprio) !== moi) {
@@ -106,31 +114,52 @@ export async function ouvrirProduction(ctx, c, confirmer) {
         militaire = planete?.planetType === "mil";
     }
 
-    const base = capacite.quantite === "clog" ? capaciteLogistique(moi) : capacite.quantite;
     const dejaActivee = Object.values(etat.composants).some(x => x.sur === c.id && !x.ref && x.jeton === ACTIVATION);
 
     const commentaire = confirmer(`Produire avec ${nom} (${nomCase(numero)})`, [
         !/production/i.test(etat.phase) && "ce n'est pas la phase de production",
         dejaActivee && "cette unité est déjà activée",
+        !agentDisponible({ index, moi, search }, LOGISTICIEN) && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
     ]);
 
     if (!commentaire) {
         return true;
     }
 
-    envoyer([{ type: "creer", jeton: ACTIVATION, sur: c.id }], commentaire);
-
-    setProduction({
-        source: c.id,
-        nom,
-        numero,
-        max: base === null ? null : base + (ia ? 2 : 0),
-        types: capacite.types,
-        fait: 0,
-        reduction: militaire ? 2 : 0,
-    });
+    ouvrirProductionLieu(
+        { index, moi, search, envoyer, setProduction, capaciteLogistique },
+        { source: c.id, nom, numero, capacite, activation: { sur: c.id }, bonus: ia ? 2 : 0, reduction: militaire ? 2 : 0 },
+        commentaire
+    );
 
     return true;
+}
+
+// Ouvre une production : un logisticien est utilisé (s'il y en a un), la source
+// est activée, et la production devient celle en cours.
+//   lieu : { source, nom, numero, capacite (lireProduction), activation ({ sur } ou
+//            { zone } du marqueur), bonus (quantité en plus), reduction (coût en moins) }
+export function ouvrirProductionLieu(ctx, lieu, commentaire) {
+
+    const { index, moi, search, envoyer, setProduction, capaciteLogistique } = ctx;
+
+    const logisticien = agentDisponible({ index, moi, search }, LOGISTICIEN);
+    const base = lieu.capacite.quantite === "clog" ? capaciteLogistique(moi) : lieu.capacite.quantite;
+
+    envoyer([
+        logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
+        { type: "creer", jeton: ACTIVATION, ...lieu.activation },
+    ], commentaire);
+
+    setProduction({
+        source: lieu.source,
+        nom: lieu.nom,
+        numero: lieu.numero,
+        max: base === null ? null : base + (lieu.bonus || 0),
+        types: lieu.capacite.types,
+        fait: 0,
+        reduction: lieu.reduction || 0,
+    });
 }
 
 // ------------------------------------------------------------
@@ -196,7 +225,11 @@ export function ReserveProductible({ zone }) {
 
     useEffect(() => {
 
-        const types = production && production !== true ? production.types : null;
+        // Production ouverte : ses types ; case « Construction » (phase de
+        // construction) : les structures seulement ; sinon tout
+        const types = production && production !== true
+            ? production.types
+            : (production === true && /construction/i.test(etat.phase) ? ["structure"] : null);
 
         for (const racine of document.querySelectorAll(`[data-zone="${zone}"]`)) {
             for (const pion of racine.querySelectorAll("[data-composant], [data-source]")) {

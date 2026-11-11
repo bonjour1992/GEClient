@@ -177,13 +177,21 @@ export function SourcesIllimitees({ userId }) {
 
 // Case « Production » de la réserve : tant qu'elle est cochée, poser une
 // unité de sa réserve (ou une infanterie) retire son coût de ses ressources.
+// À la phase de construction elle s'appelle « Construction » : seules les
+// structures se construisent (le reste de la réserve est grisé), un
+// logisticien est utilisé ou dépensé tout seul (Interaction.jsx, payerProduction).
 export function CaseProduction() {
 
-    const { production, setProduction, moi } = useEngine();
+    const { production, setProduction, moi, etat } = useEngine();
+
+    const construction = /construction/i.test(etat.phase);
 
     return (
         <label
-            title="Cochée : glisser une unité hors de la réserve coûte son coût en ressources. Ctrl + clic sur une unité à production (un dock…) ouvre une production comptée ; décocher la termine."
+            data-case-production={construction ? "construction" : "production"}
+            title={construction
+                ? "Cochée : glisser une structure hors de la réserve vers une planète ou un système la construit — son coût est payé, la planète est activée et un logisticien est utilisé (dépensé si la planète porte déjà une structure). Ce qui n'est pas une structure est grisé."
+                : "Cochée : glisser une unité hors de la réserve coûte son coût en ressources. Ctrl + clic sur une unité à production (un dock…) ouvre une production comptée ; décocher la termine."}
             style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -202,7 +210,7 @@ export function CaseProduction() {
                 checked={!!production}
                 onChange={e => setProduction(e.target.checked)}
             />
-            Production{production && production !== true ? ` : ${production.nom}` : ""}
+            {construction ? "Construction" : "Production"}{production && production !== true ? ` : ${production.nom}` : ""}
 
             {/* Ce que la production en cours ne peut pas produire est cerclé de rouge */}
             <ReserveProductible zone={`joueur:${moi}:reserve`} />

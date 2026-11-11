@@ -1085,8 +1085,9 @@ export function appliquer(etat, action, ctx = {}) {
         // ----------------------------------------------------
         // Remet à zéro le vote du tour, pour tous les joueurs : sur chaque
         // plateau de vote (même caché : seul le serveur les connaît tous),
-        // les agents des carrés de droite (zone « ...:d », utilisés) vont dans
-        // les agents usés de leur joueur, le reste est retiré du jeu ; les
+        // les agents des cases (utilisés) vont dans les agents usés de leur
+        // joueur ; ceux des carrés de droite (zone « ...:d », dépensés) et le
+        // reste sont retirés du jeu ; les
         // plateaux sont cachés, plus personne n'est « prêt », et les
         // ajustements manuels et départages du tour sont effacés.
         case "reinitialiserVotes": {
@@ -1100,7 +1101,7 @@ export function appliquer(etat, action, ctx = {}) {
                     continue;
                 }
 
-                poser(etat, c, m[2] && c.ref?.type === "agent" ? `joueur:${m[1]}:agentsUses` : "horsJeu", null);
+                poser(etat, c, !m[2] && c.ref?.type === "agent" ? `joueur:${m[1]}:agentsUses` : "horsJeu", null);
                 deplaces.push(c.id);
             }
 
