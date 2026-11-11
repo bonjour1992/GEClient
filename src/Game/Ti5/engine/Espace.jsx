@@ -27,6 +27,7 @@ import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
 import { ProductionEnCours, lireProduction, ouvrirProductionLieu } from "./Production";
 import { zoneFouille } from "./Archeologie";
+import { noter } from "./recherche";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter,
@@ -1047,12 +1048,12 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Phase de science, rechercher : active la planète et utilise un
     // scientifique. La recherche gagnée s'ajoute à la main (onglet Technologie).
-    // La recherche est notée dans le cadre « Recherche du tour » de l'onglet Technologie.
+    // La recherche est notée au journal de recherche du tour (onglet Technologie).
     function rechercher(k, idPlanete, commentaire) {
         envoyer([
             utiliser("scientifique"),
             { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k) },
-            { type: "compteur", id: `joueur:${moi}:rechTour:${idPlanete}`, valeur: 2 },
+            noter(etat, moi, "p", idPlanete, 2),
         ], commentaire);
     }
 

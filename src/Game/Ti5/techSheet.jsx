@@ -96,7 +96,8 @@ function Connaissance({ content, LineNumber, explication, style }) {
                 <span > Connaissance</span>
             </div>
             <Text text={content?.connaissance} explication={explication} style={{ height: 280, fontSize: 10,marginLeft:2 }} />
-            <div style={{
+            {/* data-connaissance : la grille des points de connaissance (outil de partie) */}
+            <div data-connaissance="" style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(" + (content.connaissanceReq || 8) + ",1fr)",
                 position: "absolute",
@@ -119,7 +120,7 @@ function Connaissance({ content, LineNumber, explication, style }) {
                         borderBottomRightRadius: i === (LineNumber * (content.connaissanceReq || 8) - 1) ? 12 : 4,
                         lineHeight: (20 - (content.connaissanceReq || 8)) + "px"
                     }} >
-                        {i < techPoint(content) ? <span style={{ lineHeight:0,fontSize: (20 - (content.connaissanceReq || 8)) + "px", fontWeight: 700, color: "black" }}>X</span> : ""}
+                        {i < techPoint(content) + (Number(content.connaissancePlus) || 0) ? <span style={{ lineHeight:0,fontSize: (20 - (content.connaissanceReq || 8)) + "px", fontWeight: 700, color: "black" }}>X</span> : ""}
                     </div>)
                 })}
             </div>

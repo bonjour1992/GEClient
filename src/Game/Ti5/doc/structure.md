@@ -617,13 +617,26 @@ pour un trou de ver ou un saut.
 
 ### recherche du tour
 
-Onglet Technologie (`RechercheDuTour`) : `joueur:<u>:rechTour:<planète>` =
-points gagnés en recherchant sur cette planète (« Rechercher » de la fiche du
-système), `joueur:<u>:rechFait:<type>` = cases cochées ce tour, par type de
-technologie. Les deux sont effacés en quittant la phase de science
-(`effacerRecherches`) et à « Nouveau tour ». Une technologie acquise est
-encadrée de vert (`tech.jsx`, `context.unlocked`). La zone « Éléments posés
-sur les technologies » n'est plus affichée.
+Onglet Technologie (`RechercheDuTour`) : le journal de recherche du tour,
+phase par phase et dans l'ordre (`engine/recherche.js`). Une ligne est un
+compteur `joueur:<u>:rechlog:<rang>:<phase>:<sorte>:<élément>` = quantité —
+sortes : `p` recherche sur une planète (« Rechercher » de la fiche du
+système), `g` autre source notée à la main (sélecteur du cadre), `t` cases
+cochées sur une technologie, `c` points de connaissance d'une feuille ;
+`joueur:<u>:rechlog:0:0:f:<technologie>` dit qu'elle a été finie ce tour
+(« fini ✓ »). `noter` complète la ligne de la phase en cours ou en ouvre une ;
+`effacerRecherches` efface tout à « Nouveau tour » (plus à la fin de la phase
+de science). Une technologie acquise est encadrée de vert (`tech.jsx`,
+`context.unlocked`). La zone « Éléments posés sur les technologies » n'est
+plus affichée.
+
+Connaissance : la grille de droite d'une feuille (`data-connaissance`,
+`techSheet.jsx`) compte 2 points par technologie obtenue, plus les points
+recherchés (`content.connaissancePlus`, compteur
+`joueur:<u>:tech:<composant>:connaissance` : clic, Ctrl + clic). Une ligne
+pleine (`connaissanceReq` points) est un niveau. Prérequis d'une technologie :
+son rang (`tier`) moins un, en niveaux de connaissance de sa feuille ; s'il
+manque, cocher une case demande une confirmation (`confirmerRegle`).
 
 ### construction
 

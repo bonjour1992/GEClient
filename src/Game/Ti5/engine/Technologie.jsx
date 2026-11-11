@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
-import { useEngine, Emplacements } from "./Interaction";
+import { useEngine, Emplacements, nomElement, confirmerRegle } from "./Interaction";
 import { Text } from "../../../Component/Text";
-import { techType } from "../ti5Const";
+import { ModalPickerInput } from "../../../Input/ModalPickerInput";
+import { getFromType } from "../../../lib/store";
+import { lireJournal, noter, noterFinie } from "./recherche";
 import { useElement, useElements, chargerContenu } from "./sync";
 import { SCRIPTS } from "./scripts";
 
@@ -25,6 +27,14 @@ import { SCRIPTS } from "./scripts";
 //   clic         -> une case de recherche de plus
 //   Ctrl + clic  -> une case de moins
 //   Maj + clic   -> utilisée ce tour / disponible
+//
+// Connaissance d'une feuille (grille de droite, data-connaissance) :
+// 2 points par technologie obtenue, plus ceux qu'on y recherche
+// (clic / Ctrl + clic : compteur joueur:<u>:tech:<composant>:connaissance).
+// Une ligne pleine (connaissanceReq points) est un niveau. Une
+// technologie à prérequis — son rang (tier) moins un — demande autant
+// de niveaux de connaissance de sa feuille : sinon la case cochée
+// demande une confirmation.
 // ============================================================
 
 // Pions posés sur une technologie : par-dessus le bas de sa carte
@@ -41,44 +51,68 @@ const stylePions = () => ({
 const estFeuille = c => c.ref?.type === "techsheet";
 
 // ------------------------------------------------------------
-// RECHERCHE DU TOUR (cadre en haut de l'onglet)
+// JOURNAL DE RECHERCHE DU TOUR (cadre en haut de l'onglet)
 //
-//   <base>:rechTour:<planète>   points de recherche gagnés ce tour en
-//                               recherchant sur cette planète (fiche du
-//                               système, « Rechercher ») ;
-//   <base>:rechFait:<type>      cases de recherche cochées ce tour, par
-//                               type de technologie.
+// Ce que le joueur gagne et applique en recherche, phase par phase et
+// dans l'ordre (compteurs : recherche.js) :
 //
-// Les deux sont remis à zéro à la fin de la phase de science (Partie.jsx).
+//   Ravitaillement
+//     Forge du vide génère [rech]
+//     Apprentissage + [gen]
+//   Science
+//     Recherche sur Hercant [rech](2)
+//     Recherche sur Antarès [rech](2) spé mil
+//     Récupération + [mil](4) fini ✓
+//
+// « Rechercher » (fiche d'un système) y note la recherche gagnée ; une
+// case cochée sur une technologie ou sur la connaissance d'une feuille
+// s'y ajoute ; une autre source se note à la main. Effacé à « Nouveau tour ».
 // ------------------------------------------------------------
 
-const RE_RECHERCHES = /^joueur:\d+:(rechTour|rechFait):/;
-
-// Actions qui effacent les recherches du tour de tous les joueurs
-export const effacerRecherches = etat => Object.keys(etat.compteurs)
-    .filter(id => RE_RECHERCHES.test(id) && etat.compteurs[id])
-    .map(id => ({ type: "compteur", id, valeur: 0 }));
-
 const styleMacro = { display: "inline-block", verticalAlign: "middle" };
+const styleMini = { fontSize: 11, padding: "0 4px" };
+
+// Sources qu'on peut noter à la main
+const TYPES_SOURCE = ["tech", "unit", "planet", "relique", "habilite", "mercenaire", "agent", "faction"];
+
+// « 11.Phase de science » -> « Science »
+const libellePhase = nom => {
+    const court = String(nom || "").replace(/^\s*\d+\s*\.?\s*/, "").replace(/^phase\s+(de\s+|d['’]\s*)?/i, "").trim();
+
+    return court ? court[0].toUpperCase() + court.slice(1) : "Hors phase";
+};
 
 function RechercheDuTour({ base }) {
 
-    const { etat, jouer, joueur } = useEngine();
+    const { etat, jouer, joueur, search } = useEngine();
 
-    const lire = prefixe => Object.keys(etat.compteurs)
-        .filter(id => id.startsWith(prefixe) && Number(etat.compteurs[id]) > 0)
-        .map(id => ({ id, cle: id.slice(prefixe.length), n: Number(etat.compteurs[id]) }));
+    const userId = Number(base.split(":")[1]);
+    const journal = lireJournal(etat, userId);
 
-    const recherches = lire(base + ":rechTour:");
-    const appliquees = lire(base + ":rechFait:");
+    const contenus = useElements([...new Set(journal.lignes.map(l => l.element))]);
 
-    const planetes = useElements(recherches.map(r => Number(r.cle)));
+    // Nom de chaque phase, par numéro
+    const phases = new Map(getFromType(search, ["phase"]).map(e => {
+        const nom = nomElement(search, { type: "phase", id: e.id });
 
-    const nomPlanete = r => (planetes[Number(r.cle)]?.name || "une planète").replace(/^!([^!]*)!/, "");
+        return [Number(/^\s*(\d+)/.exec(nom)?.[1]) || 0, libellePhase(nom)];
+    }));
 
-    const specialites = r => (planetes[Number(r.cle)]?.techSpe || [])
-        .map(t => (techType[t] || t).toLowerCase())
-        .join(", ");
+    const nom = l => (contenus[l.element]?.name || nomElement(search, { id: l.element }) || "…").replace(/^!([^!]*)!/, "");
+    const macro = (type, n) => `#re${type}${n > 1 ? `(${n})` : ""}`;
+
+    // Lignes groupées par phase, dans l'ordre d'arrivée
+    const groupes = [];
+
+    for (const ligne of journal.lignes) {
+        if (groupes.at(-1)?.phase !== ligne.phase) {
+            groupes.push({ phase: ligne.phase, lignes: [] });
+        }
+
+        groupes.at(-1).lignes.push(ligne);
+    }
+
+    const ajuster = (ligne, delta) => jouer({ type: "compteur", id: ligne.id, valeur: Math.max(0, ligne.n + delta) });
 
     return (
         <div
@@ -92,35 +126,64 @@ function RechercheDuTour({ base }) {
                 fontSize: 13,
             }}
         >
-            <b>Recherche du tour</b>
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+                <b>Recherche du tour</b>
 
-            {recherches.length === 0 && <i style={{ marginLeft: 8 }}>aucune recherche lancée (fiche d'un système, « Rechercher »).</i>}
+                {journal.lignes.length === 0 && <i>rien pour l'instant (fiche d'un système, « Rechercher » ; puis cochez les cases).</i>}
 
-            {recherches.map(r => (
-                <div key={r.id} data-recherche={r.cle}>
-                    Recherche sur {nomPlanete(r)} <Text text={`#rech(${r.n})`} style={styleMacro} />
-                    {specialites(r) && ` (spécialité ${specialites(r)})`}
-                    {joueur && (
-                        <button
-                            type="button"
-                            title="Retirer cette ligne"
-                            onClick={() => jouer({ type: "compteur", id: r.id, valeur: 0 })}
-                            style={{ marginLeft: 6, fontSize: 11, padding: "0 4px" }}
-                        >
-                            ✕
-                        </button>
-                    )}
+                {/* Une source que l'outil ne connaît pas : notée à la main */}
+                {joueur && (
+                    <span data-ajouter-source style={{ marginLeft: "auto", fontSize: 12 }}>
+                        <ModalPickerInput
+                            name="source"
+                            label="Autre source de recherche"
+                            value={{ source: null }}
+                            onChange={(champ, lien) => lien?.id > 0 && jouer(noter(etat, userId, "g", Number(lien.id), 1))}
+                            type={TYPES_SOURCE}
+                        />
+                    </span>
+                )}
+            </div>
+
+            {groupes.map((groupe, g) => (
+                <div key={g} data-phase-recherche={groupe.phase} style={{ marginTop: 3 }}>
+                    <b style={{ color: "#0d47a1" }}>{phases.get(groupe.phase) || "Hors phase"}</b>
+
+                    {groupe.lignes.map(l => (
+                        <div key={l.id} data-ligne-recherche={l.sorte + ":" + l.element} style={{ paddingLeft: 14 }}>
+                            {l.sorte === "p" && (<>
+                                Recherche sur {nom(l)} <Text text={`#rech(${l.n})`} style={styleMacro} />
+                                {(contenus[l.element]?.techSpe || []).length > 0 && ` spé ${contenus[l.element].techSpe.join(", ")}`}
+                            </>)}
+
+                            {l.sorte === "g" && (<>
+                                {nom(l)} génère <Text text={l.n > 1 ? `#rech(${l.n})` : "#rech"} style={styleMacro} />
+                            </>)}
+
+                            {l.sorte === "t" && (<>
+                                {nom(l)} + <Text text={macro(contenus[l.element]?.techType || "ch", l.n)} style={styleMacro} />
+                                {/* (finie : dit sur sa dernière ligne, celle où elle l'a été) */}
+                                {journal.finies.has(l.element) &&
+                                    journal.lignes.findLast(x => x.sorte === "t" && x.element === l.element) === l &&
+                                    <b style={{ color: "#1b5e20" }}> fini ✓</b>}
+                            </>)}
+
+                            {l.sorte === "c" && (<>
+                                Connaissance ({nom(l)}) + <Text text={macro(contenus[l.element]?.techType || "ch", l.n)} style={styleMacro} />
+                            </>)}
+
+                            {/* Recherche gagnée : la quantité se corrige ici */}
+                            {joueur && (l.sorte === "p" || l.sorte === "g") && (
+                                <span style={{ marginLeft: 6 }}>
+                                    <button type="button" title="Un point de moins" style={styleMini} onClick={() => ajuster(l, -1)}>−</button>{" "}
+                                    <button type="button" title="Un point de plus" style={styleMini} onClick={() => ajuster(l, 1)}>+</button>{" "}
+                                    <button type="button" title="Retirer cette ligne" style={styleMini} onClick={() => ajuster(l, -l.n)}>✕</button>
+                                </span>
+                            )}
+                        </div>
+                    ))}
                 </div>
             ))}
-
-            <div data-recherche-appliquee style={{ marginTop: 4, paddingTop: 4, borderTop: "1px solid #90caf9" }}>
-                <b>Recherche appliquée à ce tour</b> :{" "}
-                {appliquees.length === 0
-                    ? <i>aucune case cochée.</i>
-                    : appliquees.map(a => (
-                        <Text key={a.id} text={`#re${a.cle}${a.n > 1 ? `(${a.n})` : ""}`} style={{ ...styleMacro, marginRight: 6 }} />
-                    ))}
-            </div>
         </div>
     );
 }
@@ -140,7 +203,7 @@ function Feuille({ composant, base }) {
 
     const {
         etat, index, jouer, envoyer, joueur, jeu, ouvrirFiche, partie, factionDe, nomDe, aviser,
-        aScript, aTechnologie, scriptsDesactives,
+        aScript, aTechnologie, scriptsDesactives, search,
     } = useEngine();
 
     const contenu = useElement(composant.ref.id);
@@ -182,6 +245,16 @@ function Feuille({ composant, base }) {
     const idUtilisee = k => `${base}:techUse:${composant.id}:${k}`;
     const progres = k => Number(etat.compteurs[idProgres(k)]) || 0;
 
+    // Joueur à qui est la feuille
+    const chercheur = Number(base.split(":")[1]);
+
+    // Connaissance : 2 points par technologie obtenue, plus les points recherchés
+    const idConnaissance = `${base}:tech:${composant.id}:connaissance`;
+    const connaissancePlus = Number(etat.compteurs[idConnaissance]) || 0;
+    const obtenues = liens.filter((lien, k) => lien?.id > 0 && progres(k) >= cout(k)).length;
+    const parNiveau = Number(contenu?.connaissanceReq) || 8;
+    const niveau = Math.floor((2 * obtenues + connaissancePlus) / parNiveau);
+
     // Marque les technologies utilisées ce tour. L'affichage de la feuille
     // recrée ses cases à chaque rendu : la marque est reposée à chaque fois.
     useEffect(() => {
@@ -192,6 +265,12 @@ function Feuille({ composant, base }) {
             noeud.style.opacity = use ? 0.4 : "";
             noeud.style.cursor = "pointer";
             noeud.title = use ? "Utilisée ce tour" : "";
+        }
+
+        for (const noeud of racine.current?.querySelectorAll("[data-connaissance]") || []) {
+            noeud.style.cursor = "pointer";
+            noeud.title = `Connaissance : niveau ${niveau} (${2 * obtenues + connaissancePlus} points, ${parNiveau} par niveau). ` +
+                "Clic : un point de recherche de plus. Ctrl + clic : un de moins.";
         }
     });
 
@@ -208,12 +287,29 @@ function Feuille({ composant, base }) {
         progres: liens.map((lien, k) => progres(k)),
         // Obtenue : toutes ses cases de recherche sont cochées
         unlocked: liens.map((lien, k) => progres(k) >= cout(k)),
+        // Points de connaissance recherchés, en plus de ceux des technologies obtenues
+        connaissancePlus,
     };
 
     function onClick(event) {
 
         // Un clic sur un pion posé sur la technologie ouvre sa fiche
         if (event.target.closest("[data-composant]")) {
+            return;
+        }
+
+        // Connaissance : un point de recherche de plus (Ctrl + clic : un de moins)
+        if (joueur && event.target.closest("[data-connaissance]")) {
+
+            const delta = event.ctrlKey ? -1 : 1;
+
+            if (connaissancePlus + delta >= 0) {
+                jouer([
+                    { type: "compteur", id: idConnaissance, valeur: connaissancePlus + delta },
+                    noter(etat, chercheur, "c", composant.ref.id, delta),
+                ]);
+            }
+
             return;
         }
 
@@ -238,32 +334,48 @@ function Feuille({ composant, base }) {
             return;
         }
 
-        // Recherche appliquée à ce tour : cases cochées, par type de technologie
-        const type = techs[liens[k]?.id]?.techType;
-        const idFait = `${base}:rechFait:${type}`;
-        const fait = Number(etat.compteurs[idFait]) || 0;
+        const idTech = Number(liens[k]?.id);
+        const plus = valeur > progres(k);
 
+        // Prérequis : le rang de la technologie, moins un, en niveaux de connaissance
+        // de cette feuille. S'il manque, la case cochée demande une confirmation.
+        const prerequis = Math.max(0, (Number(techs[idTech]?.tier) || 1) - 1);
+
+        const commentaire = plus && niveau < prerequis
+            ? confirmerRegle(`Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
+                `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
+            ])
+            : "";
+
+        if (commentaire === null) {
+            return;
+        }
+
+        // La case cochée (ou décochée) est notée au journal de recherche du tour
         const avance = [
             { type: "compteur", id: idProgres(k), valeur },
-            /^\w+$/.test(type || "") && (valeur > progres(k) || fait > 0) &&
-                { type: "compteur", id: idFait, valeur: Math.max(0, fait + (valeur > progres(k) ? 1 : -1)) },
+            noter(etat, chercheur, "t", idTech, plus ? 1 : -1),
+            noterFinie(etat, chercheur, idTech, valeur >= cout(k)),
         ].filter(Boolean);
 
         // Une case de moins : rien d'autre
-        if (valeur < progres(k)) {
+        if (!plus) {
             jouer(avance);
             return;
         }
 
-        reactions(liens[k]?.id, valeur >= cout(k)).then(({ actions, messages }) => {
+        reactions(idTech, valeur >= cout(k)).then(({ actions, messages }) => {
 
-            if (!actions.length) {
+            if (!actions.length && !commentaire) {
                 jouer(avance);
                 return;
             }
 
-            envoyer([...avance, ...actions], messages.join(" — "));
-            aviser(messages.join(" "));
+            envoyer([...avance, ...actions], [commentaire, ...messages].filter(Boolean).join(" — "));
+
+            if (messages.length) {
+                aviser(messages.join(" "));
+            }
         });
     }
 

@@ -55,7 +55,8 @@ import {
 import { Preparation } from "./Preparation";
 import { Espace } from "./Espace";
 import { PlateauJoueur, SourcesIllimitees, CaseProduction, MesCompteurs } from "./PlateauJoueur";
-import { Technologie, effacerRecherches } from "./Technologie";
+import { Technologie } from "./Technologie";
+import { effacerRecherches } from "./recherche";
 import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
@@ -582,8 +583,6 @@ export function Partie({ id }) {
             p.envoyer([commentaire, ...trading.messages].filter(Boolean).join(" — "), [
                 ...trading.actions,
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
-                // On quitte la phase de science : les recherches du tour sont effacées (Technologie.jsx)
-                ...(pas > 0 && enScience ? effacerRecherches(etat) : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
                 ...remiseDesPasses,
@@ -627,6 +626,7 @@ export function Partie({ id }) {
             ...retraitUse,
             ...remiseDesPasses,
             ...figerOrdre,
+            // Le journal de recherche du tour qui s'achève est effacé (recherche.js)
             ...effacerRecherches(etat),
             // Le vote du tour qui s'achève est remis à zéro (etat.js)
             { type: "reinitialiserVotes" },

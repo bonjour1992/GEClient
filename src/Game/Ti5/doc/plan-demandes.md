@@ -305,5 +305,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Complément vote : secret du vote — pendant la phase de vote, placements sur le plateau de
   vote et ajustements de voix restent dans un coup local (navigateur), envoyé avec la révélation
   quand tous les joueurs sont prêts.
+- ☑ Complément recherche : journal de recherche du tour par phase (effacé en fin de tour),
+  recherche de connaissance (clic sur la grille d'une feuille), prérequis d'une technologie
+  semi-bloquant (niveaux de connaissance).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
