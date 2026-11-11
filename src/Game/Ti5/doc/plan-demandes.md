@@ -341,5 +341,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Ahk Ravin : donnée modifiée (`demandes-ti5/migrate-ahk-ravin.mjs`), fenêtre à la fouille.
 - ☑ Correctifs (2026-11-11) : Dock (réparation illimitée) — « Réparer » sur la fiche de chaque unité
   endommagée du système en production ; transporteurs déplacés par un amiral ou un logisticien, au choix.
+- ☑ Lot « faciles et moyens » (2026-11-11) : 34 scripts — 14 technologies, 5 habilités (réfugiés,
+  rebelles), 9 unités, Mecatol Rex (spécial). Les éléments passés et les mécaniques manquantes :
+  voir `implementabilite.md` (lignes « non »).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

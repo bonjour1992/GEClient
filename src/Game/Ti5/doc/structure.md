@@ -1010,6 +1010,22 @@ production. Déplacement assisté (`Deplacement.jsx`) : un vaisseau `trans` sans
 `mil` (`estTransport`) est compté avec l'agent choisi dans « Transports
 déplacés par » (état `transport`, amiral par défaut, remis à zéro avec le départ).
 
+Lot « faciles et moyens » (11 novembre, nuit) : 34 scripts de plus dans
+`scripts.js`. `ActionsScript.jsx` donne aux scripts de nouveaux `outils`
+(`moi`, `c`, `contenu`, `nom`, `infanterie`, `ici`, `mesUnitesDansLeSysteme`,
+`aCarte`, `agentsUses`…) ; `use` d'une technologie passe par le compteur
+`joueur:<u>:techUse:<feuille>:<case>` ; `cree.unite: "inf"` pose l'infanterie
+de la faction, `cree.bord` à bord de l'unité ; `demande.question` peut être une
+fonction ; `calcul` peut rendre `actions` et `agentDepense` ; option d'agent
+`surCarte` (l'agent est posé sur la carte). `Revenus.jsx` : les technologies
+ont des revenus (`aScript`, `stations`, `unitesAvecMot`). `Combat.jsx`,
+`bonusScripts` : Énergie de la faille, Soldats déphasés, Centre d'expansion
+(`joueur:<camp>:expansion` = tour × 1000 + case + 1), Vaisseau relique (marque
+`reliqueMil`), Armer les rebelles (`general:armer-rebelles`), Entraîner les
+milices (amiral sur la Promesse 454), Générateur de tempête
+(`general:tempete:<case>`), Adaptation de la visée. `Deplacement.jsx` : marque
+`reliqueSpa` = +3 mouvement et furtif.
+
 Cube noir d'un mercenaire (11 novembre, soir) : l'usure d'un mercenaire, c'est
 la place de son cube (`CUBE_MERCENAIRE`, `Interaction.jsx`). Posé sur la carte
 (`cubeDeMercenaire`), le mercenaire est disponible ; `actionsUserCarte` envoie

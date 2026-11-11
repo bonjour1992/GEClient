@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 93 | 60 | 0 | 33 | 19 | 19 | 28 |
-| Habilités | 48 | 20 | 2 | 26 | 9 | 7 | 8 |
-| Unités | 104 | 46 | 58 | 0 | 10 | 13 | 17 |
-| Planètes | 29 | 23 | 2 | 4 | 14 | 11 | 6 |
+| Technologies | 93 | 72 | 2 | 19 | 28 | 22 | 32 |
+| Habilités | 48 | 25 | 2 | 21 | 14 | 7 | 10 |
+| Unités | 104 | 49 | 55 | 0 | 19 | 13 | 19 |
+| Planètes | 29 | 24 | 2 | 3 | 15 | 11 | 6 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **333** | **171** | **82** | **80** | **76** | **74** | **59** |
+| **Total** | **333** | **192** | **81** | **60** | **100** | **77** | **67** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -96,14 +96,14 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 273 | Exploitation de masse | non | — | — | Dépend de l'action « Esclaves » de Kabal (habilité 157), qui n'existe pas dans l'outil : non fait. |
 | 274 | Enrôlement | non | — | — | Dépend des esclaves de Kabal (habilité 157), qui n'existent pas dans l'outil : non fait. |
 | 399 | Adaptation des réacteurs | non | automatique (prévu) | — | À brancher sur le déplacement assisté. (difficile) |
-| 400 | Adaptation de la visée | non | automatique (prévu) | — | Annule le malus de tempête à l'écran de combat, une fois celui-ci scripté. (moyenne) |
-| 402 | Vaccin | non | nouveau bouton (prévu) | — | Bouton : +4 points ; faveur si personne n'a découvert le vaccin avant. (moyenne) |
+| 400 | Adaptation de la visée | **oui** | automatique | Conflit : le −1 de la Tempête spatiale ne s'applique pas à vos unités ; la tempête finie, le Générateur de tempête ne vous touche plus. | — |
+| 402 | Vaccin | **oui** | nouveau bouton | Plateau joueur, une seule fois : « Vaccin » +4 points, et une de vos faveurs si personne ne l'avait découvert à un tour précédent. | — |
 | 403 | Arme bactériologique | non | nouveau bouton (prévu) | — | Bouton : use un scientifique, jet de 5 par infanterie du système choisi. (moyenne) |
 | 419 | Réparation improvisée (Conglomérat mercantile d'Hacan) | **oui** | nouveau bouton | Version de Hacan de « Réparation improvisée » (195) : même bouton, sur la fiche d'un vaisseau endommagé. | Vaisseau « non bloqué » : non vérifié. |
 | 445 | Station météorologique | non | automatique (prévu) | — | Message orange si une station météorologique est produite sans cette technologie. (facile) |
 | 446 | Tempête électromagnétique | non | nouveau bouton (prévu) | — | Bouton : use un scientifique, lance un canon (4,4) ; nébuleuse et cible choisies. (moyenne) |
-| 447 | Générateur de tempête | non | nouveau bouton + automatique (prévu) | — | Bouton : use un scientifique, −3 ressources ; malus de combat à saisir à la main. (moyenne) |
-| 448 | Exploitation des tempêtes | non | nouveau bouton (prévu) | — | Deux boutons : +3 ressources au ravitaillement ; use un scientifique, +4 ressources. (facile) |
+| 447 | Générateur de tempête | **partiel** | nouveau bouton + automatique | Fiche d'un système, combat spatial : la technologie et un scientifique sont usés, 3 ressources — tous les vaisseaux du système ont −1 au combat ce tour (la tempête finie, pas les factions qui ont Adaptation de la visée). | La flotte ciblée (−1 de plus) : à la main. |
+| 448 | Exploitation des tempêtes | **oui** | bouton existant modifié + nouveau bouton | « Entretien » : +3 ressources tant que la Tempête spatiale est active. Fiche d'une nébuleuse, science : use un scientifique et active le système, +4 ressources. | Nébuleuse « que vous contrôlez » : non vérifié. |
 | 481 | SIG-1 | non | nouveau bouton (prévu) | — | Bouton : donne le signal n° 1 au joueur (sens du texte à confirmer). (facile) |
 | 482 | SIG-2 | non | nouveau bouton (prévu) | — | Bouton : donne le signal n° 2 au joueur (sens du texte à confirmer). (facile) |
 | 483 | SIG-3 | non | nouveau bouton (prévu) | — | Bouton : donne le signal n° 3 au joueur (sens du texte à confirmer). (facile) |
@@ -111,22 +111,22 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 592 | Recomposition | non | nouveau bouton + automatique (prévu) | — | Bouton de fin de combat : dés selon les pertes biologiques, puis production offerte. (moyenne) |
 | 593 | Croissance | non | nouveau bouton (prévu) | — | Bouton : remplace un vaisseau biologique choisi par un autre coûtant jusqu'à 2 de plus. (moyenne) |
 | 594 | Vie fructifiante | non | bouton existant modifié (prévu) | — | Variante du script de « Sève de vie » (à écrire) : 2 points rendus. (moyenne) |
-| 787 | Réseau | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : +2 influence par satellite possédé. (facile) |
+| 787 | Réseau | **oui** | bouton existant modifié | « Entretien » : +2 influence par satellite — stations possédées (planètes de type station) et unités satellites sur la carte. | — |
 | 788 | Stratégie d'évitement | non | automatique (prévu) | — | Début de combat : malus −1 sur des vaisseaux choisis, à l'écran de combat. (moyenne) |
 | 789 | Contact mercenaire | non | nouveau bouton + automatique (prévu) | — | Bouton : use la carte, produit un vaisseau payé en influence ; portée non vérifiée. (moyenne) |
-| 791 | Stimulant | non | nouveau bouton (prévu) | — | Bouton : use la carte, rend disponible un agent usé choisi. (moyenne) |
+| 791 | Stimulant | **oui** | nouveau bouton | Plateau joueur : la technologie est usée, une fenêtre numérotée fait choisir un agent usé (cube noir d'un mercenaire compris), qui redevient disponible. | — |
 | 803 | Prévision des combats | non | nouveau bouton (prévu) | — | Bouton : use un scientifique ; frappe en premier donnée à une flotte choisie. (moyenne) |
 | 804 | Calcul de probabilité | non | nouveau bouton (prévu) | — | Bouton : montre au seul joueur la prochaine carte du plateau déroulé. (moyenne) |
-| 805 | Anticipation | non | nouveau bouton + automatique (prévu) | — | Bouton : use la carte et un scientifique ; le déplacement de « Memoria » reste manuel. (facile) |
-| 806 | Opportunité prédite | non | nouveau bouton (prévu) | — | Bouton : ajoute un agent de base choisi sur la case de recrutement 4. (moyenne) |
-| 807 | Relais d'influence | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : +2 influence par station possédée. (facile) |
-| 816 | Ouverture de faille | non | nouveau bouton (prévu) | — | Bouton : use carte et scientifique, crée un jeton oméga dans un système choisi. (moyenne) |
-| 817 | Communication avec les êtres de la faille | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, −4 influence, donne une « Nef de la rupture » choisie. (moyenne) |
-| 818 | Énergie de la faille | non | automatique (prévu) | — | Bonus permanent : script sur l'écran de combat, +1 aux vaisseaux en combat spatial. (moyenne) |
-| 819 | Soldats déphasés | non | automatique (prévu) | — | Bonus permanent : script sur l'écran de combat, +1 aux forces terrestres. (moyenne) |
+| 805 | Anticipation | **partiel** | nouveau bouton | Plateau joueur, combat spatial, quand Memoria est sur la carte : la technologie et un scientifique sont usés. | Le déplacement de Memoria : à la main. |
+| 806 | Opportunité prédite | **oui** | nouveau bouton | Plateau joueur, recrutement (une fois par tour) : une fenêtre numérotée fait choisir un agent de base ; un agent de ce type est pris dans le sac (ou créé) et posé sur la case de recrutement 4. | « À tout moment » : limité à une fois par tour. |
+| 807 | Relais d'influence | **oui** | bouton existant modifié | « Entretien » : +2 influence par station possédée. | — |
+| 816 | Ouverture de faille | **oui** | nouveau bouton | Fiche d'un système : la technologie et un scientifique sont usés, un jeton trou de ver oméga est posé dans le système. | — |
+| 817 | Communication avec les êtres de la faille | **oui** | nouveau bouton | Fiche d'un système où est une Nef de la rupture qui n'est pas à vous : use un diplomate, 4 influence, la Nef passe sous votre contrôle. | — |
+| 818 | Énergie de la faille | **oui** | automatique | Conflit, combat spatial : +1 à vos vaisseaux. | — |
+| 819 | Soldats déphasés | **oui** | automatique | Conflit, combat terrestre : +1 à vos forces terrestres. | — |
 | 820 | Stabilisateur de rupture | non | automatique (prévu) | — | À brancher sur le jet de trou de ver oméga du déplacement assisté. (difficile) |
 | 821 | Extraction de la faille | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : +3 ressources par « Faille » dominée (domination à déterminer). (moyenne) |
-| 857 | Piraterie informatique | non | nouveau bouton (prévu) | — | Deux boutons de conversion : 1 commerce en 2 ressources ou en 2 influence. (facile) |
+| 857 | Piraterie informatique | **oui** | nouveau bouton | Plateau joueur, deux boutons : le commerce choisi (fenêtre) est converti à 2 ressources, ou à 2 influence, chacun. | — |
 
 ## Habilités
 
@@ -153,7 +153,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 442 | Tempête spatiale | **oui** | automatique | Posée sur la table, elle vaut pour tous : −1 au mouvement (déplacement assisté), −1 aux canons spatiaux et à tous les combats (Conflit). | — |
 | 443 | Fin de la tempête | **oui** | nouveau bouton | Fiche de la carte (posée sur la table), phase d'événement : « Appliquer la fin de la tempête » — la Tempête spatiale est retirée de la table, chaque faction marque 2 points par niveau de connaissance de tempête, celle qui en a le plus (seule) 3 de plus ; les stations météorologiques ne génèrent plus de recherche tempête. | — |
 | 452 | Péage aux frontières | non | nouveau bouton + automatique (prévu) | — | Bouton d'événement : +3 commerce à qui domine chaque système à trou de ver alpha. (moyenne) |
-| 453 | Offre d'asile | non | nouveau bouton (prévu) | — | Bouton : planète choisie, points gagnés, 6 « Milice » et un entrepôt créés, alliance donnée. (moyenne) |
+| 453 | Offre d'asile | **oui** | nouveau bouton | Fiche d'un système, phase d'événement, à côté d'une de vos planètes (l'habilité sur la case Événement du tour) : autant de points que son influence, sa carte est retirée, 6 Milices et un Entrepôt d'aide y sont posés, l'alliance Tuteur des réfugiés arrive chez vous. | — |
 | 486 | Cache | non | nouveau bouton (prévu) | — | Bouton : prend un fragment présent dans un système dominé (domination à déterminer). (moyenne) |
 | 487 | BDD technique | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 1 de recherche par fragment de relique possédé, notée au journal de recherche. | — |
 | 491 | Présence de cache | **oui** | automatique | Explorer (Ctrl + clic sur un emplacement vide) : un fragment de relique tiré du sac est posé sur le système découvert. | — |
@@ -166,7 +166,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 558 | Rébellion en cours | **oui** | automatique | « Nouveau tour » : 1D3 rebelles de plus sur chaque planète possédée par un joueur où il y en a déjà (dé lancé par le serveur, annoncé). | — |
 | 560 | Négocier avec les rebelles | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, lance 3 dés à 4 (précis) contre les rebelles. (moyenne) |
 | 561 | Rébellion armée | non | automatique (prévu) | — | Repérer les planètes à 6 rebelles et y ouvrir un combat terrestre. (moyenne) |
-| 563 | Armer les rebelles | non | nouveau bouton + automatique (prévu) | — | Bouton : −3 ressources ; le +1 des rebelles se saisit à l'écran de combat. (facile) |
+| 563 | Armer les rebelles | **oui** | nouveau bouton + automatique | Plateau joueur, combat terrestre, quand des Rebelles sont sur la carte : 3 ressources, les Rebelles ont +1 au combat ce tour (une fois par tour pour la table). | « Vos unités adjacentes » : non vérifié. |
 | 720 | Vote du conclave | non | nouveau bouton (prévu) | — | Bouton : jets des « Soutien politique », puis 1D10 ou 3D10 de votes. (moyenne) |
 | 722 | Achat de votes | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, donne un soutien au Conclave, +5 commerce deux tours après. (moyenne) |
 | 725 | Milice au coeur du pouvoir | **oui** | automatique | « Nouveau tour », à partir du tour 8, habilité posée sur la table : 1D10 miliciens mercenaires sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu). | — |
@@ -174,9 +174,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 765 | Signal | **oui** | bouton existant modifié | « Entretien » : un marqueur de signal est posé sur un système tiré au hasard. | — |
 | 814 | Rupture de l'espace-temps | **oui** | automatique | Déplacement assisté : passage par un trou de ver oméga, un dé de 10 par vaisseau (3 ou moins bloqué, 9 ou plus une touche), dans le cadre de blocage. | — |
 | 815 | Étude des failles | **oui** | nouveau bouton | Fiche d'une Faille, phase de science : use un scientifique, active le système, +2 de recherche de rupture, notée au journal de recherche. | — |
-| 837 | Réfugiés | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : crée 2 « Milice » sur chaque planète des réfugiés. (moyenne) |
-| 838 | Entraîner les milices | non | nouveau bouton (prévu) | — | Bouton unique : −4 ressources, amiral posé sur la carte ; +2 des milices au combat. (moyenne) |
-| 839 | Enrôlement des milices | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, donne 3 « Milice » d'une planète choisie au joueur. (moyenne) |
+| 837 | Réfugiés | **oui** | nouveau bouton | Bandeau « À faire », ravitaillement : 2 Milices sur chaque planète des Réfugiés (celles qui ont un Entrepôt d'aide), une fois par tour pour la table. | — |
+| 838 | Entraîner les milices | **oui** | nouveau bouton + automatique | Plateau joueur du détenteur de Tuteur des réfugiés, une fois par partie : 4 ressources, un amiral est posé sur l'alliance ; tant qu'il y est, les Milices ont +2 au combat. | — |
+| 839 | Enrôlement des milices | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète des Réfugiés, pour le détenteur de Tuteur des réfugiés : use un diplomate, la planète est activée, 3 Milices passent sous votre contrôle. | — |
 | 844 | Maître du pillage | **oui** | automatique | Chaque pillage rapporte 1 commerce de plus. | — |
 | 895 | Sans influence | **oui** | bouton existant modifié | Recrutement, propositions et boutons de script qui coûtent de l'influence : payés en ressources. « Entretien » : aucune influence gagnée. | Autres dépenses d'influence : à la main. |
 | 896 | Infiltration | **oui** | automatique + nouveau bouton | Conflit, « Retirer » : détruire un vaisseau donne un token Infiltration (éléments actifs, aux couleurs de la faction touchée). Plateau joueur, science : « Infiltration : +4 recherche » — use un scientifique et 2 infiltrations (usées jusqu'au nouveau tour), recherche notée au journal. | Prendre 2 infiltrations envers la même faction : à la main. |
@@ -208,16 +208,16 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 154 | Camp de travail (Kabal de l’ombre) | **partiel** | nouveau bouton | Fiche de l'unité, production : « Camp de travail : +4 ressources » — le camp est usé, un esclave dépensé. | Effet de destruction : à la main. |
 | 155 | Portail de repli (Kabal de l’ombre) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de ravitaillement : replace ici les « Raideur » détruits au tour précédent. (moyenne) |
 | 162 | Quetzalcoalt (Volée argentée) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Point de fin de combat avec trois vaisseaux militaires engagés. |
-| 163 | Destroyeur (Volée argentée) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −1 influence ; la seconde attaque se relance à l'écran de combat. (facile) |
+| 163 | Destroyeur (Volée argentée) | **partiel** | nouveau bouton | Fiche de l'unité, combat spatial : « Deux attaques (1 influence) ». | La seconde attaque : à lancer à la main. |
 | 164 | Complexe de guerre (Volée argentée) | **partiel** | bouton existant modifié | « Entretien » : un destroyeur de la faction est posé dans le système du complexe. | Contrôle du système non vérifié ; +1 des destroyeurs des systèmes adjacents au combat. |
-| 165 | Centre d'expansion (Volée argentée) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : marque un système choisi ; +1 au combat spatial là pour ce tour. (moyenne) |
+| 165 | Centre d'expansion (Volée argentée) | **oui** | nouveau bouton + automatique | Fiche d'un système où vous n'avez pas d'unité, ravitaillement (une fois par tour, avec un Centre d'expansion sur la carte) : +1 au combat spatial dans ce système pour le tour. | — |
 | 171 | Mech Aérien (Volée argentée) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Autoriser ce mech dans l'écran de combat spatial ; réparation 2 non suivie. (moyenne) |
-| 172 | J.N.S. Hylarim (Université de Jol-Nar) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −1 ressource pour annuler une touche ; valeur de contrôle non calculée. (moyenne) |
+| 172 | J.N.S. Hylarim (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, combat spatial : « Annuler une touche (1 ressource) ». | Retirer la touche : à la main ; valeur de contrôle non calculée. |
 | 173 | Cuirassé (Université de Jol-Nar) | oui | — | Bombardement noté « 5\*\* » : vérifier que l'outil lit bien cette notation. | — |
 | 174 | Destroyeur (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 175 | Bouclier mobile (Université de Jol-Nar) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −1 ressource pour annuler une touche ; valeur de contrôle non calculée. (moyenne) |
+| 175 | Bouclier mobile (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, combat terrestre : « Annuler une touche (1 ressource) ». | Retirer la touche : à la main ; valeur de contrôle non calculée. |
 | 176 | Laboratoire (Université de Jol-Nar) | **oui** | bouton existant modifié | « Rechercher » rapporte 1 de recherche de plus sur une planète où le joueur a un Laboratoire. | — |
-| 177 | Système de défense (Université de Jol-Nar) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : −1 ressource pour annuler une touche, retirée à la main. (facile) |
+| 177 | Système de défense (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, bombardement : « Annuler une touche (1 ressource) ». | Retirer la touche : à la main. |
 | 178 | Sphère de dyson (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, phase de science : use un scientifique, +2 ressources par niveau de connaissance spatiale. | Règle de pose (nébuleuse, supernova) non vérifiée. |
 | 199 | Soleil de guerre (Université de Jol-Nar) | **oui** | automatique | Confirmation à la production sans la technologie ; valeur de contrôle lue par `#con`. | — |
 | 243 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -235,7 +235,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 467 | Arbre mère (Omni-esprit d'Arborec) | **oui** | bouton existant modifié | « Entretien » : autant de Letani que le niveau de connaissance génétique, posés sur la planète de l'arbre. | — |
 | 470 | Graine d'eden (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Jet et nombre d'attaques selon la connaissance génétique : écran de combat à étendre. (moyenne) |
-| 490 | Armageddon | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : dépense 3 fragments militaires et un scientifique ; portée du canon non gérée. (moyenne) |
+| 490 | Armageddon | **partiel** | nouveau bouton | Fiche de l'unité : 3 fragments militaires, un scientifique est posé sur l'unité. | Portée du canon +1 et 2 points de plus au décompte : à la main. |
 | 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
 | 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
@@ -250,7 +250,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 557 | Rebelle (Rébellion inter-planétaire) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Furtif : mot-clé à ajouter à l'écran de combat. (moyenne) |
 | 568 | Indigène | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un diplomate, lance 4 dés à 3 contre cette unité. (moyenne) |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
-| 570 | Cuve de Clonage | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de production : crée 2 infanteries sur la planète de la cuve. (moyenne) |
+| 570 | Cuve de Clonage | **oui** | nouveau bouton | Fiche de l'unité, production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète. | — |
 | 571 | Arbre de vie éternelle | **partiel** | nouveau bouton | Fiche de l'unité, phase de production : l'arbre est usé et prend 1 dégât, +4 commerce. | Soin en phase de science (coût « #regen(2) » à préciser) ; points du décompte. |
 | 572 | Étoile de mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique ; valeur de contrôle non calculée. (moyenne) |
 | 573 | Vaisseau gigantesque | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
@@ -270,7 +270,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 732 | S'Ula Mentarion | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Marqueur posé à la destruction d'un vaisseau de commerce ; bouton : le dépenser, livraison 5. (moyenne) |
 | 745 | Olivier Dubois | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bonus +2 à des infanteries choisies, à l'écran de combat terrestre. (moyenne) |
 | 746 | Bombardier Lourd | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
-| 747 | Combattant Voyageur | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use l'unité, −3 ressources ; déplacement du pion manuel, distance non vérifiée. (moyenne) |
+| 747 | Combattant Voyageur | **partiel** | nouveau bouton | Fiche de l'unité, débarquement : l'unité est usée, 3 ressources. | Le déplacement (3 de distance au plus) : à la main. |
 | 766 | Memoria (Le Nomade) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : dépense un signal, +4 cases de recherche de signal. (facile) |
 | 767 | Memoria B (Le Nomade) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : dépense un signal, +4 cases de recherche de signal. (facile) |
 | 768 | Memoria A (Le Nomade) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton signal facile ; furtivité et malus d'anomalie liés au déplacement. (difficile) |
@@ -285,7 +285,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 847 | Soleil de capturé (Pirate Mentak) | oui | — | Texte informatif (non productible) ; bombardement noté « 6\*\*\* » à vérifier. | — |
 | 849 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 850 | Armageddon | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | À sa destruction : change de propriétaire avec 1 de résistance restante. (moyenne) |
-| 854 | vaisseau relique | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Quatre boutons dépensant chacun un fragment ; le bonus de mouvement reste manuel. (moyenne) |
+| 854 | vaisseau relique | **oui** | nouveau bouton + automatique | Fiche de l'unité, quatre boutons : fragment militaire, +3 au combat spatial ce tour ; fragment spatial, +3 mouvement et déplacement furtif ce tour (déplacement assisté) ; fragment civil, rempli d'infanteries de votre faction jusqu'à sa capacité ; fragment ancien, réparé et +1 ressource. | — |
 | 856 | Lune noire (Pirate Mentak) | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Ciblage obligatoire : notion de cible absente de l'écran de combat. (moyenne) |
 | 868 | Forge du vide (Fantômes de Creuss) | **oui** | bouton existant modifié | « Entretien » : 1 ressource, 1 influence et 1 de recherche s'il y a un trou de ver delta dans son système. | — |
 | 893 | Usine (Virus de Nekro) | **partiel** | bouton existant modifié + nouveau bouton | « Entretien » : +2 ressources (script de l'Usine) ; production comptée par `#prod(3, Drone)`. | Dévastation pour réduire un coût. |
@@ -318,7 +318,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 74 | Velnor | non | — (passé) | — | Fragments posés sur la planète, déplacement d'une flotte : texte à préciser. (difficile) |
 | 75 | Elysium | **oui** | nouveau bouton + bouton existant modifié | Fiche du système, science : « Poser un scientifique » (la planète est activée, il y reste). « Entretien » : 1 de recherche militaire, spatiale, génétique et sociale par scientifique posé. | — |
 | 131 | Relique reforgée | **oui** | bouton existant modifié | « Entretien » : +1 point pour qui la possède. | — |
-| 229 | Mecatol Rex (spécial) | non | — (passé) | — | Dépenser un agent au choix pour obtenir un politique : choix de l'agent à faire. (facile) |
+| 229 | Mecatol Rex (spécial) | **oui** | nouveau bouton | Fiche de la carte, recrutement : une fenêtre numérotée fait choisir un de vos agents disponibles, il est dépensé ; un politique (du sac, sinon créé) arrive dans vos agents. | — |
 | 275 | Shar | **oui** | automatique | Déplacement assisté : la nébuleuse du système de Shar ne gêne pas les déplacements de qui possède Shar. | — |
 | 469 | New eden | **oui** | bouton existant modifié | « Entretien » : 2 Letani posés sur la planète. | — |
 | 473 | SIG-1 à SIG-4 | **oui** | nouveau bouton | Fiche du système, phase de science : « Obtenir » use un scientifique, la carte va dans les éléments actifs. | — |

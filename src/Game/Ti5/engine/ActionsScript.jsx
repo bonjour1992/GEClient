@@ -1,5 +1,5 @@
 import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte } from "./Interaction";
-import { contenuEnCache, useElements } from "./sync";
+import { contenuEnCache, useElement, useElements } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite } from "./miseEnPlace";
 import { depenserAgent } from "./effets";
@@ -25,8 +25,8 @@ import { noter } from "./recherche";
 //
 //   phase     motif du nom de la phase attendue (nomPhase : son nom)
 //   possede   la planète doit être à moi
-//   agent     { motif, nom, depense, pose } — utilisé ; dépensé ; ou posé
-//             sur le lieu (il y reste)
+//   agent     { motif, nom, depense, pose, surCarte } — utilisé ; dépensé ; posé
+//             sur le lieu (il y reste) ; ou posé sur l'unité ou la carte de la fiche
 //   cout      { res, inf, commerce } (habilité Sans influence : l'influence se paie en ressources)
 //   fragments { ancien, mil, civ, spa, autres } — fragments de relique à dépenser
 //             (autres : de n'importe quel type, les anciens en dernier)
@@ -38,7 +38,8 @@ import { noter } from "./recherche";
 //   faveur    nombre de mes faveurs gagnées ; faveurNeutre : faveurs neutres
 //             (jeton sans propriétaire)
 //   recherche [[type, n]…] — notée au journal de recherche du tour (sorte « a »)
-//   cree      { unite, n } — unités posées là où est la source
+//   cree      { unite, n, bord } — unités posées là où est la source (unite "inf" :
+//             l'infanterie de ma faction ; bord : embarquées sur l'unité de la fiche)
 //   donne     [{ type, id }] — cartes qui arrivent dans mes éléments actifs
 //   donneCarte identifiant d'une planète dont la carte arrive dans mes éléments actifs
 //   remplace  [[de, vers]…] — les unités « de » du lieu deviennent « vers »
@@ -49,25 +50,30 @@ import { noter } from "./recherche";
 //   degat     variation des dégâts de l'unité (+1, −1)
 //   use       l'unité ou la carte est usée (refusé si elle l'est déjà) ; pour un mercenaire,
 //             c'est son cube noir qui passe dans les agents usés (il revient à l'entretien),
-//             même quand le bouton est sur la fiche d'une unité
+//             même quand le bouton est sur la fiche d'une unité ; pour une technologie, son
+//             compteur « utilisée ce tour »
 //   cible     (contenu de l'unité, composant) -> vrai : le bouton d'un mercenaire est montré
 //             sur la fiche de mes unités qui conviennent (lieu "unite")
-//   demande   { question, max(outils) } — le joueur choisit un montant X : calcul(outils, X)
+//   demande   { question (texte, ou (outils) -> texte), max(outils) } — le joueur choisit un
+//             nombre X (un montant, ou le rang d'un choix listé dans la question) : calcul(outils, X)
 //   activer   un marqueur d'activation est posé sur le lieu (refusé s'il y en a un)
 //   prendre   la carte de la planète va dans mes éléments actifs
 //   pioche    { de, vers, n } — cartes piochées (vers "main")
 //   parTour   une seule fois par tour
 //   visible   (outils) -> faux pour ne pas montrer le bouton ici
-//   calcul    (outils, X) -> champs qui remplacent ceux du script (ou { sans: raison })
+//   calcul    (outils, X) -> champs qui remplacent ceux du script (ou { sans: raison }) ;
+//             en plus : actions (ajoutées au coup), agentDepense (composant d'un agent à dépenser)
 //   special   (atelier) -> { actions, avis, sans } : effet propre au script
 //
-// outils  : { systeme (contenu du système), idSysteme, numero, possede, phase, etat,
-//             connaissance(type), agentIci(motif), surLaCarte(idUnite), compte(cle),
+// outils  : { systeme (contenu du système), idSysteme, numero, possede, phase, etat, index, moi,
+//             c (composant de la fiche), contenu (de l'élément du lieu), nom(ref), infanterie (id),
+//             connaissance(type), agentIci(motif), surLaCarte(idUnite), mienneSurLaCarte(idUnite),
+//             ici(idUnite), mesUnitesDansLeSysteme(), aCarte(type, id), agentsUses(), compte(cle),
 //             planetesPossedees(), alliances(), anomalies(), factionsVoisines() }
 // atelier : { etat, index, moi, joueurs, nomDe, connaissance(joueur, type), points(joueur, n),
 //             cartes(type, id, zone), c (la carte de la fiche), numero (la case), infamie(joueur, n),
 //             recherche(joueur, idElement, n), donneur(carte), marqueurs(carte),
-//             zonesDePlanete(id), activee(zone) }
+//             zonesDePlanete(id), activee(zone), zone (du lieu), idElement, contenu, nom(ref) }
 // ============================================================
 
 const NOMS = { res: "ressource", inf: "influence", commerce: "commerce", points: "point" };
@@ -78,6 +84,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
     const {
         etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives, partie,
+        factionDe, techDuScript,
     } = useEngine();
 
     // Mes promesses (éléments actifs, promesses à durée) : leur contenu dit lesquelles sont des alliances
@@ -85,6 +92,12 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
     const mesPromesses = Object.values(etat.composants).filter(x => !x.cache && x.ref?.type === "Promesse" && estAMoi(x));
     const contenuPromesses = useElements(mesPromesses.map(x => x.ref.id));
+
+    // Infanterie de ma faction (cree : { unite: "inf" })
+    const faction = useElement(factionDe(moi) ?? -1);
+    const liensUnites = (faction?.units || []).filter(lien => lien?.id > 0);
+    const unitesFaction = useElements(liensUnites.map(lien => lien.id));
+    const idInfanterie = liensUnites.find(lien => typeUnite(unitesFaction[lien.id]) === "inf")?.id ?? null;
 
     if (!joueur) {
         return null;
@@ -120,7 +133,25 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         numero,
         possede,
         etat,
+        index,
+        moi,
+        c,
+        contenu: idElement ? contenuEnCache(idElement) : null,
+        nom: ref => nomElement(search, ref),
+        infanterie: idInfanterie,
         phase: etat.phase || "",
+        // Une de mes unités de cet élément est-elle sur la carte ? Unités de cet élément au lieu
+        mienneSurLaCarte: idUnite => Object.values(etat.composants).some(x =>
+            !x.cache && x.ref?.type === "unit" && x.ref.id === idUnite && campDe(x) === moi && /^hex:\d+/.test(x.zone || "")),
+        ici: idUnite => ici.filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === idUnite).length,
+        // Mes unités dans le système de la fiche (espace, planètes, embarquées)
+        mesUnitesDansLeSysteme: () => numero === null ? 0 : Object.values(etat.composants).filter(x =>
+            !x.cache && x.ref?.type === "unit" && campDe(x) === moi &&
+            (x.zone === "hex:" + numero || x.zone?.startsWith(`hex:${numero}:`))).length,
+        // Ai-je cette carte (éléments actifs, promesse à durée) ?
+        aCarte: (type, id) => Object.values(etat.composants).some(x => !x.cache && x.ref?.type === type && x.ref.id === id && estAMoi(x)),
+        // Mes agents usés (agents, cubes noirs des mercenaires)
+        agentsUses: () => (index.parZone.get(`joueur:${moi}:agentsUses`) || []).filter(x => !x.cache),
         connaissance: type => connaissance(moi, type),
         agentIci: motif => ici.some(x => !x.cache && x.ref?.type === "agent" && new RegExp(motif, "i").test(nomElement(search, x.ref))),
         // Une unité de cet élément est-elle posée sur la carte ?
@@ -160,6 +191,10 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         donneur: carte => Object.values(etat.composants).find(x => carte && x.sur === carte.id && x.jeton === MARQUEUR)?.proprio ?? null,
         zonesDePlanete,
         activee: z => (index.parZone.get(z) || []).some(x => !x.ref && x.jeton === ACTIVATION && !x.marques?.ruine),
+        zone,
+        idElement,
+        contenu: idElement ? contenuEnCache(idElement) : null,
+        nom: ref => nomElement(search, ref),
     };
 
     // Le bouton est-il à montrer ici ?
@@ -178,7 +213,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
         if (lieu === "planete") {
             return s.carte.type === "habilite"
-                ? s.surPlanete === idElement && aScript(moi, s.id)
+                // (surPlanete true : n'importe quelle planète, le script dit où avec visible)
+                ? (s.surPlanete === true || s.surPlanete === idElement) && aScript(moi, s.id)
                 : [s.carte.id, ...(s.aussi || [])].includes(idElement);
         }
 
@@ -245,7 +281,13 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         const propre = s.special ? s.special(atelier) : { actions: [] };
 
         // (un agent à poser : pas de remplaçant)
-        const agent = s.agent ? agentDisponible({ index, moi, search }, s.agent.motif, { sansRemplacant: !!s.agent.pose }) : null;
+        const agent = s.agent ? agentDisponible({ index, moi, search }, s.agent.motif, { sansRemplacant: !!(s.agent.pose || s.agent.surCarte) }) : null;
+
+        // Technologie usée : son compteur « utilisée ce tour »
+        const utiliseeTech = s.use && s.carte.type === "tech" ? techDuScript(moi, s.id) : null;
+
+        // Unité créée : « inf », l'infanterie de ma faction
+        const idCree = effet.cree ? (effet.cree.unite === "inf" ? idInfanterie : effet.cree.unite) : null;
         const degat = Number(c?.marques?.degat) || 0;
 
         // Ce que le bouton use : la carte du mercenaire (dans mes éléments actifs) quand le
@@ -293,7 +335,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 `fragments de relique insuffisants : ${fragmentsVoulus} à dépenser, ${payes.length} trouvé(s) (seuls ceux-là seront dépensés)`,
             ...depenses.filter(d => d.trouves.length < d.voulus).map(d =>
                 `il faut ${d.voulus} ${d.nom}(s)${d.use ? " non usé(e)(s)" : ""}, vous en avez ${d.trouves.length} (seuls ceux-là seront ${d.use ? "usés" : "dépensés"})`),
-            s.use && porteur && carteUsee(index, porteur) && (porteur.ref?.type === "unit"
+            utiliseeTech && etat.compteurs[utiliseeTech] && "la technologie est déjà utilisée ce tour",
+            effet.cree && !idCree && "l'infanterie de votre faction est introuvable",
+            s.use && s.carte.type !== "tech" && porteur && carteUsee(index, porteur) && (porteur.ref?.type === "unit"
                 ? "cette unité est déjà usée"
                 : (porteur.ref?.type === "mercenaire"
                     ? "le cube de ce mercenaire n'est pas sur sa carte : il est déjà utilisé (son cube revient à l'entretien)"
@@ -311,8 +355,10 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         function faire(commentaire) {
 
             // Montant choisi par le joueur : le script est recalculé avec lui
+            const question = typeof s.demande?.question === "function" ? s.demande.question(outils) : s.demande?.question;
+
             const x = s.demande
-                ? Math.floor(Number(window.prompt(s.demande.question, String(s.demande.max(outils)))))
+                ? Math.floor(Number(window.prompt(question, String(s.demande.max(outils)))))
                 : null;
 
             if (s.demande && !(x > 0)) {
@@ -321,6 +367,13 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
             const choisi = s.demande ? { ...s, ...s.calcul(outils, x) } : effet;
 
+            if (choisi.sans) {
+                aviser(`${s.nom} : ${choisi.sans}.`);
+                return;
+            }
+
+            const idChoisi = choisi.cree ? (choisi.cree.unite === "inf" ? idInfanterie : choisi.cree.unite) : null;
+
             const possession = s.prendre
                 ? actionsPossession({ etat, moi, aScript, nomDe }, zone, idElement, null, false)
                 : { actions: [], messages: [] };
@@ -328,9 +381,12 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             envoyer([
                 ...(agent ? (s.agent.depense
                     ? depenserAgent({ aScript, moi, etat }, agent, `le ${s.agent.nom} (${s.nom})`)
-                    : [s.agent.pose && zone
-                        ? { type: "deplacer", c: agent.id, vers: zone, proprio: moi }
-                        : { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` }]) : []),
+                    : [s.agent.surCarte && c
+                        ? { type: "deplacer", c: agent.id, sur: c.id, proprio: moi }
+                        : (s.agent.pose && zone
+                            ? { type: "deplacer", c: agent.id, vers: zone, proprio: moi }
+                            : { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` })]) : []),
+                ...(choisi.agentDepense ? depenserAgent({ aScript, moi, etat }, choisi.agentDepense, `l'agent (${s.nom})`) : []),
                 ...coutDe(choisi).map(([cle, n]) => ({ type: "compteur", id: `joueur:${moi}:${compteurDe(cle)}`, delta: -n })),
                 ...payes.map(f => ({ type: "supprimer", c: f.id })),
                 ...depenses.flatMap(d => d.trouves.map(x => (d.use
@@ -342,10 +398,10 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 ...Array.from({ length: choisi.faveur || 0 }, () => ({ type: "creer", jeton: FAVEUR, zone: `joueur:${moi}:faveurs`, proprio: moi })),
                 ...Array.from({ length: choisi.faveurNeutre || 0 }, () => ({ type: "creer", jeton: FAVEUR, zone: `joueur:${moi}:faveurs` })),
                 rechercheDe(choisi) > 0 && noter(etat, moi, "a", s.carte.id, rechercheDe(choisi)),
-                ...(choisi.cree && zone
-                    ? Array.from({ length: choisi.cree.n }, () => ({
-                        type: "creer", ref: { type: "unit", id: choisi.cree.unite }, zone, proprio: moi,
-                    }))
+                ...(choisi.cree && idChoisi && (choisi.cree.bord ? c : zone)
+                    ? Array.from({ length: choisi.cree.n }, () => (choisi.cree.bord
+                        ? { type: "creer", ref: { type: "unit", id: idChoisi }, sur: c.id, proprio: moi }
+                        : { type: "creer", ref: { type: "unit", id: idChoisi }, zone, proprio: moi }))
                     : []),
                 choisi.donneCarte && { type: "creer", ref: { type: "planet", id: choisi.donneCarte }, zone: `joueur:${moi}:actif`, proprio: moi },
                 ...(choisi.donne || []).map(ref => ({ type: "creer", ref, zone: `joueur:${moi}:actif`, proprio: moi })),
@@ -356,7 +412,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 ...aReparer.map(x => ({ type: "marquer", c: x.id, marque: "degat", valeur: 0, si: x.marques.degat })),
                 ...aSoigner.map(x => ({ type: "marquer", c: x.id, marque: "degat", valeur: 0, si: x.marques.degat })),
                 choisi.degat && c && { type: "marquer", c: c.id, marque: "degat", valeur: Math.max(0, degat + choisi.degat) },
-                ...(s.use && porteur ? actionsUserCarte(index, moi, porteur) : []),
+                ...(s.use && s.carte.type !== "tech" && porteur ? actionsUserCarte(index, moi, porteur) : []),
+                utiliseeTech && { type: "compteur", id: utiliseeTech, valeur: 1 },
+                ...(choisi.actions || []),
                 s.activer && zone && { type: "creer", jeton: ACTIVATION, zone },
                 s.pioche && { type: "piocher", de: s.pioche.de, vers: `joueur:${moi}:${s.pioche.vers}`, n: s.pioche.n || 1 },
                 ...possession.actions,

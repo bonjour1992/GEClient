@@ -1,5 +1,5 @@
 import { useEngine, BoutonRegle, nomElement, distanceCases } from "./Interaction";
-import { useElement, useElements } from "./sync";
+import { useElement, useElements, contenuEnCache } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { actionsPoints, typeUnite } from "./miseEnPlace";
 import { noter, numeroPhase } from "./recherche";
@@ -65,6 +65,11 @@ export function useRevenus(userId, phase) {
 
     const systemes = useElements(scripts.some(s => s.carte.type === "planet") ? tuiles.map(t => t.id) : []);
 
+    // Contenu des planètes que je possède (technologies Réseau, Relais d'influence : stations)
+    const idsPossedees = (index.parZone.get(`joueur:${userId}:actif`) || [])
+        .filter(c => !c.cache && c.ref?.type === "planet").map(c => c.ref.id);
+    const contenusPossedees = useElements(scripts.some(s => s.carte.type === "tech") ? idsPossedees : []);
+
     // Unités de ma faction (créations « inf », « dest »)
     const faction = useElement(scripts.length ? (factionDe(userId) ?? -1) : -1);
     const liensUnites = (faction?.units || []).filter(lien => lien?.id > 0);
@@ -107,6 +112,14 @@ export function useRevenus(userId, phase) {
                     !c.cache && c.ref && (c.zone === "hex:" + numero || c.zone?.startsWith(`hex:${numero}:`)) &&
                     motif.test(nomElement(search, c.ref)));
         },
+        // Script en service pour ce joueur
+        aScript: id => aScript(userId, id),
+        // Stations (planètes de type « sat ») que je possède
+        stations: () => idsPossedees.filter(id => contenusPossedees[id]?.type === "sat").length,
+        // Mes unités de la carte qui portent ce mot-clé
+        unitesAvecMot: motif => Object.values(etat.composants).filter(c => !c.cache && c.ref?.type === "unit" &&
+            campDe(c) === userId && /^hex:\d+/.test(c.zone || "") &&
+            (contenuEnCache(c.ref.id)?.mot_cle || []).some(m => motif.test(m))).length,
         // Nombre d'agents de ce nom posés sur la source (station, planète)
         agentsSur: (source, motif) => (source.zone ? (index.parZone.get(source.zone) || []) : []).filter(c =>
             !c.cache && c.ref?.type === "agent" && new RegExp(motif, "i").test(nomElement(search, c.ref))).length,
@@ -128,7 +141,8 @@ export function useRevenus(userId, phase) {
 
         // Sources : mes unités de la carte, mes planètes posées sur la carte, ou
         // une habilité qui s'applique à moi (une seule source, sans lieu)
-        const sources = script.carte.type === "habilite"
+        // (technologie : une seule source, sans lieu, si je l'ai débloquée)
+        const sources = ["habilite", "tech"].includes(script.carte.type)
             ? (aScript(userId, script.id) ? [{ ref: script.carte, numero: null, zone: null }] : [])
             : script.carte.type === "unit"
             ? Object.values(etat.composants)

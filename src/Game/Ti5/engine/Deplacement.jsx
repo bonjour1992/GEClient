@@ -246,8 +246,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     // départ, puis chaque case avant l'arrivée)
     //   { ou, camps: unités militaires spatiales d'un autre camp, jet: "rift", "omega" ou null }
     // Tous furtifs (#deplfurtif, script Camouflage) : les unités adverses ne les arrêtent pas
+    // (vaisseau relique : un fragment spatial dépensé ce tour le rend furtif)
     const tousFurtifs = selection.length > 0 &&
-        selection.every(v => estDeplacementFurtif(contenus[v.ref.id], moi, aScript));
+        selection.every(v => estDeplacementFurtif(contenus[v.ref.id], moi, aScript) || Number(v.marques?.reliqueSpa) === etat.tour);
 
     const risques = etapes
         .map(e => ({ ou: e.de, camps: tousFurtifs ? [] : campsAdverses(carte, e.de, moi), jet: sorteJet(carte, e.de, e.a) }))
@@ -267,7 +268,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const avecGravite = gravite && aScript(moi, "moteur-a-gravite");
 
     const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures +
-        (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0) -
+        (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0) +
+        // Vaisseau relique : un fragment spatial dépensé ce tour, +3 mouvement
+        (Number(v.marques?.reliqueSpa) === etat.tour ? 3 : 0) -
         // Habilité Tempête spatiale : −1 au mouvement
         (aScript(moi, "tempete-spatiale") ? 1 : 0);
 

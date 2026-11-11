@@ -88,6 +88,41 @@ const promesseRompue = atelier => {
 };
 
 const ROMPUE = "Promesse rompue : retour à la réserve, la faction gagne 1 infamie";
+
+// Nefs de la rupture (#810) de l'espace d'un système qui ne sont pas à moi
+const nefsIci = (etat, numero, moi) => Object.values(etat.composants).filter(x => !x.cache && x.ref?.type === "unit" &&
+    x.ref.id === 810 && x.zone === "hex:" + numero && (x.marques?.possession ?? x.proprio ?? 0) !== moi);
+
+// Planètes des Réfugiés : celles où est posé un Entrepôt d'aide (#836)
+const planetesDesRefugies = etat => [...new Set(Object.values(etat.composants)
+    .filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === 836 && /^hex:\d+:planete:\d+$/.test(x.zone || ""))
+    .map(x => x.zone))];
+
+// Mes agents disponibles (réserve « Mes agents »)
+const mesAgentsDisponibles = outils => (outils.index.parZone.get(`joueur:${outils.moi}:agents`) || [])
+    .filter(x => !x.cache && x.ref?.type === "agent");
+
+// Nom d'un agent usé : l'agent, ou le cube noir et la carte du mercenaire
+const nomAgentUse = (outils, x) => {
+    if (x.ref) {
+        return outils.nom(x.ref);
+    }
+
+    const carte = x.marques?.carte ? outils.etat.composants[x.marques.carte] : null;
+
+    return x.jeton + (carte?.ref ? " : " + outils.nom(carte.ref) : "");
+};
+
+// Piraterie informatique : X commerce convertis en 2X ressources ou influence
+const conversion = (outils, x, vers) => {
+    if (x === undefined) {
+        return outils.compte("commerce") > 0 ? {} : { sans: "aucun commerce" };
+    }
+
+    return x > outils.compte("commerce")
+        ? { sans: `commerce insuffisant : ${x} demandé, vous en avez ${outils.compte("commerce")}` }
+        : { cout: { commerce: x }, gains: { [vers]: 2 * x } };
+};
 const LOGISTICIEN = { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: false };
 
 export const SCRIPTS = [
@@ -1244,6 +1279,467 @@ export const SCRIPTS = [
                 avis: "Mirik Aun Sissiri : +1 au combat spatial dans ce système jusqu'à la prochaine phase de mandat.",
             }),
             libelle: "Mirik Aun Sissiri : +1 au combat spatial dans ce système",
+        }),
+
+    // --------------------------------------------------------
+    // LOT « FACILES ET MOYENS » (11 novembre) : technologies, habilités des
+    // événements et des neutres, unités
+    // --------------------------------------------------------
+
+    // ---- technologies : effets automatiques (Combat.jsx) ----
+
+    effet("adaptation-de-la-visee", 400, 1794343420993, "Adaptation de la visée", "auto",
+        "Conflit : malus de la tempête",
+        "Le −1 de la Tempête spatiale ne s'applique pas à vos unités ; une fois la tempête finie, le Générateur de tempête ne vous touche plus."),
+
+    effet("energie-de-la-faille", 818, 1794343421184, "Énergie de la faille", "auto",
+        "Conflit : combat spatial",
+        "Vos vaisseaux ont +1 au combat."),
+
+    effet("soldats-dephases", 819, 1794343421185, "Soldats déphasés", "auto",
+        "Conflit : combat terrestre",
+        "Vos forces terrestres ont +1 au combat."),
+
+    // ---- technologies : revenus du ravitaillement (Revenus.jsx) ----
+
+    revenu("exploitation-des-tempetes", "tech", 448, 1794343421166, "Exploitation des tempêtes", "ravit",
+        "+3 ressources tant que la tempête est active.", {
+            calcul: (source, outils) => (outils.aScript("tempete-spatiale")
+                ? { gains: { res: 3 } }
+                : { sans: "la tempête n'est pas active" }),
+        }),
+
+    revenu("reseau", "tech", 787, 1794343421173, "Réseau", "ravit",
+        "+2 influence par satellite : stations que vous possédez et unités satellites posées sur la carte.", {
+            calcul: (source, outils) => {
+                const n = outils.stations() + outils.unitesAvecMot(/^sat+el+ite$/i);
+                return n > 0 ? { gains: { inf: 2 * n } } : { sans: "aucun satellite" };
+            },
+        }),
+
+    revenu("relais-d-influence", "tech", 807, 1794343421181, "Relais d'influence", "ravit",
+        "+2 influence par station que vous possédez.", {
+            calcul: (source, outils) => (outils.stations() > 0
+                ? { gains: { inf: 2 * outils.stations() } }
+                : { sans: "aucune station" }),
+        }),
+
+    // ---- technologies : boutons ----
+
+    action("vaccin", "tech", 402, 1794335055007, "Vaccin", "plateau",
+        "Une seule fois : +4 points, et une de vos faveurs si personne n'avait découvert le vaccin à un tour précédent.", {
+            gains: { points: 4 },
+            visible: outils => !Number(outils.etat.compteurs[`joueur:${outils.moi}:vaccin`]),
+            calcul: outils => {
+                const decouvert = Number(outils.etat.compteurs["general:vaccin"]) || 0;
+                const premier = !decouvert || decouvert === outils.etat.tour;
+
+                return { faveur: premier ? 1 : 0, libelle: `Vaccin : +4 points${premier ? " et une faveur" : ""}` };
+            },
+            special: atelier => ({
+                actions: [
+                    { type: "compteur", id: `joueur:${atelier.moi}:vaccin`, valeur: 1 },
+                    !Number(atelier.etat.compteurs["general:vaccin"]) && { type: "compteur", id: "general:vaccin", valeur: atelier.etat.tour },
+                ].filter(Boolean),
+            }),
+            libelle: "Vaccin : +4 points",
+        }),
+
+    action("generateur-de-tempete", "tech", 447, 1794343421165, "Générateur de tempête", "systeme",
+        "Combat spatial : la technologie et un scientifique sont usés, 3 ressources — tous les vaisseaux du système ont −1 au combat ce tour (la tempête finie, les factions qui ont Adaptation de la visée y échappent). La flotte ciblée (−1 de plus) : à la main.", {
+            phase: "combat spatial",
+            use: true,
+            agent: SCIENTIFIQUE,
+            cout: { res: 3 },
+            special: atelier => ({
+                actions: [{ type: "compteur", id: `general:tempete:${atelier.numero}`, valeur: atelier.etat.tour }],
+                avis: "Générateur de tempête : −1 à tous les vaisseaux de ce système ce tour (écran de combat). La flotte ciblée a −1 de plus : à saisir à la main.",
+            }),
+            libelle: "Générateur de tempête (use la technologie et un scientifique, 3 ressources)",
+        }),
+
+    action("exploitation-des-tempetes-nebuleuse", "tech", 448, 1794343421166, "Exploitation des tempêtes : nébuleuse", "systeme",
+        "Science : use un scientifique et active une nébuleuse (que vous contrôlez : non vérifié) — +4 ressources.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            activer: true,
+            gains: { res: 4 },
+            visible: outils => outils.systeme?.anomaly === "neb",
+            libelle: "Exploitation des tempêtes : +4 ressources (use un scientifique, active la nébuleuse)",
+        }),
+
+    action("stimulant", "tech", 791, 1794343421176, "Stimulant", "plateau",
+        "La technologie est usée : un de vos agents usés (mercenaire compris) redevient disponible.", {
+            use: true,
+            demande: {
+                question: outils => "Stimulant : quel agent usé rafraîchir ?\n" + outils.agentsUses().map((x, k) => `${k + 1} = ${nomAgentUse(outils, x)}`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+                const uses = outils.agentsUses();
+
+                if (!uses.length) {
+                    return { sans: "aucun agent usé" };
+                }
+
+                if (x === undefined) {
+                    return {};
+                }
+
+                const agent = uses[x - 1];
+
+                if (!agent) {
+                    return { sans: "numéro inconnu" };
+                }
+
+                // (cube noir d'un mercenaire : il retourne sur sa carte)
+                const carte = !agent.ref && agent.marques?.carte ? outils.etat.composants[agent.marques.carte] : null;
+
+                return {
+                    actions: carte
+                        ? [{ type: "deplacer", c: agent.id, sur: carte.id }, { type: "marquer", c: agent.id, marque: "carte", valeur: null }]
+                        : [{ type: "deplacer", c: agent.id, vers: `joueur:${outils.moi}:agents` }],
+                };
+            },
+            libelle: "Stimulant : rafraîchir un agent usé (use la technologie)",
+        }),
+
+    action("anticipation", "tech", 805, 1794343421179, "Anticipation", "plateau",
+        "Début du combat spatial : la technologie et un scientifique sont usés, vous effectuez un déplacement avec Memoria (à la main).", {
+            phase: "combat spatial",
+            use: true,
+            agent: SCIENTIFIQUE,
+            visible: outils => [766, 767, 768, 769].some(id => outils.mienneSurLaCarte(id)),
+            avis: "Anticipation : déplacez Memoria à la main.",
+            libelle: "Anticipation : déplacement de Memoria (use la technologie et un scientifique)",
+        }),
+
+    action("opportunite-predite", "tech", 806, 1794343421180, "Opportunité prédite", "plateau",
+        "Recrutement : un agent de base de votre choix est ajouté sur la case de recrutement 4 (une fois par tour).", {
+            phase: "recrutement",
+            parTour: true,
+            demande: {
+                question: outils => "Opportunité prédite : quel agent de base ajouter sur la case de recrutement 4 ?\n" +
+                    (outils.etat.references?.agentsBase || []).map((id, k) => `${k + 1} = ${outils.nom({ type: "agent", id })}`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+                const base = outils.etat.references?.agentsBase || [];
+
+                if (!base.length) {
+                    return { sans: "les agents de base de la partie sont inconnus" };
+                }
+
+                if (x === undefined) {
+                    return {};
+                }
+
+                const id = base[x - 1];
+
+                if (!id) {
+                    return { sans: "numéro inconnu" };
+                }
+
+                // (un agent de ce type tiré du sac, sinon un nouveau)
+                const duSac = (outils.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === id);
+
+                return {
+                    actions: [duSac
+                        ? { type: "deplacer", c: duSac.id, vers: "general:boite:4" }
+                        : { type: "creer", ref: { type: "agent", id }, zone: "general:boite:4" }],
+                };
+            },
+            libelle: "Opportunité prédite : un agent de base sur la case de recrutement 4",
+        }),
+
+    action("ouverture-de-faille", "tech", 816, 1794343421182, "Ouverture de faille", "systeme",
+        "La technologie et un scientifique sont usés : un jeton trou de ver oméga est posé dans ce système.", {
+            use: true,
+            agent: SCIENTIFIQUE,
+            special: atelier => ({ actions: [{ type: "creer", ref: { type: "token", id: 830 }, zone: "hex:" + atelier.numero }] }),
+            libelle: "Ouverture de faille : jeton trou de ver oméga ici (use la technologie et un scientifique)",
+        }),
+
+    action("communication-faille", "tech", 817, 1794343421183, "Communication avec les êtres de la faille", "systeme",
+        "Use un diplomate et dépensez 4 influence : une Nef de la rupture de ce système passe sous votre contrôle.", {
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            cout: { inf: 4 },
+            visible: outils => nefsIci(outils.etat, outils.numero, outils.moi).length > 0,
+            special: atelier => {
+                const nef = nefsIci(atelier.etat, atelier.numero, atelier.moi)[0];
+
+                return { actions: nef ? [{ type: "marquer", c: nef.id, marque: "possession", valeur: atelier.moi }] : [] };
+            },
+            libelle: "Prendre le contrôle d'une Nef de la rupture (use un diplomate, 4 influence)",
+        }),
+
+    action("piraterie-informatique-res", "tech", 857, 1794343421187, "Piraterie informatique : ressources", "plateau",
+        "Vos commerces valent 2 ressources : le commerce choisi est converti.", {
+            demande: { question: "Piraterie informatique : combien de commerce convertir, à 2 ressources chacun ?", max: outils => outils.compte("commerce") },
+            calcul: (outils, x) => conversion(outils, x, "res"),
+            libelle: "Piraterie informatique : commerce → 2 ressources chacun",
+        }),
+
+    action("piraterie-informatique-inf", "tech", 857, 1794343421187, "Piraterie informatique : influence", "plateau",
+        "Vos commerces valent 2 influence : le commerce choisi est converti.", {
+            demande: { question: "Piraterie informatique : combien de commerce convertir, à 2 influence chacun ?", max: outils => outils.compte("commerce") },
+            calcul: (outils, x) => conversion(outils, x, "inf"),
+            libelle: "Piraterie informatique : commerce → 2 influence chacun",
+        }),
+
+    // ---- planète : Mecatol Rex (carte spéciale) ----
+
+    action("mecatol-rex-politique", "planet", 229, 1794383437427, "Mecatol Rex : obtenir un politique", "carte",
+        "Recrutement : dépensez un de vos agents disponibles, vous obtenez un politique.", {
+            phase: "recrutement",
+            visible: outils => outils.aCarte("planet", 229),
+            demande: {
+                question: outils => "Mecatol Rex : quel agent dépenser pour obtenir un politique ?\n" +
+                    mesAgentsDisponibles(outils).map((a, k) => `${k + 1} = ${outils.nom(a.ref)}`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+                const agents = mesAgentsDisponibles(outils);
+
+                if (!agents.length) {
+                    return { sans: "aucun agent disponible" };
+                }
+
+                if (x === undefined) {
+                    return {};
+                }
+
+                if (!agents[x - 1]) {
+                    return { sans: "numéro inconnu" };
+                }
+
+                // Le politique : tiré du sac s'il y en a un, sinon un nouveau
+                const base = outils.etat.references?.agentsBase || [];
+                const idPolitique = base.find(id => /politi/i.test(outils.nom({ type: "agent", id }))) ?? 6;
+                const duSac = (outils.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === idPolitique);
+
+                return {
+                    agentDepense: agents[x - 1],
+                    actions: [duSac
+                        ? { type: "deplacer", c: duSac.id, vers: `joueur:${outils.moi}:agents`, proprio: outils.moi }
+                        : { type: "creer", ref: { type: "agent", id: idPolitique }, zone: `joueur:${outils.moi}:agents`, proprio: outils.moi }],
+                };
+            },
+            libelle: "Mecatol Rex : dépenser un agent, obtenir un politique",
+        }),
+
+    // ---- habilités d'événements et de factions neutres (valables pour toute la table) ----
+
+    action("armer-les-rebelles", "habilite", 563, 1794335055058, "Armer les rebelles", "plateau",
+        "Combat terrestre, quand des Rebelles engagent (vos unités adjacentes : non vérifié) : dépensez 3 ressources, les Rebelles ont +1 au combat ce tour.", {
+            pourTous: true,
+            phase: "combat terrestre",
+            cout: { res: 3 },
+            visible: outils => outils.surLaCarte(557),
+            calcul: outils => (Number(outils.etat.compteurs["general:armer-rebelles"]) === outils.etat.tour
+                ? { sans: "les Rebelles sont déjà armés ce tour" }
+                : {}),
+            special: atelier => ({ actions: [{ type: "compteur", id: "general:armer-rebelles", valeur: atelier.etat.tour }] }),
+            libelle: "Armer les rebelles : +1 aux Rebelles ce tour (3 ressources)",
+        }),
+
+    action("offre-d-asile", "habilite", 453, 1794046867036, "Offre d'asile", "planete",
+        "Phase d'événement : une de vos planètes passe aux Réfugiés — vous gagnez autant de points que son influence, 6 Milices et un Entrepôt d'aide y sont posés, l'alliance Tuteur des réfugiés arrive chez vous.", {
+            pourTous: true,
+            surPlanete: true,
+            phase: "v[ée]nement",
+            nomPhase: "événement",
+            possede: true,
+            parTour: true,
+            visible: outils => outils.possede &&
+                (outils.index.parZone.get(`general:evenement:${outils.etat.tour}`) || []).some(x => x.ref?.type === "habilite" && x.ref.id === 453),
+            calcul: outils => ({
+                gains: { points: Number(outils.contenu?.inf) || 0 },
+                libelle: `Offre d'asile : la planète aux Réfugiés, +${Number(outils.contenu?.inf) || 0} point(s)`,
+            }),
+            donne: [{ type: "Promesse", id: 454 }],
+            special: atelier => {
+                const carte = Object.values(atelier.etat.composants).find(x => !x.cache && x.ref?.type === "planet" &&
+                    x.ref.id === atelier.idElement && x.zone === `joueur:${atelier.moi}:actif`);
+
+                return {
+                    actions: [
+                        // (la planète n'est plus à personne : la planète des Réfugiés est celle de l'Entrepôt d'aide)
+                        carte && { type: "deplacer", c: carte.id, vers: "horsJeu" },
+                        ...Array.from({ length: 6 }, () => ({ type: "creer", ref: { type: "unit", id: 835 }, zone: atelier.zone })),
+                        { type: "creer", ref: { type: "unit", id: 836 }, zone: atelier.zone },
+                    ].filter(Boolean),
+                };
+            },
+            libelle: "Offre d'asile : donner la planète aux Réfugiés",
+        }),
+
+    action("refugies", "habilite", 837, 1794046867028, "Réfugiés", "bandeau",
+        "Ravitaillement : 2 Milices sont ajoutées sur chaque planète des Réfugiés (là où est un Entrepôt d'aide) — une fois par tour, pour toute la table.", {
+            pourTous: true,
+            phase: "ravitaillement",
+            visible: outils => outils.surLaCarte(836),
+            calcul: outils => (Number(outils.etat.compteurs["general:refugies"]) === outils.etat.tour ? { sans: "déjà fait ce tour" } : {}),
+            special: atelier => ({
+                actions: [
+                    ...planetesDesRefugies(atelier.etat).flatMap(z => [0, 1].map(() => ({ type: "creer", ref: { type: "unit", id: 835 }, zone: z }))),
+                    { type: "compteur", id: "general:refugies", valeur: atelier.etat.tour },
+                ],
+            }),
+            libelle: "Réfugiés : 2 Milices sur chaque planète des Réfugiés",
+        }),
+
+    action("entrainer-les-milices", "habilite", 838, 1794046867030, "Entraîner les milices", "plateau",
+        "Une fois par partie, détenteur de Tuteur des réfugiés : dépensez 4 ressources et posez un de vos amiraux sur cette alliance — les Milices ont +2 au combat.", {
+            pourTous: true,
+            cout: { res: 4 },
+            visible: outils => outils.aCarte("Promesse", 454) && !Number(outils.etat.compteurs["general:milices-entrainees"]),
+            special: atelier => {
+                const tuteur = Object.values(atelier.etat.composants).find(x => !x.cache && x.ref?.type === "Promesse" && x.ref.id === 454 &&
+                    new RegExp(`^joueur:${atelier.moi}:(actif|tour:\\d+)$`).test(x.zone || ""));
+                const amiral = (atelier.index.parZone.get(`joueur:${atelier.moi}:agents`) || [])
+                    .find(x => !x.cache && x.ref?.type === "agent" && /amiral/i.test(atelier.nom(x.ref)));
+
+                return {
+                    actions: [
+                        amiral && tuteur && { type: "deplacer", c: amiral.id, sur: tuteur.id, proprio: atelier.moi },
+                        { type: "compteur", id: "general:milices-entrainees", valeur: 1 },
+                    ].filter(Boolean),
+                    sans: amiral ? null : "vous n'avez pas d'amiral disponible (aucun ne sera posé : pas de bonus)",
+                    avis: "Entraîner les milices : les Milices ont +2 au combat (un amiral est posé sur Tuteur des réfugiés).",
+                };
+            },
+            libelle: "Entraîner les milices (4 ressources, un amiral posé)",
+        }),
+
+    action("enrolement-des-milices", "habilite", 839, 1794046867032, "Enrôlement des milices", "planete",
+        "Détenteur de Tuteur des réfugiés : activez une planète des Réfugiés et usez un diplomate — 3 Milices de la planète passent sous votre contrôle.", {
+            pourTous: true,
+            surPlanete: true,
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            activer: true,
+            visible: outils => outils.ici(836) > 0 && outils.aCarte("Promesse", 454),
+            special: atelier => {
+                const milices = (atelier.index.parZone.get(atelier.zone) || []).filter(x => !x.cache && x.ref?.type === "unit" &&
+                    x.ref.id === 835 && (x.marques?.possession ?? x.proprio ?? 0) !== atelier.moi).slice(0, 3);
+
+                return {
+                    actions: milices.map(x => ({ type: "marquer", c: x.id, marque: "possession", valeur: atelier.moi })),
+                    sans: milices.length ? null : "aucune Milice à enrôler sur cette planète",
+                };
+            },
+            libelle: "Enrôlement des milices : 3 Milices (use un diplomate, active la planète)",
+        }),
+
+    // ---- unités ----
+
+    action("destroyeur-double-attaque", "unit", 163, 1794339608720, "Destroyeur : deux attaques", "unite",
+        "Combat spatial : dépensez 1 influence, ce destroyeur effectue deux attaques au lieu d'une (la seconde : à lancer à la main).", {
+            phase: "combat spatial",
+            cout: { inf: 1 },
+            avis: "Destroyeur : lancez sa seconde attaque à la main.",
+            libelle: "Deux attaques (1 influence)",
+        }),
+
+    action("jns-hylarim-annuler", "unit", 172, 1794335054831, "J.N.S. Hylarim : annuler une touche", "unite",
+        "Combat spatial : dépensez 1 ressource, une touche subie par une autre unité du système est annulée (à retirer à la main).", {
+            phase: "combat spatial",
+            cout: { res: 1 },
+            avis: "J.N.S. Hylarim : retirez la touche annulée à la main.",
+            libelle: "Annuler une touche (1 ressource)",
+        }),
+
+    action("bouclier-mobile-annuler", "unit", 175, 1794335054831, "Bouclier mobile : annuler une touche", "unite",
+        "Combat terrestre : dépensez 1 ressource, une touche subie par une autre unité de la planète est annulée (à retirer à la main).", {
+            phase: "combat terrestre",
+            cout: { res: 1 },
+            avis: "Bouclier mobile : retirez la touche annulée à la main.",
+            libelle: "Annuler une touche (1 ressource)",
+        }),
+
+    action("systeme-de-defense-annuler", "unit", 177, 1794341902859, "Système de défense : annuler une touche", "unite",
+        "Bombardement : dépensez 1 ressource, une touche subie par une autre unité est annulée (à retirer à la main).", {
+            phase: "bombardement",
+            cout: { res: 1 },
+            avis: "Système de défense : retirez la touche annulée à la main.",
+            libelle: "Annuler une touche (1 ressource)",
+        }),
+
+    action("centre-d-expansion", "unit", 165, 1794335054827, "Centre d'expansion", "systeme",
+        "Ravitaillement : désignez un système où vous n'avez pas d'unité ; pour ce tour, vous y avez +1 au combat spatial.", {
+            phase: "ravitaillement",
+            parTour: true,
+            visible: outils => outils.mienneSurLaCarte(165) && outils.mesUnitesDansLeSysteme() === 0,
+            special: atelier => ({
+                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:expansion`, valeur: atelier.etat.tour * 1000 + atelier.numero + 1 }],
+                avis: "Centre d'expansion : +1 au combat spatial dans ce système pour ce tour.",
+            }),
+            libelle: "Centre d'expansion : +1 au combat spatial ici ce tour",
+        }),
+
+    action("armageddon-scientifique", "unit", 490, 1794052194776, "Armageddon : scientifique", "unite",
+        "Dépensez 3 fragments militaires et posez un scientifique sur cette unité : la portée de son canon augmente de 1 et elle rapporte 2 points de plus au décompte (à compter à la main).", {
+            fragments: { mil: 3 },
+            agent: { motif: "scientifique", nom: "scientifique", pose: true, surCarte: true },
+            visible: outils => !!outils.c && !Object.values(outils.etat.composants).some(x => x.sur === outils.c.id && x.ref?.type === "agent"),
+            avis: "Armageddon : portée du canon +1 et 2 points de plus au décompte, à appliquer à la main.",
+            libelle: "Poser un scientifique (3 fragments militaires)",
+        }),
+
+    action("cuve-de-clonage-produire", "unit", 570, 1794049918229, "Cuve de clonage : produire", "unite",
+        "Production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète.", {
+            phase: "production",
+            use: true,
+            cree: { unite: "inf", n: 2 },
+            libelle: "Produire 2 infanteries (cuve usée)",
+        }),
+
+    action("combattant-voyageur", "unit", 747, 1794339608767, "Combattant voyageur : se déplacer", "unite",
+        "Débarquement : l'unité est usée et vous dépensez 3 ressources ; glissez-la sur une autre planète à 3 de distance au plus.", {
+            phase: "d[ée]barquement",
+            nomPhase: "débarquement",
+            use: true,
+            cout: { res: 3 },
+            avis: "Combattant voyageur : glissez-le sur une autre planète (3 de distance au plus).",
+            libelle: "Se déplacer (3 ressources, unité usée)",
+        }),
+
+    action("vaisseau-relique-combat", "unit", 854, 1794335055091, "Vaisseau relique : +3 au combat", "unite",
+        "Dépensez un fragment militaire : +3 au combat pour ce combat (ce tour).", {
+            fragments: { mil: 1 },
+            calcul: outils => (Number(outils.c?.marques?.reliqueMil) === outils.etat.tour ? { sans: "déjà fait ce tour" } : {}),
+            special: atelier => ({ actions: [{ type: "marquer", c: atelier.c.id, marque: "reliqueMil", valeur: atelier.etat.tour }] }),
+            libelle: "+3 au combat (fragment militaire)",
+        }),
+
+    action("vaisseau-relique-mouvement", "unit", 854, 1794335055091, "Vaisseau relique : +3 mouvement", "unite",
+        "Dépensez un fragment spatial : +3 mouvement et déplacement furtif ce tour (déplacement assisté).", {
+            fragments: { spa: 1 },
+            calcul: outils => (Number(outils.c?.marques?.reliqueSpa) === outils.etat.tour ? { sans: "déjà fait ce tour" } : {}),
+            special: atelier => ({ actions: [{ type: "marquer", c: atelier.c.id, marque: "reliqueSpa", valeur: atelier.etat.tour }] }),
+            libelle: "+3 mouvement et furtif (fragment spatial)",
+        }),
+
+    action("vaisseau-relique-infanterie", "unit", 854, 1794335055091, "Vaisseau relique : infanterie", "unite",
+        "Dépensez un fragment civil : le vaisseau est rempli d'infanteries de votre faction (jusqu'à sa capacité).", {
+            fragments: { civ: 1 },
+            calcul: outils => {
+                const n = Math.max(0, (Number(outils.contenu?.capacite) || 0) -
+                    Object.values(outils.etat.composants).filter(x => outils.c && x.sur === outils.c.id && x.ref?.type === "unit").length);
+
+                return n > 0
+                    ? { cree: { unite: "inf", n, bord: true }, libelle: `Remplir d'infanterie : ${n} (fragment civil)` }
+                    : { sans: "le vaisseau est plein" };
+            },
+            libelle: "Remplir d'infanterie (fragment civil)",
+        }),
+
+    action("vaisseau-relique-reparer", "unit", 854, 1794335055091, "Vaisseau relique : réparer", "unite",
+        "Dépensez un fragment ancien : le vaisseau est réparé gratuitement et vous gagnez 1 ressource.", {
+            fragments: { ancien: 1 },
+            degat: -100,
+            gains: { res: 1 },
+            libelle: "Réparer gratuitement, +1 ressource (fragment ancien)",
         }),
 
     // ---- remplaçants d'agent (Interaction.jsx : choisirRemplacants) ----

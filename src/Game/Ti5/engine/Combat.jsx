@@ -653,6 +653,11 @@ function CombatSysteme({ lieu }) {
             .some(c => c.ref?.type === "agent" && /scientifique/i.test(nomElement(search, c.ref)));
     };
 
+    // Habilité Entraîner les milices : un amiral est posé sur une alliance « Tuteur des réfugiés » (#454)
+    const milicesEntrainees = Object.values(etat.composants).some(x => !x.cache && x.ref?.type === "agent" &&
+        x.sur && etat.composants[x.sur]?.ref?.type === "Promesse" && etat.composants[x.sur].ref.id === 454 &&
+        /amiral/i.test(nomElement(search, x.ref)));
+
     // Rang d'une unité parmi celles de son camp qui tirent (Sharsiss : les N premières)
     const rangDansCamp = v => vaisseaux.filter(x => x.camp === v.camp && x.tire).findIndex(x => x.id === v.id);
 
@@ -677,6 +682,21 @@ function CombatSysteme({ lieu }) {
             (sorte === "spatial" || sorte === "canons") && campVise(v) && aScript(campVise(v), "cartographie-de-l-espace") &&
                 systeme?.anomaly && !/^hpl/.test(systeme.anomaly) && [-1, "Cartographie de l'espace"],
             sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
+            // Énergie de la faille, Soldats déphasés : +1 aux vaisseaux, aux forces terrestres
+            sorte === "spatial" && a("energie-de-la-faille") && [1, "Énergie de la faille"],
+            sorte === "terrestre" && a("soldats-dephases") && [1, "Soldats déphasés"],
+            // Centre d'expansion : système désigné au ravitaillement (tour × 1000 + case + 1)
+            sorte === "spatial" && v.camp !== NEUTRE &&
+                Number(etat.compteurs[`joueur:${v.camp}:expansion`]) === etat.tour * 1000 + numero + 1 && [1, "Centre d'expansion"],
+            // Vaisseau relique : un fragment militaire dépensé ce tour, +3
+            sorte === "spatial" && v.c.ref?.id === 854 && Number(v.c.marques?.reliqueMil) === etat.tour && [3, "Vaisseau relique"],
+            // Habilités des neutres : Armer les rebelles (+1 aux Rebelles ce tour), Entraîner les milices (+2 aux Milices)
+            v.c.ref?.id === 557 && Number(etat.compteurs["general:armer-rebelles"]) === etat.tour && [1, "Armer les rebelles"],
+            v.c.ref?.id === 835 && milicesEntrainees && [2, "Entraîner les milices"],
+            // Générateur de tempête : −1 à tous les vaisseaux du système ce tour ; si la tempête n'est
+            // plus active, les factions qui ont Adaptation de la visée y échappent
+            sorte === "spatial" && Number(etat.compteurs[`general:tempete:${numero}`]) === etat.tour &&
+                !(v.camp !== NEUTRE && !aScript(v.camp, "tempete-spatiale") && a("adaptation-de-la-visee")) && [-1, "Générateur de tempête"],
             // Mercenaires (un bouton chacun, sous le combat) : le temps de ce combat
             sorte === "terrestre" && v.u.type === "inf" && etat.compteurs[MERC(281) + v.camp] && [1, "Claire Gibson"],
             sorte === "terrestre" && etat.compteurs[MERC(357) + v.camp] && [1, "Jace X"],
@@ -688,7 +708,8 @@ function CombatSysteme({ lieu }) {
             sorte === "bombardement" && idPlanete === 59 && aScript(v.camp, "jeollr") && [-2, "Jeollr"],
             idPlanete === 62 && possesseur !== null && campVise(v) === possesseur && aScript(v.camp, "loki") && [-1, "Loki"],
             // Habilité Tempête spatiale : canons et combats ont −1
-            aScript(v.camp, "tempete-spatiale") && [-1, "Tempête spatiale"],
+            // (Adaptation de la visée : le malus de la tempête est ignoré)
+            aScript(v.camp, "tempete-spatiale") && !a("adaptation-de-la-visee") && [-1, "Tempête spatiale"],
             (sorte === "canons" || sorte === "bombardement") && a("systeme-de-visee") && [1, "Système de visée"],
             sorte === "canons" && campVise(v) && aScript(campVise(v), "bouclier-deflecteur") && [-1, "Bouclier déflecteur"],
             sorte === "bombardement" && possesseur && possesseur !== v.camp && aScript(possesseur, "batiment-resistant") && [
