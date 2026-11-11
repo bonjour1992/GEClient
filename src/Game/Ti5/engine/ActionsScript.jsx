@@ -1,4 +1,4 @@
-import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle } from "./Interaction";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte } from "./Interaction";
 import { contenuEnCache, useElements } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite } from "./miseEnPlace";
@@ -48,7 +48,8 @@ import { noter } from "./recherche";
 //   soigne    type d'unité (« pds ») : celles du lieu perdent leurs dégâts, sans rien payer
 //   degat     variation des dégâts de l'unité (+1, −1)
 //   use       l'unité ou la carte est usée (refusé si elle l'est déjà) ; pour un mercenaire,
-//             c'est sa carte, même quand le bouton est sur la fiche d'une unité
+//             c'est son cube noir qui passe dans les agents usés (il revient à l'entretien),
+//             même quand le bouton est sur la fiche d'une unité
 //   cible     (contenu de l'unité, composant) -> vrai : le bouton d'un mercenaire est montré
 //             sur la fiche de mes unités qui conviennent (lieu "unite")
 //   demande   { question, max(outils) } — le joueur choisit un montant X : calcul(outils, X)
@@ -292,8 +293,11 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 `fragments de relique insuffisants : ${fragmentsVoulus} à dépenser, ${payes.length} trouvé(s) (seuls ceux-là seront dépensés)`,
             ...depenses.filter(d => d.trouves.length < d.voulus).map(d =>
                 `il faut ${d.voulus} ${d.nom}(s)${d.use ? " non usé(e)(s)" : ""}, vous en avez ${d.trouves.length} (seuls ceux-là seront ${d.use ? "usés" : "dépensés"})`),
-            s.use && porteur?.marques?.use &&
-                (porteur.ref?.type === "unit" ? "cette unité est déjà usée" : "cette carte est déjà usée (jusqu'au nouveau tour)"),
+            s.use && porteur && carteUsee(index, porteur) && (porteur.ref?.type === "unit"
+                ? "cette unité est déjà usée"
+                : (porteur.ref?.type === "mercenaire"
+                    ? "le cube de ce mercenaire n'est pas sur sa carte : il est déjà utilisé (son cube revient à l'entretien)"
+                    : "cette carte est déjà usée")),
             s.activer && lieuActive && "ce lieu est déjà activé",
             s.reparer && !aReparer.length && "aucune unité à réparer ici",
             s.soigne && !aSoigner.length && "aucune unité endommagée de ce type ici",
@@ -352,7 +356,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 ...aReparer.map(x => ({ type: "marquer", c: x.id, marque: "degat", valeur: 0, si: x.marques.degat })),
                 ...aSoigner.map(x => ({ type: "marquer", c: x.id, marque: "degat", valeur: 0, si: x.marques.degat })),
                 choisi.degat && c && { type: "marquer", c: c.id, marque: "degat", valeur: Math.max(0, degat + choisi.degat) },
-                s.use && porteur && { type: "marquer", c: porteur.id, marque: "use", valeur: true },
+                ...(s.use && porteur ? actionsUserCarte(index, moi, porteur) : []),
                 s.activer && zone && { type: "creer", jeton: ACTIVATION, zone },
                 s.pioche && { type: "piocher", de: s.pioche.de, vers: `joueur:${moi}:${s.pioche.vers}`, n: s.pioche.n || 1 },
                 ...possession.actions,

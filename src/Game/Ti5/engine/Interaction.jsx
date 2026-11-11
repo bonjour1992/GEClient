@@ -22,6 +22,7 @@ import {
     ressourceDe,
     typeUnite as typeDeUnite,
     estUniteMercenaire,
+    CUBES,
 } from "./miseEnPlace";
 import { joueurDeMain, estPioche } from "./etat";
 import { distanceIndex, distanceBande } from "../hexSpirale";
@@ -670,7 +671,8 @@ export function payerConnexion(actions) {
 // l'envoi du coup). Sans agent de ce type, agentDisponible rend le
 // remplaçant, et l'action qui le vise est traduite :
 //
-//   mercenaire  utilisé : sa carte est usée ; dépensé : retirée du jeu
+//   mercenaire  utilisé : son cube noir passe dans les agents usés ;
+//               dépensé : sa carte est retirée du jeu
 //   Noble       sa carte est usée, même quand il devrait être dépensé
 //   Héritier    utilisé comme un agent ; dépensé : il attend deux tours
 //               (zone joueur:<u>:tour:<tour + 2>)
@@ -678,6 +680,46 @@ export function payerConnexion(actions) {
 
 export const NOBLE = 396;
 export const HERITIER = 142;
+
+// ------------------------------------------------------------
+// CUBE NOIR D'UN MERCENAIRE
+//
+// Le cube est posé sur la carte du mercenaire tant qu'il est
+// disponible. Tout ce qui utilise le mercenaire (comme agent, ou
+// pour son propre effet) envoie son cube dans les agents usés de son
+// joueur (marque « carte » du cube : la carte d'où il vient) ; sans
+// cube sur sa carte, le mercenaire est usé. À l'entretien, chaque
+// carte mercenaire retrouve son cube (PlateauJoueur.jsx).
+// ------------------------------------------------------------
+
+export const CUBE_MERCENAIRE = CUBES[0][0];
+
+export const cubeDeMercenaire = (index, carte) =>
+    (index.parPorteur.get(carte?.id) || []).find(x => !x.ref && x.jeton === CUBE_MERCENAIRE) || null;
+
+// La carte (ou l'unité) est-elle usée ? Mercenaire : son cube n'est plus sur sa carte
+export const carteUsee = (index, carte) => (carte?.ref?.type === "mercenaire"
+    ? !cubeDeMercenaire(index, carte)
+    : !!carte?.marques?.use);
+
+// Actions qui usent une carte ou une unité. Mercenaire : son cube passe dans les agents
+// usés (utilisation forcée, sans cube : un cube y est créé, il reviendra à l'entretien)
+export function actionsUserCarte(index, moi, carte) {
+
+    if (carte.ref?.type !== "mercenaire") {
+        return [{ type: "marquer", c: carte.id, marque: "use", valeur: true }];
+    }
+
+    const cube = cubeDeMercenaire(index, carte);
+    const uses = `joueur:${moi}:agentsUses`;
+
+    return cube
+        ? [
+            { type: "marquer", c: cube.id, marque: "carte", valeur: carte.id },
+            { type: "deplacer", c: cube.id, vers: uses },
+        ]
+        : [{ type: "creer", jeton: CUBE_MERCENAIRE, zone: uses, marques: { carte: carte.id } }];
+}
 
 export const estCarteRemplacant = c => !!c && !c.cache &&
     (c.ref?.type === "mercenaire" || (c.ref?.type === "relique" && c.ref.id === NOBLE));
@@ -722,7 +764,7 @@ export function remplacantsDisponibles({ index, moi, search }, test) {
     const actifs = index.parZone.get(`joueur:${moi}:actif`) || [];
     const enService = id => !connexion || connexion.moi !== moi || connexion.aScript(moi, id);
 
-    const cartes = actifs.filter(c => estCarteRemplacant(c) && c.marques?.comme && !c.marques?.use &&
+    const cartes = actifs.filter(c => estCarteRemplacant(c) && c.marques?.comme && !carteUsee(index, c) &&
         (c.ref.type !== "relique" || enService("noble-cryogenise")) &&
         test(nomElement(search, { type: "agent", id: Number(c.marques.comme) })));
 
@@ -735,6 +777,11 @@ export function remplacantsDisponibles({ index, moi, search }, test) {
 
     return [...cartes, ...heritiers];
 }
+
+// Actions pour lesquelles le joueur a déjà répondu « l'agent de base » : la question
+// n'est pas reposée si le coup repasse par choisirRemplacants (fouille d'une ruine,
+// qui résout le choix avant d'envoyer pour savoir si Ahk Ravin fouille)
+const decides = new WeakSet();
 
 // À l'envoi d'un coup : qui agit, l'agent de base ou un remplaçant ?
 export function choisirRemplacants(actions) {
@@ -781,16 +828,18 @@ export function choisirRemplacants(actions) {
                 messages.push(`${nom} : usé au lieu d'être dépensé.`);
             }
 
-            return [{ type: "marquer", c: r.id, marque: "use", valeur: true }];
+            return actionsUserCarte(index, moi, r);
         }
 
-        if (!use) {
-            messages.push(`${nom} (mercenaire) est dépensé : sa carte est retirée du jeu.`);
+        if (use) {
+            return actionsUserCarte(index, moi, r);
         }
 
-        return use
-            ? [{ type: "marquer", c: r.id, marque: "use", valeur: true }]
-            : [{ type: "supprimer", c: r.id }];
+        messages.push(`${nom} (mercenaire) est dépensé : sa carte est retirée du jeu.`);
+
+        const cube = cubeDeMercenaire(index, r);
+
+        return [cube && { type: "supprimer", c: cube.id }, { type: "supprimer", c: r.id }].filter(Boolean);
     };
 
     const precision = (r, use) => (r.ref.type === "agent"
@@ -805,7 +854,7 @@ export function choisirRemplacants(actions) {
         const use = action.type === "deplacer" && action.vers === uses;
         const depense = action.type === "supprimer";
 
-        if (!c || c.cache || !(use || depense) || pris.has(c.id)) {
+        if (!c || c.cache || !(use || depense) || pris.has(c.id) || decides.has(action)) {
             return [action];
         }
 
@@ -842,7 +891,12 @@ export function choisirRemplacants(actions) {
 
         const choisi = candidats[Math.floor(Number(reponse)) - 2];
 
-        return choisi ? pour(choisi, use) : [action];
+        if (!choisi) {
+            decides.add(action);
+            return [action];
+        }
+
+        return pour(choisi, use);
     });
 
     if (messages.length) {
@@ -990,7 +1044,7 @@ export function MiniToken({ contenu, cote = 22, bord }) {
 
 function Pion({ groupe, petit }) {
 
-    const { search, jeu, couleurDe, nomDe, factionDe, index, jouer, joueur, ouvrirCachee } = useEngine();
+    const { search, jeu, couleurDe, nomDe, factionDe, index, jouer, joueur, ouvrirCachee, etat } = useEngine();
 
     const c = groupe[groupe.length - 1];
     const n = groupe.length;
@@ -1060,7 +1114,13 @@ function Pion({ groupe, petit }) {
         );
     }
 
-    const nom = c.ref ? nomElement(search, c.ref) : c.jeton;
+    // (cube noir d'un mercenaire utilisé : le nom du mercenaire, marque « carte »)
+    const carteDuCube = !c.ref && c.jeton === CUBE_MERCENAIRE ? etat.composants[c.marques?.carte] : null;
+
+    const nom = c.ref
+        ? nomElement(search, c.ref)
+        : (carteDuCube?.ref ? `${c.jeton} : ${nomElement(search, carteDuCube.ref)} (utilisé)` : c.jeton);
+
     const portes = index.parPorteur.get(c.id) || [];
     const degat = Number(c.marques?.degat) || 0;
     const cube = couleurCube(c, agent);
@@ -2636,6 +2696,9 @@ export function Plan({ children, style }) {
             !!ressourceDe(etat.composants[a.id]) ||
             // Marqueur libre déposé sur une carte : il s'y attache
             (estLibre(etat.composants[a.id]) && estCarteCible(etat.composants[pionCible.dataset.composant])) ||
+            // Cube noir déposé sur une carte mercenaire : il s'y pose (le mercenaire est disponible)
+            (!etat.composants[a.id]?.ref && etat.composants[a.id]?.jeton === CUBE_MERCENAIRE &&
+                etat.composants[pionCible.dataset.composant]?.ref?.type === "mercenaire") ||
             (aMotCle(etat.composants[a.id], "transportable") &&
                 aMotCle(etat.composants[pionCible.dataset.composant], "ship"))
         ) ? pionCible : null;

@@ -1,4 +1,4 @@
-import { useEngine, nomElement, remplacantsDisponibles, estCarteRemplacant } from "./Interaction";
+import { useEngine, nomElement, remplacantsDisponibles, estCarteRemplacant, carteUsee } from "./Interaction";
 import { useElement, useElements } from "./sync";
 
 // ============================================================
@@ -92,7 +92,7 @@ export function ReserveAgents() {
                     key={c.id}
                     data-remplacant={c.id}
                     title={`${nomElement(search, c.ref)} s'utilise comme ${nomType(Number(c.marques.comme))}` +
-                        (c.marques?.use ? " (usé)" : "") + " — × : ne plus l'utiliser comme agent"}
+                        (carteUsee(index, c) ? " (utilisé : son cube est dans les agents usés)" : "") + " — × : ne plus l'utiliser comme agent"}
                     style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -102,7 +102,7 @@ export function ReserveAgents() {
                         borderRadius: 8,
                         backgroundColor: "#fff",
                         fontSize: 11,
-                        opacity: c.marques?.use ? 0.5 : 1,
+                        opacity: carteUsee(index, c) ? 0.5 : 1,
                     }}
                 >
                     <span style={{ display: "inline-block", width: 10, height: 10, backgroundColor: "#000", borderRadius: 2 }} />

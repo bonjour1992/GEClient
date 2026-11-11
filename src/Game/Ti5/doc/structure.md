@@ -1002,6 +1002,23 @@ vaisseau capturé va dans les éléments actifs. Mirik Aun Sissiri : compteur
 `joueur:<u>:mirik` = case + 1, posé depuis la fiche du système à la phase de
 mandat et effacé en revenant à cette phase (`changerPhase`).
 
+Cube noir d'un mercenaire (11 novembre, soir) : l'usure d'un mercenaire, c'est
+la place de son cube (`CUBE_MERCENAIRE`, `Interaction.jsx`). Posé sur la carte
+(`cubeDeMercenaire`), le mercenaire est disponible ; `actionsUserCarte` envoie
+le cube dans `joueur:<u>:agentsUses` (marque `carte` du cube : la carte d'où il
+vient ; sans cube — utilisation forcée — un cube y est créé) et `carteUsee`
+dit qu'un mercenaire sans cube est usé. Les boutons de script (`use`), les
+boutons de combat et `choisirRemplacants` passent tous par là ; une unité ou
+le Noble cryogénisé gardent la marque `use`. À l'entretien
+(`retourDesCubes`, `PlateauJoueur.jsx`), chaque carte mercenaire du joueur
+retrouve son cube : celui qui en vient, sinon un autre de ses agents usés,
+sinon un cube neuf ; un cube sans carte est retiré. Un cube noir déposé à la
+main sur une carte mercenaire s'y pose. Ahk Ravin (`fouiller`, `Espace.jsx`) :
+la fouille résout elle-même le choix du scientifique (`choisirRemplacants`,
+dont la réponse « agent de base » est retenue par action, `decides`) ; si
+c'est le cube d'Ahk Ravin qui part, une fenêtre propose 3 ressources pour un
+second fragment.
+
 `aScript(joueur, id)` : pour une unité ou une planète, le script est en
 service ; pour une **habilité**, elle s'applique au joueur — elle est sur sa
 feuille de faction ou dans ses éléments actifs, ou posée sur la table (elle

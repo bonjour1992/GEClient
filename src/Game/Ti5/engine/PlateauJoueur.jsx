@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, BoutonRegle, aMotCle } from "./Interaction";
+import {
+    useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, BoutonRegle, aMotCle, CUBE_MERCENAIRE, cubeDeMercenaire,
+} from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite, actionsPoints } from "./miseEnPlace";
 import { ActionsTechnologies } from "./ActionsTechnologies";
@@ -220,6 +222,39 @@ export function CaseProduction() {
     );
 }
 
+// Entretien : chaque carte mercenaire du joueur retrouve son cube noir — celui qui en
+// vient (marque « carte »), sinon un autre de ses agents usés, sinon un cube neuf (un
+// mercenaire arrivé sans cube) ; un cube resté sans carte est retiré. -> actions
+function retourDesCubes(index, base, cubesUses) {
+
+    const sansCube = (index.parZone.get(base + ":actif") || [])
+        .filter(c => !c.cache && c.ref?.type === "mercenaire" && !cubeDeMercenaire(index, c));
+
+    const libres = [...cubesUses];
+    const actions = [];
+
+    for (const carte of sansCube) {
+
+        const k = libres.findIndex(x => x.marques?.carte === carte.id);
+        const i = k >= 0 ? k : libres.findIndex(x => !sansCube.some(autre => autre.id === x.marques?.carte));
+
+        if (i < 0) {
+            actions.push({ type: "creer", jeton: CUBE_MERCENAIRE, sur: carte.id });
+            continue;
+        }
+
+        const [cube] = libres.splice(i, 1);
+
+        actions.push({ type: "deplacer", c: cube.id, sur: carte.id });
+
+        if (cube.marques?.carte) {
+            actions.push({ type: "marquer", c: cube.id, marque: "carte", valeur: null });
+        }
+    }
+
+    return [...actions, ...libres.map(c => ({ type: "supprimer", c: c.id }))];
+}
+
 export function PlateauJoueur({ vu }) {
 
     const { etat, index, jouer, envoyer, moi, joueur, aScript } = useEngine();
@@ -308,6 +343,14 @@ export function PlateauJoueur({ vu }) {
     ].filter(Boolean);
     const agentsUses = index.parZone.get(base + ":agentsUses") || [];
 
+    // Cubes noirs des mercenaires utilisés : à l'entretien, ils retournent sur leur carte
+    const cubesUses = agentsUses.filter(c => !c.ref && c.jeton === CUBE_MERCENAIRE);
+    const retourCubes = retourDesCubes(index, base, cubesUses);
+
+    // (le Noble cryogénisé usé redevient disponible)
+    const noblesUses = (index.parZone.get(base + ":actif") || [])
+        .filter(c => !c.cache && c.ref?.type === "relique" && c.ref.id === 396 && c.marques?.use);
+
     const techsUtilisees = Object.keys(etat.compteurs)
         .filter(id => id.startsWith(base + ":techUse:") && etat.compteurs[id]);
 
@@ -336,7 +379,9 @@ export function PlateauJoueur({ vu }) {
             { type: "compteur", id: base + ":entretien", valeur: etat.tour, si: Number(etat.compteurs[base + ":entretien"]) || 0 },
             ressources && { type: "compteur", id: base + ":res", delta: ressources },
             influence && { type: "compteur", id: base + ":inf", delta: influence },
-            ...agentsUses.map(c => ({ type: "deplacer", c: c.id, vers: base + ":agents" })),
+            ...agentsUses.filter(c => !cubesUses.includes(c)).map(c => ({ type: "deplacer", c: c.id, vers: base + ":agents" })),
+            ...retourCubes,
+            ...noblesUses.map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false })),
             ...techsUtilisees.map(id => ({ type: "compteur", id, valeur: 0 })),
             ...revenus.actions,
             ...bioBlessees.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: Number(c.marques.degat) - 1 })),

@@ -336,5 +336,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   du mercenaire glissé sur un type d'agent, fenêtre de choix à chaque agent utilisé ou dépensé ;
   agent Héritier et relique Noble cryogénisé ; un bouton de combat par mercenaire (Claire Gibson,
   Jace X, Sharsiss, Henry Storcher, Skarvald, So Ata) et Mirik Aun Sissiri sur la fiche du système.
+- ☑ Cube des mercenaires (2026-11-11) : un mercenaire utilisé envoie son cube noir dans les agents
+  usés ; sans cube sur sa carte il n'est plus utilisable ; l'entretien rend les cubes aux cartes.
+  Ahk Ravin : donnée modifiée (`demandes-ti5/migrate-ahk-ravin.mjs`), fenêtre à la fouille.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

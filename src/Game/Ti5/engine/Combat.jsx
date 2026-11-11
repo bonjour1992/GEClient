@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible } from "./Interaction";
+import {
+    useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible, carteUsee, actionsUserCarte,
+} from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe } from "./effets";
 import { CombatResolu } from "./CombatResolu";
@@ -1158,15 +1160,18 @@ function CombatSysteme({ lieu }) {
     // MERCENAIRES DE COMBAT (scripts.js)
     //
     // Un bouton par mercenaire dont j'ai la carte (éléments actifs).
-    // La carte est usée jusqu'au nouveau tour ; l'effet vaut pour ce
-    // combat : bonusScripts lit le compteur combat:<lieu>:merc<id>:<camp>.
+    // Son cube noir passe dans les agents usés (il revient à l'entretien) ;
+    // l'effet vaut pour ce combat : bonusScripts lit le compteur
+    // combat:<lieu>:merc<id>:<camp>.
     // --------------------------------------------------------
 
     const carteMerc = id => (index.parZone.get(`joueur:${moi}:actif`) || [])
         .find(c => !c.cache && c.ref?.type === "mercenaire" && c.ref.id === id);
 
-    const userMerc = id => ({ type: "marquer", c: carteMerc(id).id, marque: "use", valeur: true });
-    const dejaUse = id => !!carteMerc(id)?.marques?.use && "cette carte est déjà usée (jusqu'au nouveau tour)";
+    const userMerc = id => actionsUserCarte(index, moi, carteMerc(id));
+
+    const dejaUse = id => !!carteMerc(id) && carteUsee(index, carteMerc(id)) &&
+        "le cube de ce mercenaire n'est pas sur sa carte : il est déjà utilisé (son cube revient à l'entretien)";
     const enVigueur = (id, camp = moi) => !!etat.compteurs[MERC(id) + camp] && "déjà en vigueur dans ce combat";
 
     // (unités encore debout : Sharsiss compte celles qui sont au combat)
@@ -1179,7 +1184,7 @@ function CombatSysteme({ lieu }) {
 
         const carte = carteMerc(350);
 
-        envoyer([userMerc(350), { type: "des", n: 3, faces: 10, c: carte.id, marque: "jetSkarvald" }], commentaire)
+        envoyer([...userMerc(350), { type: "des", n: 3, faces: 10, c: carte.id, marque: "jetSkarvald" }], commentaire)
             .then(reponse => {
 
                 const jets = String(reponse?.etat?.composants?.[carte.id]?.marques?.jetSkarvald ?? "")
@@ -1223,7 +1228,7 @@ function CombatSysteme({ lieu }) {
         }
 
         envoyer([
-            userMerc(284),
+            ...userMerc(284),
             { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
             { type: "deplacer", c: v.id, vers: `joueur:${moi}:actif` },
             { type: "compteur", id: DETRUITS, delta: 1 },
@@ -1237,18 +1242,18 @@ function CombatSysteme({ lieu }) {
             cle: "281",
             nom: "Claire Gibson : +1 au combat pour vos infanteries, ce combat",
             libelle: "Claire Gibson : +1 à vos infanteries",
-            titre: "Combat terrestre : la carte est usée, vos infanteries ont +1 pour ce combat",
+            titre: "Combat terrestre : son cube part dans les agents usés, vos infanteries ont +1 pour ce combat",
             obstacles: [dejaUse(281), enVigueur(281)],
-            faire: commentaire => envoyer([userMerc(281), { type: "compteur", id: MERC(281) + moi, valeur: 1 }], commentaire),
+            faire: commentaire => envoyer([...userMerc(281), { type: "compteur", id: MERC(281) + moi, valeur: 1 }], commentaire),
         },
 
         jeCombats && sorte === "terrestre" && aScript(moi, "jace-x") && {
             cle: "357",
             nom: "Jace X : +1 au combat pour vos unités terrestres, ce combat",
             libelle: "Jace X : +1 à vos unités terrestres",
-            titre: "Combat terrestre : la carte est usée, vos unités ont +1 pour ce combat",
+            titre: "Combat terrestre : son cube part dans les agents usés, vos unités ont +1 pour ce combat",
             obstacles: [dejaUse(357), enVigueur(357)],
-            faire: commentaire => envoyer([userMerc(357), { type: "compteur", id: MERC(357) + moi, valeur: 1 }], commentaire),
+            faire: commentaire => envoyer([...userMerc(357), { type: "compteur", id: MERC(357) + moi, valeur: 1 }], commentaire),
         },
 
         // Sharsiss : un bouton par autre faction du combat
@@ -1256,19 +1261,19 @@ function CombatSysteme({ lieu }) {
             cle: "299-" + u,
             nom: `Sharsiss : +1 au combat pour ${mesUnites} unité(s) de ${nomDe(u)}, ce combat`,
             libelle: `Sharsiss : +1 pour ${mesUnites} unité(s) de ${nomDe(u)}`,
-            titre: "Combat spatial : la carte est usée ; autant d'unités de cette faction que vous en avez dans ce combat ont +1 (les premières qui tirent, dans l'ordre de la liste)",
+            titre: "Combat spatial : son cube part dans les agents usés ; autant d'unités de cette faction que vous en avez dans ce combat ont +1 (les premières qui tirent, dans l'ordre de la liste)",
             obstacles: [dejaUse(299), enVigueur(299, u)],
-            faire: commentaire => envoyer([userMerc(299), { type: "compteur", id: MERC(299) + u, valeur: mesUnites }], commentaire),
+            faire: commentaire => envoyer([...userMerc(299), { type: "compteur", id: MERC(299) + u, valeur: mesUnites }], commentaire),
         })) : []),
 
         sorte === "spatial" && aScript(moi, "henry-storcher") && (jeCombats || mesPertes > 0) && {
             cle: "356",
             nom: `Henry Storcher : +${mesPertes} commerce (vos vaisseaux détruits dans ce combat)`,
             libelle: `Henry Storcher : +${mesPertes} commerce`,
-            titre: "Combat spatial : la carte est usée, 1 commerce par vaisseau que vous avez perdu dans ce combat",
+            titre: "Combat spatial : son cube part dans les agents usés, 1 commerce par vaisseau que vous avez perdu dans ce combat",
             obstacles: [dejaUse(356), mesPertes === 0 && "aucun de vos vaisseaux n'a été détruit dans ce combat"],
             faire: commentaire => envoyer([
-                userMerc(356),
+                ...userMerc(356),
                 mesPertes > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: mesPertes },
             ].filter(Boolean), commentaire),
         },
@@ -1277,7 +1282,7 @@ function CombatSysteme({ lieu }) {
             cle: "350",
             nom: "Skarvald : 3 dés à 5, 1 commerce volé par réussite à qui possède la planète",
             libelle: "Skarvald : voler du commerce (3 dés à 5)",
-            titre: "Bombardement : la carte est usée, 3 dés ; chaque 5 ou moins vole 1 commerce à la faction qui possède la planète",
+            titre: "Bombardement : son cube part dans les agents usés, 3 dés ; chaque 5 ou moins vole 1 commerce à la faction qui possède la planète",
             obstacles: [
                 dejaUse(350),
                 (!possesseur || possesseur === moi) && "aucune autre faction ne possède cette planète (les dés seront lancés pour rien)",
@@ -1289,10 +1294,10 @@ function CombatSysteme({ lieu }) {
             cle: "284-designer",
             nom: "So Ata : désigner un vaisseau adverse, qui ne peut engager que les vaisseaux qui l'ont engagé",
             libelle: "So Ata : désigner un vaisseau (début du combat)",
-            titre: "Début du combat spatial : la carte est usée ; le vaisseau désigné (hors vaisseau amiral et soleil de guerre) ne peut engager que les vaisseaux qui l'ont engagé — à respecter à la main",
+            titre: "Début du combat spatial : son cube part dans les agents usés ; le vaisseau désigné (hors vaisseau amiral et soleil de guerre) ne peut engager que les vaisseaux qui l'ont engagé — à respecter à la main",
             obstacles: [dejaUse(284), etape > 0 && "le combat a déjà commencé"],
             faire: commentaire => {
-                envoyer([userMerc(284)], commentaire);
+                envoyer([...userMerc(284)], commentaire);
                 aviser("So Ata : le vaisseau désigné ne peut engager que les vaisseaux qui l'ont engagé (à respecter à la main).");
             },
         },
@@ -1301,9 +1306,9 @@ function CombatSysteme({ lieu }) {
             cle: "284-capturer",
             nom: "So Ata : capturer un vaisseau adverse détruit",
             libelle: `So Ata : capturer un vaisseau détruit${capturables.length ? ` (${capturables.length})` : ""}`,
-            titre: "Fin du combat spatial : la carte est usée ; un vaisseau adverse détruit, pas encore retiré (hors vaisseau amiral et soleil de guerre), va dans vos éléments actifs",
+            titre: "Fin du combat spatial : son cube part dans les agents usés ; un vaisseau adverse détruit, pas encore retiré (hors vaisseau amiral et soleil de guerre), va dans vos éléments actifs",
             obstacles: [dejaUse(284), !capturables.length && "aucun vaisseau adverse détruit à capturer (avant « Retirer »)"],
-            faire: commentaire => (capturables.length ? capturer(commentaire) : envoyer([userMerc(284)], commentaire)),
+            faire: commentaire => (capturables.length ? capturer(commentaire) : envoyer([...userMerc(284)], commentaire)),
         },
     ].filter(Boolean);
 

@@ -29,6 +29,7 @@ import { ProductionEnCours, lireProduction, ouvrirProductionLieu } from "./Produ
 import { zoneFouille } from "./Archeologie";
 import { noter } from "./recherche";
 import { BoutonsScripts } from "./ActionsScript";
+import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter,
@@ -1110,14 +1111,39 @@ function FicheSysteme({ numero, id, fermer }) {
             return;
         }
 
-        envoyer([
+        // (le choix du scientifique — agent de base ou remplaçant — est résolu ici, avant
+        // l'envoi, pour savoir si c'est Ahk Ravin qui fouille)
+        const actions = choisirRemplacants([
             !mechaSur(k) && utiliser("scientifique"),
             { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k), marques: { ruine } },
             fragment
                 ? { type: "creer", jeton: fragment[0], zone: vers }
                 : { type: "piocher", de: SAC_FRAGMENTS, vers },
             archeologie && { type: "piocher", de: SAC_FRAGMENTS, vers },
-        ], commentaire);
+        ]);
+
+        // Mercenaire Ahk Ravin : quand il est le scientifique de la fouille (son cube part
+        // dans les agents usés), 3 ressources donnent 2 fragments au lieu d'un
+        const ahk = (index.parZone.get(`joueur:${moi}:actif`) || [])
+            .find(c => !c.cache && c.ref?.type === "mercenaire" && c.ref.id === 291);
+
+        const parAhk = !!ahk && aScript(moi, "ahk-ravin") && actions.some(a =>
+            (a.type === "marquer" && a.marque === "carte" && a.valeur === ahk.id) ||
+            (a.type === "creer" && a.marques?.carte === ahk.id));
+
+        const double = parAhk && (fragment || sac >= (archeologie ? 2 : 1) + 1) && window.confirm(
+            "Ahk Ravin fouille cette ruine.\n\n" +
+            `OK : dépenser 3 ressources pour 2 fragments au lieu d'un (vous avez ${Number(etat.compteurs[`joueur:${moi}:res`]) || 0} ressource(s)).\n` +
+            "Annuler : un seul fragment, sans rien payer.");
+
+        envoyer([
+            ...actions,
+            double && { type: "compteur", id: `joueur:${moi}:res`, delta: -3 },
+            // (le second fragment : comme le premier ; il va droit dans les fragments du joueur)
+            double && (fragment
+                ? { type: "creer", jeton: fragment[0], zone: `joueur:${moi}:fragments` }
+                : { type: "piocher", de: SAC_FRAGMENTS, vers: `joueur:${moi}:fragments` }),
+        ], commentaire + (double ? " — Ahk Ravin : 3 ressources, 2 fragments" : ""));
 
         if (archeologie) {
             aviser("Archéologie : deux fragments trouvés, gardez-en un (en haut du volet de droite).");

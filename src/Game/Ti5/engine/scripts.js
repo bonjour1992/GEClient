@@ -1106,7 +1106,7 @@ export const SCRIPTS = [
     //      carte est usée jusqu'au nouveau tour ----
 
     action("doctor-carrina", "mercenaire", 285, 1786999216593, "Doctor Carrina", "carte",
-        "Science : la carte est usée, 1 de recherche sociale, militaire, génétique et spatiale (la planète à activer : à la main).", {
+        "Science : son cube part dans les agents usés, 1 de recherche sociale, militaire, génétique et spatiale (la planète à activer : à la main).", {
             phase: "science",
             use: true,
             recherche: [["soc", 1], ["mil", 1], ["gen", 1], ["spa", 1]],
@@ -1115,7 +1115,7 @@ export const SCRIPTS = [
         }),
 
     action("xuange", "mercenaire", 286, 1789968499216, "Xuange", "carte",
-        "Science : la carte est usée, dépensez 2X influence, X de recherche sociale.", {
+        "Science : son cube part dans les agents usés, dépensez 2X influence, X de recherche sociale.", {
             phase: "science",
             use: true,
             recherche: [["soc", 1]],
@@ -1128,7 +1128,7 @@ export const SCRIPTS = [
         }),
 
     action("aktaran", "mercenaire", 287, 1787903345632, "Aktaran", "carte",
-        "Diplomatie, lors d'une livraison : la carte est usée, 4 de recherche d'une technologie que la cible possède.", {
+        "Diplomatie, lors d'une livraison : son cube part dans les agents usés, 4 de recherche d'une technologie que la cible possède.", {
             phase: "diplomatie",
             use: true,
             recherche: [["", 4]],
@@ -1136,7 +1136,7 @@ export const SCRIPTS = [
         }),
 
     action("yvin-korduul", "mercenaire", 288, 1789968562567, "Yvin Korduul", "carte",
-        "Diplomatie : la carte est usée, dépensez 5 influence, vous produisez une de vos faveurs.", {
+        "Diplomatie : son cube part dans les agents usés, dépensez 5 influence, vous produisez une de vos faveurs.", {
             phase: "diplomatie",
             use: true,
             cout: { inf: 5 },
@@ -1145,7 +1145,7 @@ export const SCRIPTS = [
         }),
 
     action("sai-seravus", "mercenaire", 289, 1794335054893, "Sai Seravus", "carte",
-        "Science : la carte est usée, 1 de recherche spatiale par système à anomalie où vous avez une unité.", {
+        "Science : son cube part dans les agents usés, 1 de recherche spatiale par système à anomalie où vous avez une unité.", {
             phase: "science",
             use: true,
             recherche: [["spa", 1]],
@@ -1155,18 +1155,12 @@ export const SCRIPTS = [
             libelle: "Sai Seravus : recherche spatiale (anomalies où vous avez une unité)",
         }),
 
-    action("ahk-ravin", "mercenaire", 291, 1789877845168, "Ahk Ravin", "carte",
-        "Science : la carte est usée, dépensez 3 ressources, 2 fragments de relique sont piochés (la ruine à activer : à la main).", {
-            phase: "science",
-            use: true,
-            cout: { res: 3 },
-            pioche: { de: "pioche:fragments", vers: "fragments", n: 2 },
-            avis: "Ahk Ravin : activez la ruine à la main.",
-            libelle: "Ahk Ravin : 2 fragments (3 ressources)",
-        }),
+    regle("ahk-ravin", "mercenaire", 291, 1794390437899, "Ahk Ravin", "modifie",
+        "Fiche d'un système : « Fouiller la ruine »",
+        "Quand Ahk Ravin est le scientifique d'une fouille (son cube posé sur le type Scientifique) : une fenêtre propose de dépenser 3 ressources pour 2 fragments au lieu d'un."),
 
     action("artuno", "mercenaire", 297, 1794335054896, "Artuno", "carte",
-        "Diplomatie : la carte est usée, 1 commerce par alliance en cours chez vous.", {
+        "Diplomatie : son cube part dans les agents usés, 1 commerce par alliance en cours chez vous.", {
             phase: "diplomatie",
             use: true,
             calcul: outils => (outils.alliances() > 0
@@ -1176,7 +1170,7 @@ export const SCRIPTS = [
         }),
 
     action("ta-zern", "mercenaire", 302, 1794335054899, "Ta Zern", "carte",
-        "Science : la carte est usée, 1 de recherche génétique par planète que vous possédez.", {
+        "Science : son cube part dans les agents usés, 1 de recherche génétique par planète que vous possédez.", {
             phase: "science",
             use: true,
             recherche: [["gen", 1]],
@@ -1187,7 +1181,7 @@ export const SCRIPTS = [
         }),
 
     action("sal-gavda", "mercenaire", 349, 1794335054958, "Sal Gavda", "carte",
-        "Diplomatie : la carte est usée, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité.", {
+        "Diplomatie : son cube part dans les agents usés, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité.", {
             phase: "diplomatie",
             use: true,
             calcul: outils => (outils.factionsVoisines() > 0
@@ -1197,7 +1191,7 @@ export const SCRIPTS = [
         }),
 
     action("agnlan-oln", "mercenaire", 353, 1789878760208, "Agnlan Oln", "carte",
-        "Science : la carte est usée, un plan de relique est pioché dans votre main.", {
+        "Science : son cube part dans les agents usés, un plan de relique est pioché dans votre main.", {
             phase: "science",
             use: true,
             pioche: { de: "pioche:relique", vers: "main" },
@@ -1205,7 +1199,7 @@ export const SCRIPTS = [
         }),
 
     action("shipmonger-zsknck", "mercenaire", 358, 1794335054962, "Shipmonger Zsknck", "unite",
-        "Production : la carte du mercenaire est usée, un de vos vaisseaux non biologiques est réparé gratuitement (bouton de la fiche du vaisseau).", {
+        "Production : le cube du mercenaire part dans les agents usés, un de vos vaisseaux non biologiques est réparé gratuitement (bouton de la fiche du vaisseau).", {
             phase: "production",
             use: true,
             cible: (contenu, c) => (contenu?.mot_cle || []).includes("ship") && !(contenu?.mot_cle || []).includes("bio") &&
@@ -1222,26 +1216,26 @@ export const SCRIPTS = [
 
     regle("claire-gibson", "mercenaire", 281, 1794335054891, "Claire Gibson", "nouveau",
         "Conflit : combat terrestre",
-        "La carte est usée : vos infanteries ont +1 pour ce combat."),
+        "Son cube part dans les agents usés : vos infanteries ont +1 pour ce combat."),
 
     regle("sharsiss", "mercenaire", 299, 1794335054897, "Sharsiss", "nouveau",
         "Conflit : combat spatial",
-        "La carte est usée : autant d'unités d'une autre faction que vous en avez dans ce combat ont +1 (un bouton par faction)."),
+        "Son cube part dans les agents usés : autant d'unités d'une autre faction que vous en avez dans ce combat ont +1 (un bouton par faction)."),
 
     regle("skarvald", "mercenaire", 350, 1794335054959, "Skarvald", "nouveau",
         "Conflit : bombardement",
-        "La carte est usée : 3 dés, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète."),
+        "Son cube part dans les agents usés : 3 dés, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète."),
 
     regle("henry-storcher", "mercenaire", 356, 1794335054961, "Henry Storcher", "nouveau",
         "Conflit : combat spatial",
-        "La carte est usée : 1 commerce par vaisseau que vous avez perdu dans ce combat."),
+        "Son cube part dans les agents usés : 1 commerce par vaisseau que vous avez perdu dans ce combat."),
 
     regle("jace-x", "mercenaire", 357, 1789967502290, "Jace X", "nouveau",
         "Conflit : combat terrestre",
-        "La carte est usée : vos unités terrestres ont +1 pour ce combat."),
+        "Son cube part dans les agents usés : vos unités terrestres ont +1 pour ce combat."),
 
     action("mirik-aun-sissiri", "mercenaire", 355, 1794335054961, "Mirik Aun Sissiri", "systeme",
-        "Mandat : la carte est usée, vous avez +1 au combat spatial dans ce système jusqu'à la prochaine phase de mandat.", {
+        "Mandat : son cube part dans les agents usés, vous avez +1 au combat spatial dans ce système jusqu'à la prochaine phase de mandat.", {
             phase: "mandat",
             use: true,
             visible: outils => /mandat/i.test(outils.phase),
