@@ -370,7 +370,7 @@ export function Partie({ id }) {
             // Habilité : elle s'applique au joueur si elle est sur sa feuille de faction
             // ou dans ses éléments actifs ; posée sur la table, elle vaut pour toutes les
             // factions. (feuille : ou il a la feuille de technologie de ce type, qui la porte.)
-            if (script.carte.type === "habilite") {
+            if (script.carte.type === "habilite" && !script.pourTous) {
 
                 const estElle = c => !c.cache && c.ref?.type === "habilite" && c.ref.id === script.carte.id;
 
@@ -598,7 +598,8 @@ export function Partie({ id }) {
 
     // Fin d'une phase : les unités « usées » sont de nouveau disponibles
     const retraitUse = Object.values(etat.composants)
-        .filter(c => !c.cache && c.ref?.type === "unit" && c.marques?.use)
+        // (et les tokens Infiltration usés par l'habilité du même nom)
+        .filter(c => !c.cache && (c.ref?.type === "unit" || (c.ref?.type === "token" && c.ref.id === 882)) && c.marques?.use)
         .map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false }));
 
     // Marqueurs de trêve, où qu'ils soient
@@ -683,17 +684,87 @@ export function Partie({ id }) {
     //   Atlas    un Ravageur neutre est ajouté sur la planète ;
     //   Cormund  chaque unité qui s'y trouve subit une attaque de force 4 — un dé
     //            à 10 faces par unité, lancé par le serveur dans ce coup ; les
-    //            dégâts (4 ou moins) sont appliqués dans un second coup.
+    //            dégâts (4 ou moins) sont appliqués dans un second coup ;
+    //   Rébellion en cours, Milice au cœur du pouvoir (habilités) : des unités
+    //            neutres de plus, en nombre tiré au dé.
     function nouveauTour(commentaire = "") {
+
+        const tour = etat.tour + 1;
+        const unitesSur = zone => (index.parZone.get(zone) || []).filter(c => !c.cache && c.ref?.type === "unit");
 
         const atlas = ctx.aScript(moi, "atlas") ? zonesDePlanete(41) : [];
 
-        const surCormund = (ctx.aScript(moi, "cormund-attaque") ? zonesDePlanete(49) : [])
-            .flatMap(zone => (index.parZone.get(zone) || []).filter(c => !c.cache && c.ref?.type === "unit"));
+        // Tirages du début de tour : un dé lancé par le serveur dans ce coup (son
+        // résultat est écrit dans une marque du composant), puis sa suite dans un
+        // second coup. { c, faces, suite(jet) -> { actions, texte } }
+        const tirages = [];
+
+        // Cormund : attaque de force 4 contre chaque unité présente
+        for (const c of (ctx.aScript(moi, "cormund-attaque") ? zonesDePlanete(49) : []).flatMap(unitesSur)) {
+            tirages.push({
+                c: c.id,
+                faces: 10,
+                suite: jet => ({
+                    actions: jet <= 4
+                        ? [{ type: "marquer", c: c.id, marque: "degat", valeur: (Number(c.marques?.degat) || 0) + 1 }]
+                        : [],
+                    texte: `Cormund, ${nomElement(search, c.ref)} : ${jet}${jet <= 4 ? " (touchée)" : ""}`,
+                }),
+            });
+        }
+
+        // Habilité Rébellion en cours : 1D3 rebelles de plus sur chaque planète
+        // possédée par un joueur où il y en a déjà
+        if (ctx.aScript(moi, "rebellion-en-cours")) {
+
+            const possedees = joueurs.flatMap(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+                .filter(c => !c.cache && c.ref?.type === "planet")
+                .map(c => c.ref.id));
+
+            for (const zone of [...new Set(possedees)].flatMap(zonesDePlanete)) {
+
+                const rebelle = unitesSur(zone).find(c => c.ref.id === 557);
+
+                if (rebelle) {
+                    tirages.push({
+                        c: rebelle.id,
+                        faces: 3,
+                        suite: jet => ({
+                            actions: Array.from({ length: jet }, () => ({ type: "creer", ref: { type: "unit", id: 557 }, zone })),
+                            texte: `Rébellion en cours : ${jet} rebelle(s) de plus`,
+                        }),
+                    });
+                }
+            }
+        }
+
+        // Habilité Milice au cœur du pouvoir (tour 8 et suivants) : 1D10 miliciens sur
+        // Mecatol Rex — 2D10 si la loi « Ouverture bureau des mercenaires » est en jeu
+        if (tour >= 8 && ctx.aScript(moi, "milice-au-coeur-du-pouvoir")) {
+
+            const bureau = Object.values(etat.composants).some(c =>
+                !c.cache && c.ref?.id === 726 && /^(general:|joueur:\d+:actif$)/.test(c.zone || ""));
+
+            for (const zone of zonesDePlanete(34).flatMap(z => (bureau ? [z, z] : [z]))) {
+
+                const tuile = (index.parZone.get(zone.replace(/:planete:\d+$/, "")) || []).find(c => c.ref?.type === "system");
+
+                if (tuile) {
+                    tirages.push({
+                        c: tuile.id,
+                        faces: 10,
+                        suite: jet => ({
+                            actions: Array.from({ length: jet }, () => ({ type: "creer", ref: { type: "unit", id: 723 }, zone })),
+                            texte: `Milice au cœur du pouvoir : ${jet} milicien(s) sur Mecatol Rex`,
+                        }),
+                    });
+                }
+            }
+        }
 
         p.envoyer(commentaire, [
             ...atlas.map(zone => ({ type: "creer", ref: { type: "unit", id: 574 }, zone })),
-            ...surCormund.map(c => ({ type: "des", n: 1, faces: 10, c: c.id, marque: "jetCormund" })),
+            ...tirages.map((t, k) => ({ type: "des", n: 1, faces: t.faces, c: t.c, marque: "jetTour" + k })),
             ...retraitMarqueurs,
             ...retraitUse,
             ...remiseDesPasses,
@@ -703,10 +774,10 @@ export function Partie({ id }) {
             // Le vote du tour qui s'achève est remis à zéro (etat.js)
             { type: "reinitialiserVotes" },
             // Le recrutement du nouveau tour est mis en place (PlateauGeneral.jsx)
-            ...(dernierTour ? [] : actionsRecrutement(etat, index, deroule, joueurs.length, etat.tour + 1)),
+            ...(dernierTour ? [] : actionsRecrutement(etat, index, deroule, joueurs.length, tour)),
             {
                 type: "partie",
-                tour: etat.tour + 1,
+                tour,
                 phase: phases[0]?.nom ?? "",
                 joueurActif: ordreSuivant[0] ?? null,
             },
@@ -714,25 +785,22 @@ export function Partie({ id }) {
 
             const messages = [atlas.length > 0 && reponse && "Atlas : un Ravageur est ajouté sur la planète."];
 
-            // Cormund : les jets sont dans la réponse du serveur
-            const jets = surCormund
-                .map(c => reponse?.etat?.composants?.[c.id])
-                .filter(c => c?.marques?.jetCormund !== undefined);
+            // Les jets sont dans la réponse du serveur : leur suite part dans un second coup
+            const suites = tirages
+                .map((t, k) => ({ t, k, jet: reponse?.etat?.composants?.[t.c]?.marques?.["jetTour" + k] }))
+                .filter(x => x.jet !== undefined)
+                .map(x => ({ c: x.t.c, marque: "jetTour" + x.k, ...x.t.suite(Number(x.jet)) }));
 
-            if (jets.length) {
+            if (suites.length) {
 
-                const touchees = jets.filter(c => Number(c.marques.jetCormund) <= 4);
+                const resume = suites.map(s => s.texte).join(" ; ");
 
-                p.envoyer(
-                    `Cormund : attaque de force 4 — ${touchees.length} unité(s) touchée(s) sur ${jets.length}`,
-                    jets.flatMap(c => [
-                        Number(c.marques.jetCormund) <= 4 &&
-                            { type: "marquer", c: c.id, marque: "degat", valeur: (Number(c.marques?.degat) || 0) + 1 },
-                        { type: "marquer", c: c.id, marque: "jetCormund", valeur: null },
-                    ])
-                );
+                p.envoyer("Début du tour — " + resume, suites.flatMap(s => [
+                    ...s.actions,
+                    { type: "marquer", c: s.c, marque: s.marque, valeur: null },
+                ]));
 
-                messages.push(`Cormund : attaque de force 4 contre chaque unité de la planète — ${touchees.length} touchée(s) sur ${jets.length} (jets : ${jets.map(c => c.marques.jetCormund).join(", ")}).`);
+                messages.push(resume + ".");
             }
 
             if (messages.some(Boolean)) {
@@ -848,7 +916,8 @@ export function Partie({ id }) {
             : 0;
 
         const cout = Number(m[1]) + achat[0] + surcout;
-        const compteur = `joueur:${moi}:inf`;
+        // (habilité Sans influence : l'influence se paie en ressources)
+        const compteur = `joueur:${moi}:${ctx.aScript(moi, "sans-influence") ? "res" : "inf"}`;
         const influence = Number(etat.compteurs[compteur]) || 0;
         const nom = nomElement(search, achete.ref);
 
@@ -984,7 +1053,7 @@ export function Partie({ id }) {
         const bonus = ctx.aScript(moi, "ecole-politique-lois") ? 2 : 0;
         const paye = Math.floor(Number(nbPropositions));
         const n = Math.max(bonus ? 0 : 1, Math.min(10, Number.isFinite(paye) ? paye : 1));
-        const compteur = `joueur:${moi}:inf`;
+        const compteur = `joueur:${moi}:${ctx.aScript(moi, "sans-influence") ? "res" : "inf"}`;
         const influence = Number(etat.compteurs[compteur]) || 0;
         const enPioche = (index.parZone.get("pioche:Agenda") || []).length;
 

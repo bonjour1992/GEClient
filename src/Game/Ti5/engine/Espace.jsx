@@ -405,8 +405,15 @@ export function Espace() {
             }
         }
 
-        if (natives.length) {
-            envoyer(natives, "Unités natives du système exploré");
+        // Habilité Présence de cache : un fragment de relique tiré du sac sur le système exploré
+        const cache = aScript(moi, "presence-de-cache") && (index.parZone.get(SAC_FRAGMENTS) || []).length > 0;
+
+        if (natives.length || cache) {
+            envoyer(
+                [...natives, cache && { type: "piocher", de: SAC_FRAGMENTS, vers: zone }],
+                [natives.length && "Unités natives du système exploré", cache && "Présence de cache : un fragment de relique"]
+                    .filter(Boolean).join(" — ")
+            );
         }
     }
 

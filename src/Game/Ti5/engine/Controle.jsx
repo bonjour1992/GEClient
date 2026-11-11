@@ -552,6 +552,10 @@ function Accord({ conflit }) {
                 // Chacun répond pour son camp ; tout joueur peut répondre pour les neutres
                 const repond = !!joueur && (camp === moi || camp === NEUTRE);
 
+                // Habilité Fierté : on n'accepte pas la revendication d'une planète qu'on possède
+                const fier = camp !== NEUTRE && aScript(camp, "fierte") &&
+                    (index.parZone.get(`joueur:${camp}:actif`) || []).some(x => x.ref?.type === "planet" && x.ref.id === idPlanete);
+
                 return (
                     <div key={camp} data-camp={camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
                         <span>{pastille(camp)}<b>{nomCamp(camp)}</b></span>
@@ -562,6 +566,8 @@ function Accord({ conflit }) {
                                     key={valeur}
                                     type="button"
                                     data-choix={valeur}
+                                    disabled={valeur === 2 && fier}
+                                    title={valeur === 2 && fier ? "Fierté : vous ne pouvez pas consentir à la revendication d'une de vos planètes" : undefined}
                                     onClick={() => repondre(camp, valeur)}
                                     style={{
                                         ...styleMini,

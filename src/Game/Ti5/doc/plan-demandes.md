@@ -319,5 +319,13 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   automatiques, Anneau monde, Relique, Elysium, SR-42, Station de combat, Arcturus, Anneau
   Arcturus. Restent passées : Station de mercenaire, Velnor, Mecatol Rex spécial, Université
   polytechnique.
+- ☑ Habilités, second lot (2026-11-11) : Clé de l'empire, Esclaves (et Camp de travail), Fierté,
+  Fin de la tempête, Présence de cache, Diplomatie pirate, Rébellion en cours, Milice au cœur du
+  pouvoir, Sans influence, Infiltration. Passées (difficiles ou pas claires) : Vente au Bazaar,
+  Mandat, Raid, Exécuter / Restituer les otages, Vassalisation forcée, Seigneur, Domination, Aide
+  humanitaire, Mouvement pirate, Péage aux frontières, Offre d'asile, Cache, Distorsion
+  gravitationnelle, Combat pirate, Khan (3), Négocier avec les rebelles, Rébellion armée, Armer
+  les rebelles, Vote du conclave, Achat de votes, Réfugiés, Entraîner les milices, Enrôlement des
+  milices, Essaim de drones.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

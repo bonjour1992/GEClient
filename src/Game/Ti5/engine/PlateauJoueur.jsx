@@ -7,6 +7,7 @@ import { ActionsTechnologies } from "./ActionsTechnologies";
 import { ReserveProductible } from "./Production";
 import { useExploitationDuVide } from "./Controle";
 import { useRevenus } from "./Revenus";
+import { BoutonsScripts } from "./ActionsScript";
 
 // ============================================================
 // ONGLET PLATEAU JOUEUR
@@ -275,7 +276,10 @@ export function PlateauJoueur({ vu }) {
         aScript(u, "culture-courtisane-alliances") && alliances > 0 && [alliances, "Culture courtisane"],
     ].filter(Boolean);
 
-    const influence = somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0) + revenus.inf;
+    // (habilité Sans influence : l'entretien ne rapporte pas d'influence)
+    const influence = aScript(u, "sans-influence")
+        ? 0
+        : somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0) + revenus.inf;
 
     // Habilités qui jouent à l'entretien (scripts de sorte « regle »)
     //   Sève de vie       mes unités biologiques de la carte récupèrent 1 de résistance
@@ -421,6 +425,13 @@ export function PlateauJoueur({ vu }) {
 
             {/* Nouveaux boutons des scripts de mes technologies */}
             {joueur && u === moi && <ActionsTechnologies />}
+
+            {/* Boutons d'action des habilités utilisables depuis le plateau (ActionsScript.jsx) */}
+            {joueur && u === moi && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    <BoutonsScripts lieu="plateau" />
+                </div>
+            )}
 
             {/* ZONES */}
 

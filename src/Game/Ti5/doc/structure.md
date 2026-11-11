@@ -940,6 +940,26 @@ non bloquant à la pose d'unités (`avertirArcturus`, `Interaction.jsx`). Une
 recherche obtenue par un bouton d'action est notée au journal sous la sorte
 `a` (`g` pour un revenu de phase).
 
+Habilités (second lot, 11 novembre) : `BoutonsScripts` (`ActionsScript.jsx`)
+connaît deux lieux de plus — `plateau` (onglet Plateau joueur : Esclaves,
+Infiltration) et `carte` (fiche d'une carte qui n'est pas une unité : Fin de la
+tempête) — et, pour une habilité, le champ `surPlanete` (bouton à côté d'une
+planète : Clé de l'empire). Champs nouveaux : `depense` (cartes ou tokens des
+éléments actifs à retirer, ou à user avec `use` ; `esclaves` : infanteries d'un
+autre camp dans les éléments actifs), `soigne`, `donne`, `special(atelier)`
+(effet propre au script). Un script `pourTous` vaut pour toute faction dès
+qu'il est en service (Diplomatie pirate, Rébellion en cours). Automatismes de
+« Nouveau tour » : la liste `tirages` de `nouveauTour` (`Partie.jsx`) — un dé
+lancé par le serveur (marque `jetTour<k>` du composant), puis sa suite dans un
+second coup : Cormund, Rébellion en cours (1D3 rebelles), Milice au cœur du
+pouvoir (1D10 ou 2D10 miliciens, tour 8 et suivants). Sans influence : les
+compteurs d'influence à payer deviennent ceux des ressources (recrutement,
+propositions, `compteurDe` des boutons de script) et l'entretien ne rapporte
+pas d'influence. Infiltration : jeton créé au retrait d'un vaisseau détruit
+(`butinDe`, `Combat.jsx`). Fierté : « Accepter » grisé dans `Accord`
+(`Controle.jsx`). Présence de cache : fragment pioché dans `explorer`
+(`Espace.jsx`).
+
 `aScript(joueur, id)` : pour une unité ou une planète, le script est en
 service ; pour une **habilité**, elle s'applique au joueur — elle est sur sa
 feuille de faction ou dans ses éléments actifs, ou posée sur la table (elle

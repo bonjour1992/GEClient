@@ -596,8 +596,12 @@ export const SCRIPTS = [
         "Chaque statue rapporte 1 point.", { gains: { points: 1 } }),
 
     revenu("station-meteorologique", "unit", 444, 1794335055030, "Station météorologique", "ravit",
-        "Chaque station génère 2 de recherche tempête et 1 de recherche spatiale (notées au journal de recherche).",
-        { recherche: [["storm", 2], ["spa", 1]] }),
+        "Chaque station génère 2 de recherche tempête et 1 de recherche spatiale (notées au journal de recherche) ; plus de recherche tempête une fois la « Fin de la tempête » appliquée.", {
+            recherche: [["storm", 2], ["spa", 1]],
+            calcul: (source, outils) => (outils.etat.compteurs["tempete:finie"]
+                ? { recherche: [["spa", 1]] }
+                : { recherche: [["storm", 2], ["spa", 1]] }),
+        }),
 
     revenu("forge-du-vide", "unit", 868, 1794340035096, "Forge du vide", "ravit",
         "S'il y a un trou de ver delta dans son système : 1 ressource, 1 influence et 1 de recherche.", {
@@ -976,6 +980,108 @@ export const SCRIPTS = [
     regle("cormund-attaque", "planet", 49, 1794335054764, "Cormund : attaque", "auto",
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), chaque unité présente sur Cormund subit une attaque de force 4 : un dé à 10 faces par unité, 1 dégât sur 4 ou moins."),
+
+    // ---- habilités (second lot) ----
+
+    action("cle-de-l-empire", "habilite", 144, 1794335054817, "Clé de l'empire", "planete",
+        "Production : dépensez un logisticien, les systèmes de défense de Mecatol Rex perdent leurs dégâts.", {
+            surPlanete: 34,
+            phase: "production",
+            agent: { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: true },
+            soigne: "pds",
+            libelle: "Clé de l'empire : réparer le système de défense (dépense un logisticien)",
+        }),
+
+    action("esclaves", "habilite", 157, 1794335054822, "Esclaves", "plateau",
+        "À tout moment : dépensez un esclave (une infanterie capturée, dans vos éléments actifs), +1 ressource.", {
+            depense: [{ esclaves: 1 }],
+            gains: { res: 1 },
+            libelle: "Esclaves : dépenser un esclave (+1 ressource)",
+        }),
+
+    action("camp-de-travail", "unit", 154, 1794049918192, "Camp de travail", "unite",
+        "Production : le camp est usé et un esclave dépensé, +4 ressources.", {
+            phase: "production",
+            use: true,
+            depense: [{ esclaves: 1 }],
+            gains: { res: 4 },
+            libelle: "Camp de travail : +4 ressources (usé, dépense un esclave)",
+        }),
+
+    regle("fierte", "habilite", 167, 1794335054829, "Fierté", "modifie",
+        "Conflit : conflit d'accord (revendication)",
+        "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez."),
+
+    action("fin-de-la-tempete", "habilite", 443, 1793999783814, "Fin de la tempête", "carte",
+        "Phase d'événement : la Tempête spatiale est retirée de la table, les stations météorologiques ne génèrent plus de recherche tempête, chaque faction marque 2 points par niveau de connaissance de tempête, et celle qui en a le plus 3 de plus.", {
+            phase: "[ée]v[ée]nement",
+            nomPhase: "événement",
+            special: atelier => {
+
+                if (atelier.etat.compteurs["tempete:finie"]) {
+                    return { actions: [], sans: "la fin de la tempête est déjà appliquée" };
+                }
+
+                const niveaux = atelier.joueurs.map(j => ({ u: j.userId, n: atelier.connaissance(j.userId, "storm") }));
+                const max = Math.max(0, ...niveaux.map(x => x.n));
+                const premiers = niveaux.filter(x => max > 0 && x.n === max);
+                const gain = x => 2 * x.n + (premiers.length === 1 && premiers[0].u === x.u ? 3 : 0);
+
+                return {
+                    actions: [
+                        ...atelier.cartes("habilite", 442, "general:table").map(c => ({ type: "supprimer", c: c.id })),
+                        { type: "compteur", id: "tempete:finie", valeur: 1 },
+                        ...niveaux.flatMap(x => atelier.points(x.u, gain(x))),
+                    ],
+                    avis: "Fin de la tempête : " + niveaux.map(x => `${atelier.nomDe(x.u)} +${gain(x)} point(s)`).join(", ") + ".",
+                };
+            },
+            libelle: "Appliquer la fin de la tempête",
+        }),
+
+    regle("presence-de-cache", "habilite", 491, 1794335055044, "Présence de cache", "modifie",
+        "Espace : explorer (Ctrl + clic sur un emplacement vide)",
+        "Un système qui vient d'être exploré reçoit un fragment de relique tiré du sac."),
+
+    action("diplomatie-pirate", "habilite", 522, 1794335055049, "Diplomatie pirate", "bandeau",
+        "Diplomatie, quand des vaisseaux pirates sont sur la carte : use un diplomate et dépensez 3 commerce, l'alliance Pacte pirate arrive dans vos éléments actifs.", {
+            pourTous: true,
+            phase: "diplomatie",
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            cout: { commerce: 3 },
+            donne: [{ type: "Promesse", id: 458 }],
+            visible: outils => /diplomatie/i.test(outils.phase) && outils.surLaCarte(407),
+            parTour: true,
+            libelle: "Diplomatie pirate : Pacte pirate (use un diplomate, 3 commerce)",
+        }),
+
+    {
+        ...regle("rebellion-en-cours", "habilite", 558, 1794335055056, "Rébellion en cours", "auto",
+            "En-tête : « Nouveau tour »",
+            "À chaque nouveau tour, 1D3 rebelles de plus sur chaque planète possédée par un joueur où il y en a déjà."),
+        pourTous: true,
+    },
+
+    regle("milice-au-coeur-du-pouvoir", "habilite", 725, 1789794426606, "Milice au cœur du pouvoir", "auto",
+        "En-tête : « Nouveau tour » (habilité posée sur la table)",
+        "À partir du tour 8, à chaque nouveau tour : 1D10 miliciens sont posés sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu)."),
+
+    regle("sans-influence", "habilite", 895, 1794336276050, "Sans influence", "modifie",
+        "Recrutement, propositions, boutons qui coûtent de l'influence ; « Entretien »",
+        "Ce qui se paie en influence se paie en ressources ; l'entretien ne rapporte pas d'influence."),
+
+    regle("infiltration", "habilite", 896, 1794336276052, "Infiltration", "auto",
+        "Conflit : « Retirer » un vaisseau détruit",
+        "Détruire un vaisseau vous donne un token Infiltration (dans vos éléments actifs, aux couleurs de la faction touchée)."),
+
+    action("infiltration-recherche", "habilite", 896, 1794336276052, "Infiltration : recherche", "plateau",
+        "Science : use un scientifique et 2 infiltrations (usées jusqu'au nouveau tour), 4 de recherche d'une technologie que possède la faction infiltrée.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            depense: [{ type: "token", id: 882, n: 2, nom: "infiltration", use: true }],
+            recherche: [["", 4]],
+            libelle: "Infiltration : +4 recherche (use un scientifique, 2 infiltrations)",
+        }),
 
     action("confrerie-de-mercenaire-pioche", "habilite", 764, 1794335055080, "Confrérie de mercenaire", "bandeau",
         "Recrutement : piochez un mercenaire dans votre main, à poser sur la case de recrutement de votre choix (une fois par tour).", {

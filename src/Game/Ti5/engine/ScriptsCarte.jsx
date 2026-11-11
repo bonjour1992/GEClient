@@ -34,6 +34,9 @@ export function ScriptsCarte({ c, fermer }) {
         // Livraison commerciale : une de mes unités de la carte dont le texte porte #livr(n)
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi &&
             <LivraisonCommerciale key="livraison-commerciale" c={c} fermer={fermer} />,
+        // Boutons d'action d'une carte qui n'est pas une unité (habilité posée sur la table…)
+        c.ref.type !== "unit" &&
+            <BoutonsScripts key="actions-carte" lieu="carte" c={c} idElement={c.ref.id} apres={fermer} />,
         // Boutons d'action de l'unité (scripts de sorte « action ») : une de mes unités de la carte
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && /^hex:\d+/.test(c.zone || "") &&
             <BoutonsScripts

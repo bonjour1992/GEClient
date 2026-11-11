@@ -757,6 +757,18 @@ function CombatSysteme({ lieu }) {
             gains.push("1 infamie (Libre échange)");
         }
 
+        // Habilité Infiltration : détruire un vaisseau donne un token Infiltration,
+        // aux couleurs de la faction touchée
+        if ((v.u.mot_cle || []).includes("ship") && aScript(camp, "infiltration")) {
+            actions.push({
+                type: "creer",
+                ref: { type: "token", id: 882 },
+                zone: `joueur:${camp}:actif`,
+                ...(v.camp !== NEUTRE ? { proprio: v.camp } : {}),
+            });
+            gains.push(`1 infiltration${v.camp !== NEUTRE ? " envers " + nomCamp(v.camp) : ""}`);
+        }
+
         return gains.length
             ? { camp, actions: actions.filter(Boolean), texte: `${nomUnite} détruit(e) par ${nomCamp(camp)} : ${gains.join(", ")}` }
             : null;

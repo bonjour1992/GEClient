@@ -1,6 +1,7 @@
 import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle } from "./Interaction";
+import { contenuEnCache } from "./sync";
 import { SCRIPTS } from "./scripts";
-import { ACTIVATION, FAVEUR, FRAGMENTS, actionsPoints } from "./miseEnPlace";
+import { ACTIVATION, FAVEUR, FRAGMENTS, actionsPoints, typeUnite } from "./miseEnPlace";
 import { depenserAgent } from "./effets";
 import { actionsPossession } from "./Controle";
 import { noter } from "./recherche";
@@ -14,27 +15,36 @@ import { noter } from "./recherche";
 // un bouton, vert ou rouge gris comme les autres effets du jeu.
 //
 //   lieu      "unite"    fiche d'une de mes unités (ScriptsCarte.jsx)
-//             "planete"  à côté de la planète, dans la fiche du système
+//             "carte"    fiche d'une carte qui n'est pas une unité (habilité posée sur la table…)
+//             "planete"  à côté de la planète, dans la fiche du système — la planète
+//                        du script, ou (habilité) celle de son champ surPlanete
 //             "systeme"  en tête de la fiche du système (habilités)
 //             "bandeau"  bandeau « À faire » (habilités de phase)
+//             "plateau"  onglet Plateau joueur (habilités utilisables à tout moment)
 //
 //   phase     motif du nom de la phase attendue (nomPhase : son nom)
 //   possede   la planète doit être à moi
 //   agent     { motif, nom, depense, pose } — utilisé ; dépensé ; ou posé
 //             sur le lieu (il y reste)
-//   cout      { res, inf, commerce }
+//   cout      { res, inf, commerce } (habilité Sans influence : l'influence se paie en ressources)
 //   fragments { ancien, mil, civ, spa, autres } — fragments de relique à dépenser
 //             (autres : de n'importe quel type, les anciens en dernier)
+//   depense   [{ type, id, n, nom, use } | { esclaves: n }] — cartes ou tokens de mes éléments
+//             actifs à retirer (use : ils sont usés au lieu d'être retirés, jusqu'au
+//             nouveau tour) ; esclaves : infanteries capturées (unités d'un autre camp
+//             dans mes éléments actifs)
 //   gains     { res, inf, commerce, points }
 //   faveur    nombre de mes faveurs gagnées ; faveurNeutre : faveurs neutres
 //             (jeton sans propriétaire)
 //   recherche [[type, n]…] — notée au journal de recherche du tour (sorte « a »)
 //   cree      { unite, n } — unités posées là où est la source
+//   donne     [{ type, id }] — cartes qui arrivent dans mes éléments actifs
 //   donneCarte identifiant d'une planète dont la carte arrive dans mes éléments actifs
 //   remplace  [[de, vers]…] — les unités « de » du lieu deviennent « vers »
 //   retire    identifiant d'une unité : toutes celles du lieu sont retirées
 //   reparer   répare mes unités non biologiques du système et les unités
 //             du lieu : 1 ressource par dégât
+//   soigne    type d'unité (« pds ») : celles du lieu perdent leurs dégâts, sans rien payer
 //   degat     variation des dégâts de l'unité (+1, −1)
 //   use       l'unité est usée (refusé si elle l'est déjà)
 //   activer   un marqueur d'activation est posé sur le lieu (refusé s'il y en a un)
@@ -43,9 +53,12 @@ import { noter } from "./recherche";
 //   parTour   une seule fois par tour
 //   visible   (outils) -> faux pour ne pas montrer le bouton ici
 //   calcul    (outils) -> champs qui remplacent ceux du script (ou { sans: raison })
+//   special   (atelier) -> { actions, avis, sans } : effet propre au script
 //
-// outils : { systeme (contenu du système), idSysteme, numero, possede, phase,
-//            connaissance(type), agentIci(motif) : un agent de ce nom est posé sur le lieu }
+// outils  : { systeme (contenu du système), idSysteme, numero, possede, phase, etat,
+//             connaissance(type), agentIci(motif), surLaCarte(idUnite) }
+// atelier : { etat, index, moi, joueurs, nomDe, connaissance(joueur, type), points(joueur, n),
+//             cartes(type, id, zone) }
 // ============================================================
 
 const NOMS = { res: "ressource", inf: "influence", commerce: "commerce", points: "point" };
@@ -55,7 +68,7 @@ const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
 export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null, zone = null, possede = true, systeme = null, idSysteme = null, apres }) {
 
     const {
-        etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives,
+        etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives, partie,
     } = useEngine();
 
     if (!joueur) {
@@ -63,25 +76,56 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
     }
 
     const ici = zone ? (index.parZone.get(zone) || []) : [];
+    const mesActifs = index.parZone.get(`joueur:${moi}:actif`) || [];
 
     const outils = {
         systeme,
         idSysteme,
         numero,
         possede,
+        etat,
         phase: etat.phase || "",
         connaissance: type => connaissance(moi, type),
         agentIci: motif => ici.some(x => !x.cache && x.ref?.type === "agent" && new RegExp(motif, "i").test(nomElement(search, x.ref))),
+        // Une unité de cet élément est-elle posée sur la carte ?
+        surLaCarte: idUnite => Object.values(etat.composants).some(x =>
+            !x.cache && x.ref?.type === "unit" && x.ref.id === idUnite && /^hex:\d+/.test(x.zone || "")),
+    };
+
+    const atelier = {
+        etat,
+        index,
+        moi,
+        joueurs: partie.joueurs,
+        nomDe,
+        connaissance,
+        points: (userId, n) => actionsPoints(etat, userId, n),
+        cartes: (type, id, ou) => (index.parZone.get(ou) || []).filter(x => !x.cache && x.ref?.type === type && x.ref.id === id),
+    };
+
+    // Le bouton est-il à montrer ici ?
+    const concerne = s => {
+
+        if (lieu === "unite" || lieu === "carte") {
+            return [s.carte.id, ...(s.aussi || [])].includes(idElement);
+        }
+
+        if (lieu === "planete") {
+            return s.carte.type === "habilite"
+                ? s.surPlanete === idElement && aScript(moi, s.id)
+                : [s.carte.id, ...(s.aussi || [])].includes(idElement);
+        }
+
+        return aScript(moi, s.id);
     };
 
     const scripts = SCRIPTS.filter(s =>
-        s.sorte === "action" && s.lieu === lieu && !scriptsDesactives.includes(s.id) &&
-        (lieu === "unite" || lieu === "planete"
-            ? [s.carte.id, ...(s.aussi || [])].includes(idElement)
-            : aScript(moi, s.id)) &&
+        s.sorte === "action" && s.lieu === lieu && !scriptsDesactives.includes(s.id) && concerne(s) &&
         (!s.visible || s.visible(outils)));
 
-    const compte = cle => Number(etat.compteurs[`joueur:${moi}:${cle}`]) || 0;
+    // Habilité Sans influence : ce qui se paie en influence se paie en ressources
+    const compteurDe = cle => (cle === "inf" && aScript(moi, "sans-influence") ? "res" : cle);
+    const compte = cle => Number(etat.compteurs[`joueur:${moi}:${compteurDe(cle)}`]) || 0;
 
     // Mes fragments de relique
     const mesFragments = (index.parZone.get(`joueur:${moi}:fragments`) || []).filter(f => !f.ref);
@@ -116,9 +160,26 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         return pris;
     }
 
+    // Esclaves : infanteries capturées — unités d'infanterie d'un autre camp dans mes éléments actifs
+    const esclaves = mesActifs.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) !== moi &&
+        typeUnite(contenuEnCache(x.ref.id)) === "inf");
+
+    // Ce qu'une ligne de « depense » retire : { voulus, trouves, nom }
+    const depenseDe = ligne => (ligne.esclaves
+        ? { voulus: ligne.esclaves, trouves: esclaves.slice(0, ligne.esclaves), nom: "esclave" }
+        : {
+            voulus: ligne.n,
+            trouves: mesActifs
+                .filter(x => !x.cache && x.ref?.type === ligne.type && x.ref.id === ligne.id && !(ligne.use && x.marques?.use))
+                .slice(0, ligne.n),
+            nom: ligne.nom || nomElement(search, { id: ligne.id }),
+            use: !!ligne.use,
+        });
+
     return scripts.map(s => {
 
         const effet = { ...s, ...(s.calcul ? s.calcul(outils) : {}) };
+        const propre = s.special ? s.special(atelier) : { actions: [] };
 
         const agent = s.agent ? agentDisponible({ index, moi, search }, s.agent.motif) : null;
         const degat = Number(c?.marques?.degat) || 0;
@@ -135,25 +196,36 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
         const coutReparation = aReparer.reduce((total, x) => total + Number(x.marques.degat), 0);
 
+        const aSoigner = s.soigne ? ici.filter(x => x.ref?.type === "unit" && Number(x.marques?.degat) > 0 &&
+            typeUnite(contenuEnCache(x.ref.id)) === s.soigne) : [];
+
         const cout = Object.entries({ ...(effet.cout || {}), ...(s.reparer ? { res: coutReparation } : {}) }).filter(([, n]) => n > 0);
 
         const voulus = effet.fragments || {};
         const fragmentsVoulus = Object.values(voulus).reduce((total, n) => total + n, 0);
         const payes = fragmentsVoulus ? fragmentsPour(voulus) : [];
 
+        const depenses = (s.depense || []).map(depenseDe);
+
         const aRetirer = s.retire ? ici.filter(x => x.ref?.type === "unit" && x.ref.id === s.retire) : [];
 
         const obstacles = [
-            s.phase && !new RegExp(s.phase, "i").test(etat.phase || "") && `ce n'est pas la phase de ${s.nomPhase || s.phase}`,
+            s.phase && !new RegExp(s.phase, "i").test(etat.phase || "") &&
+                `ce n'est pas la phase ${/^[aeiouyéè]/i.test(s.nomPhase || s.phase) ? "d'" : "de "}${s.nomPhase || s.phase}`,
             s.possede && !possede && "vous ne possédez pas cette planète",
             effet.sans,
+            propre.sans,
             s.agent && !agent && `vous n'avez pas de ${s.agent.nom} disponible (aucun ne sera ${s.agent.depense ? "dépensé" : (s.agent.pose ? "posé" : "usé")})`,
-            ...cout.filter(([cle, n]) => compte(cle) < n).map(([cle, n]) => `${NOMS[cle]} insuffisant : ${n} à payer, vous avez ${compte(cle)}`),
+            ...cout.filter(([cle, n]) => compte(cle) < n).map(([cle, n]) =>
+                `${NOMS[cle]} insuffisant${compteurDe(cle) !== cle ? " (payé en ressources)" : ""} : ${n} à payer, vous avez ${compte(cle)}`),
             fragmentsVoulus > payes.length &&
                 `fragments de relique insuffisants : ${fragmentsVoulus} à dépenser, ${payes.length} trouvé(s) (seuls ceux-là seront dépensés)`,
+            ...depenses.filter(d => d.trouves.length < d.voulus).map(d =>
+                `il faut ${d.voulus} ${d.nom}(s)${d.use ? " non usé(e)(s)" : ""}, vous en avez ${d.trouves.length} (seuls ceux-là seront ${d.use ? "usés" : "dépensés"})`),
             s.use && c?.marques?.use && "cette unité est déjà usée",
             s.activer && lieuActive && "ce lieu est déjà activé",
             s.reparer && !aReparer.length && "aucune unité à réparer ici",
+            s.soigne && !aSoigner.length && "aucune unité endommagée de ce type ici",
             s.retire && !aRetirer.length && `aucune unité « ${nomElement(search, { id: s.retire })} » ici`,
             effet.degat < 0 && degat <= 0 && "cette unité n'a aucun dégât",
             fait && "déjà fait ce tour",
@@ -173,8 +245,11 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                     : [s.agent.pose && zone
                         ? { type: "deplacer", c: agent.id, vers: zone, proprio: moi }
                         : { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` }]) : []),
-                ...cout.map(([cle, n]) => ({ type: "compteur", id: `joueur:${moi}:${cle}`, delta: -n })),
+                ...cout.map(([cle, n]) => ({ type: "compteur", id: `joueur:${moi}:${compteurDe(cle)}`, delta: -n })),
                 ...payes.map(f => ({ type: "supprimer", c: f.id })),
+                ...depenses.flatMap(d => d.trouves.map(x => (d.use
+                    ? { type: "marquer", c: x.id, marque: "use", valeur: true }
+                    : { type: "supprimer", c: x.id }))),
                 ...Object.entries(effet.gains || {}).filter(([, n]) => n > 0).flatMap(([cle, n]) => (cle === "points"
                     ? actionsPoints(etat, moi, n)
                     : [{ type: "compteur", id: `joueur:${moi}:${cle}`, delta: n }])),
@@ -187,21 +262,24 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                     }))
                     : []),
                 effet.donneCarte && { type: "creer", ref: { type: "planet", id: effet.donneCarte }, zone: `joueur:${moi}:actif`, proprio: moi },
+                ...(effet.donne || []).map(ref => ({ type: "creer", ref, zone: `joueur:${moi}:actif`, proprio: moi })),
                 ...(effet.remplace || []).flatMap(([de, vers]) => ici
                     .filter(x => x.ref?.type === "unit" && x.ref.id === de)
                     .map(x => ({ type: "remplacer", c: x.id, ref: { type: "unit", id: vers } }))),
                 ...aRetirer.map(x => ({ type: "supprimer", c: x.id })),
                 ...aReparer.map(x => ({ type: "marquer", c: x.id, marque: "degat", valeur: 0, si: x.marques.degat })),
+                ...aSoigner.map(x => ({ type: "marquer", c: x.id, marque: "degat", valeur: 0, si: x.marques.degat })),
                 effet.degat && c && { type: "marquer", c: c.id, marque: "degat", valeur: Math.max(0, degat + effet.degat) },
                 s.use && c && { type: "marquer", c: c.id, marque: "use", valeur: true },
                 s.activer && zone && { type: "creer", jeton: ACTIVATION, zone },
                 s.pioche && { type: "piocher", de: s.pioche.de, vers: `joueur:${moi}:${s.pioche.vers}`, n: s.pioche.n || 1 },
                 ...possession.actions,
+                ...(propre.actions || []),
                 s.parTour && { type: "compteur", id: cleTour, valeur: etat.tour },
             ], [commentaire, ...possession.messages].join(" — "));
 
-            if (effet.avis) {
-                aviser(effet.avis);
+            if (effet.avis || propre.avis) {
+                aviser([effet.avis, propre.avis].filter(Boolean).join(" "));
             }
 
             apres?.();
