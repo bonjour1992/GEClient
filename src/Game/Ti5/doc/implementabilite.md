@@ -20,13 +20,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 93 | 74 | 2 | 17 | 30 | 22 | 32 |
-| Habilités | 48 | 26 | 2 | 20 | 15 | 7 | 11 |
+| Habilités | 48 | 26 | 2 | 20 | 15 | 8 | 10 |
 | Unités | 104 | 69 | 35 | 0 | 25 | 13 | 34 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 11 | 6 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **333** | **215** | **61** | **57** | **109** | **77** | **83** |
+| **Total** | **333** | **215** | **61** | **57** | **109** | **78** | **82** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -156,7 +156,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 453 | Offre d'asile | **oui** | nouveau bouton | Fiche d'un système, phase d'événement, à côté d'une de vos planètes (l'habilité sur la case Événement du tour) : autant de points que son influence, sa carte est retirée, 6 Milices et un Entrepôt d'aide y sont posés, l'alliance Tuteur des réfugiés arrive chez vous. | — |
 | 486 | Cache | non | nouveau bouton (prévu) | — | Bouton : prend un fragment présent dans un système dominé (domination à déterminer). (moyenne) |
 | 487 | BDD technique | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 1 de recherche par fragment de relique possédé, notée au journal de recherche. | — |
-| 491 | Présence de cache | **oui** | automatique | Explorer (Ctrl + clic sur un emplacement vide) : un fragment de relique tiré du sac est posé sur le système découvert. | — |
+| 491 | Présence de cache | **oui** | bouton existant modifié | Explorer (Ctrl + clic sur un emplacement vide) : un fragment de relique tiré du sac est posé sur le système découvert. | — |
 | 515 | Distorsion gravitationnelle | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : une touche de force « numéro du tour » par unité du système. (moyenne) |
 | 522 | Diplomatie pirate | **oui** | nouveau bouton | Bandeau « À faire », phase de diplomatie, quand un vaisseau pirate est sur la carte (toute faction) : use un diplomate, 3 commerce, l'alliance « Pacte pirate » arrive dans les éléments actifs (une fois par tour). | — |
 | 523 | Combat pirate | non | automatique (prévu) | — | Engagements automatiques d'une faction non jouée, selon plusieurs critères de priorité. (difficile) |
