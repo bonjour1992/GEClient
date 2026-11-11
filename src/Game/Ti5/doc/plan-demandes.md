@@ -302,5 +302,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Complément déplacement : « Annuler l'activation » tant qu'aucun vaisseau n'est déplacé ; un
   déplacement à la fois (seconde activation signalée) ; « Finir le déplacement » clôt les
   activations (marque `fini`, le marqueur reste) ; trajet en flèches sur la carte.
+- ☑ Complément vote : secret du vote — pendant la phase de vote, placements sur le plateau de
+  vote et ajustements de voix restent dans un coup local (navigateur), envoyé avec la révélation
+  quand tous les joueurs sont prêts.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

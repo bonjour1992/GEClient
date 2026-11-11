@@ -883,8 +883,8 @@ cube blanc est remplacé par la carte du dessus de `pioche:relique`.
 Onglet Vote : chaque joueur a son plateau (élément `vote`), zones
 `joueur:<u>:vote:<ligne>:<colonne>`. Il est visible de son joueur seul tant
 que le compteur `joueur:<u>:voteRevele` n'est pas à 1 (« Prêt à révéler » du
-décompte : tous les plateaux sont révélés ensemble ; il n'y a plus de bouton
-pour révéler son plateau seul) :
+décompte : quand tous sont prêts, chaque joueur révèle son plateau ; il n'y a
+pas de bouton pour révéler son plateau seul) :
 les autres n'en reçoivent rien, ni les pions, ni leur nombre, ni les coups qui
 y posent quelque chose. Chaque case a une partie droite (zone
 `…:vote:<ligne>:<colonne>:d`) : le carré. Un politicien dans la case est
@@ -892,6 +892,25 @@ utilisé (1 voix) ; dans le carré, il est dépensé (2 voix). « Réinitialiser
 renvoie donc les agents des cases dans les agents usés, retire du jeu ceux
 des carrés et le reste, et remet le compteur à 0. En haut de l'onglet : la liste numérotée des lois du tour
 (cartes de `general:agenda:<tour>`).
+
+### secret du vote : coup local
+
+Un coup qui pose un agent visible sur un plateau caché est reçu en entier par
+les autres joueurs (ils voyaient le composant avant l'action) : le journal
+disait donc où chacun votait. Pendant la phase de vote, tant que son plateau
+n'est pas révélé, les actions de vote d'un joueur ne partent plus au serveur
+(`sync.js`, `usePartie`) : déplacer, retirer ou marquer un composant de son
+plateau de vote, et ajuster des voix (`vote:<tour>:<loi>:<colonne>:<joueur>`)
+sont gardés dans un coup local (`estSecrete`), appliqué à l'état affiché avec
+le réducteur du serveur (`appliquer`, `avecLocaux`) et gardé dans le
+`localStorage` (`ge-vote-local:<partie>:<joueur>`, avec le tour). « Prêt à
+révéler » n'envoie que `votePret`. Quand tous les joueurs sont prêts ou révélés,
+la page de chacun envoie son coup local, `voteRevele` = 1 et `votePret` = 0 en
+un seul coup. Le coup local part aussi, sans révélation, si la phase de vote est
+quittée avant ou si le plateau a été révélé autrement ; celui d'un autre tour
+est oublié. Le contexte expose `votesLocaux`, `voteSecret` et
+`oublierVotesLocaux` (bandeau de l'onglet Vote). Une action « creer » sur le
+plateau de vote n'est pas gardée en local (son identifiant viendrait du client).
 
 ### éléments posés sur une technologie
 

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchAPI, getElement } from "../../../lib/fetch";
-import { portes } from "./etat";
+import { portes, appliquer } from "./etat";
 import { LIMITES_UNITES, typeUnite, estUniteMercenaire } from "./miseEnPlace";
 
 // ============================================================
@@ -75,9 +75,101 @@ export function retourEnReserve(actions, etat) {
     });
 }
 
+// ============================================================
+// SECRET DU VOTE
+//
+// Pendant la phase de vote, tant que le plateau de vote du joueur
+// n'est pas révélé, ce qu'il y fait ne part pas au serveur : poser,
+// déplacer ou retirer un élément de son plateau de vote, et ajuster
+// des voix (compteurs vote:<tour>:<loi>:<colonne>:<joueur>). Ces
+// actions sont gardées ici, dans un coup local — rien n'en paraît
+// au journal ni chez les autres —, et appliquées à l'état affiché
+// (même réducteur que le serveur : etat.js).
+//
+// Elles partent en un seul coup, avec la révélation du plateau,
+// quand tous les joueurs se sont dits prêts (joueur:<u>:votePret) ;
+// ou sans attendre si la phase de vote est quittée avant, ou si le
+// plateau a été révélé autrement. Le coup local est gardé dans le
+// navigateur (localStorage) : il survit à un rechargement de la
+// page. Celui d'un autre tour est oublié.
+// ============================================================
+
+const RE_PHASE_VOTE = /^(?!.*pr[ée]).*vote/i;
+const RE_AJUSTEMENT = /^vote:\d+:\d+:\d+:\d+$/;
+
+export const phaseDeVote = etat => RE_PHASE_VOTE.test(etat?.phase || "");
+
+const cleLocale = (id, moi) => `ge-vote-local:${id}:${moi}`;
+
+function lireLocaux(id, moi) {
+    try {
+        const lu = JSON.parse(localStorage.getItem(cleLocale(id, moi)) || "null");
+
+        return lu && Array.isArray(lu.actions) ? { tour: Number(lu.tour) || 0, actions: lu.actions } : { tour: 0, actions: [] };
+    } catch {
+        return { tour: 0, actions: [] };
+    }
+}
+
+function ecrireLocaux(id, moi, locaux) {
+    try {
+        if (locaux.actions.length) {
+            localStorage.setItem(cleLocale(id, moi), JSON.stringify(locaux));
+        } else {
+            localStorage.removeItem(cleLocale(id, moi));
+        }
+    } catch {
+        // coup local non gardé : il vit le temps de la page
+    }
+}
+
+// Cette action touche-t-elle au vote secret du joueur ? (etat : l'état affiché)
+function estSecrete(action, etat, moi) {
+
+    const plateau = `joueur:${moi}:vote:`;
+    const surPlateau = c => typeof c === "string" && !!etat.composants[c]?.zone?.startsWith(plateau);
+
+    switch (action?.type) {
+        case "compteur":
+            return RE_AJUSTEMENT.test(action.id || "");
+        case "deplacer":
+            return String(action.vers || "").startsWith(plateau) || surPlateau(action.sur) || surPlateau(action.c);
+        case "supprimer":
+        case "marquer":
+        case "retourner":
+            return surPlateau(action.c);
+        default:
+            return false;
+    }
+}
+
+// L'état du serveur, plus le coup local (les actions refusées sont ignorées)
+function avecLocaux(etat, actions, moi) {
+
+    if (!etat || !actions.length) {
+        return etat;
+    }
+
+    const copie = structuredClone(etat);
+
+    for (const action of actions) {
+        try {
+            appliquer(copie, action, { auteur: moi });
+        } catch {
+            // action devenue impossible : ignorée à l'affichage
+        }
+    }
+
+    return copie;
+}
+
 export function usePartie(id) {
 
     const [vue, setVue] = useState(null);
+
+    // Coup local du vote secret : { tour, actions }
+    const [locaux, setLocaux] = useState({ tour: 0, actions: [] });
+    const flush = useRef("");
     const [erreur, setErreur] = useState("");
     // Nombre de requêtes en cours (plusieurs envois peuvent se suivre)
     const [envois, setEnvois] = useState(0);
@@ -190,9 +282,33 @@ export function usePartie(id) {
 
     }, [id]);
 
-    // L'état affiché est celui du serveur : il n'y a plus d'action en attente.
+    // L'état affiché est celui du serveur, plus le coup local du vote secret.
     const moi = vue?.moi;
-    const etat = vue?.etat ?? null;
+    const serveur = vue?.etat ?? null;
+
+    const etat = useMemo(() => avecLocaux(serveur, locaux.actions, moi), [serveur, locaux, moi]);
+
+    const joueurs = vue?.partie?.joueurs || [];
+    const jeJoue = joueurs.some(j => j.userId === moi);
+    const monPlateauRevele = !!serveur?.compteurs?.[`joueur:${moi}:voteRevele`];
+
+    // Mes actions de vote sont-elles gardées en local ?
+    const secret = !!serveur && jeJoue && phaseDeVote(serveur) && !monPlateauRevele;
+
+    // Le coup local gardé dans le navigateur (rechargement de la page)
+    useEffect(() => {
+        if (Number.isInteger(moi)) {
+            setLocaux(lireLocaux(id, moi));
+        }
+    }, [id, moi]);
+
+    function garderLocaux(suivant) {
+        setLocaux(suivant);
+
+        if (Number.isInteger(moi)) {
+            ecrireLocaux(id, moi, suivant);
+        }
+    }
 
     // --------------------------------------------------------
     // ENVOIS
@@ -221,10 +337,28 @@ export function usePartie(id) {
     }
 
     // surRefus(refus) : appelé si le serveur refuse le coup (rien n'est appliqué)
-    async function envoyerActions(liste, commentaire, surRefus) {
+    // direct : le coup part tel quel (envoi du coup local du vote)
+    async function envoyerActions(liste, commentaire, surRefus, direct = false) {
 
         // Unités de joueurs retirées : retour dans leur réserve
-        const actions = retourEnReserve(liste, etat);
+        let actions = retourEnReserve(liste, etat);
+
+        // Vote secret : ce qui touche à mon vote reste en local (voir plus haut)
+        if (secret && !direct) {
+
+            const gardees = actions.filter(action => estSecrete(action, etat, moi));
+
+            if (gardees.length) {
+                actions = actions.filter(action => !gardees.includes(action));
+
+                garderLocaux({
+                    tour: serveur.tour,
+                    actions: [...(locaux.tour === serveur.tour ? locaux.actions : []), ...gardees],
+                });
+
+                setErreur("");
+            }
+        }
 
         if (!actions.length) {
             return null;
@@ -283,6 +417,66 @@ export function usePartie(id) {
         envoyerActions(liste, "");
     }
 
+    // --------------------------------------------------------
+    // ENVOI DU COUP LOCAL DU VOTE
+    //
+    // Tous les joueurs sont prêts (ou ont déjà révélé) : mon coup local part
+    // avec la révélation de mon plateau. Il part aussi, sans révélation, si
+    // la phase de vote a été quittée ou si mon plateau est déjà révélé. Un
+    // coup local d'un autre tour est oublié.
+    // --------------------------------------------------------
+
+    useEffect(() => {
+
+        if (!serveur || !jeJoue) {
+            return;
+        }
+
+        if (locaux.actions.length && locaux.tour !== serveur.tour) {
+            garderLocaux({ tour: 0, actions: [] });
+            return;
+        }
+
+        const enVote = phaseDeVote(serveur);
+
+        const tousPrets = joueurs.every(j =>
+            serveur.compteurs[`joueur:${j.userId}:votePret`] || serveur.compteurs[`joueur:${j.userId}:voteRevele`]);
+
+        const reveler = enVote && tousPrets && !monPlateauRevele;
+
+        if (!reveler && !(locaux.actions.length && (!enVote || monPlateauRevele))) {
+            return;
+        }
+
+        // (un même coup n'est pas renvoyé en boucle s'il est refusé)
+        const signature = JSON.stringify([serveur.tour, serveur.phase, reveler, locaux.actions]);
+
+        if (flush.current === signature) {
+            return;
+        }
+
+        flush.current = signature;
+
+        const partis = locaux.actions.length;
+
+        envoyerActions([
+            ...locaux.actions,
+            reveler && { type: "compteur", id: `joueur:${moi}:voteRevele`, valeur: 1 },
+            reveler && { type: "compteur", id: `joueur:${moi}:votePret`, valeur: 0 },
+        ].filter(Boolean), reveler ? "Vote : plateau révélé" : "Vote : coup local envoyé", undefined, true).then(r => {
+            if (r) {
+                setLocaux(actuel => {
+                    const reste = { tour: actuel.tour, actions: actuel.actions.slice(partis) };
+
+                    ecrireLocaux(id, moi, reste);
+
+                    return reste;
+                });
+            }
+        });
+
+    }, [serveur, locaux, moi]);
+
     // Chat : a est le destinataire d'un message privé (null : à tous)
     async function ecrire(texte, a = null) {
 
@@ -304,6 +498,10 @@ export function usePartie(id) {
         erreur,
         setErreur,
         envoi: envois > 0,
+        // Vote secret : nombre d'actions gardées en local, et de quoi les oublier
+        votesLocaux: locaux.actions.length,
+        voteSecret: secret,
+        oublierVotesLocaux: () => garderLocaux({ tour: 0, actions: [] }),
         jouer,
         requete,
         // Un coup commenté : plusieurs actions validées ensemble

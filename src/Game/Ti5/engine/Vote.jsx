@@ -62,7 +62,12 @@ const stylePions = zone => (estPartieDroite(zone)
 //
 // Un plateau caché ne compte pas tant qu'il n'est pas révélé.
 // Chacun se dit « prêt à révéler » (joueur:<u>:votePret) ; quand
-// tous le sont, tous les plateaux sont révélés dans le même coup.
+// tous le sont, chaque joueur révèle son plateau.
+//
+// Secret du vote (sync.js) : pendant la phase de vote, ce qu'un joueur
+// pose sur son plateau et ses ajustements de voix restent dans son
+// navigateur — rien n'en paraît au journal. Quand tous sont prêts, sa
+// page envoie le tout en un coup, avec la révélation de son plateau.
 //
 // Les colonnes sont classées par total. Le responsable du sénat
 // (dernière case d'initiative) départage les égalités : compteur
@@ -178,7 +183,10 @@ export function tradingFinDeVote({ etat, index, joueurs, search, aScript, nomDe 
 
 function Decompte({ lois }) {
 
-    const { etat, index, envoyer, joueur, moi, partie, search, nomDe, couleurDe, aScript } = useEngine();
+    const {
+        etat, index, envoyer, joueur, moi, partie, search, nomDe, couleurDe, aScript,
+        votesLocaux, voteSecret, oublierVotesLocaux,
+    } = useEngine();
 
     // Toutes les colonnes, ou seulement celles qui ont des voix
     const [toutes, setToutes] = useState(false);
@@ -204,26 +212,10 @@ function Decompte({ lois }) {
     const tousPrets = caches.length > 0 && caches.every(j => estPret(j.userId));
     const jeVote = joueur && joueurs.some(j => j.userId === moi);
 
-    const revelation = () => joueurs.flatMap(j => [
-        !estRevele(j.userId) && { type: "compteur", id: `joueur:${j.userId}:voteRevele`, valeur: 1 },
-        estPret(j.userId) && { type: "compteur", id: `joueur:${j.userId}:votePret`, valeur: 0 },
-    ]).filter(Boolean);
-
+    // « Prêt » : rien d'autre ne part. Quand tous le sont, la page de chaque
+    // joueur envoie son coup local et révèle son plateau (sync.js).
     function basculerPret() {
-
-        const compteur = `joueur:${moi}:votePret`;
-
-        if (estPret(moi)) {
-            envoyer([{ type: "compteur", id: compteur, valeur: 0 }], "");
-            return;
-        }
-
-        // Je suis le dernier attendu : tout est révélé avec mon « prêt »
-        if (caches.every(j => j.userId === moi || estPret(j.userId))) {
-            envoyer(revelation(), "Vote : plateaux révélés");
-        } else {
-            envoyer([{ type: "compteur", id: compteur, valeur: 1 }], "");
-        }
+        envoyer([{ type: "compteur", id: `joueur:${moi}:votePret`, valeur: estPret(moi) ? 0 : 1 }], "");
     }
 
     const numerosLois = Array.from({ length: nombreLois }, (_, k) => k + 1);
@@ -266,7 +258,7 @@ function Decompte({ lois }) {
                     <button
                         type="button"
                         onClick={basculerPret}
-                        title="Quand tous les joueurs sont prêts, tous les plateaux sont révélés en même temps"
+                        title="Quand tous les joueurs sont prêts, chacun envoie ses votes et révèle son plateau"
                         style={{
                             fontWeight: "bold",
                             padding: "3px 10px",
@@ -278,15 +270,11 @@ function Decompte({ lois }) {
                     </button>
                 )}
 
-                {/* Tous prêts mais rien n'est parti (deux « prêt » en même temps) */}
-                {joueur && tousPrets && (
-                    <button
-                        type="button"
-                        style={{ fontWeight: "bold" }}
-                        onClick={() => envoyer(revelation(), "Vote : plateaux révélés")}
-                    >
-                        Révéler tous les plateaux
-                    </button>
+                {/* Tous prêts : chaque page envoie ses votes ; ceux qui manquent encore */}
+                {tousPrets && (
+                    <span data-vote-attente style={{ fontSize: 12, color: "#a15c00" }}>
+                        Tous prêts : en attente des votes de {caches.map(j => j.nom).join(", ")} (envoyés dès que leur page est ouverte).
+                    </span>
                 )}
 
                 <label style={{ fontSize: 12 }}>
@@ -316,6 +304,26 @@ function Decompte({ lois }) {
             {caches.length > 0 && (
                 <div style={{ fontSize: 12, color: "#a15c00" }}>
                     Les voix des plateaux encore cachés ne sont pas comptées.
+                </div>
+            )}
+
+            {/* Secret du vote : mes actions de vote restent sur cet appareil jusqu'à la révélation */}
+            {jeVote && (voteSecret || votesLocaux > 0) && (
+                <div data-vote-secret={votesLocaux} style={{ fontSize: 12, color: "#1b5e20" }}>
+                    🔒 Vote secret : ce que vous posez sur votre plateau et vos ajustements de voix restent sur cet
+                    appareil, sans rien au journal, et partent quand tous les joueurs sont prêts.{" "}
+                    <b>{votesLocaux} action{votesLocaux > 1 ? "s" : ""} gardée{votesLocaux > 1 ? "s" : ""}.</b>
+                    {votesLocaux > 0 && (
+                        <button
+                            type="button"
+                            data-action="oublier-votes-locaux"
+                            title="Annule tout ce que vous avez fait en secret depuis le début de ce vote"
+                            style={{ ...styleMini, marginLeft: 6 }}
+                            onClick={() => window.confirm("Annuler vos votes gardés sur cet appareil ?") && oublierVotesLocaux()}
+                        >
+                            Les annuler
+                        </button>
+                    )}
                 </div>
             )}
 

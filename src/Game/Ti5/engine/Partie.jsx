@@ -314,6 +314,10 @@ export function Partie({ id }) {
         nomDe: userId => trouver(userId)?.nom || "personne",
         factionDe: userId => trouver(userId)?.faction ?? null,
         cliquer: (id, event) => cliquer(id, event),
+        // Vote secret (sync.js) : mes actions de vote gardées en local
+        votesLocaux: p.votesLocaux,
+        voteSecret: p.voteSecret,
+        oublierVotesLocaux: p.oublierVotesLocaux,
         // Fin de mon tour : ces actions, puis la main au joueur suivant (un seul coup)
         finirTour: (actions, commentaire) => finirTour(actions, commentaire),
         ouvrirCachee: setCachee,
