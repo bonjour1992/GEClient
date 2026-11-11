@@ -64,7 +64,7 @@ import { noter } from "./recherche";
 //             connaissance(type), agentIci(motif), surLaCarte(idUnite), compte(cle),
 //             planetesPossedees(), alliances(), anomalies(), factionsVoisines() }
 // atelier : { etat, index, moi, joueurs, nomDe, connaissance(joueur, type), points(joueur, n),
-//             cartes(type, id, zone), c (la carte de la fiche), infamie(joueur, n),
+//             cartes(type, id, zone), c (la carte de la fiche), numero (la case), infamie(joueur, n),
 //             recherche(joueur, idElement, n), donneur(carte), marqueurs(carte),
 //             zonesDePlanete(id), activee(zone) }
 // ============================================================
@@ -151,6 +151,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         points: (userId, n) => actionsPoints(etat, userId, n),
         cartes: (type, id, ou) => (index.parZone.get(ou) || []).filter(x => !x.cache && x.ref?.type === type && x.ref.id === id),
         c,
+        numero,
         infamie: (userId, n) => actionsPiste(etat, userId, "infamie", n),
         recherche: (userId, idElement, n) => noter(etat, userId, "a", idElement, n),
         // Marqueurs de faction posés sur une carte ; faction qui a fait une promesse (celle du marqueur)
@@ -242,7 +243,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         const effet = { ...s, ...(s.calcul ? s.calcul(outils) : {}) };
         const propre = s.special ? s.special(atelier) : { actions: [] };
 
-        const agent = s.agent ? agentDisponible({ index, moi, search }, s.agent.motif) : null;
+        // (un agent à poser : pas de remplaçant)
+        const agent = s.agent ? agentDisponible({ index, moi, search }, s.agent.motif, { sansRemplacant: !!s.agent.pose }) : null;
         const degat = Number(c?.marques?.degat) || 0;
 
         // Ce que le bouton use : la carte du mercenaire (dans mes éléments actifs) quand le

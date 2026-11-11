@@ -23,9 +23,10 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Habilités | 48 | 20 | 2 | 26 | 9 | 7 | 8 |
 | Unités | 104 | 46 | 58 | 0 | 10 | 13 | 17 |
 | Planètes | 29 | 23 | 2 | 4 | 14 | 11 | 6 |
-| Mercenaires | 40 | 8 | 3 | 29 | 11 | 0 | 0 |
+| Mercenaires | 40 | 14 | 19 | 7 | 18 | 20 | 0 |
 | Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
-| **Total** | **331** | **162** | **67** | **102** | **70** | **51** | **59** |
+| Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
+| **Total** | **333** | **170** | **83** | **80** | **77** | **73** | **59** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -327,50 +328,50 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 
 ## Mercenaires
 
-Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Un bouton de mercenaire use sa carte (elle s'estompe) jusqu'au « Nouveau tour ». « Utilisable comme » un agent n'est pas géré : un mercenaire n'est pas compté parmi les agents. « (passé) » : laissé de côté pour l'instant.
+Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Un bouton de mercenaire use sa carte (elle s'estompe) jusqu'au « Nouveau tour ». « Utilisable comme » un agent : glisser le cube noir du mercenaire (ou sa carte) sur un type d'agent de « Mes agents » — les types à 0 y restent affichés — ou de sa feuille ; ensuite, dès qu'un agent de ce type est utilisé ou dépensé, une fenêtre demande qui agit, l'agent de base ou le mercenaire (utilisé : sa carte est usée ; dépensé : elle est retirée du jeu). Sans agent de ce type, le mercenaire agit d'office. Les mercenaires de combat ont chacun leur bouton sous le combat. « (passé) » : laissé de côté pour l'instant.
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
-| 219 | Rear Admiral Farran | non | — | — | Coût des cuirassés −1 quand il sert de logisticien. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 220 | Suffi An | non | — | — | Coût des croiseurs −1 quand il sert de logisticien. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 221 | Trillossa Aun Mirik | non | — | — | Un destroyeur de plus à la production. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 280 | Evelyne Delouis | non | — | — | Coût des transporteurs −1, vitesse +1. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 281 | Claire Gibson | non | — | — | Bonus le temps d'un combat : pas d'engagement d'un mercenaire dans le cadre de combat. (passé) |
+| 219 | Rear Admiral Farran | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Coût des cuirassés −1 : à la main. |
+| 220 | Suffi An | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Coût des croiseurs −1 : à la main. |
+| 221 | Trillossa Aun Mirik | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Le destroyeur de plus : à la main. |
+| 280 | Evelyne Delouis | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Coût des transporteurs −1, vitesse +1 : à la main. |
+| 281 | Claire Gibson | **oui** | nouveau bouton | Combat terrestre : « Claire Gibson : +1 à vos infanteries » — la carte est usée, le bonus vaut pour ce combat. | — |
 | 282 | Ipswitch | non | — | — | Livraison envers n'importe quelle unité : hors du bouton de livraison actuel. (passé) |
-| 283 | M'aban | non | — | — | Construire un second bâtiment sur une planète. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 284 | So Ata | non | — | — | Interdiction d'engagement, capture d'un vaisseau détruit. (passé) |
+| 283 | M'aban | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Construire un second bâtiment : à la main. |
+| 284 | So Ata | **partiel** | nouveau bouton | Combat spatial, deux boutons : « désigner un vaisseau » (début du combat : la carte est usée, un rappel s'affiche) ; « capturer un vaisseau détruit » (avant « Retirer » : le vaisseau adverse va dans vos éléments actifs, sans ses dégâts). | La restriction d'engagement du vaisseau désigné : à la main. |
 | 285 | Doctor Carrina | **partiel** | nouveau bouton | Fiche de la carte, science : la carte est usée, 1 de recherche sociale, militaire, génétique et spatiale (journal de recherche). | Activer une planète ; ignorer un niveau de prérequis : à la main. |
 | 286 | Xuange | **oui** | nouveau bouton | Fiche de la carte, science : la carte est usée, le joueur choisit X — 2X influence dépensée, X de recherche sociale. | — |
 | 287 | Aktaran | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 4 de recherche (journal de recherche). | La livraison qui le déclenche n'est pas vérifiée. |
 | 288 | Yvin Korduul | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 5 influence, une de vos faveurs est créée. | — |
 | 289 | Sai Seravus (astrophysicienne) | **oui** | nouveau bouton | Fiche de la carte, science : la carte est usée, 1 de recherche spatiale par système à anomalie où vous avez une unité. | — |
-| 290 | Taïk jedz | non | — | — | Placer puis retirer une unité liée au mercenaire, là où il se trouve. (passé) |
+| 290 | Taïk jedz | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Placer puis retirer l'unité liée au mercenaire : à la main. (passé) |
 | 291 | Ahk Ravin | **partiel** | nouveau bouton | Fiche de la carte, science : la carte est usée, 3 ressources, 2 fragments de relique piochés. | Activer la ruine : à la main. |
-| 292 | Carth de Sabledor | non | — | — | Un vaisseau de commerce gratuit à la production. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 293 | Elder Qanoj | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 292 | Carth de Sabledor | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Le vaisseau de commerce gratuit : à la main. |
+| 293 | Elder Qanoj | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Ses 3 votes : non reliés au vote de l'outil. (passé) |
 | 294 | Z'eu | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
-| 295 | Viscount Unlenn | non | — | — | Déplacement hors des règles de blocage. (passé) |
+| 295 | Viscount Unlenn | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Déplacement hors des règles de blocage : à la main. (passé) |
 | 297 | Artuno | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 1 commerce par alliance en cours chez vous. | — |
-| 298 | Acamar | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
-| 299 | Sharsiss | non | — | — | Bonus le temps d'un combat : pas d'engagement d'un mercenaire dans le cadre de combat. (passé) |
+| 298 | Acamar | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Votes copiés sur une autre faction : non reliés au vote de l'outil. (passé) |
+| 299 | Sharsiss | **oui** | nouveau bouton + bouton existant modifié | Combat spatial : un bouton par autre faction du combat — la carte est usée, autant de ses unités que vous en avez au combat ont +1 (les premières qui tirent). Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | — |
 | 300 | Harrugh Gefhara | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
 | 301 | S'Ula Mentarion | non | — | — | Pose d'une unité liée dans un système non contrôlé. (passé) |
 | 302 | Ta Zern | **oui** | nouveau bouton | Fiche de la carte, science : la carte est usée, 1 de recherche génétique par planète que vous possédez. | — |
-| 303 | Baggil Wildpaw | non | — | — | Mercenaire posé sur la planète d'une autre faction, revenu détourné. (passé) |
-| 304 | George Nobin | non | — | — | Livraison augmentée de X : hors du bouton de livraison actuel. (passé) |
+| 303 | Baggil Wildpaw | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Mercenaire posé sur la planète d'une autre faction, revenu détourné : à la main. (passé) |
+| 304 | George Nobin | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Livraison augmentée de X : à la main. (passé) |
 | 349 | Sal Gavda | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité. | — |
-| 350 | Skarvald | non | — | — | Vol de commerce au bombardement. (passé) |
-| 351 | Vasra Ivo | non | — | — | Portée des canons +1 quand il sert d'amiral. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 350 | Skarvald | **oui** | nouveau bouton + bouton existant modifié | Bombardement : « Skarvald : voler du commerce » — la carte est usée, 3 dés lancés par le serveur, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | « Système que vous contrôlez » non vérifié. |
+| 351 | Vasra Ivo | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Portée des canons +1 : à la main. |
 | 352 | Suldhan Wraeg | non | — | — | Marqueurs qui annulent une anomalie pour vos déplacements. (passé) |
 | 353 | Agnlan Oln | **partiel** | nouveau bouton | Fiche de la carte, science : la carte est usée, un plan de relique est pioché dans votre main. | Fabriquer une relique en ignorant 2 fragments : à la main. |
 | 354 | Richtyrian | non | — | — | Bonus d'infanterie sur le monde où il est posé : le propriétaire d'une carte posée sur la carte du jeu n'est pas connu. (passé) |
-| 355 | Mirik Aun Sissiri | non | — | — | Bonus de combat spatial dans un système désigné. (passé) |
-| 356 | Henry Storcher | non | — | — | Commerce par vaisseau perdu dans un combat. (passé) |
-| 357 | Jace X | non | — | — | Bonus le temps d'un combat : pas d'engagement d'un mercenaire dans le cadre de combat. (passé) |
+| 355 | Mirik Aun Sissiri | **oui** | nouveau bouton + bouton existant modifié | Fiche d'un système, phase de mandat : « Mirik Aun Sissiri : +1 au combat spatial dans ce système » — la carte est usée, le bonus vaut jusqu'à la prochaine phase de mandat. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | — |
+| 356 | Henry Storcher | **oui** | nouveau bouton + bouton existant modifié | Combat spatial : « Henry Storcher : +N commerce » — la carte est usée, 1 commerce par vaisseau que vous avez perdu dans ce combat. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | — |
+| 357 | Jace X | **oui** | nouveau bouton + bouton existant modifié | Combat terrestre : « Jace X : +1 à vos unités terrestres » — la carte est usée, le bonus vaut pour ce combat. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | — |
 | 358 | Shipmonger Zsknck | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux non biologiques endommagés, production : la carte du mercenaire est usée, le vaisseau perd ses dégâts sans rien payer. | — |
 | 359 | Sai Seravus (cartographe de Creuss) | non | — | — | Trous de ver alpha et bêta adjacents : règle de déplacement. (passé) |
-| 729 | Gabriel Gibbs | non | — | — | Mobilisation jusqu'à la capacité logistique. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
-| 910 | Ilyane Vorsk | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 729 | Gabriel Gibbs | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Mobilisation jusqu'à la capacité logistique : à la main. |
+| 910 | Ilyane Vorsk | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Ses votes en plus : non reliés au vote de l'outil. (passé) |
 
 ## Promesses
 
@@ -395,6 +396,15 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 | 454 | Tuteur des réfugiés | non | — | — | Lié aux réfugiés, non représentés. (passé) |
 | 458 | Pacte pirate | **partiel** | nouveau bouton | Obtenu par « Diplomatie pirate ». Fiche de la carte, ravitaillement : « payer 2 ressources » (une fois par tour). | Les pirates vous ignorent : à la main. |
 | 870 | Passage de Creuss | non | — | — | Usage des trous de ver delta : règle de déplacement. (passé) |
+
+## Agents et reliques
+
+Agents spéciaux et reliques qui remplacent un agent (même fenêtre de choix que les mercenaires « utilisables comme »).
+
+| n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
+|---|---|---|---|---|---|
+| 142 | Héritier (agent des Winnu) | **oui** | bouton existant modifié | Quand un politique (si vous possédez Mecatol Rex) ou un amiral (sinon) est utilisé ou dépensé, la fenêtre propose un Héritier à sa place ; sans agent de ce type, l'Héritier agit d'office. Dépensé, il va sur la case du tour + 2 de votre feuille au lieu d'être détruit. | Le reprendre au tour dit : à la main (le glisser dans ses agents). |
+| 396 | Noble cryogénisé (relique) | **oui** | bouton existant modifié | Glisser la carte sur un type d'agent de « Mes agents » : elle s'utilise comme cet agent (fenêtre de choix) ; quand elle devrait être dépensée, elle est usée. Usée, elle redevient disponible au « Nouveau tour ». | Changer de type : glisser la carte sur un autre type. |
 
 ## Mots-clés d'unité
 

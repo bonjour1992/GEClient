@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { getHandler } from "../../games";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { PlayerColor } from "../ti5Const";
+import { PlayerColor, turnNumber } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
@@ -615,7 +615,7 @@ export function IconeRessource({ ressource, n, cote = 22 }) {
 // oui, le coût s'ajoute au coup ; non, l'agent n'est pas utilisé.
 // ------------------------------------------------------------
 
-// Contexte de la partie affichée ({ aScript, moi }), tenu à jour par Partie.jsx
+// Contexte de la partie affichée ({ aScript, moi, etat, index, search, aviser }), tenu à jour par Partie.jsx
 let connexion = null;
 
 export const reglerConnexion = contexte => {
@@ -654,8 +654,207 @@ export function payerConnexion(actions) {
         : gardees;
 }
 
-// Agent disponible (non usé) du joueur dont le nom contient `nom`, ou null
-export function agentDisponible({ index, moi, search }, nom) {
+// ------------------------------------------------------------
+// REMPLAÇANTS D'AGENT : « utilisable comme »
+//
+// Un mercenaire « utilisable comme » un agent et la relique Noble
+// cryogénisé (« compte comme tout type d'agent de base ») remplacent
+// un agent : leur carte, dans les éléments actifs du joueur, porte la
+// marque « comme » = identifiant du type d'agent (posée en glissant le
+// cube noir du mercenaire, ou la carte, sur ce type d'agent de sa
+// réserve). L'agent Héritier des Winnu remplace un politique si son
+// joueur possède Mecatol Rex, un amiral sinon.
+//
+// Quand un agent de ce type est utilisé ou dépensé, une fenêtre
+// demande qui agit (choisirRemplacants, appelé par Partie.jsx à
+// l'envoi du coup). Sans agent de ce type, agentDisponible rend le
+// remplaçant, et l'action qui le vise est traduite :
+//
+//   mercenaire  utilisé : sa carte est usée ; dépensé : retirée du jeu
+//   Noble       sa carte est usée, même quand il devrait être dépensé
+//   Héritier    utilisé comme un agent ; dépensé : il attend deux tours
+//               (zone joueur:<u>:tour:<tour + 2>)
+// ------------------------------------------------------------
+
+export const NOBLE = 396;
+export const HERITIER = 142;
+
+export const estCarteRemplacant = c => !!c && !c.cache &&
+    (c.ref?.type === "mercenaire" || (c.ref?.type === "relique" && c.ref.id === NOBLE));
+
+// Carte de remplaçant que désigne un composant : elle-même, ou la carte qui porte ce cube
+export const carteRemplacant = (etat, c) => {
+    const carte = c && !c.ref && c.sur ? etat.composants[c.sur] : c;
+    return estCarteRemplacant(carte) ? carte : null;
+};
+
+const AGENTS_MACRO = {
+    log: /logisticien|g[ée]n[ée]ticien/i,
+    scien: /scientifique/i,
+    neg: /n[ée]gociant/i,
+    diplo: /diplomate/i,
+    pol: /politique/i,
+    amiral: /amiral/i,
+};
+
+// Le texte de la carte dit-il « utilisable comme » ce type d'agent ? (null : texte inconnu)
+export function remplaceType(carte, nomType) {
+
+    if (carte.ref.type === "relique") {
+        return true;
+    }
+
+    const usage = contenuEnCache(carte.ref.id)?.usage;
+
+    if (typeof usage !== "string") {
+        return null;
+    }
+
+    return usage.split(/<[^>]+>|\./)
+        .filter(phrase => /comme/i.test(phrase))
+        .flatMap(phrase => [...phrase.matchAll(/#(log|scien|neg|diplo|pol|amiral)\b/gi)].map(m => m[1].toLowerCase()))
+        .some(macro => AGENTS_MACRO[macro].test(nomType));
+}
+
+// Remplaçants disponibles (non usés) du joueur pour un type d'agent — test(nom du type) -> vrai
+export function remplacantsDisponibles({ index, moi, search }, test) {
+
+    const actifs = index.parZone.get(`joueur:${moi}:actif`) || [];
+    const enService = id => !connexion || connexion.moi !== moi || connexion.aScript(moi, id);
+
+    const cartes = actifs.filter(c => estCarteRemplacant(c) && c.marques?.comme && !c.marques?.use &&
+        (c.ref.type !== "relique" || enService("noble-cryogenise")) &&
+        test(nomElement(search, { type: "agent", id: Number(c.marques.comme) })));
+
+    // Héritier : politique si son joueur possède Mecatol Rex, amiral sinon
+    const role = actifs.some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 34) ? "Politique" : "Amiral";
+
+    const heritiers = enService("heritier") && test(role)
+        ? (index.parZone.get(`joueur:${moi}:agents`) || []).filter(c => c.ref?.type === "agent" && c.ref.id === HERITIER).slice(0, 1)
+        : [];
+
+    return [...cartes, ...heritiers];
+}
+
+// À l'envoi d'un coup : qui agit, l'agent de base ou un remplaçant ?
+export function choisirRemplacants(actions) {
+
+    const liste = (Array.isArray(actions) ? actions : [actions]).filter(Boolean);
+
+    if (!connexion?.etat) {
+        return liste;
+    }
+
+    const { etat, index, moi, search } = connexion;
+    const stock = `joueur:${moi}:agents`;
+    const uses = `joueur:${moi}:agentsUses`;
+    const pris = new Set();
+    const messages = [];
+
+    // Ce que devient l'action quand c'est ce remplaçant qui agit
+    const pour = (r, use) => {
+
+        pris.add(r.id);
+
+        const nom = nomElement(search, r.ref);
+
+        if (r.ref.type === "agent") {
+
+            if (use) {
+                return [{ type: "deplacer", c: r.id, vers: uses }];
+            }
+
+            const retour = etat.tour + 2;
+
+            if (retour > turnNumber) {
+                return [{ type: "supprimer", c: r.id }];
+            }
+
+            messages.push(`${nom} dépensé : il reviendra au tour ${retour} (case du tour ${retour} de votre feuille).`);
+
+            return [{ type: "deplacer", c: r.id, vers: `joueur:${moi}:tour:${retour}` }];
+        }
+
+        if (r.ref.type === "relique") {
+
+            if (!use) {
+                messages.push(`${nom} : usé au lieu d'être dépensé.`);
+            }
+
+            return [{ type: "marquer", c: r.id, marque: "use", valeur: true }];
+        }
+
+        if (!use) {
+            messages.push(`${nom} (mercenaire) est dépensé : sa carte est retirée du jeu.`);
+        }
+
+        return use
+            ? [{ type: "marquer", c: r.id, marque: "use", valeur: true }]
+            : [{ type: "supprimer", c: r.id }];
+    };
+
+    const precision = (r, use) => (r.ref.type === "agent"
+        ? (use ? "" : " — il reviendra dans 2 tours")
+        : (r.ref.type === "relique"
+            ? (use ? " (relique)" : " (relique : usé au lieu d'être dépensé)")
+            : (use ? " (mercenaire)" : " (mercenaire : sa carte sera retirée du jeu)")));
+
+    const resultat = liste.flatMap(action => {
+
+        const c = etat.composants[action.c];
+        const use = action.type === "deplacer" && action.vers === uses;
+        const depense = action.type === "supprimer";
+
+        if (!c || c.cache || !(use || depense) || pris.has(c.id)) {
+            return [action];
+        }
+
+        // Un remplaçant visé directement (rendu par agentDisponible faute d'agent, ou
+        // utilisé depuis le cube à zéro de la réserve)
+        if (estCarteRemplacant(c) && c.marques?.comme && c.zone === `joueur:${moi}:actif`) {
+            return pour(c, use);
+        }
+
+        if (c.ref?.type === "agent" && c.ref.id === HERITIER && c.zone === stock && connexion.aScript(moi, "heritier")) {
+            return depense ? pour(c, false) : [action];
+        }
+
+        // Un de mes agents disponibles : un remplaçant de son type peut agir à sa place
+        if (c.ref?.type !== "agent" || c.zone !== stock) {
+            return [action];
+        }
+
+        const type = nomElement(search, c.ref);
+
+        const candidats = remplacantsDisponibles({ index, moi, search }, nom => nom.toLowerCase() === type.toLowerCase())
+            .filter(r => !pris.has(r.id));
+
+        if (!candidats.length) {
+            return [action];
+        }
+
+        const reponse = window.prompt(
+            `${type} à ${use ? "utiliser" : "dépenser"} — tapez le numéro de votre choix :\n\n` +
+            `1 : ${type} (agent de base)\n` +
+            candidats.map((r, k) => `${k + 2} : ${nomElement(search, r.ref)}${precision(r, use)}`).join("\n"),
+            "1"
+        );
+
+        const choisi = candidats[Math.floor(Number(reponse)) - 2];
+
+        return choisi ? pour(choisi, use) : [action];
+    });
+
+    if (messages.length) {
+        connexion.aviser?.(messages.join(" "));
+    }
+
+    return resultat;
+}
+
+// Agent disponible (non usé) du joueur dont le nom contient `nom`, ou null. Faute
+// d'agent de ce type, un remplaçant (sauf sansRemplacant : l'agent sera posé quelque part)
+export function agentDisponible({ index, moi, search }, nom, { sansRemplacant = false } = {}) {
 
     const motif = new RegExp(nom, "i");
     const agents = (index.parZone.get(`joueur:${moi}:agents`) || []).filter(c => c.ref);
@@ -665,6 +864,14 @@ export function agentDisponible({ index, moi, search }, nom) {
         // (un négociant demandé pour lui-même n'est pas une substitution)
         substitutions.delete(trouve.id);
         return trouve;
+    }
+
+    const remplacant = sansRemplacant
+        ? null
+        : remplacantsDisponibles({ index, moi, search }, type => motif.test(type))[0];
+
+    if (remplacant) {
+        return remplacant;
     }
 
     const negociant = connexion?.moi === moi && connexion.aScript(moi, "connexion")
@@ -869,6 +1076,7 @@ function Pion({ groupe, petit }) {
                 data-composant={c.id}
                 data-groupe={groupe.map(x => x.id).join(",")}
                 data-nom={nom}
+                data-agent-type={typeRef === "agent" ? c.ref.id : undefined}
                 title={nom + (n > 1 ? ` ×${n}` : "")}
                 style={{
                     ...stylePion,
@@ -1594,7 +1802,7 @@ export function Cartes({ zone, zoom = 1, separes }) {
 // Une zone sous forme de boîte : titre, boutons, pions.
 // cartes = zoom : affiche les cartes en entier au lieu de pions.
 // repli = clé : la zone se replie (son titre reste une cible où déposer).
-export function Zone({ zone, titre, filtre, style, cartes, repli, children }) {
+export function Zone({ zone, titre, filtre, style, cartes, repli, children, apres }) {
 
     const { index } = useEngine();
 
@@ -1640,6 +1848,9 @@ export function Zone({ zone, titre, filtre, style, cartes, repli, children }) {
             {!replie && (cartes
                 ? <Cartes zone={zone} zoom={cartes} />
                 : <Pions zone={zone} filtre={filtre} />)}
+
+            {/* (apres : sous les pions — types d'agent à zéro et remplaçants, Remplacants.jsx) */}
+            {!replie && apres}
         </div>
     );
 }
@@ -2389,6 +2600,33 @@ export function Plan({ children, style }) {
 
         const ids = event.ctrlKey ? a.ids : [a.id];
         const pionCible = cible.closest("[data-composant]");
+
+        // Remplaçant d'agent : le cube noir d'un mercenaire, sa carte ou le Noble
+        // cryogénisé, déposé sur un type d'agent de ma réserve (ou de ma feuille),
+        // s'utilisera comme cet agent
+        const caseAgent = cible.closest("[data-agent-type]") || cible.closest('[data-emplacement="agents"][data-filtre]');
+
+        const remplacant = caseAgent && trouverZone(cible) === `joueur:${moi}:agents`
+            ? carteRemplacant(etat, etat.composants[a.id])
+            : null;
+
+        if (remplacant && remplacant.zone === `joueur:${moi}:actif`) {
+
+            const idType = Number(caseAgent.dataset.agentType || caseAgent.dataset.filtre);
+            const type = nomElement(search, { type: "agent", id: idType });
+            const nomRemplacant = nomElement(search, remplacant.ref);
+
+            const commentaire = confirmerRegle(`${nomRemplacant} utilisable comme ${type}`, [
+                remplaceType(remplacant, type) === false &&
+                    `le texte de ${nomRemplacant} ne dit pas « utilisable comme ${type} »`,
+            ]);
+
+            if (commentaire) {
+                envoyer([{ type: "marquer", c: remplacant.id, marque: "comme", valeur: idType }], commentaire);
+            }
+
+            return;
+        }
 
         // Embarquement : une unité transportable déposée sur un vaisseau,
         // ou n'importe quel pion déposé sur un autre avec la touche Maj.

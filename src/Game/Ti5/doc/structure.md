@@ -974,6 +974,34 @@ rompue (`promesseRompue`, `scripts.js`) : la carte retourne dans
 1 infamie. `aScript` d'un mercenaire ou d'une promesse : le joueur a la carte.
 Promesse Vassal : même blocage que Fierté dans `Accord` (`Controle.jsx`).
 
+Remplaçants d'agent, « utilisable comme » (11 novembre) : un mercenaire ou la
+relique Noble cryogénisé remplace un agent quand sa carte (éléments actifs)
+porte la marque `comme` = identifiant du type d'agent. On la pose en glissant
+le cube noir du mercenaire, ou la carte, sur un cube d'agent
+(`data-agent-type`) de « Mes agents » ou sur la case de l'agent de sa feuille
+(`Interaction.jsx`, dépôt). `ReserveAgents` (`Remplacants.jsx`, sous « Mes
+agents ») garde un cube en pointillé pour chaque type d'agent de la feuille
+qui est à zéro, et liste les remplaçants (× : retirer la marque). L'agent
+Héritier remplace un politique si son joueur possède Mecatol Rex, un amiral
+sinon. `choisirRemplacants` (`Interaction.jsx`), appelé par `Partie.jsx` à
+l'envoi de tout coup avec `payerConnexion`, ouvre une fenêtre de choix quand
+un agent de la réserve est utilisé (vers `agentsUses`) ou dépensé
+(`supprimer`) et qu'un remplaçant de son type est disponible ; il traduit
+l'action : mercenaire usé (marque `use`) ou retiré du jeu, Noble toujours usé,
+Héritier dépensé envoyé dans `joueur:<u>:tour:<tour + 2>`. Sans agent du type,
+`agentDisponible` rend le remplaçant (sauf `sansRemplacant`, quand l'agent
+doit être posé quelque part).
+
+Mercenaires de combat (`Combat.jsx`, `boutonsMercenaires`) : un bouton par
+mercenaire dont le joueur a la carte ; elle est usée et l'effet vaut pour ce
+combat — compteur `combat:<lieu>:merc<id>:<camp>`, lu par `bonusScripts`,
+effacé avec le combat. `combat:<lieu>:perdus:<camp>` compte les vaisseaux
+perdus (Henry Storcher). Skarvald : 3 dés lancés par le serveur (marque
+`jetSkarvald` de sa carte), le vol part dans un second coup. So Ata : le
+vaisseau capturé va dans les éléments actifs. Mirik Aun Sissiri : compteur
+`joueur:<u>:mirik` = case + 1, posé depuis la fiche du système à la phase de
+mandat et effacé en revenant à cette phase (`changerPhase`).
+
 `aScript(joueur, id)` : pour une unité ou une planète, le script est en
 service ; pour une **habilité**, elle s'applique au joueur — elle est sur sa
 feuille de faction ou dans ses éléments actifs, ou posée sur la table (elle

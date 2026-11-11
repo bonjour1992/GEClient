@@ -171,7 +171,7 @@ export function MiseEnPlaceJoueur() {
                 return p ? `${hex}:planete:${p.k}` : null;
             },
             // Un de mes agents disponibles dont le nom contient ce motif (ou null)
-            agent: motif => agentDisponible({ index, moi, search }, motif),
+            agent: motif => agentDisponible({ index, moi, search }, motif, { sansRemplacant: true }),
             // Zone d'une habilité de la feuille de faction (emplacement habilite:<rang>)
             habilite: id => {
                 const i = (faction.rules || []).findIndex(lien => Number(lien?.id) === id);

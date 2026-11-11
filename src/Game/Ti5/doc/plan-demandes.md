@@ -332,5 +332,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   7 promesses (Vassal, Pacte de non-agression, Accord de recherche, Accès aux archives impériales,
   Promesse de vente, Frontière ouverte, Pacte pirate). Les autres sont passés : voir les sections
   Mercenaires et Promesses de `implementabilite.md`.
+- ☑ « Utilisable comme » (2026-11-11) : types d'agent à 0 gardés dans « Mes agents », cube noir
+  du mercenaire glissé sur un type d'agent, fenêtre de choix à chaque agent utilisé ou dépensé ;
+  agent Héritier et relique Noble cryogénisé ; un bouton de combat par mercenaire (Claire Gibson,
+  Jace X, Sharsiss, Henry Storcher, Skarvald, So Ata) et Mirik Aun Sissiri sur la fiche du système.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

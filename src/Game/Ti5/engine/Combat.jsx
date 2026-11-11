@@ -267,6 +267,13 @@ function CombatSysteme({ lieu }) {
     const ETAPE = COMBAT + ":etape";
     const PRET = COMBAT + ":pret:";
 
+    // Mercenaires de combat : effet en vigueur le temps de ce combat
+    // (compteur combat:<lieu>:merc<id>:<camp>) ; vaisseaux perdus par un camp
+    // (combat:<lieu>:perdus:<camp>, pour Henry Storcher)
+    const MERC = id => `${COMBAT}:merc${id}:`;
+    const PERDUS = COMBAT + ":perdus:";
+    const estVaisseau = v => (v.u.mot_cle || []).includes("ship");
+
     const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
     const systeme = useElement(tuile ? tuile.ref.id : -1);
     const laPlanete = useElement(planete === null ? -1 : (systeme?.elems?.[planete]?.id ?? -1));
@@ -644,6 +651,9 @@ function CombatSysteme({ lieu }) {
             .some(c => c.ref?.type === "agent" && /scientifique/i.test(nomElement(search, c.ref)));
     };
 
+    // Rang d'une unité parmi celles de son camp qui tirent (Sharsiss : les N premières)
+    const rangDansCamp = v => vaisseaux.filter(x => x.camp === v.camp && x.tire).findIndex(x => x.id === v.id);
+
     function bonusScripts(v) {
 
         if (!v.tire) {
@@ -665,6 +675,13 @@ function CombatSysteme({ lieu }) {
             (sorte === "spatial" || sorte === "canons") && campVise(v) && aScript(campVise(v), "cartographie-de-l-espace") &&
                 systeme?.anomaly && !/^hpl/.test(systeme.anomaly) && [-1, "Cartographie de l'espace"],
             sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
+            // Mercenaires (un bouton chacun, sous le combat) : le temps de ce combat
+            sorte === "terrestre" && v.u.type === "inf" && etat.compteurs[MERC(281) + v.camp] && [1, "Claire Gibson"],
+            sorte === "terrestre" && etat.compteurs[MERC(357) + v.camp] && [1, "Jace X"],
+            sorte === "spatial" && rangDansCamp(v) < (Number(etat.compteurs[MERC(299) + v.camp]) || 0) && [1, "Sharsiss"],
+            // Mirik Aun Sissiri : +1 au combat spatial dans le système désigné à la phase de mandat
+            sorte === "spatial" && v.camp !== NEUTRE &&
+                Number(etat.compteurs[`joueur:${v.camp}:mirik`]) === numero + 1 && [1, "Mirik Aun Sissiri"],
             // Règles de planètes : Jeollr (bombardements −2), Loki (−1 contre qui possède la planète)
             sorte === "bombardement" && idPlanete === 59 && aScript(v.camp, "jeollr") && [-2, "Jeollr"],
             idPlanete === 62 && possesseur !== null && campVise(v) === possesseur && aScript(v.camp, "loki") && [-1, "Loki"],
@@ -790,7 +807,14 @@ function CombatSysteme({ lieu }) {
         const butins = liste.map(butinDe).filter(Boolean).map(b => b.texte);
 
         envoyer(
-            [...liste.flatMap(retrait), { type: "compteur", id: DETRUITS, delta: liste.length }],
+            [
+                ...liste.flatMap(retrait),
+                { type: "compteur", id: DETRUITS, delta: liste.length },
+                // Henry Storcher : les vaisseaux perdus de son joueur sont comptés
+                ...campsJoueurs.filter(u => aScript(u, "henry-storcher"))
+                    .map(u => ({ type: "compteur", id: PERDUS + u, delta: liste.filter(v => v.camp === u && estVaisseau(v)).length }))
+                    .filter(action => action.delta > 0),
+            ],
             [`Combat : ${liste.length} unité(s) détruite(s) retirée(s)`, ...butins].join(" — ")
         );
 
@@ -1120,7 +1144,7 @@ function CombatSysteme({ lieu }) {
             ...(gain ? cochees.map(u => ({ type: "compteur", id: `joueur:${u}:res`, delta: epaves })) : []),
             // Compteurs des scripts de ce combat (Écoles militaires, Récupération)
             ...Object.keys(etat.compteurs)
-                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup):\d+$|:detruits$/.test(id) && etat.compteurs[id])
+                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup|perdus|merc\d+):\d+$|:detruits$/.test(id) && etat.compteurs[id])
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
             ...unites.filter(c => c.marques?.canon).map(c => ({ type: "marquer", c: c.id, marque: "canon", valeur: null })),
             // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
@@ -1129,6 +1153,159 @@ function CombatSysteme({ lieu }) {
     }
 
     const maSelection = selection.filter(id => parId[id]?.camp === moi);
+
+    // --------------------------------------------------------
+    // MERCENAIRES DE COMBAT (scripts.js)
+    //
+    // Un bouton par mercenaire dont j'ai la carte (éléments actifs).
+    // La carte est usée jusqu'au nouveau tour ; l'effet vaut pour ce
+    // combat : bonusScripts lit le compteur combat:<lieu>:merc<id>:<camp>.
+    // --------------------------------------------------------
+
+    const carteMerc = id => (index.parZone.get(`joueur:${moi}:actif`) || [])
+        .find(c => !c.cache && c.ref?.type === "mercenaire" && c.ref.id === id);
+
+    const userMerc = id => ({ type: "marquer", c: carteMerc(id).id, marque: "use", valeur: true });
+    const dejaUse = id => !!carteMerc(id)?.marques?.use && "cette carte est déjà usée (jusqu'au nouveau tour)";
+    const enVigueur = (id, camp = moi) => !!etat.compteurs[MERC(id) + camp] && "déjà en vigueur dans ce combat";
+
+    // (unités encore debout : Sharsiss compte celles qui sont au combat)
+    const mesUnites = vaisseaux.filter(v => v.camp === moi && !estDetruit(v)).length;
+    const mesPertes = (Number(etat.compteurs[PERDUS + moi]) || 0) + aRetirer.filter(v => v.camp === moi && estVaisseau(v)).length;
+    const capturables = aRetirer.filter(v => v.camp !== moi && estVaisseau(v) && !["fs", "sun"].includes(v.u.type));
+
+    // Skarvald : 3 dés lancés par le serveur (marque de sa carte), puis le vol dans un second coup
+    function skarvald(commentaire) {
+
+        const carte = carteMerc(350);
+
+        envoyer([userMerc(350), { type: "des", n: 3, faces: 10, c: carte.id, marque: "jetSkarvald" }], commentaire)
+            .then(reponse => {
+
+                const jets = String(reponse?.etat?.composants?.[carte.id]?.marques?.jetSkarvald ?? "")
+                    .split(",").filter(Boolean).map(Number);
+
+                if (!jets.length) {
+                    return;
+                }
+
+                const reussites = jets.filter(jet => jet <= 5).length;
+
+                const vol = possesseur && possesseur !== moi
+                    ? Math.min(reussites, Number(etat.compteurs[`joueur:${possesseur}:commerce`]) || 0)
+                    : 0;
+
+                const texte = `Skarvald : ${jets.join(", ")} — ${reussites} réussite(s)` +
+                    (possesseur && possesseur !== moi ? `, ${vol} commerce volé(s) à ${nomDe(possesseur)}` : "");
+
+                envoyer([
+                    { type: "marquer", c: carte.id, marque: "jetSkarvald", valeur: null },
+                    vol > 0 && { type: "compteur", id: `joueur:${possesseur}:commerce`, delta: -vol },
+                    vol > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: vol },
+                ].filter(Boolean), texte);
+
+                aviser(texte + ".");
+            });
+    }
+
+    // So Ata : un vaisseau adverse détruit (pas encore retiré) est capturé — il va dans mes éléments actifs
+    function capturer(commentaire) {
+
+        const reponse = capturables.length > 1
+            ? window.prompt("So Ata : quel vaisseau capturer ? Tapez son numéro :\n\n" +
+                capturables.map((v, k) => `${k + 1} : ${nomElement(search, v.c.ref)} (${nomCamp(v.camp)})`).join("\n"), "1")
+            : "1";
+
+        const v = capturables[Math.floor(Number(reponse)) - 1];
+
+        if (!v) {
+            return;
+        }
+
+        envoyer([
+            userMerc(284),
+            { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+            { type: "deplacer", c: v.id, vers: `joueur:${moi}:actif` },
+            { type: "compteur", id: DETRUITS, delta: 1 },
+            v.camp !== NEUTRE && aScript(v.camp, "henry-storcher") && { type: "compteur", id: PERDUS + v.camp, delta: 1 },
+        ].filter(Boolean), `${commentaire} — ${nomElement(search, v.c.ref)} (${nomCamp(v.camp)}) capturé`);
+    }
+
+    const boutonsMercenaires = !joueur ? [] : [
+
+        jeCombats && sorte === "terrestre" && aScript(moi, "claire-gibson") && {
+            cle: "281",
+            nom: "Claire Gibson : +1 au combat pour vos infanteries, ce combat",
+            libelle: "Claire Gibson : +1 à vos infanteries",
+            titre: "Combat terrestre : la carte est usée, vos infanteries ont +1 pour ce combat",
+            obstacles: [dejaUse(281), enVigueur(281)],
+            faire: commentaire => envoyer([userMerc(281), { type: "compteur", id: MERC(281) + moi, valeur: 1 }], commentaire),
+        },
+
+        jeCombats && sorte === "terrestre" && aScript(moi, "jace-x") && {
+            cle: "357",
+            nom: "Jace X : +1 au combat pour vos unités terrestres, ce combat",
+            libelle: "Jace X : +1 à vos unités terrestres",
+            titre: "Combat terrestre : la carte est usée, vos unités ont +1 pour ce combat",
+            obstacles: [dejaUse(357), enVigueur(357)],
+            faire: commentaire => envoyer([userMerc(357), { type: "compteur", id: MERC(357) + moi, valeur: 1 }], commentaire),
+        },
+
+        // Sharsiss : un bouton par autre faction du combat
+        ...(jeCombats && sorte === "spatial" && aScript(moi, "sharsiss") ? campsJoueurs.filter(u => u !== moi).map(u => ({
+            cle: "299-" + u,
+            nom: `Sharsiss : +1 au combat pour ${mesUnites} unité(s) de ${nomDe(u)}, ce combat`,
+            libelle: `Sharsiss : +1 pour ${mesUnites} unité(s) de ${nomDe(u)}`,
+            titre: "Combat spatial : la carte est usée ; autant d'unités de cette faction que vous en avez dans ce combat ont +1 (les premières qui tirent, dans l'ordre de la liste)",
+            obstacles: [dejaUse(299), enVigueur(299, u)],
+            faire: commentaire => envoyer([userMerc(299), { type: "compteur", id: MERC(299) + u, valeur: mesUnites }], commentaire),
+        })) : []),
+
+        sorte === "spatial" && aScript(moi, "henry-storcher") && (jeCombats || mesPertes > 0) && {
+            cle: "356",
+            nom: `Henry Storcher : +${mesPertes} commerce (vos vaisseaux détruits dans ce combat)`,
+            libelle: `Henry Storcher : +${mesPertes} commerce`,
+            titre: "Combat spatial : la carte est usée, 1 commerce par vaisseau que vous avez perdu dans ce combat",
+            obstacles: [dejaUse(356), mesPertes === 0 && "aucun de vos vaisseaux n'a été détruit dans ce combat"],
+            faire: commentaire => envoyer([
+                userMerc(356),
+                mesPertes > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: mesPertes },
+            ].filter(Boolean), commentaire),
+        },
+
+        jeCombats && sorte === "bombardement" && aScript(moi, "skarvald") && {
+            cle: "350",
+            nom: "Skarvald : 3 dés à 5, 1 commerce volé par réussite à qui possède la planète",
+            libelle: "Skarvald : voler du commerce (3 dés à 5)",
+            titre: "Bombardement : la carte est usée, 3 dés ; chaque 5 ou moins vole 1 commerce à la faction qui possède la planète",
+            obstacles: [
+                dejaUse(350),
+                (!possesseur || possesseur === moi) && "aucune autre faction ne possède cette planète (les dés seront lancés pour rien)",
+            ],
+            faire: skarvald,
+        },
+
+        jeCombats && sorte === "spatial" && aScript(moi, "so-ata") && {
+            cle: "284-designer",
+            nom: "So Ata : désigner un vaisseau adverse, qui ne peut engager que les vaisseaux qui l'ont engagé",
+            libelle: "So Ata : désigner un vaisseau (début du combat)",
+            titre: "Début du combat spatial : la carte est usée ; le vaisseau désigné (hors vaisseau amiral et soleil de guerre) ne peut engager que les vaisseaux qui l'ont engagé — à respecter à la main",
+            obstacles: [dejaUse(284), etape > 0 && "le combat a déjà commencé"],
+            faire: commentaire => {
+                envoyer([userMerc(284)], commentaire);
+                aviser("So Ata : le vaisseau désigné ne peut engager que les vaisseaux qui l'ont engagé (à respecter à la main).");
+            },
+        },
+
+        sorte === "spatial" && aScript(moi, "so-ata") && {
+            cle: "284-capturer",
+            nom: "So Ata : capturer un vaisseau adverse détruit",
+            libelle: `So Ata : capturer un vaisseau détruit${capturables.length ? ` (${capturables.length})` : ""}`,
+            titre: "Fin du combat spatial : la carte est usée ; un vaisseau adverse détruit, pas encore retiré (hors vaisseau amiral et soleil de guerre), va dans vos éléments actifs",
+            obstacles: [dejaUse(284), !capturables.length && "aucun vaisseau adverse détruit à capturer (avant « Retirer »)"],
+            faire: commentaire => (capturables.length ? capturer(commentaire) : envoyer([userMerc(284)], commentaire)),
+        },
+    ].filter(Boolean);
 
     // --------------------------------------------------------
     // UNE LIGNE DE VAISSEAU
@@ -1574,6 +1751,20 @@ function CombatSysteme({ lieu }) {
                         >
                             Retirer tous les détruits{aRetirer.length ? ` (${aRetirer.length})` : ""}
                         </button>
+
+                        {/* Mercenaires de combat : un bouton par mercenaire dont j'ai la carte */}
+                        {boutonsMercenaires.map(b => (
+                            <BoutonRegle
+                                key={b.cle}
+                                data-action={"mercenaire-" + b.cle}
+                                nom={b.nom}
+                                obstacles={b.obstacles}
+                                faire={b.faire}
+                                title={b.titre}
+                            >
+                                {b.libelle}
+                            </BoutonRegle>
+                        ))}
 
                         {/* Script Récupération : une case par joueur qui a la technologie */}
                         <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>

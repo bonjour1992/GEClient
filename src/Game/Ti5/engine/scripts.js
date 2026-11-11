@@ -1214,6 +1214,54 @@ export const SCRIPTS = [
             libelle: "Shipmonger Zsknck : réparer ce vaisseau gratuitement",
         }),
 
+    // ---- mercenaires de combat : un bouton chacun dans le cadre du combat (Combat.jsx) ----
+
+    regle("so-ata", "mercenaire", 284, 1794335054892, "So Ata", "nouveau",
+        "Conflit : combat spatial",
+        "Deux boutons : « désigner un vaisseau » au début du combat (la restriction d'engagement est à respecter à la main) ; « capturer un vaisseau détruit » à la fin — il va dans vos éléments actifs."),
+
+    regle("claire-gibson", "mercenaire", 281, 1794335054891, "Claire Gibson", "nouveau",
+        "Conflit : combat terrestre",
+        "La carte est usée : vos infanteries ont +1 pour ce combat."),
+
+    regle("sharsiss", "mercenaire", 299, 1794335054897, "Sharsiss", "nouveau",
+        "Conflit : combat spatial",
+        "La carte est usée : autant d'unités d'une autre faction que vous en avez dans ce combat ont +1 (un bouton par faction)."),
+
+    regle("skarvald", "mercenaire", 350, 1794335054959, "Skarvald", "nouveau",
+        "Conflit : bombardement",
+        "La carte est usée : 3 dés, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète."),
+
+    regle("henry-storcher", "mercenaire", 356, 1794335054961, "Henry Storcher", "nouveau",
+        "Conflit : combat spatial",
+        "La carte est usée : 1 commerce par vaisseau que vous avez perdu dans ce combat."),
+
+    regle("jace-x", "mercenaire", 357, 1789967502290, "Jace X", "nouveau",
+        "Conflit : combat terrestre",
+        "La carte est usée : vos unités terrestres ont +1 pour ce combat."),
+
+    action("mirik-aun-sissiri", "mercenaire", 355, 1794335054961, "Mirik Aun Sissiri", "systeme",
+        "Mandat : la carte est usée, vous avez +1 au combat spatial dans ce système jusqu'à la prochaine phase de mandat.", {
+            phase: "mandat",
+            use: true,
+            visible: outils => /mandat/i.test(outils.phase),
+            special: atelier => ({
+                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:mirik`, valeur: atelier.numero + 1 }],
+                avis: "Mirik Aun Sissiri : +1 au combat spatial dans ce système jusqu'à la prochaine phase de mandat.",
+            }),
+            libelle: "Mirik Aun Sissiri : +1 au combat spatial dans ce système",
+        }),
+
+    // ---- remplaçants d'agent (Interaction.jsx : choisirRemplacants) ----
+
+    regle("heritier", "agent", 142, 1794335054815, "Héritier", "modifie",
+        "Tout agent utilisé ou dépensé : fenêtre de choix",
+        "Utilisable comme politique si vous possédez Mecatol Rex, comme amiral sinon ; dépensé, il attend deux tours sur votre feuille au lieu d'être détruit."),
+
+    regle("noble-cryogenise", "relique", 396, 1794335055002, "Noble cryogénisé", "modifie",
+        "Tout agent utilisé ou dépensé : fenêtre de choix",
+        "Glissez la carte sur un type d'agent de votre réserve : elle s'utilise comme cet agent ; quand elle devrait être dépensée, elle est usée."),
+
     // ---- promesses : boutons de la fiche de la carte (chez moi) ----
 
     regle("vassal", "Promesse", 224, 1794339360457, "Vassal", "modifie",

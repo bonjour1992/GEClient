@@ -145,7 +145,8 @@ export function agentDeStation(planete, choix) {
 // -> { actions, obstacles }
 export function actionsSatellite({ etat, index, moi, search }, zonePlanete, voulu, idPlanete) {
 
-    const agent = voulu ? agentDisponible({ index, moi, search }, voulu.motif) : null;
+    // (l'agent est posé sur la station : pas de remplaçant)
+    const agent = voulu ? agentDisponible({ index, moi, search }, voulu.motif, { sansRemplacant: true }) : null;
 
     const carte = Object.values(etat?.composants || {})
         .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");

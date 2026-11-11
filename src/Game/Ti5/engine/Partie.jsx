@@ -51,7 +51,9 @@ import {
     confirmerRegle,
     reglerConnexion,
     payerConnexion,
+    choisirRemplacants,
 } from "./Interaction";
+import { ReserveAgents } from "./Remplacants";
 import { Preparation } from "./Preparation";
 import { Espace } from "./Espace";
 import { PlateauJoueur, SourcesIllimitees, CaseProduction, MesCompteurs } from "./PlateauJoueur";
@@ -321,8 +323,9 @@ export function Partie({ id }) {
         coups,
         moi,
         joueur: estJoueur,
-        // (payerConnexion : script Connexion, un négociant utilisé à la place d'un autre agent)
-        jouer: actions => p.jouer(payerConnexion(actions)),
+        // (payerConnexion : script Connexion, un négociant utilisé à la place d'un autre agent ;
+        // choisirRemplacants : un mercenaire, le Noble ou un Héritier à la place d'un agent)
+        jouer: actions => p.jouer(choisirRemplacants(payerConnexion(actions))),
         ouvrirFiche: setFiche,
         nomDe: userId => trouver(userId)?.nom || "personne",
         factionDe: userId => trouver(userId)?.faction ?? null,
@@ -340,7 +343,7 @@ export function Partie({ id }) {
         ecrire: p.ecrire,
 
         // Envoie tout de suite ces actions (avec celles en attente) en un coup commenté
-        envoyer: (actions, commentaire, surRefus) => p.envoyer(commentaire, payerConnexion(actions), surRefus),
+        envoyer: (actions, commentaire, surRefus) => p.envoyer(commentaire, choisirRemplacants(payerConnexion(actions)), surRefus),
         couleurDe: userId => (trouver(userId) ? couleurJoueur(trouver(userId)) : null),
 
         // Production (case de la réserve) et message d'erreur de l'en-tête
@@ -421,7 +424,7 @@ export function Partie({ id }) {
         setCombatVu,
     };
 
-    reglerConnexion({ aScript: ctx.aScript, moi });
+    reglerConnexion({ aScript: ctx.aScript, moi, etat, index, search, aviser: setAvis });
 
     // Combats et blocages de déplacement en cours : l'onglet Conflit est mis
     // en avant, d'une couleur différente selon que j'y ai des unités ou non
@@ -607,8 +610,9 @@ export function Partie({ id }) {
 
     // Fin d'une phase : les unités « usées » sont de nouveau disponibles
     const retraitUse = Object.values(etat.composants)
-        // (et les mercenaires usés, les tokens Infiltration usés par l'habilité du même nom)
-        .filter(c => !c.cache && (["unit", "mercenaire"].includes(c.ref?.type) || (c.ref?.type === "token" && c.ref.id === 882)) &&
+        // (et les mercenaires usés, le Noble cryogénisé, les tokens Infiltration usés par l'habilité du même nom)
+        .filter(c => !c.cache && (["unit", "mercenaire"].includes(c.ref?.type) ||
+            (c.ref?.type === "token" && c.ref.id === 882) || (c.ref?.type === "relique" && c.ref.id === 396)) &&
             c.marques?.use)
         .map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false }));
 
@@ -633,6 +637,12 @@ export function Partie({ id }) {
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
+                // On arrive à la phase de mandat : le système désigné par Mirik Aun Sissiri ne l'est plus
+                ...(pas > 0 && /mandat/i.test(phase.nom)
+                    ? Object.keys(etat.compteurs)
+                        .filter(id => /^joueur:\d+:mirik$/.test(id) && etat.compteurs[id])
+                        .map(id => ({ type: "compteur", id, valeur: 0 }))
+                    : []),
                 ...remiseDesPasses,
                 // Nouvelle phase : l'ordre des marqueurs d'initiative prend effet
                 ...(pas > 0 ? figerOrdre : []),
@@ -862,11 +872,11 @@ export function Partie({ id }) {
             ]);
 
             if (commentaire) {
-                p.envoyer(commentaire, [
+                p.envoyer(commentaire, choisirRemplacants([
                     politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
                     { type: "deplacer", c: id, vers: `general:agenda:${etat.tour + 1}` },
                     { type: "compteur", id: compteur, valeur: etat.tour },
-                ]);
+                ]));
             }
 
             return true;
@@ -907,9 +917,9 @@ export function Partie({ id }) {
 
         if (achete.ref.type === "agent" && (c.zone === stock || c.zone === uses)) {
             // (Ctrl + clic : dépensé — le script Bio stimulant propose de l'user à la place)
-            p.jouer(event.ctrlKey
+            p.jouer(choisirRemplacants(event.ctrlKey
                 ? depenserAgent(ctx, c, nomElement(search, c.ref))
-                : { type: "deplacer", c: id, vers: c.zone === stock ? uses : stock });
+                : { type: "deplacer", c: id, vers: c.zone === stock ? uses : stock }));
 
             return true;
         }
@@ -1036,10 +1046,10 @@ export function Partie({ id }) {
             return;
         }
 
-        p.jouer([
+        p.jouer(choisirRemplacants([
             { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` },
             { type: "partie", joueurActif: suivantId },
-        ]);
+        ]));
     }
 
     // --------------------------------------------------------
@@ -1680,6 +1690,7 @@ export function Partie({ id }) {
                                 zone={`joueur:${moi}:agents`}
                                 titre="Mes agents (clic : utiliser, Ctrl + clic : retirer)"
                                 repli="agents"
+                                apres={<ReserveAgents />}
                             />
                             <Zone zone={`joueur:${moi}:agentsUses`} titre="Mes agents usés" repli="agentsUses" />
 
