@@ -327,5 +327,10 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   gravitationnelle, Combat pirate, Khan (3), Négocier avec les rebelles, Rébellion armée, Armer
   les rebelles, Vote du conclave, Achat de votes, Réfugiés, Entraîner les milices, Enrôlement des
   milices, Essaim de drones.
+- ☑ Mercenaires et promesses (2026-11-11) : 11 mercenaires (Doctor Carrina, Xuange, Aktaran, Yvin
+  Korduul, Sai Seravus, Ahk Ravin, Artuno, Ta Zern, Sal Gavda, Agnlan Oln, Shipmonger Zsknck) et
+  7 promesses (Vassal, Pacte de non-agression, Accord de recherche, Accès aux archives impériales,
+  Promesse de vente, Frontière ouverte, Pacte pirate). Les autres sont passés : voir les sections
+  Mercenaires et Promesses de `implementabilite.md`.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

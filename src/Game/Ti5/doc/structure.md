@@ -960,6 +960,20 @@ pas d'influence. Infiltration : jeton créé au retrait d'un vaisseau détruit
 (`Controle.jsx`). Présence de cache : fragment pioché dans `explorer`
 (`Espace.jsx`).
 
+Mercenaires et promesses (11 novembre) : scripts de sorte `action`, lieu
+`carte` — le bouton est sur la fiche de la carte, et seulement chez qui la
+garde (zone `joueur:<u>:actif` ou `joueur:<u>:tour:<n>`). Un bouton de
+mercenaire use sa carte (marque `use`, retirée à « Nouveau tour » avec celle
+des unités) ; avec `cible`, il est montré sur la fiche de mes unités qui
+conviennent (Shipmonger Zsknck) et c'est toujours la carte du mercenaire qui
+est usée. `demande` fait choisir un montant X au joueur, passé à
+`calcul(outils, X)` (Xuange). `outils` compte aussi les planètes possédées,
+les alliances, les anomalies occupées et les factions voisines. Promesse
+rompue (`promesseRompue`, `scripts.js`) : la carte retourne dans
+`general:promesses`, son marqueur est retiré, et la faction du marqueur gagne
+1 infamie. `aScript` d'un mercenaire ou d'une promesse : le joueur a la carte.
+Promesse Vassal : même blocage que Fierté dans `Accord` (`Controle.jsx`).
+
 `aScript(joueur, id)` : pour une unité ou une planète, le script est en
 service ; pour une **habilité**, elle s'applique au joueur — elle est sur sa
 feuille de faction ou dans ses éléments actifs, ou posée sur la table (elle

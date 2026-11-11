@@ -69,6 +69,25 @@ const reductionAgent = (id, carte, ecritLe, nom, motif, pluriel) => ({
 
 // Agents utilisés par plusieurs boutons d'action
 const SCIENTIFIQUE = { motif: "scientifique", nom: "scientifique", depense: false };
+
+// Promesse rompue (bouton de sa fiche) : la carte retourne à la réserve de promesses, son
+// marqueur est retiré, et la faction qui l'avait faite gagne 1 infamie
+const promesseRompue = atelier => {
+
+    const donneur = atelier.donneur(atelier.c);
+
+    return {
+        actions: [
+            ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
+            { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+            ...(donneur ? atelier.infamie(donneur, 1) : []),
+        ],
+        sans: donneur ? null : "aucun marqueur de faction sur cette promesse (personne ne gagnera d'infamie)",
+        avis: donneur ? `Promesse rompue : ${atelier.nomDe(donneur)} gagne 1 infamie.` : "",
+    };
+};
+
+const ROMPUE = "Promesse rompue : retour à la réserve, la faction gagne 1 infamie";
 const LOGISTICIEN = { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: false };
 
 export const SCRIPTS = [
@@ -1083,6 +1102,188 @@ export const SCRIPTS = [
             libelle: "Infiltration : +4 recherche (use un scientifique, 2 infiltrations)",
         }),
 
+    // ---- mercenaires : boutons de la fiche de leur carte (dans mes éléments actifs) ; la
+    //      carte est usée jusqu'au nouveau tour ----
+
+    action("doctor-carrina", "mercenaire", 285, 1786999216593, "Doctor Carrina", "carte",
+        "Science : la carte est usée, 1 de recherche sociale, militaire, génétique et spatiale (la planète à activer : à la main).", {
+            phase: "science",
+            use: true,
+            recherche: [["soc", 1], ["mil", 1], ["gen", 1], ["spa", 1]],
+            avis: "Doctor Carrina : activez une planète à la main.",
+            libelle: "Doctor Carrina : recherche sociale, militaire, génétique et spatiale",
+        }),
+
+    action("xuange", "mercenaire", 286, 1789968499216, "Xuange", "carte",
+        "Science : la carte est usée, dépensez 2X influence, X de recherche sociale.", {
+            phase: "science",
+            use: true,
+            recherche: [["soc", 1]],
+            demande: {
+                question: "Xuange : combien de recherche sociale (2 influence chacune) ?",
+                max: outils => Math.max(1, Math.floor(outils.compte("inf") / 2)),
+            },
+            calcul: (outils, x = 1) => ({ cout: { inf: 2 * x }, recherche: [["soc", x]] }),
+            libelle: "Xuange : 2X influence → X recherche sociale",
+        }),
+
+    action("aktaran", "mercenaire", 287, 1787903345632, "Aktaran", "carte",
+        "Diplomatie, lors d'une livraison : la carte est usée, 4 de recherche d'une technologie que la cible possède.", {
+            phase: "diplomatie",
+            use: true,
+            recherche: [["", 4]],
+            libelle: "Aktaran : +4 recherche (lors d'une livraison)",
+        }),
+
+    action("yvin-korduul", "mercenaire", 288, 1789968562567, "Yvin Korduul", "carte",
+        "Diplomatie : la carte est usée, dépensez 5 influence, vous produisez une de vos faveurs.", {
+            phase: "diplomatie",
+            use: true,
+            cout: { inf: 5 },
+            faveur: 1,
+            libelle: "Yvin Korduul : une faveur (5 influence)",
+        }),
+
+    action("sai-seravus", "mercenaire", 289, 1794335054893, "Sai Seravus", "carte",
+        "Science : la carte est usée, 1 de recherche spatiale par système à anomalie où vous avez une unité.", {
+            phase: "science",
+            use: true,
+            recherche: [["spa", 1]],
+            calcul: outils => (outils.anomalies() > 0
+                ? { recherche: [["spa", outils.anomalies()]] }
+                : { recherche: [], sans: "vous n'avez d'unité dans aucun système à anomalie" }),
+            libelle: "Sai Seravus : recherche spatiale (anomalies où vous avez une unité)",
+        }),
+
+    action("ahk-ravin", "mercenaire", 291, 1789877845168, "Ahk Ravin", "carte",
+        "Science : la carte est usée, dépensez 3 ressources, 2 fragments de relique sont piochés (la ruine à activer : à la main).", {
+            phase: "science",
+            use: true,
+            cout: { res: 3 },
+            pioche: { de: "pioche:fragments", vers: "fragments", n: 2 },
+            avis: "Ahk Ravin : activez la ruine à la main.",
+            libelle: "Ahk Ravin : 2 fragments (3 ressources)",
+        }),
+
+    action("artuno", "mercenaire", 297, 1794335054896, "Artuno", "carte",
+        "Diplomatie : la carte est usée, 1 commerce par alliance en cours chez vous.", {
+            phase: "diplomatie",
+            use: true,
+            calcul: outils => (outils.alliances() > 0
+                ? { gains: { commerce: outils.alliances() } }
+                : { sans: "vous n'avez aucune alliance" }),
+            libelle: "Artuno : 1 commerce par alliance",
+        }),
+
+    action("ta-zern", "mercenaire", 302, 1794335054899, "Ta Zern", "carte",
+        "Science : la carte est usée, 1 de recherche génétique par planète que vous possédez.", {
+            phase: "science",
+            use: true,
+            recherche: [["gen", 1]],
+            calcul: outils => (outils.planetesPossedees() > 0
+                ? { recherche: [["gen", outils.planetesPossedees()]] }
+                : { recherche: [], sans: "vous ne possédez aucune planète" }),
+            libelle: "Ta Zern : recherche génétique (1 par planète possédée)",
+        }),
+
+    action("sal-gavda", "mercenaire", 349, 1794335054958, "Sal Gavda", "carte",
+        "Diplomatie : la carte est usée, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité.", {
+            phase: "diplomatie",
+            use: true,
+            calcul: outils => (outils.factionsVoisines() > 0
+                ? { gains: { commerce: outils.factionsVoisines() } }
+                : { sans: "aucune faction ne possède de planète dans un système où vous avez une unité" }),
+            libelle: "Sal Gavda : 1 commerce par faction voisine",
+        }),
+
+    action("agnlan-oln", "mercenaire", 353, 1789878760208, "Agnlan Oln", "carte",
+        "Science : la carte est usée, un plan de relique est pioché dans votre main.", {
+            phase: "science",
+            use: true,
+            pioche: { de: "pioche:relique", vers: "main" },
+            libelle: "Agnlan Oln : piocher un plan de relique",
+        }),
+
+    action("shipmonger-zsknck", "mercenaire", 358, 1794335054962, "Shipmonger Zsknck", "unite",
+        "Production : la carte du mercenaire est usée, un de vos vaisseaux non biologiques est réparé gratuitement (bouton de la fiche du vaisseau).", {
+            phase: "production",
+            use: true,
+            cible: (contenu, c) => (contenu?.mot_cle || []).includes("ship") && !(contenu?.mot_cle || []).includes("bio") &&
+                Number(c?.marques?.degat) > 0,
+            degat: -99,
+            libelle: "Shipmonger Zsknck : réparer ce vaisseau gratuitement",
+        }),
+
+    // ---- promesses : boutons de la fiche de la carte (chez moi) ----
+
+    regle("vassal", "Promesse", 224, 1794339360457, "Vassal", "modifie",
+        "Conflit : conflit d'accord (revendication)",
+        "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez."),
+
+    action("vassal-rompu", "Promesse", 224, 1794339360457, "Vassal : promesse rompue", "carte",
+        "Si vous perdez un de vos mondes nataux : la promesse retourne à la réserve et la faction qui l'a faite gagne 1 infamie.", {
+            special: promesseRompue,
+            libelle: ROMPUE,
+        }),
+
+    action("pacte-de-non-agression-rompu", "Promesse", 225, 1794335054861, "Pacte de non-agression : rompu", "carte",
+        "Si la faction qui vous l'a fourni fait un engagement contre vous : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
+            special: promesseRompue,
+            libelle: ROMPUE,
+        }),
+
+    action("accord-de-recherche", "Promesse", 335, 1794335054917, "Accord de recherche", "carte",
+        "Quand la faction recherche une technologie : vous gagnez 2 de recherche dans celle-ci (notée au journal de recherche).", {
+            recherche: [["", 2]],
+            libelle: "Accord de recherche : +2 recherche (la faction recherche une technologie)",
+        }),
+
+    action("acces-aux-archives-imperiales", "Promesse", 370, 1794335054966, "Accès aux archives impériales", "carte",
+        "Science : use un scientifique et activez Mecatol Rex, 3 de recherche ; les Winnu gagnent autant de recherche.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            recherche: [["", 3]],
+            special: atelier => {
+
+                const zones = atelier.zonesDePlanete(34);
+                const libre = zones.find(z => !atelier.activee(z));
+                const winnu = atelier.joueurs.find(j => Number(j.faction) === 143 && j.userId !== atelier.moi);
+
+                return {
+                    actions: [
+                        libre && { type: "creer", jeton: "activation", zone: libre },
+                        winnu && atelier.recherche(winnu.userId, 370, 3),
+                    ],
+                    sans: !zones.length
+                        ? "Mecatol Rex n'est pas sur la carte"
+                        : (!libre ? "Mecatol Rex est déjà activée" : null),
+                    avis: winnu ? `Accès aux archives impériales : ${atelier.nomDe(winnu.userId)} gagne aussi 3 de recherche.` : "",
+                };
+            },
+            libelle: "Accès aux archives impériales : +3 recherche (use un scientifique, active Mecatol Rex)",
+        }),
+
+    action("promesse-de-vente-rompue", "Promesse", 383, 1794335054976, "Promesse de vente : rompue", "carte",
+        "Si la faction ne vous a pas fourni l'élément à l'échéance : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
+            special: promesseRompue,
+            libelle: ROMPUE,
+        }),
+
+    action("frontiere-ouverte-rompue", "Promesse", 384, 1794335054976, "Frontière ouverte : rompue", "carte",
+        "Si la faction bloque un de vos mouvements : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
+            special: promesseRompue,
+            libelle: ROMPUE,
+        }),
+
+    action("pacte-pirate", "Promesse", 458, 1794339360468, "Pacte pirate", "carte",
+        "Ravitaillement : dépensez 2 ressources pour garder le pacte (une fois par tour) ; sinon renvoyez la carte à la réserve.", {
+            phase: "ravit",
+            nomPhase: "ravitaillement",
+            cout: { res: 2 },
+            parTour: true,
+            libelle: "Pacte pirate : payer 2 ressources (ravitaillement)",
+        }),
+
     action("confrerie-de-mercenaire-pioche", "habilite", 764, 1794335055080, "Confrérie de mercenaire", "bandeau",
         "Recrutement : piochez un mercenaire dans votre main, à poser sur la case de recrutement de votre choix (une fois par tour).", {
             phase: "recrut",
@@ -1106,9 +1307,11 @@ function action(id, type, carte, ecritLe, nom, lieu, description, spec) {
         mode: "nouveau",
         ou: {
             unite: "Fiche de l'unité",
+            carte: "Fiche de la carte",
             planete: "Fiche d'un système, à côté de la planète",
             systeme: "Fiche d'un système, en tête",
             bandeau: "Bandeau « À faire »",
+            plateau: "Plateau joueur",
         }[lieu],
         carte: { type, id: carte },
         aussi,

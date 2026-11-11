@@ -23,7 +23,9 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Habilités | 48 | 20 | 2 | 26 | 9 | 7 | 8 |
 | Unités | 104 | 46 | 58 | 0 | 10 | 13 | 17 |
 | Planètes | 29 | 23 | 2 | 4 | 14 | 11 | 6 |
-| **Total** | **274** | **149** | **62** | **63** | **52** | **50** | **59** |
+| Mercenaires | 40 | 8 | 3 | 29 | 11 | 0 | 0 |
+| Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
+| **Total** | **331** | **162** | **67** | **102** | **70** | **51** | **59** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -322,6 +324,77 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 508 | Université polytechnique | non | — (passé) | — | Agent tiré au ravitaillement, achats par commerce ou livraison. (difficile) |
 | 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. | — |
 | 784 | Anneau Arcturus | **oui** | bouton existant modifié + nouveau bouton | « Entretien » : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (use un scientifique). | — |
+
+## Mercenaires
+
+Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Un bouton de mercenaire use sa carte (elle s'estompe) jusqu'au « Nouveau tour ». « Utilisable comme » un agent n'est pas géré : un mercenaire n'est pas compté parmi les agents. « (passé) » : laissé de côté pour l'instant.
+
+| n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
+|---|---|---|---|---|---|
+| 219 | Rear Admiral Farran | non | — | — | Coût des cuirassés −1 quand il sert de logisticien. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 220 | Suffi An | non | — | — | Coût des croiseurs −1 quand il sert de logisticien. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 221 | Trillossa Aun Mirik | non | — | — | Un destroyeur de plus à la production. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 280 | Evelyne Delouis | non | — | — | Coût des transporteurs −1, vitesse +1. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 281 | Claire Gibson | non | — | — | Bonus le temps d'un combat : pas d'engagement d'un mercenaire dans le cadre de combat. (passé) |
+| 282 | Ipswitch | non | — | — | Livraison envers n'importe quelle unité : hors du bouton de livraison actuel. (passé) |
+| 283 | M'aban | non | — | — | Construire un second bâtiment sur une planète. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 284 | So Ata | non | — | — | Interdiction d'engagement, capture d'un vaisseau détruit. (passé) |
+| 285 | Doctor Carrina | **partiel** | nouveau bouton | Fiche de la carte, science : la carte est usée, 1 de recherche sociale, militaire, génétique et spatiale (journal de recherche). | Activer une planète ; ignorer un niveau de prérequis : à la main. |
+| 286 | Xuange | **oui** | nouveau bouton | Fiche de la carte, science : la carte est usée, le joueur choisit X — 2X influence dépensée, X de recherche sociale. | — |
+| 287 | Aktaran | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 4 de recherche (journal de recherche). | La livraison qui le déclenche n'est pas vérifiée. |
+| 288 | Yvin Korduul | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 5 influence, une de vos faveurs est créée. | — |
+| 289 | Sai Seravus (astrophysicienne) | **oui** | nouveau bouton | Fiche de la carte, science : la carte est usée, 1 de recherche spatiale par système à anomalie où vous avez une unité. | — |
+| 290 | Taïk jedz | non | — | — | Placer puis retirer une unité liée au mercenaire, là où il se trouve. (passé) |
+| 291 | Ahk Ravin | **partiel** | nouveau bouton | Fiche de la carte, science : la carte est usée, 3 ressources, 2 fragments de relique piochés. | Activer la ruine : à la main. |
+| 292 | Carth de Sabledor | non | — | — | Un vaisseau de commerce gratuit à la production. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 293 | Elder Qanoj | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 294 | Z'eu | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 295 | Viscount Unlenn | non | — | — | Déplacement hors des règles de blocage. (passé) |
+| 297 | Artuno | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 1 commerce par alliance en cours chez vous. | — |
+| 298 | Acamar | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 299 | Sharsiss | non | — | — | Bonus le temps d'un combat : pas d'engagement d'un mercenaire dans le cadre de combat. (passé) |
+| 300 | Harrugh Gefhara | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 301 | S'Ula Mentarion | non | — | — | Pose d'une unité liée dans un système non contrôlé. (passé) |
+| 302 | Ta Zern | **oui** | nouveau bouton | Fiche de la carte, science : la carte est usée, 1 de recherche génétique par planète que vous possédez. | — |
+| 303 | Baggil Wildpaw | non | — | — | Mercenaire posé sur la planète d'une autre faction, revenu détourné. (passé) |
+| 304 | George Nobin | non | — | — | Livraison augmentée de X : hors du bouton de livraison actuel. (passé) |
+| 349 | Sal Gavda | **oui** | nouveau bouton | Fiche de la carte, diplomatie : la carte est usée, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité. | — |
+| 350 | Skarvald | non | — | — | Vol de commerce au bombardement. (passé) |
+| 351 | Vasra Ivo | non | — | — | Portée des canons +1 quand il sert d'amiral. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 352 | Suldhan Wraeg | non | — | — | Marqueurs qui annulent une anomalie pour vos déplacements. (passé) |
+| 353 | Agnlan Oln | **partiel** | nouveau bouton | Fiche de la carte, science : la carte est usée, un plan de relique est pioché dans votre main. | Fabriquer une relique en ignorant 2 fragments : à la main. |
+| 354 | Richtyrian | non | — | — | Bonus d'infanterie sur le monde où il est posé : le propriétaire d'une carte posée sur la carte du jeu n'est pas connu. (passé) |
+| 355 | Mirik Aun Sissiri | non | — | — | Bonus de combat spatial dans un système désigné. (passé) |
+| 356 | Henry Storcher | non | — | — | Commerce par vaisseau perdu dans un combat. (passé) |
+| 357 | Jace X | non | — | — | Bonus le temps d'un combat : pas d'engagement d'un mercenaire dans le cadre de combat. (passé) |
+| 358 | Shipmonger Zsknck | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux non biologiques endommagés, production : la carte du mercenaire est usée, le vaisseau perd ses dégâts sans rien payer. | — |
+| 359 | Sai Seravus (cartographe de Creuss) | non | — | — | Trous de ver alpha et bêta adjacents : règle de déplacement. (passé) |
+| 729 | Gabriel Gibbs | non | — | — | Mobilisation jusqu'à la capacité logistique. Sert d'agent pour une action précise : un mercenaire n'est pas compté parmi les agents. (passé) |
+| 910 | Ilyane Vorsk | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+
+## Promesses
+
+Cartes de la réserve de promesses, chez la faction qui les garde (éléments actifs ou promesse à durée) ; le marqueur posé dessus est celui de la faction qui a fait la promesse. « (passé) » : laissé de côté pour l'instant.
+
+| n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
+|---|---|---|---|---|---|
+| 224 | Vassal | **partiel** | bouton existant modifié + nouveau bouton | Conflit d'accord : « Accepter » est grisé pour le camp qui possède la planète revendiquée. Fiche de la carte : « Promesse rompue » (monde natal perdu) — retour à la réserve, la faction du marqueur gagne 1 infamie. | Donner sa faveur aux tours pairs ; fins de promesse sans infamie : à la main. |
+| 225 | Pacte de non-agression | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — la carte retourne à la réserve, son marqueur est retiré, la faction qui l'a faite gagne 1 infamie. | — |
+| 226 | Redevance de protection | non | — | — | Paiements au choix de deux factions à chaque ravitaillement. (passé) |
+| 227 | Soutien politique | non | — | — | Issue annoncée et vote à hauteur de la promesse : non relié au vote de l'outil. (passé) |
+| 228 | Concession commerciale | non | — | — | Effet pas clair pour l'outil. (passé) |
+| 262 | Embuscade | non | — | — | Unité d'une autre faction posée et contrôlée le temps d'un combat. (passé) |
+| 335 | Accord de recherche | **oui** | nouveau bouton | Fiche de la carte : « +2 recherche », notée au journal de recherche. | Le déclenchement (la faction recherche une technologie) est à la main. |
+| 336 | Commerce d'esclave | non | — | — | Jet par infanterie détruite, capture et dette. (passé) |
+| 368 | Protecteur de l'empire | non | — | — | Bonus de combat contre une faction plus infâme. (passé) |
+| 369 | Pupille de l'empire | non | — | — | Réaction des Winnu à une conquête. (passé) |
+| 370 | Accès aux archives impériales | **oui** | nouveau bouton | Fiche de la carte, science : use un scientifique, Mecatol Rex est activée, 3 de recherche pour vous et autant pour les Winnu (journal de recherche). | — |
+| 383 | Promesse de vente | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — retour à la réserve, la faction qui l'a faite gagne 1 infamie. | L'élément promis et l'échéance : à la main. |
+| 384 | Frontière ouverte | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — retour à la réserve, la faction qui l'a faite gagne 1 infamie. | — |
+| 421 | Partage de technologie | non | — | — | Technologie d'une autre faction dont on bénéficie. (passé) |
+| 454 | Tuteur des réfugiés | non | — | — | Lié aux réfugiés, non représentés. (passé) |
+| 458 | Pacte pirate | **partiel** | nouveau bouton | Obtenu par « Diplomatie pirate ». Fiche de la carte, ravitaillement : « payer 2 ressources » (une fois par tour). | Les pirates vous ignorent : à la main. |
+| 870 | Passage de Creuss | non | — | — | Usage des trous de ver delta : règle de déplacement. (passé) |
 
 ## Mots-clés d'unité
 

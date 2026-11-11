@@ -380,6 +380,15 @@ export function Partie({ id }) {
                     (!!script.feuille && technologies[userId]?.connaissance?.[script.feuille] !== undefined);
             }
 
+            // Mercenaire, promesse : le joueur a la carte (éléments actifs, promesse à durée)
+            if (["mercenaire", "Promesse"].includes(script.carte.type)) {
+
+                const zone = new RegExp(`^joueur:${userId}:(actif|tour:\\d+)$`);
+
+                return [...index.parZone].some(([z, contenu]) => zone.test(z) &&
+                    contenu.some(c => !c.cache && c.ref?.type === script.carte.type && c.ref.id === script.carte.id));
+            }
+
             return true;
         },
 
@@ -598,8 +607,9 @@ export function Partie({ id }) {
 
     // Fin d'une phase : les unités « usées » sont de nouveau disponibles
     const retraitUse = Object.values(etat.composants)
-        // (et les tokens Infiltration usés par l'habilité du même nom)
-        .filter(c => !c.cache && (c.ref?.type === "unit" || (c.ref?.type === "token" && c.ref.id === 882)) && c.marques?.use)
+        // (et les mercenaires usés, les tokens Infiltration usés par l'habilité du même nom)
+        .filter(c => !c.cache && (["unit", "mercenaire"].includes(c.ref?.type) || (c.ref?.type === "token" && c.ref.id === 882)) &&
+            c.marques?.use)
         .map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false }));
 
     // Marqueurs de trêve, où qu'ils soient
