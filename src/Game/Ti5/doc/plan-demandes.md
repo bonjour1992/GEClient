@@ -360,5 +360,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   technologie militaire « Pluie d'astéroïdes » (#941, niveau 4, feuille militaire de Mentak
   case 3), marqueur « Ciblage astéroïde » (#940, `ti/token/ciblage.svg`), habilité « Racket »
   (#942) ajoutée à la faction. Noms choisis faute d'indication ; règles non scriptées.
+- ☑ Issues GEClient #2 et #3 (2026-11-18) : unités de base dans la réserve neutre ; ni
+  bombardement ni combat terrestre sur un satellite ou une planète spéciale (rouge gris) ;
+  un seul bombardement par unité et par tour. Verso de faction : illustration, système et
+  infos de planète côte à côte. Détail : `combat.md`, `structure.md`.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

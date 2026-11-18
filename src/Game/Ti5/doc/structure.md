@@ -1496,9 +1496,11 @@ ressources, fragments, cartes ; ils s'affichent en haut à droite de la carte
 Données de la faction (`faction.jsx`, classe `Faction`) : `planete`, `population`,
 `gouvernement`, `environnement`, `descriptionPlanete` (planète natale) et `forces`
 (9 valeurs de 0 à 4, dans l'ordre de `FORCES` : Espace, Sol, Technologie, Commerce,
-Économie, Politique, Défense, Mobilité, Exploration). Au verso, `InfosPlanete`
-(`data-planete-faction`) est en haut à droite, sur la case du système de départ, qui
-se décale alors de 45 px vers la gauche ; `GraphiqueForces` (`data-forces-faction`,
+Économie, Politique, Défense, Mobilité, Exploration). Au verso, quand il y a des
+infos de planète, le haut des colonnes 2 et 3 devient une rangée (`data-haut-verso`) :
+illustration (largeur restante), système de départ (240 px, réduit à 70 % depuis son
+coin haut gauche), puis `InfosPlanete` (`data-planete-faction`, 210 px) à droite — rien
+ne se superpose ; sans infos, la disposition d'origine reste. `GraphiqueForces` (`data-forces-faction`,
 graphique en étoile aux couleurs de la faction) est en bas de la colonne de gauche.
 L'un et l'autre ne s'affichent pas quand leurs données sont vides. Le formulaire
 a les sections « Planète natale » et « Forces » (`data-forces-formulaire`).

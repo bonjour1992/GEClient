@@ -975,7 +975,13 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Bouton d'un combat : « voir » (bouton simple) s'il est déjà ouvert ;
     // sinon l'ouvrir est un effet du jeu, attendu aux phases de combat
-    const boutonCombat = (lieu, libelle, titre) => (combats.includes(lieu)
+    // Combat terrestre, bombardement, raid : seulement sur une planète (type « pla » ou non
+    // renseigné), pas sur un satellite ni une planète spéciale
+    const pasUnePlanete = planete => ["sat", "spe"].includes(planete?.type) &&
+        `${planete.type === "sat" ? "un satellite" : "une planète spéciale"} n'a ni bombardement ni combat terrestre`;
+
+    // (autres : obstacles en plus, ex. une planète qui n'en est pas vraiment une)
+    const boutonCombat = (lieu, libelle, titre, autres = []) => (combats.includes(lieu)
         ? (
             <button
                 key={lieu}
@@ -994,6 +1000,7 @@ function FicheSysteme({ numero, id, fermer }) {
                 obstacles={[
                     !enCombatPhase && "ce n'est pas une phase de combat",
                     !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
+                    ...autres,
                 ]}
                 faire={commentaire => envoyerAuCombat(lieu, commentaire)}
                 title={titre}
@@ -1692,18 +1699,20 @@ function FicheSysteme({ numero, id, fermer }) {
 
                                         {/* COMBATS SUR LA PLANÈTE */}
 
+                                        {/* (issue #3 : un satellite ou une planète spéciale ne se bombarde pas et
+                                            n'a pas de combat terrestre — bouton rouge gris, avec confirmation) */}
                                         {joueur && (
                                             <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 6 }}>
                                                 {boutonCombat(`${numero}p${k}`, "Combat terrestre",
-                                                    "Ouvre un combat entre les unités de cette planète")}
+                                                    "Ouvre un combat entre les unités de cette planète", [pasUnePlanete(planete)])}
                                                 {boutonCombat(`${numero}p${k}b`, "Bombardement",
-                                                    "Les unités à bombardement de l'espace du système tirent sur cette planète")}
+                                                    "Les unités à bombardement de l'espace du système tirent sur cette planète", [pasUnePlanete(planete)])}
                                                 {/* Raid (#raid, Kabal de l'ombre) : une unité à raid est dans l'espace du système */}
                                                 {(combats.includes(`${numero}p${k}r`) || (index.parZone.get("hex:" + numero) || []).some(c =>
                                                     c.ref?.type === "unit" && ([152, 153].includes(c.ref.id) ||
                                                         /#raid\b/i.test(contenuEnCache(c.ref.id)?.habilite || "")))) &&
                                                     boutonCombat(`${numero}p${k}r`, "Raid",
-                                                        "Après les bombardements : les unités à raid de l'espace du système tirent sur les infanteries de cette planète, et capturent celles qu'elles touchent")}
+                                                        "Après les bombardements : les unités à raid de l'espace du système tirent sur les infanteries de cette planète, et capturent celles qu'elles touchent", [pasUnePlanete(planete)])}
                                             </span>
                                         )}
 

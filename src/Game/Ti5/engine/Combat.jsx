@@ -1294,8 +1294,15 @@ function CombatSysteme({ lieu }) {
     // réussite capture un esclave du possesseur de la planète)
     const sansInfanterie = sorte === "raid" && !vaisseaux.some(v => v.cible);
 
+    // Un seul bombardement (raid compris) par unité et par tour (issue #3) : marque
+    // « bombarde » = « <lieu>:<tour> », posée quand ses dés partent et gardée après
+    // « Terminer le combat » ; l'unité ne tire plus dans un autre bombardement du tour
+    const aDejaBombarde = v => bombe && String(v.c.marques?.bombarde || "").endsWith(":" + etat.tour) &&
+        v.c.marques.bombarde !== CE_COMBAT;
+
     const tireurs = vaisseaux.filter(v =>
-        v.tire && attaque(v) > 0 && nombreDes(v) > 0 && (engagement(v).length > 0 || sansInfanterie) && !estDetruit(v));
+        v.tire && attaque(v) > 0 && nombreDes(v) > 0 && (engagement(v).length > 0 || sansInfanterie) && !estDetruit(v) &&
+        !aDejaBombarde(v));
 
     // Troupe de détournement : elle attaque après toutes les autres unités (3e temps)
     const attaqueEnDernier = v => /attaque après toutes les autres/i.test(v.u.habilite || "") &&
@@ -1310,6 +1317,7 @@ function CombatSysteme({ lieu }) {
         v.c.marques?.[M.desF] !== undefined && marquer(v.id, M.desF, []),
         v.c.marques?.[M.desA] !== undefined && marquer(v.id, M.desA, []),
         { type: "des", n: nombreDes(v), faces: FACES, c: v.id, marque: M.des },
+        bombe && v.c.marques?.bombarde !== CE_COMBAT && { type: "marquer", c: v.id, marque: "bombarde", valeur: CE_COMBAT },
     ]).filter(Boolean);
 
     // --------------------------------------------------------
@@ -1454,6 +1462,10 @@ function CombatSysteme({ lieu }) {
             ...unites.flatMap(c => ["dubois", "evitement", "khan", "khanPris", "memoria", "duha"]
                 .filter(m => c.marques?.[m] !== undefined)
                 .map(m => ({ type: "marquer", c: c.id, marque: m, valeur: null }))),
+            // Bombardement fini : la marque « bombarde » de ce combat devient « fini:<lieu>:<tour> »,
+            // l'unité ne tire donc plus si ce bombardement est rouvert au même tour (issue #3)
+            ...unites.filter(c => c.marques?.bombarde === CE_COMBAT)
+                .map(c => ({ type: "marquer", c: c.id, marque: "bombarde", valeur: "fini:" + CE_COMBAT })),
             // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
             { type: "compteur", id: COMBAT, valeur: 2 },
         ], commentaire + (gain ? ` — Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}` : ""));
@@ -1833,6 +1845,13 @@ function CombatSysteme({ lieu }) {
 
                     {attaqueEnDernier(v) && (
                         <span data-attaque-en-dernier style={{ fontSize: 11, color: "#6a1b9a" }}>attaque en dernier</span>
+                    )}
+
+                    {aDejaBombarde(v) && (
+                        <span data-deja-bombarde style={{ fontSize: 11, color: "#a15c00" }}
+                            title="Une unité ne bombarde qu'une fois par tour (raid compris) : elle ne tire pas ici. Dés à la main si besoin.">
+                            a déjà bombardé ce tour
+                        </span>
                     )}
 
                     {detruit && (

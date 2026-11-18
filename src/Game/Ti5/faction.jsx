@@ -78,11 +78,11 @@ function InfosPlanete({ content }) {
 
     return (
         <div data-planete-faction style={{
-            position: "absolute",
-            top: 6,
-            right: 6,
-            width: "40%",
-            maxHeight: "92%",
+            width: 210,
+            flexShrink: 0,
+            alignSelf: "flex-start",
+            boxSizing: "border-box",
+            maxHeight: "100%",
             overflow: "hidden",
             backgroundColor: "#000000AA",
             border: "1px solid " + (content.color2 || "#999999"),
@@ -297,31 +297,57 @@ export function Verso({ content, style, explication }) {
                 <GraphiqueForces content={content} />
             </div>
         </div>
-        <div style={{
-            gridColumn: 2,
-            gridRow: 1,
-            padding: 5,
-            minHeight: 0,
-        }}>
-            {/* Illustration de la faction, à gauche de son système de départ */}
-            {content.picture && (
-                <img
-                    data-faction-picture
-                    src={encodeURI(pub + content.picture)}
-                    alt=""
-                    style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-                />
-            )}
-        </div>
-        <div style={{
-            gridColumn: 3,
-            gridRow: 1,
-            position: "relative",
-        }}>
-            {/* (décalé à gauche quand les infos de planète occupent la droite de la case) */}
-            <LoadAndDisplay link={content.system || new Link("system")} style={{ transform: (aInfosPlanete(content) ? "translateX(-45px) " : "") + "scale(0.7) ", marginTop: -30 }} />
-            <InfosPlanete content={content} />
-        </div>
+        {aInfosPlanete(content) ? (
+            // Avec les infos de planète : une rangée illustration | système | infos,
+            // chacun à sa place (rien ne se superpose)
+            <div data-haut-verso style={{
+                gridColumn: "2 / 4",
+                gridRow: 1,
+                display: "flex",
+                gap: 6,
+                padding: 5,
+                minHeight: 0,
+                minWidth: 0,
+            }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    {content.picture && (
+                        <img
+                            data-faction-picture
+                            src={encodeURI(pub + content.picture)}
+                            alt=""
+                            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                        />
+                    )}
+                </div>
+                <div style={{ width: 240, flexShrink: 0, overflow: "visible" }}>
+                    <LoadAndDisplay link={content.system || new Link("system")} style={{ transform: "scale(0.7)", transformOrigin: "top left" }} />
+                </div>
+                <InfosPlanete content={content} />
+            </div>
+        ) : (<>
+            <div style={{
+                gridColumn: 2,
+                gridRow: 1,
+                padding: 5,
+                minHeight: 0,
+            }}>
+                {/* Illustration de la faction, à gauche de son système de départ */}
+                {content.picture && (
+                    <img
+                        data-faction-picture
+                        src={encodeURI(pub + content.picture)}
+                        alt=""
+                        style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                    />
+                )}
+            </div>
+            <div style={{
+                gridColumn: 3,
+                gridRow: 1,
+            }}>
+                <LoadAndDisplay link={content.system || new Link("system")} style={{ transform: "scale(0.7) ", marginTop: -30 }} />
+            </div>
+        </>)}
         <div style={{
             gridColumn: "2 / 4",
             gridRow: 2,

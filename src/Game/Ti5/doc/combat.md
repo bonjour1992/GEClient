@@ -130,6 +130,19 @@ Engagement calculé, recalculé à chaque changement :
 
 Un neutre défensif furtif (Rebelle) ne répond qu'aux factions qui le ciblent.
 
+## planètes et bombardements (issues #2 et #3, 18 novembre)
+
+- Combat terrestre, bombardement et raid ne concernent que les vraies planètes : sur
+  un satellite ou une planète spéciale, leurs boutons (fiche du système) sont rouge
+  gris, utilisables après confirmation (`pasUnePlanete`, `Espace.jsx`).
+- Une unité ne bombarde qu'une fois par tour, raid compris : ses dés posent la marque
+  `bombarde` = « <lieu>:<tour> » ; dans un autre bombardement du tour, ou dans le
+  même rouvert après « Terminer le combat » (la marque devient « fini:<lieu>:<tour> »),
+  elle ne tire pas et sa ligne dit « a déjà bombardé ce tour » (`data-deja-bombarde`).
+  Dés à la main si besoin.
+- Plateau général : la réserve des unités neutres commence par les unités de base
+  (`UNITES_DE_BASE`, `Neutres.jsx`).
+
 ## mécaniques d'unités (11 novembre)
 
 - **raid** (Kabal de l'ombre) : bouton « Raid » à côté d'une planète quand une

@@ -124,6 +124,11 @@ export function Fenetre({ titre, actions, fermer, children }) {
 // RÉSERVE DES UNITÉS NEUTRES
 // ============================================================
 
+// Unités de base (lien « commun »), dans l'ordre de la faction modèle « template » (#18) :
+// cuirassé, croiseur, destroyeur, transporteur, frégate marchande, infanterie, mech, dock,
+// système de défense, usine, soleil de guerre
+const UNITES_DE_BASE = [7, 8, 10, 9, 11, 12, 13, 14, 15, 16, 17];
+
 export function ReserveNeutre() {
 
     const { joueur } = useEngine();
@@ -132,6 +137,8 @@ export function ReserveNeutre() {
 
     return (
         <Zone zone="general:neutres" titre="Unités neutres (réserve illimitée : glisser pour en poser une)">
+            {/* (issue #2 : les unités de base d'abord, sans propriétaire elles aussi) */}
+            {joueur && UNITES_DE_BASE.map(id => <Source key={"base:" + id} lien={{ type: "unit", id }} neutre />)}
             {joueur && factions.map(f => (
                 (f.contenu?.units || [])
                     .filter(lien => lien?.id > 0)
