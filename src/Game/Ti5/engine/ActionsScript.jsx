@@ -198,6 +198,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         systemeDe,
         // Contenu d'un élément déjà chargé
         contenuDe: contenuEnCache,
+        // Cases où j'ai une unité ; nom lisible d'une case
+        mesCases: () => mesCases().sort((a, b) => a - b),
+        nomCase,
         // Ai-je cette carte (éléments actifs, promesse à durée) ?
         aCarte: (type, id) => Object.values(etat.composants).some(x => !x.cache && x.ref?.type === type && x.ref.id === id && estAMoi(x)),
         // Mes agents usés (agents, cubes noirs des mercenaires)
@@ -291,8 +294,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         }
 
         if (lieu === "planete") {
-            // (habilité ou technologie : sur la planète de son champ surPlanete)
-            return ["habilite", "tech"].includes(s.carte.type)
+            // (habilité, technologie ou promesse détenue : sur la planète de son champ surPlanete)
+            return ["habilite", "tech", "Promesse"].includes(s.carte.type)
                 // (surPlanete true : n'importe quelle planète, le script dit où avec visible)
                 ? (s.surPlanete === true || s.surPlanete === idElement) && aScript(moi, s.id)
                 : [s.carte.id, ...(s.aussi || [])].includes(idElement);

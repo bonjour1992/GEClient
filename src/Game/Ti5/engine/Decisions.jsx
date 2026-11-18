@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase } from "./Interaction";
 import { useElement, useElements } from "./sync";
+import { MARQUEUR, actionsPiste, typeUnite } from "./miseEnPlace";
 
 // ============================================================
 // ONGLET « DÉCISION »
@@ -165,7 +166,162 @@ function etatRecomposition({ etat, moi, aScript }) {
 
 // Nombre de décisions durables qui m'attendent
 export function decisionsDurables(ctx) {
-    return ctx.joueur && etatRecomposition(ctx) ? 1 : 0;
+
+    if (!ctx.joueur) {
+        return 0;
+    }
+
+    return (etatRecomposition(ctx) ? 1 : 0) +
+        (ctx.etat.compteurs[`embuscade:${ctx.moi}`] ? 1 : 0) +
+        (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0);
+}
+
+// ------------------------------------------------------------
+// Décisions durables d'une promesse : elles reviennent à la faction
+// qui l'a faite, quand celle qui la détient s'en sert (scripts.js).
+//
+//   Embuscade (Volée argentée)   embuscade:<moi> = le détenteur, embuscade:<moi>:case = case + 1
+//       poser un de mes destroyers (un logisticien usé, 2 ressources) — il est au détenteur
+//       pour ce combat spatial (marques possession, embuscade) — ou gagner 1 infamie
+//   Pupille de l'empire (Winnu)  pupille:<moi> = le détenteur, pupille:<moi>:par = le conquérant
+//       user un politique (le conquérant gagne 1 infamie) ou gagner 1 infamie
+// ------------------------------------------------------------
+
+// Carte de cette promesse chez ce joueur, avec mon marqueur dessus ; actions qui la rendent à la réserve
+function cartePromesse(etat, detenteur, id, moi) {
+    return Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === id &&
+        new RegExp(`^joueur:${detenteur}:(actif|tour:\\d+)$`).test(c.zone || "") &&
+        Object.values(etat.composants).some(m => m.sur === c.id && !m.ref && m.jeton === MARQUEUR && m.proprio === moi)) || null;
+}
+
+const rendre = (etat, carte) => (!carte ? [] : [
+    ...Object.values(etat.composants).filter(m => m.sur === carte.id).map(m => ({ type: "supprimer", c: m.id })),
+    { type: "deplacer", c: carte.id, vers: "general:promesses" },
+]);
+
+function Embuscade() {
+
+    const { etat, index, envoyer, moi, search, nomDe, factionDe } = useEngine();
+
+    const detenteur = Number(etat.compteurs[`embuscade:${moi}`]) || 0;
+    const numero = (Number(etat.compteurs[`embuscade:${moi}:case`]) || 0) - 1;
+
+    // Mon destroyer : l'unité de type « dest » de ma faction
+    const faction = useElement(factionDe(moi) ?? -1);
+    const liens = (faction?.units || []).filter(lien => lien?.id > 0).map(lien => lien.id);
+    const unites = useElements(liens);
+    const idDestroyer = liens.find(id => typeUnite(unites[id]) === "dest") ?? null;
+
+    if (!detenteur) {
+        return null;
+    }
+
+    const logisticien = agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
+    const carte = cartePromesse(etat, detenteur, 262, moi);
+
+    const cloture = [
+        ...rendre(etat, carte),
+        { type: "compteur", id: `embuscade:${moi}`, valeur: 0 },
+        { type: "compteur", id: `embuscade:${moi}:case`, valeur: 0 },
+    ];
+
+    return (
+        <div data-decision="embuscade" style={styleCarte}>
+            <b>Embuscade</b>
+            <div>
+                <b>{nomDe(detenteur)}</b> dépense votre promesse Embuscade dans le système <b>{nomCase(numero)}</b> : posez-y un de vos
+                destroyers (un logisticien usé, 2 ressources) — il sera à lui pour ce combat spatial, avec la frappe en premier et +2,
+                puis vous sera rendu — ou gagnez 1 point d'infamie.
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <BoutonRegle
+                    data-action="embuscade-poser"
+                    nom="Embuscade : poser un destroyer"
+                    obstacles={[
+                        !idDestroyer && "le destroyer de votre faction est introuvable",
+                        !logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+                        ressources < 2 && `ressources insuffisantes : 2 à payer, vous avez ${ressources}`,
+                    ]}
+                    faire={commentaire => envoyer([
+                        logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
+                        { type: "compteur", id: `joueur:${moi}:res`, delta: -2 },
+                        idDestroyer && {
+                            type: "creer",
+                            ref: { type: "unit", id: idDestroyer },
+                            zone: "hex:" + numero,
+                            proprio: moi,
+                            marques: { possession: detenteur, embuscade: etat.tour },
+                        },
+                        ...cloture,
+                    ].filter(Boolean), commentaire || `Embuscade : un destroyer posé pour ${nomDe(detenteur)} (${nomCase(numero)})`)}
+                    style={styleChoix}
+                >
+                    Poser un destroyer (use un logisticien, 2 ressources)
+                </BoutonRegle>
+                <button
+                    type="button"
+                    data-action="embuscade-refuser"
+                    style={styleChoix}
+                    onClick={() => envoyer([...actionsPiste(etat, moi, "infamie", 1), ...cloture], "Embuscade : refusée, +1 infamie")}
+                >
+                    Refuser : +1 infamie
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function Pupille() {
+
+    const { etat, index, envoyer, moi, search, nomDe } = useEngine();
+
+    const detenteur = Number(etat.compteurs[`pupille:${moi}`]) || 0;
+    const conquerant = Number(etat.compteurs[`pupille:${moi}:par`]) || 0;
+
+    if (!detenteur) {
+        return null;
+    }
+
+    const politique = agentDisponible({ index, moi, search }, "politique");
+
+    const cloture = [
+        { type: "compteur", id: `pupille:${moi}`, valeur: 0 },
+        { type: "compteur", id: `pupille:${moi}:par`, valeur: 0 },
+    ];
+
+    return (
+        <div data-decision="pupille" style={styleCarte}>
+            <b>Pupille de l'empire</b>
+            <div>
+                <b>{nomDe(detenteur)}</b>, qui a votre mandat Pupille de l'empire, s'est fait conquérir une planète par <b>{nomDe(conquerant)}</b> :
+                usez un politique pour que {nomDe(conquerant)} gagne 1 point d'infamie, sinon c'est vous qui le gagnez.
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <BoutonRegle
+                    data-action="pupille-politique"
+                    nom="Pupille de l'empire : user un politique"
+                    obstacles={[!politique && "vous n'avez pas de politique disponible (aucun ne sera usé)"]}
+                    faire={commentaire => envoyer([
+                        politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
+                        ...actionsPiste(etat, conquerant, "infamie", 1),
+                        ...cloture,
+                    ].filter(Boolean), commentaire || `Pupille de l'empire : ${nomDe(conquerant)} gagne 1 infamie`)}
+                    style={styleChoix}
+                >
+                    User un politique : {nomDe(conquerant)} gagne 1 infamie
+                </BoutonRegle>
+                <button
+                    type="button"
+                    data-action="pupille-infamie"
+                    style={styleChoix}
+                    onClick={() => envoyer([...actionsPiste(etat, moi, "infamie", 1), ...cloture], "Pupille de l'empire : +1 infamie pour le Winnu")}
+                >
+                    Ne rien faire : +1 infamie pour vous
+                </button>
+            </div>
+        </div>
+    );
 }
 
 function Recomposition() {
@@ -328,6 +484,8 @@ export function Decisions() {
             {decisions.map(d => <Ponctuelle key={d.id} decision={d} />)}
 
             {joueur && <Recomposition />}
+            {joueur && <Embuscade />}
+            {joueur && <Pupille />}
 
             {rien && (
                 <div style={{ color: "#000", fontSize: 14 }}>

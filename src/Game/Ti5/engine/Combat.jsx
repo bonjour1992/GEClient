@@ -6,7 +6,8 @@ import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe, estSoleilDeGuerre } from "./effets";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
-import { MARQUEUR, ACTIVATION, actionsPiste, typeUnite } from "./miseEnPlace";
+import { MARQUEUR, ACTIVATION, DETTE, actionsPiste, typeUnite } from "./miseEnPlace";
+import { turnNumber } from "../ti5Const";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
@@ -658,7 +659,31 @@ function CombatSysteme({ lieu }) {
 
     // (scripts : Avantage aérien pour les infanteries au combat terrestre, Stratégie de saut,
     // Prévision des combats)
-    const aFrappePreventive = v => aCapacite(v, "fpre") || aSaute(v) || prevision(v) ||
+    // Promesse Embuscade (Volée argentée) : le destroyer posé ce tour (marque « embuscade »)
+    // frappe en premier et a +2 à ce combat spatial ; il est rendu à la Volée à la fin
+    const embusque = v => sorte === "spatial" && Number(v.c.marques?.embuscade) === etat.tour;
+
+    // Promesses en jeu chez un joueur (éléments actifs, cases de tour), non épuisées ; qui l'a faite
+    const promesseDe = (u, id) => Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === id &&
+        !c.marques?.use && new RegExp(`^joueur:${u}:(actif|tour:\\d+)$`).test(c.zone || "")) || null;
+
+    const donneurDe = carte => Object.values(etat.composants).find(m => carte && m.sur === carte.id && !m.ref && m.jeton === MARQUEUR)?.proprio ?? null;
+
+    // Infamie d'un joueur : la case de son marqueur sur la piste
+    const infamieDe = u => Math.max(0, ...Object.values(etat.composants)
+        .filter(m => !m.ref && m.jeton === MARQUEUR && m.proprio === u && /^general:infamie:\d+$/.test(m.zone || ""))
+        .map(m => Number(m.zone.split(":")[2])));
+
+    // Promesse Protecteur de l'empire (mandat des Winnu) : un politique usé par le détenteur
+    // (compteur combat:<lieu>:protecteur:<camp>) et un par le Winnu (…:protecteurW:<camp>),
+    // +1 chacun pour les unités du détenteur contre une faction qui a plus d'infamie que lui
+    const PROTECTEUR = COMBAT + ":protecteur:";
+    const PROTECTEUR_W = COMBAT + ":protecteurW:";
+
+    const protecteur = v => (v.camp === NEUTRE || !["spatial", "terrestre"].includes(sorte) ? 0
+        : (Number(etat.compteurs[PROTECTEUR + v.camp]) || 0) + (Number(etat.compteurs[PROTECTEUR_W + v.camp]) || 0));
+
+    const aFrappePreventive = v => aCapacite(v, "fpre") || aSaute(v) || prevision(v) || embusque(v) ||
         (sorte === "terrestre" && v.u.type === "inf" && v.camp !== NEUTRE && aScript(v.camp, "avantage-aerien"));
 
     // Cible spécifique : -2 pour toucher, sauf capacité de précision
@@ -778,6 +803,9 @@ function CombatSysteme({ lieu }) {
             sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
             // Énergie de la faille, Soldats déphasés : +1 aux vaisseaux, aux forces terrestres
             sorte === "spatial" && a("energie-de-la-faille") && [1, "Énergie de la faille"],
+            // Promesses : Embuscade (+2 au destroyer posé), Protecteur de l'empire (+1 par politique usé)
+            embusque(v) && [2, "Embuscade"],
+            protecteur(v) > 0 && campVise(v) > 0 && infamieDe(campVise(v)) > infamieDe(v.camp) && [protecteur(v), "Protecteur de l'empire"],
             // Armement solaire (forge d'arme de Muaat) : +2 aux soleils de guerre
             sorte === "spatial" && estSoleilDeGuerre(v.u) && a("armement-solaire") && [2, "Armement solaire"],
             sorte === "terrestre" && a("soldats-dephases") && [1, "Soldats déphasés"],
@@ -1065,10 +1093,51 @@ function CombatSysteme({ lieu }) {
     const jetMemoria = v => Number(v.c.marques?.memoria) || 0;
     const sauveeMemoria = v => sauvableMemoria(v) && jetMemoria(v) > 0 && jetMemoria(v) <= 6;
 
+    // Promesse Commerce d'esclave (Kabal de l'ombre) : au combat terrestre, pour chaque
+    // infanterie que détruit le détenteur, un jet (marque « esclaveJet ») — sur 2 ou moins elle
+    // est capturée par la Kabal, qui doit alors 1 au détenteur, à payer dans 3 tours.
+    //   -> { tueur, kabal } ou null
+    const commerceEsclave = v => {
+
+        if (sorte !== "terrestre" || typeUnite(v.u) !== "inf" || !estDetruit(v)) {
+            return null;
+        }
+
+        const tueur = auteurDesDegats(v.c);
+        const kabal = tueur > 0 && aScript(tueur, "commerce-d-esclave") ? donneurDe(promesseDe(tueur, 336)) : null;
+
+        return kabal && v.camp !== kabal ? { tueur, kabal } : null;
+    };
+
+    const jetEsclave = v => Number(v.c.marques?.esclaveJet) || 0;
+
+    const captureEsclave = v => {
+
+        const commerce = commerceEsclave(v);
+
+        if (!commerce || !(jetEsclave(v) > 0 && jetEsclave(v) <= 2)) {
+            return null;
+        }
+
+        // Dette : un jeton sur la case de tour du débiteur, avec le marqueur du créancier
+        const echeance = etat.tour + 3;
+        const idDette = "t77" + v.id.replace(/\D/g, "");
+
+        return [
+            { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+            { type: "marquer", c: v.id, marque: "esclaveJet", valeur: null },
+            { type: "deplacer", c: v.id, vers: `joueur:${commerce.kabal}:actif` },
+            ...(echeance <= turnNumber ? [
+                { type: "creer", idLocal: idDette, jeton: DETTE, zone: `joueur:${commerce.kabal}:tour:${echeance}`, marques: { montant: 1 } },
+                { type: "creer", jeton: MARQUEUR, sur: idDette, proprio: commerce.tueur },
+            ] : []),
+        ];
+    };
+
     // Unités détruites sauvées par un jet réussi (Memoria D : à bord ; Médecine : capturée dans
-    // mes éléments actifs) -> actions, ou null. « Terminer le combat » les applique si le
-    // bouton de l'unité n'a pas été cliqué.
-    const sauvetage = v => (sauveeMemoria(v)
+    // mes éléments actifs ; Commerce d'esclave : capturée par la Kabal) -> actions, ou null.
+    // « Terminer le combat » les applique si le bouton de l'unité n'a pas été cliqué.
+    const sauvetage = v => captureEsclave(v) || (sauveeMemoria(v)
         ? [
             { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
             { type: "marquer", c: v.id, marque: "memoria", valeur: null },
@@ -1489,12 +1558,17 @@ function CombatSysteme({ lieu }) {
             ...(gain ? cochees.map(u => ({ type: "compteur", id: `joueur:${u}:res`, delta: epaves })) : []),
             // Compteurs des scripts de ce combat (Écoles militaires, Récupération, esclave du raid)
             ...Object.keys(etat.compteurs)
-                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup|perdus|merc\d+):\d+$|:(detruits|esclave)$/.test(id) && etat.compteurs[id])
+                .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup|perdus|merc\d+|protecteur|protecteurW):\d+$|:(detruits|esclave)$/.test(id) && etat.compteurs[id])
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
             ...unites.filter(c => c.marques?.canon).map(c => ({ type: "marquer", c: c.id, marque: "canon", valeur: null })),
             // Marques des choix et des jets de ce combat (Olivier Dubois, Stratégie d'évitement,
             // frégate du khan, Memoria D, Duha Menaimon)
-            ...unites.flatMap(c => ["dubois", "evitement", "khan", "khanPris", "memoria", "duha"]
+            // (et le jet de Commerce d'esclave ; le destroyer de l'Embuscade est rendu à la Volée)
+            ...unites.filter(c => c.marques?.embuscade !== undefined).flatMap(c => [
+                { type: "marquer", c: c.id, marque: "embuscade", valeur: null },
+                c.marques?.possession !== undefined && { type: "marquer", c: c.id, marque: "possession", valeur: null },
+            ].filter(Boolean)),
+            ...unites.flatMap(c => ["dubois", "evitement", "khan", "khanPris", "memoria", "duha", "esclaveJet"]
                 .filter(m => c.marques?.[m] !== undefined)
                 .map(m => ({ type: "marquer", c: c.id, marque: m, valeur: null }))),
             // Bombardement fini : la marque « bombarde » de ce combat devient « fini:<lieu>:<tour> »,
@@ -1745,6 +1819,48 @@ function CombatSysteme({ lieu }) {
             faire: commentaire => envoyer(remplacerMarque("evitement", cochees), commentaire),
         },
 
+        // Promesse Protecteur de l'empire : le détenteur use un politique, +1 à ses unités ce combat
+        jeCombats && ["spatial", "terrestre"].includes(sorte) && !!promesseDe(moi, 368) && aScript(moi, "protecteur-de-l-empire") && {
+            action: "protecteur-de-l-empire",
+            nom: "Protecteur de l'empire : +1 au combat (use un politique)",
+            libelle: "Protecteur de l'empire : +1 (use un politique)",
+            titre: "Contre une faction qui a plus d'infamie que vous : un politique est usé, vos unités ont +1 pour ce combat. Le Winnu peut en user un aussi pour vous : les deux se cumulent.",
+            obstacles: [
+                etat.compteurs[PROTECTEUR + moi] && "vous avez déjà usé un politique pour ce combat",
+                !agentDisponible({ index, moi, search }, "politique") && "vous n'avez pas de politique disponible (aucun ne sera usé)",
+            ],
+            faire: commentaire => {
+                const politique = agentDisponible({ index, moi, search }, "politique");
+
+                envoyer([
+                    politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
+                    { type: "compteur", id: PROTECTEUR + moi, valeur: 1 },
+                ].filter(Boolean), commentaire);
+            },
+        },
+
+        // … et le Winnu (celui qui a fait la promesse) pour chaque détenteur présent dans le combat
+        ...(["spatial", "terrestre"].includes(sorte)
+            ? campsJoueurs.filter(u => u !== moi && aScript(u, "protecteur-de-l-empire") && donneurDe(promesseDe(u, 368)) === moi).map(u => ({
+                action: "protecteur-de-l-empire-winnu-" + u,
+                nom: `Protecteur de l'empire : +1 au combat pour ${nomDe(u)} (use un politique)`,
+                libelle: `Protecteur de l'empire : +1 pour ${nomDe(u)} (use un politique)`,
+                titre: `Vous avez donné ce mandat à ${nomDe(u)} : un de vos politiques est usé, ses unités ont +1 pour ce combat (en plus du sien).`,
+                obstacles: [
+                    etat.compteurs[PROTECTEUR_W + u] && "vous avez déjà usé un politique pour ce combat",
+                    !agentDisponible({ index, moi, search }, "politique") && "vous n'avez pas de politique disponible (aucun ne sera usé)",
+                ],
+                faire: commentaire => {
+                    const politique = agentDisponible({ index, moi, search }, "politique");
+
+                    envoyer([
+                        politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
+                        { type: "compteur", id: PROTECTEUR_W + u, valeur: 1 },
+                    ].filter(Boolean), commentaire);
+                },
+            }))
+            : []),
+
         sansInfanterie && reussitesRaid > 0 && !etat.compteurs[ESCLAVE] && {
             action: "raid-esclave",
             nom: `Raid : capturer un esclave de ${possesseur ? nomDe(possesseur) : "personne"}`,
@@ -1977,6 +2093,26 @@ function CombatSysteme({ lieu }) {
                         >
                             Capturer
                         </button>
+                    )}
+
+                    {/* Promesse Commerce d'esclave : l'infanterie que j'ai détruite, capturée par la
+                        Kabal sur un jet de 2 ou moins (appliqué à « Terminer le combat ») */}
+                    {joueur && detruit && commerceEsclave(v)?.tueur === moi && !jetEsclave(v) && (
+                        <button
+                            type="button"
+                            data-action="commerce-d-esclave-jet"
+                            style={styleBouton}
+                            onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: "esclaveJet" }], "Commerce d'esclave : jet de capture")}
+                        >
+                            Commerce d'esclave : jet (2 ou moins)
+                        </button>
+                    )}
+
+                    {detruit && commerceEsclave(v) && jetEsclave(v) > 0 && (
+                        <b data-commerce-d-esclave={jetEsclave(v)} style={{ color: jetEsclave(v) <= 2 ? "#1b5e20" : "#b71c1c" }}>
+                            Commerce d'esclave : {jetEsclave(v)}
+                            {jetEsclave(v) <= 2 ? ` — capturée par ${nomDe(commerceEsclave(v).kabal)} à la fin du combat (dette de 1)` : " (raté)"}
+                        </b>
                     )}
 
                     {/* Memoria D : une de mes infanteries détruites, sauvée sur un jet de 6 ou moins */}

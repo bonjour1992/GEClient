@@ -291,9 +291,28 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const possedeShar = aScript(moi, "shar") && (index.parZone.get(`joueur:${moi}:actif`) || [])
         .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 275);
 
+    // Promesse Chemin du vide (#964, Empyréens) : les anomalies que contrôle la faction qui me
+    // l'a donnée (elle seule, avec moi au plus, a des unités dans leur espace) ne gênent pas
+    // mes déplacements
+    const empyreens = !aScript(moi, "chemin-du-vide") ? [] : Object.values(etat.composants)
+        .filter(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === 964 &&
+            new RegExp(`^joueur:${moi}:(actif|tour:\\d+)$`).test(c.zone || ""))
+        .flatMap(carte => Object.values(etat.composants).filter(m => m.sur === carte.id && !m.ref && m.proprio > 0).map(m => m.proprio));
+
+    const cheminDuVide = i => empyreens.length > 0 && (() => {
+        const camps = new Set((index.parZone.get("hex:" + i) || [])
+            .filter(c => !c.cache && c.ref?.type === "unit" && !c.sur)
+            .map(c => c.marques?.possession ?? c.proprio ?? 0));
+
+        return empyreens.some(u => camps.has(u)) && [...camps].every(u => u === moi || empyreens.includes(u));
+    })();
+
     // (habilité Émanation du vide des Empyréens : aucune nébuleuse ne gêne mes déplacements)
-    const sharIci = i => aScript(moi, "emanation-du-vide") || (possedeShar &&
+    const sharIci = i => aScript(moi, "emanation-du-vide") || cheminDuVide(i) || (possedeShar &&
         (systemes[tuiles[i]?.ref?.id]?.elems || []).some(lien => Number(lien?.id) === 275));
+
+    // Trous de ver delta : il faut la technologie Navigation delta, ou la promesse Passage de Creuss
+    const peutDelta = aScript(moi, "navigation-delta") || aScript(moi, "passage-de-creuss");
 
     const obstacles = [
         !enPhase && "ce n'est pas la phase de déplacement",
@@ -304,11 +323,13 @@ export function useDeplacement({ tuiles, systemes = {} }) {
             .map(e => `${nomCase(e.de)} → ${nomCase(e.a)} : ni voisines, ni reliées par un trou de ver`),
         ...trajet.filter(i => !tuiles[i]).map(i => `${nomCase(i)} : pas de système sur cette case`),
         // Supernova : interdite, sauf avec l'habilité Physiologie gashlai (Braises de Muaat)
-        ...(aScript(moi, "physiologie-gashlai") ? [] : trajet.filter(i => anomalie(i) === "sup")
+        ...(aScript(moi, "physiologie-gashlai") ? [] : trajet.filter(i => anomalie(i) === "sup" && !cheminDuVide(i))
             .map(i => `${nomCase(i)} : supernova, le déplacement y est impossible`)),
         // Champ d'astéroïdes : interdit, sauf avec le script Bouclier déflecteur
-        ...(aScript(moi, "bouclier-deflecteur") ? [] : trajet.filter(i => anomalie(i) === "ast")
+        ...(aScript(moi, "bouclier-deflecteur") ? [] : trajet.filter(i => anomalie(i) === "ast" && !cheminDuVide(i))
             .map(i => `${nomCase(i)} : champ d'astéroïdes, le déplacement y est interdit`)),
+        ...(peutDelta ? [] : etapes.filter(e => e.sorte === "trou:delta")
+            .map(e => `${nomCase(e.de)} → ${nomCase(e.a)} : trou de ver delta, il faut « Navigation delta » ou la promesse « Passage de Creuss »`)),
         ...trajet.slice(0, -1).filter(i => anomalie(i) === "neb" && !sharIci(i))
             .map(i => `${nomCase(i)} : une nébuleuse met fin au mouvement de qui y entre`),
         depart !== null && anomalie(depart) === "neb" && !sharIci(depart) && etapes.length > 1 && etapes[0].sorte === "bord" &&

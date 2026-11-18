@@ -2831,6 +2831,260 @@ export const SCRIPTS = [
             libelle: "Fouille des nébuleuses : +1 fragment spatial (use un scientifique, active la nébuleuse)",
         }),
 
+    // --------------------------------------------------------
+    // Promesses (19 novembre)
+    // Les boutons d'une promesse sont sur sa fiche, chez la faction qui la détient.
+    // --------------------------------------------------------
+
+    // ----- Redevance de protection (Pirate Mentak) -----
+
+    action("redevance-de-protection-payer", "Promesse", 226, 1794335054862, "Redevance de protection : payer", "carte",
+        "Ravitaillement, une fois par tour : 2 commerce sont transférés au Pirate Mentak pour garder la promesse.", {
+            phase: "ravit",
+            nomPhase: "ravitaillement",
+            cout: { commerce: 2 },
+            parTour: true,
+            special: atelier => {
+                const mentak = atelier.donneur(atelier.c);
+
+                return {
+                    actions: mentak ? [{ type: "compteur", id: `joueur:${mentak}:commerce`, delta: 2 }] : [],
+                    sans: mentak ? null : "aucun marqueur de faction sur cette promesse (les 2 commerce ne seront donnés à personne)",
+                    avis: mentak ? `Redevance de protection : 2 commerce transférés à ${atelier.nomDe(mentak)}.` : "",
+                };
+            },
+            libelle: "Redevance de protection : payer 2 commerce au Mentak",
+        }),
+
+    action("redevance-de-protection-rendre", "Promesse", 226, 1794335054862, "Redevance de protection : rendre", "carte",
+        "Ravitaillement, à la place du paiement — ou si vous engagez ou bloquez les Mentaks : la promesse est dépensée (retour à la réserve).", {
+            special: atelier => ({
+                actions: [
+                    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
+                    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+                ],
+                avis: "Redevance de protection : promesse dépensée, de retour à la réserve.",
+            }),
+            libelle: "Redevance de protection : dépenser la promesse (sans payer)",
+        }),
+
+    action("redevance-de-protection-rompue", "Promesse", 226, 1794335054862, "Redevance de protection : le Mentak y met fin", "carte",
+        "Ravitaillement : le Pirate Mentak met fin à la promesse — elle retourne à la réserve et il gagne 1 infamie.", {
+            special: promesseRompue,
+            libelle: "Le Mentak met fin à la redevance (il gagne 1 infamie)",
+        }),
+
+    // ----- Soutien politique -----
+
+    action("soutien-politique-annoncer", "Promesse", 227, 1794335054863, "Soutien politique : annoncer", "carte",
+        "Prévote : la promesse est engagée (carte usée) et vous annoncez une issue ; la faction qui l'a faite doit voter à hauteur de sa valeur.", {
+            phase: "prevote",
+            special: atelier => {
+                const donneur = atelier.donneur(atelier.c);
+
+                return {
+                    actions: [{ type: "marquer", c: atelier.c.id, marque: "use", valeur: true }],
+                    sans: atelier.c?.marques?.use ? "cette promesse est déjà engagée" : null,
+                    avis: `Soutien politique : annoncez l'issue — ${donneur ? atelier.nomDe(donneur) : "la faction"} doit y mettre ` +
+                        `${atelier.c?.marques?.valeur ? atelier.c.marques.valeur + " voix" : "la valeur de la promesse"}, ou gagner 1 infamie.`,
+                };
+            },
+            visible: outils => !outils.c?.marques?.use,
+            libelle: "Soutien politique : engager la promesse (annoncer une issue)",
+        }),
+
+    action("soutien-politique-respecte", "Promesse", 227, 1794335054863, "Soutien politique : respecté", "carte",
+        "Après le vote : la faction a voté à hauteur de la promesse, qui retourne à la réserve.", {
+            visible: outils => !!outils.c?.marques?.use,
+            special: atelier => ({
+                actions: [
+                    { type: "marquer", c: atelier.c.id, marque: "use", valeur: false },
+                    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
+                    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+                ],
+                avis: "Soutien politique : respecté, la promesse retourne à la réserve.",
+            }),
+            libelle: "Soutien politique : respecté (retour à la réserve)",
+        }),
+
+    action("soutien-politique-rompu", "Promesse", 227, 1794335054863, "Soutien politique : non respecté", "carte",
+        "Après le vote : la faction n'a pas voté à hauteur de la promesse — elle retourne à la réserve et cette faction gagne 1 infamie.", {
+            visible: outils => !!outils.c?.marques?.use,
+            special: atelier => {
+                const rompue = promesseRompue(atelier);
+
+                return { ...rompue, actions: [{ type: "marquer", c: atelier.c.id, marque: "use", valeur: false }, ...rompue.actions] };
+            },
+            libelle: "Soutien politique : non respecté (la faction gagne 1 infamie)",
+        }),
+
+    // ----- Mandats des Winnu -----
+
+    regle("concession-commerciale", "Promesse", 228, 1794335054864, "Concession commerciale", "modifie",
+        "Fiche d'une unité à livraison : faction livrée",
+        "Vous comptez comme ayant un comptoir sur Mecatol Rex : une unité qui livre dans son système peut vous livrer (mandat non épuisé)."),
+
+    regle("protecteur-de-l-empire", "Promesse", 368, 1794335054965, "Protecteur de l'empire", "nouveau",
+        "Conflit, combats spatial et terrestre : boutons sous le combat",
+        "Contre une faction qui a plus d'infamie que vous : « Protecteur de l'empire » use un politique, +1 au combat pour vos unités ce combat. Le Winnu a le même bouton pour vous : les deux se cumulent (+2)."),
+
+    action("pupille-de-l-empire", "Promesse", 369, 1794047595225, "Pupille de l'empire", "carte",
+        "Revendication, quand on vous conquiert une planète : vous désignez la faction (onglet Décision) ; le Winnu choisit alors, dans son onglet Décision, d'user un politique (elle gagne 1 infamie) ou de gagner lui-même 1 infamie.", {
+            phase: "revendication",
+            demande: {
+                question: outils => "Pupille de l'empire : quelle faction vous a conquis une planète ?\n" +
+                    outils.joueurs.filter(j => j.userId !== outils.moi).map((j, k) => `${k + 1} = ${j.nom}`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                const autres = outils.joueurs.filter(j => j.userId !== outils.moi);
+                const winnu = Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
+
+                if (x === undefined) {
+                    return !winnu
+                        ? { sans: "aucun marqueur de faction sur cette promesse" }
+                        : (outils.etat.compteurs[`pupille:${winnu}`] ? { sans: "le Winnu n'a pas encore répondu à la demande précédente" } : {});
+                }
+
+                const conquerant = autres[x - 1];
+
+                return conquerant && winnu
+                    ? {
+                        actions: [
+                            { type: "compteur", id: `pupille:${winnu}`, valeur: outils.moi },
+                            { type: "compteur", id: `pupille:${winnu}:par`, valeur: conquerant.userId },
+                        ],
+                        avis: `Pupille de l'empire : ${outils.nomDe(winnu)} doit choisir (onglet Décision) — user un politique, ou gagner 1 infamie.`,
+                    }
+                    : { sans: "choix invalide" };
+            },
+            libelle: "Pupille de l'empire : on m'a conquis une planète",
+        }),
+
+    // ----- Volée argentée -----
+
+    action("embuscade", "Promesse", 262, 1794339360458, "Embuscade", "carte",
+        "Après le déplacement, dans un système où vous avez des unités (choix dans l'onglet Décision) : la Volée argentée choisit, dans son onglet Décision, de poser un de ses destroyers (un logisticien usé, 2 ressources) ou de gagner 1 infamie. Le destroyer est à vous pour ce combat spatial (frappe en premier, +2), puis lui est rendu.", {
+            demande: {
+                question: outils => "Embuscade : dans quel système (où vous avez des unités) ?\n" +
+                    outils.mesCases().map((n, k) => `${k + 1} = ${outils.nomCase(n)}`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                const cases = outils.mesCases();
+                const volee = Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
+
+                if (x === undefined) {
+                    return !volee
+                        ? { sans: "aucun marqueur de faction sur cette promesse" }
+                        : (outils.etat.compteurs[`embuscade:${volee}`] ? { sans: "la Volée n'a pas encore répondu à la demande précédente" }
+                            : (cases.length ? {} : { sans: "vous n'avez d'unité dans aucun système" }));
+                }
+
+                const numero = cases[x - 1];
+
+                return numero !== undefined && volee
+                    ? {
+                        actions: [
+                            { type: "compteur", id: `embuscade:${volee}`, valeur: outils.moi },
+                            { type: "compteur", id: `embuscade:${volee}:case`, valeur: numero + 1 },
+                        ],
+                        avis: `Embuscade : ${outils.nomDe(volee)} doit choisir (onglet Décision) — poser un destroyer, ou gagner 1 infamie.`,
+                    }
+                    : { sans: "choix invalide" };
+            },
+            libelle: "Embuscade : demander un destroyer à la Volée",
+        }),
+
+    // ----- Kabal de l'ombre -----
+
+    regle("commerce-d-esclave", "Promesse", 336, 1794339360462, "Commerce d'esclave", "nouveau",
+        "Conflit, combat terrestre : ligne d'une infanterie détruite",
+        "Pour chaque infanterie que vous détruisez : « Commerce d'esclave : jet » — sur 2 ou moins, « Terminer le combat » l'envoie chez la Kabal de l'ombre (esclave) et vous donne une dette de 1 de la Kabal, à payer dans 3 tours."),
+
+    // ----- Partage de technologie -----
+
+    regle("partage-de-technologie", "Promesse", 421, 1794339360465, "Partage de technologie", "auto",
+        "Onglet Technologie : votre marqueur de faction posé sur une technologie débloquée de l'autre faction",
+        "Tant que l'alliance est en jeu entre vous deux, la faction qui pose son marqueur sur une technologie débloquée de l'autre en profite : ses scripts jouent pour elle."),
+
+    // ----- Tuteur des réfugiés -----
+
+    action("tuteur-des-refugies-attaque", "Promesse", 454, 1794339360467, "Tuteur des réfugiés : attaque", "carte",
+        "Si vous attaquez vos Réfugiés : la promesse est dépensée (retour à la réserve) et vous gagnez 1 infamie.", {
+            special: atelier => ({
+                actions: [
+                    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
+                    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+                    ...atelier.infamie(atelier.moi, 1),
+                ],
+                avis: "Tuteur des réfugiés : promesse dépensée, vous gagnez 1 infamie.",
+            }),
+            libelle: "Tuteur des réfugiés : j'attaque mes Réfugiés (+1 infamie, promesse dépensée)",
+        }),
+
+    action("tuteur-des-refugies-faveur", "Promesse", 454, 1794339360467, "Tuteur des réfugiés : faveur", "planete",
+        "Phase d'événement, à côté d'une planète qui porte un Entrepôt d'aide : l'entrepôt est usé, 4 commerce posés dessus sont dépensés, vous gagnez une faveur des Réfugiés.", {
+            surPlanete: true,
+            phase: "[ée]v[ée]nement",
+            nomPhase: "événement",
+            visible: outils => outils.ici(836) > 0,
+            special: atelier => {
+
+                const entrepot = atelier.unites(atelier.zone).find(x => x.ref.id === 836);
+                const jetons = !entrepot ? [] : Object.values(atelier.etat.composants)
+                    .filter(x => !x.ref && x.jeton === "Commerce" && x.sur === entrepot.id);
+
+                // 4 commerce pris sur les jetons posés sur l'entrepôt
+                let reste = 4;
+                const paiement = [];
+
+                for (const jeton of jetons) {
+                    const montant = Number(jeton.marques?.montant) || 0;
+                    const pris = Math.min(montant, reste);
+
+                    if (pris > 0) {
+                        reste -= pris;
+                        paiement.push(pris >= montant
+                            ? { type: "supprimer", c: jeton.id }
+                            : { type: "marquer", c: jeton.id, marque: "montant", valeur: montant - pris });
+                    }
+                }
+
+                const refugies = Number(atelier.contenuDe(836)?.lienElement?.id) || 0;
+
+                return {
+                    actions: [
+                        ...paiement,
+                        ...(entrepot ? atelier.user(entrepot) : []),
+                        // (faveur d'une faction neutre : jeton sans propriétaire, marque « neutre »)
+                        { type: "creer", jeton: "faveur", zone: `joueur:${atelier.moi}:faveurs`, ...(refugies ? { marques: { neutre: refugies } } : {}) },
+                    ],
+                    sans: !entrepot ? "aucun Entrepôt d'aide sur cette planète"
+                        : (atelier.usee(entrepot) ? "cet Entrepôt d'aide est déjà usé"
+                            : (reste > 0 ? `il faut 4 commerce posés sur l'entrepôt, il y en a ${4 - reste} (seuls ceux-là seront dépensés)` : null)),
+                    avis: "Tuteur des réfugiés : +1 faveur des Réfugiés.",
+                };
+            },
+            libelle: "Tuteur des réfugiés : faveur (use l'entrepôt, 4 commerce posés dessus)",
+        }),
+
+    // ----- Fantômes de Creuss, Empyréens -----
+
+    effet("navigation-delta", 871, 1794343421188, "Navigation delta", "auto",
+        "Espace : déplacement assisté",
+        "Vous pouvez emprunter les trous de ver delta. Sans elle (ni la promesse Passage de Creuss), une étape par un trou de ver delta demande une confirmation."),
+
+    regle("passage-de-creuss", "Promesse", 870, 1794336141948, "Passage de Creuss", "auto",
+        "Espace : déplacement assisté",
+        "Vous pouvez emprunter les trous de ver delta."),
+
+    regle("chemin-du-vide", "Promesse", 964, 1795039776983, "Chemin du vide", "auto",
+        "Espace : déplacement assisté",
+        "Les anomalies que contrôlent les Empyréens (eux seuls, avec vous au plus, ont des unités dans leur espace) ne gênent pas vos déplacements : supernova, champ d'astéroïdes, nébuleuse."),
+
     // ----- Braises de Muaat (WIP) : habilité et forge d'arme -----
 
     regle("physiologie-gashlai", "habilite", 1022, 1795042399686, "Physiologie gashlai", "auto",

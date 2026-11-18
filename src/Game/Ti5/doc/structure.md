@@ -1542,6 +1542,22 @@ Mandat (Winnu) : `Transaction.jsx`, `lire(ligne, t).regles` — avertissements d
 (pas de Mecatol Rex, transaction proposée par un autre, déjà un mandat) ; `accepter` demande
 une confirmation (`confirmerRegle`) avant d'appliquer.
 
+### promesses (19 novembre)
+
+Les boutons d'une promesse sont sur sa fiche, chez la faction qui la détient (`lieu: "carte"`,
+`scripts.js`) ; une promesse peut aussi avoir un bouton à côté d'une planète (`surPlanete`). La
+faction qui l'a faite est celle du marqueur posé dessus (`atelier.donneur`). Deux promesses
+demandent une réponse du donneur : le détenteur pose des compteurs (`embuscade:<donneur>` et
+`…:case`, `pupille:<donneur>` et `…:par`) et le donneur répond dans son onglet Décision
+(`Embuscade`, `Pupille`, `Decisions.jsx`). `Combat.jsx` : `promesseDe(u, id)`, `donneurDe`,
+`infamieDe` ; marque `embuscade` (tour) du destroyer posé — frappe en premier, +2, marques
+retirées à « Terminer le combat » ; compteurs `combat:<lieu>:protecteur:<camp>` et
+`…:protecteurW:<camp>` (Protecteur de l'empire) ; marque `esclaveJet` et `captureEsclave`
+(Commerce d'esclave, dans `sauvetage`). Partage de technologie : `aScript` (`Partie.jsx`) rend
+vrai pour une technologie d'un autre joueur qui porte le marqueur du demandeur, si l'alliance
+#421 est en jeu entre eux. `Deplacement.jsx` : `cheminDuVide(i)`, `peutDelta`. `Livraison.jsx` :
+`concessions` (Concession commerciale).
+
 ### verso de la faction : planète et forces
 
 Données de la faction (`faction.jsx`, classe `Faction`) : `planete`, `population`,

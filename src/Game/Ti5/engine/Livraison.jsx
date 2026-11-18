@@ -103,11 +103,20 @@ export function LivraisonCommerciale({ c, fermer }) {
         return null;
     }
 
+    // Promesse Concession commerciale (#228, mandat des Winnu) : son détenteur compte comme
+    // ayant un comptoir sur Mecatol Rex (#34) — dans le système qui la porte, mandat non épuisé
+    const tuile = (ctx.index.parZone.get(m[0]) || []).find(x => x.ref?.type === "system");
+    const mecatolIci = (contenuEnCache(tuile?.ref.id)?.elems || []).some(lien => Number(lien?.id) === 34);
+
+    const concessions = !mecatolIci ? [] : ctx.partie.joueurs.map(j => j.userId).filter(u => u !== moi && ctx.aScript(u, "concession-commerciale") &&
+        Object.values(etat.composants).some(x => !x.cache && x.ref?.type === "Promesse" && x.ref.id === 228 && !x.marques?.use &&
+            new RegExp(`^joueur:${u}:(actif|tour:\\d+)$`).test(x.zone || "")));
+
     // Factions qui ont un comptoir dans le système (espace ou planètes)
-    const comptoirs = [...new Set(Object.values(etat.composants)
+    const comptoirs = [...new Set([...Object.values(etat.composants)
         .filter(x => x.ref?.type === "unit" && (x.zone === m[0] || x.zone?.startsWith(m[0] + ":")) &&
             campDe(x) > 0 && campDe(x) !== moi && /#comp\b/i.test(contenuEnCache(x.ref.id)?.habilite || ""))
-        .map(campDe))];
+        .map(campDe), ...concessions])];
 
     const cible = comptoirs.length === 1 ? comptoirs[0] : (Number(choisie) || null);
 

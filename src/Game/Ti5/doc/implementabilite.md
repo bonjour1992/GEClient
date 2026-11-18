@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
+| Technologies | 102 | 95 | 4 | 3 | 43 | 19 | 46 |
 | Habilités | 62 | 39 | 8 | 15 | 32 | 6 | 15 |
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
-| Promesses | 19 | 5 | 2 | 12 | 7 | 1 | 0 |
+| Promesses | 19 | 14 | 4 | 1 | 14 | 2 | 3 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **366** | **252** | **74** | **40** | **139** | **60** | **113** |
+| **Total** | **367** | **262** | **76** | **29** | **146** | **61** | **117** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -127,6 +127,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 820 | Stabilisateur de rupture | **oui** | automatique | Cadre de blocage, passage par un trou de ver oméga : un jet de 9 ou plus ne donne plus de touche à vos vaisseaux. | — |
 | 821 | Extraction de la faille | **oui** | automatique | Ravitaillement automatique : +3 ressources par Faille dominée (seul dans son espace, ou vainqueur d'un test de domination ce tour) ; une Faille disputée retient le ravitaillement jusqu'au test. | — |
 | 857 | Piraterie informatique | **oui** | nouveau bouton | Plateau joueur, deux boutons : le commerce choisi (fenêtre) est converti à 2 ressources, ou à 2 influence, chacun. | — |
+| 871 | Navigation delta (Fantômes de Creuss) | **oui** | automatique | Déplacement assisté : les trous de ver delta sont utilisables ; sans cette technologie ni la promesse Passage de Creuss, l'étape demande une confirmation. | — |
 | 941 | Pluie d'astéroïdes (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète à portée 3 d'un champ d'astéroïdes non activé : le champ le plus proche est activé, un logisticien et un amiral sont usés, le marqueur « Ciblage astéroïde » est posé. Au bombardement, « attaque 4 sur chaque unité » : un dé par unité de la planète, 1 dégât sur 4 ou moins, marqueur retiré. | — |
 | 959 | Fouille des nébuleuses (Les Empyréens WIP) | **oui** | nouveau bouton | Fiche d'une nébuleuse, science : use un scientifique, active la nébuleuse, +1 fragment spatial. | — |
 | 1025 | Réacteurs solaires (Braises de Muaat WIP) | **oui** | automatique | Déplacement assisté : +1 au mouvement de vos soleils de guerre. | — |
@@ -412,23 +413,23 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 |---|---|---|---|---|---|
 | 224 | Vassal | **partiel** | bouton existant modifié + nouveau bouton | Conflit d'accord : « Accepter » est grisé pour le camp qui possède la planète revendiquée. Fiche de la carte : « Promesse rompue » (monde natal perdu) — retour à la réserve, la faction du marqueur gagne 1 infamie. | Donner sa faveur aux tours pairs ; fins de promesse sans infamie : à la main. |
 | 225 | Pacte de non-agression | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — la carte retourne à la réserve, son marqueur est retiré, la faction qui l'a faite gagne 1 infamie. | — |
-| 226 | Redevance de protection | non | — | — | Paiements au choix de deux factions à chaque ravitaillement. (passé) |
-| 227 | Soutien politique | non | — | — | Issue annoncée et vote à hauteur de la promesse : non relié au vote de l'outil. (passé) |
-| 228 | Concession commerciale | non | — | — | Effet pas clair pour l'outil. (passé) |
-| 262 | Embuscade | non | — | — | Unité d'une autre faction posée et contrôlée le temps d'un combat. (passé) |
+| 226 | Redevance de protection | **partiel** | nouveau bouton | Fiche de la promesse, chez la faction qui la détient : « payer 2 commerce au Mentak » (ravitaillement, une fois par tour), « dépenser la promesse » (sans payer), « le Mentak y met fin » (retour à la réserve, il gagne 1 infamie). | Les Mentaks ne peuvent pas engager le détenteur : non vérifié. |
+| 227 | Soutien politique | **partiel** | nouveau bouton | Fiche de la promesse : prévote, « engager la promesse » (carte usée, le message dit combien de voix sont dues) ; puis « respecté » (retour à la réserve) ou « non respecté » (la faction gagne 1 infamie). | Le vote réel n'est pas vérifié. |
+| 228 | Concession commerciale | **oui** | bouton existant modifié | Fiche d'une unité à livraison, dans le système de Mecatol Rex : le détenteur du mandat (non épuisé) figure parmi les factions à comptoir, il peut être livré. | — |
+| 262 | Embuscade | **oui** | nouveau bouton | Fiche de la promesse : « Embuscade » — le système se choisit dans l'onglet Décision ; la Volée argentée répond dans le sien : poser un destroyer (un logisticien usé, 2 ressources) ou gagner 1 infamie. Conflit : ce destroyer est au détenteur pour ce combat spatial, frappe en premier et a +2 ; « Terminer le combat » le rend à la Volée. | — |
 | 335 | Accord de recherche | **oui** | nouveau bouton | Fiche de la carte : « +2 recherche », notée au journal de recherche. | Le déclenchement (la faction recherche une technologie) est à la main. |
-| 336 | Commerce d'esclave | non | — | — | Jet par infanterie détruite, capture et dette. (passé) |
-| 368 | Protecteur de l'empire | non | — | — | Bonus de combat contre une faction plus infâme. (passé) |
-| 369 | Pupille de l'empire | non | — | — | Réaction des Winnu à une conquête. (passé) |
+| 336 | Commerce d'esclave | **oui** | nouveau bouton | Conflit, combat terrestre : sur la ligne d'une infanterie que le détenteur a détruite, « Commerce d'esclave : jet » — sur 2 ou moins, « Terminer le combat » l'envoie dans les éléments actifs de la Kabal et pose une dette de 1 de la Kabal envers lui, à payer dans 3 tours. | — |
+| 368 | Protecteur de l'empire | **oui** | nouveau bouton | Conflit, combats spatial et terrestre : « Protecteur de l'empire » use un politique du détenteur ; le Winnu a un bouton pour lui. +1 par politique usé (cumulables) pour les unités du détenteur, contre une faction qui a plus d'infamie que lui. | — |
+| 369 | Pupille de l'empire | **oui** | nouveau bouton | Fiche de la promesse, revendication : « on m'a conquis une planète » — le conquérant se choisit dans l'onglet Décision ; le Winnu répond dans le sien : user un politique (le conquérant gagne 1 infamie) ou gagner 1 infamie. | — |
 | 370 | Accès aux archives impériales | **oui** | nouveau bouton | Fiche de la carte, science : use un scientifique, Mecatol Rex est activée, 3 de recherche pour vous et autant pour les Winnu (journal de recherche). | — |
 | 383 | Promesse de vente | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — retour à la réserve, la faction qui l'a faite gagne 1 infamie. | L'élément promis et l'échéance : à la main. |
 | 384 | Frontière ouverte | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — retour à la réserve, la faction qui l'a faite gagne 1 infamie. | — |
-| 421 | Partage de technologie | non | — | — | Technologie d'une autre faction dont on bénéficie. (passé) |
-| 454 | Tuteur des réfugiés | non | — | — | Lié aux réfugiés, non représentés. (passé) |
+| 421 | Partage de technologie | **oui** | automatique | Onglet Technologie : la faction qui pose son marqueur sur une technologie débloquée de l'autre, tant que l'alliance est en jeu entre elles, a les scripts de cette technologie. | — |
+| 454 | Tuteur des réfugiés | **oui** | nouveau bouton | Fiche de la promesse : « j'attaque mes Réfugiés » (promesse dépensée, +1 infamie). Fiche d'un système, phase d'événement, à côté d'une planète à Entrepôt d'aide : l'entrepôt est usé, 4 commerce posés dessus sont dépensés, +1 faveur des Réfugiés. | — |
 | 458 | Pacte pirate | **partiel** | nouveau bouton | Obtenu par « Diplomatie pirate ». Fiche de la carte, ravitaillement : « payer 2 ressources » (une fois par tour). | Les pirates vous ignorent : à la main. |
-| 870 | Passage de Creuss | non | — | — | Usage des trous de ver delta : règle de déplacement. (passé) |
+| 870 | Passage de Creuss | **oui** | automatique | Déplacement assisté : une étape par un trou de ver delta n'est plus signalée (sans cette promesse ni Navigation delta, elle demande une confirmation). | — |
 | 963 | Conspirer ensemble (Les Empyréens WIP) | non | — | — | +1 vote si votre vote majoritaire suit celui des Empyréens : non relié au vote de l'outil. (passé) |
-| 964 | Chemin du vide (Les Empyréens WIP) | non | — | — | Anomalies sans effet sur vos déplacements : règle de déplacement. (passé) |
+| 964 | Chemin du vide (Les Empyréens WIP) | **oui** | automatique | Déplacement assisté : une supernova, un champ d'astéroïdes ou une nébuleuse que contrôlent les Empyréens (eux seuls, avec vous au plus, y ont des unités) ne gêne pas votre trajet. | — |
 
 ## Agents et reliques
 

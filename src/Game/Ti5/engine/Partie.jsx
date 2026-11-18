@@ -404,7 +404,29 @@ export function Partie({ id }) {
             }
 
             if (script.carte.type === "tech") {
-                return [script.carte.id, ...(script.aussi || [])].some(tech => technologies[userId]?.has(tech));
+
+                const techs = [script.carte.id, ...(script.aussi || [])];
+
+                if (techs.some(tech => technologies[userId]?.has(tech))) {
+                    return true;
+                }
+
+                // Promesse Partage de technologie (#421) : le joueur a posé son marqueur sur
+                // cette technologie, débloquée chez une faction avec qui cette alliance est en jeu
+                if (scriptsDesactives.includes("partage-de-technologie")) {
+                    return false;
+                }
+
+                const alliance = (a, b) => Object.values(etat.composants).some(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === 421 &&
+                    new RegExp(`^joueur:${a}:(actif|tour:\\d+)$`).test(c.zone || "") &&
+                    Object.values(etat.composants).some(m => m.sur === c.id && !m.ref && m.proprio === b));
+
+                return partie.joueurs.some(j => j.userId !== userId && (alliance(j.userId, userId) || alliance(userId, j.userId)) &&
+                    techs.some(tech => {
+                        const zone = technologies[j.userId]?.get(tech)?.zone;
+
+                        return !!zone && (index.parZone.get(zone) || []).some(m => !m.ref && m.jeton === "marqueur" && m.proprio === userId);
+                    }));
             }
 
             // Habilité : elle s'applique au joueur si elle est sur sa feuille de faction
