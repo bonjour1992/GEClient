@@ -21,7 +21,9 @@ export const TechColor = {
     sig:{borderColor: "#400369", backgroundColor: "#9360ce"},
     rupt: { borderColor: "#7a0000", backgroundColor: "#d64545" },
     // Infiltration (Virus de Nekro) : remplacement #reinfi de la même couleur
-    infi: { borderColor: "#004d40", backgroundColor: "#4db6ac" }
+    infi: { borderColor: "#004d40", backgroundColor: "#4db6ac" },
+    // Forge d'arme (Braises de Muaat) : remplacement #reforge de la même couleur
+    forge: { borderColor: "#bf360c", backgroundColor: "#ffab40" }
 }
 
 

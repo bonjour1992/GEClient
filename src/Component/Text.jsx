@@ -314,7 +314,8 @@ function renderTextNode(
      * #xxx(2, xxx)
      */
 const regex =
-    /#img\[([0-9a-zA-Z\/\-_ .]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(€)?(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g   
+    // (chemin d'image : tout sauf « ] » — apostrophes et accents compris, issue #4)
+    /#img\[([^\]]+)\]|\|([0-9]+)\||#([a-zA-Z_][a-zA-Z_]+)(€)?(&|&amp;)?(?:\((\d+)(?:,\s*([A-Za-z0-9 \/]+))?\))?/g   
      let result=[]
 let lastIndex = 0
     let match

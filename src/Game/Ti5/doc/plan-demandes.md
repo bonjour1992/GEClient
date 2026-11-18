@@ -387,6 +387,13 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Émanation du vide, Fouille des nébuleuses (fragment spatial), Achat de votes et Vote du conclave,
   Mandat (transactions, révocation, Mecatol Rex).
 - ☑ Données (2026-11-18) : unités de la Néo-peste et de Sardakk N'orr (`migrate-neopeste-sardakk.mjs`).
+- ☑ Braises de Muaat (2026-11-18, `migrate-muaat.mjs`) : habilité Physiologie gashlai, Soleil de
+  guerre vaisseau amiral (2 de plus en réserve), mini-technologie « Forge d'arme » — type `forge`
+  (`ti5Const.js`, `tech.jsx`), remplacement `#reforge`, feuille de 6 technologies, habilité Étude de
+  la forge, marqueur Instable. Règles non scriptées.
+- ☑ Issues GEClient #4, #5 et #6 (2026-11-18) : `#img[…]` accepte les apostrophes (`Text.jsx`) ;
+  description de la planète natale dans l'éditeur de texte ; Nekro — logisticien propre sans
+  mobiliser, habilité Essaim de drones retirée et supprimée (`migrate-nekro-logisticien.mjs`).
 - ☑ Issues GEClient #2 et #3 (2026-11-18) : unités de base dans la réserve neutre ; ni
   bombardement ni combat terrestre sur un satellite ou une planète spéciale (rouge gris) ;
   un seul bombardement par unité et par tour. Verso de faction : illustration, système et

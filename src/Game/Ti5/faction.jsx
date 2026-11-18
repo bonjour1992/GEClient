@@ -67,7 +67,10 @@ const lignesPlanete = content => [
     ["Environnement", content.environnement],
 ].filter(([, v]) => v)
 
-const aInfosPlanete = content => Boolean(content.planete || content.descriptionPlanete || lignesPlanete(content).length > 0)
+// (la description est un texte de l'éditeur : « <p></p> » est vide)
+const aDescription = content => String(content.descriptionPlanete || "").replace(/<[^>]*>/g, "").trim() !== ""
+
+const aInfosPlanete = content => Boolean(content.planete || aDescription(content) || lignesPlanete(content).length > 0)
 
 // Infos de la planète natale (verso, en haut à droite) ; rien si elles sont vides
 function InfosPlanete({ content }) {
@@ -95,7 +98,10 @@ function InfosPlanete({ content }) {
         }}>
             {content.planete && <div style={{ fontWeight: 700, fontSize: 12 }}>{content.planete}</div>}
             {lignesPlanete(content).map(([nom, v]) => <div key={nom}><b>{nom} :</b> {v}</div>)}
-            {content.descriptionPlanete && <div style={{ fontStyle: "italic", marginTop: 3 }}>{content.descriptionPlanete}</div>}
+            {/* (texte de l'éditeur : gras, italique, balises du jeu — issue #5) */}
+            {aDescription(content) && (
+                <Text text={content.descriptionPlanete} style={{ fontStyle: "italic", marginTop: 3, color: "white", fontSize: 10 }} />
+            )}
         </div>
     )
 }
@@ -426,7 +432,7 @@ function Form({ content, onChange, onSubmit, style }) {
             <TextInput onChange={onChange} value={content} name="population" label="Population" />
             <TextInput onChange={onChange} value={content} name="gouvernement" label="Gouvernement" />
             <TextInput onChange={onChange} value={content} name="environnement" label="Environnement" />
-            <TextInput onChange={onChange} value={content} name="descriptionPlanete" label="Description" style={{ width: "100%" }} />
+            <EditorInput onChange={onChange} value={content} name="descriptionPlanete" label="Description" />
             <h2>Forces (verso, en bas à gauche : 0 à {FORCE_MAX})</h2>
             <div data-forces-formulaire style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {FORCES.map((nom, k) => (
