@@ -220,7 +220,7 @@ composant caché (sa zone d'arrivée dirait où il se trouve).
   qui la cache (action `retourner`) ; une unité neutre reste neutre.
 - **vote** : dans le décompte, un vote est écrit sur la couleur de sa colonne
   du plateau ; un clic sur une loi du tour ouvre sa fiche.
-- **combat** : « Retirer tous les détruits » retire d'un coup les unités
+- **combat** : « Terminer le combat » retire d'un coup les unités
   détruites (pas les indestructibles).
 - **trêve** : le marqueur est une colombe portant un rameau d'olivier.
 - **affichage** : code couleur (jaune à faire, vert fait, rouge problème,
@@ -1050,7 +1050,7 @@ conditions de l'écran (texte, « Prêt au combat », « Lancer les attaques »)
 l'étape 3 affiche les phases 5 et 6 de `PHASES_COMBAT`. `captureePar(v)` (camp de
 l'unité de la marque `degatPar` si son texte dit « attaque après toutes les
 autres ») change `retrait` : marques effacées, dégâts à 0, `deplacer` vers
-`joueur:<camp>:actif` avec `proprio`, bouton « Retirer (capturé) ».
+`joueur:<camp>:actif` avec `proprio`, bouton « Terminer le combat ».
 
 Cube noir d'un mercenaire (11 novembre, soir) : l'usure d'un mercenaire, c'est
 la place de son cube (`CUBE_MERCENAIRE`, `Interaction.jsx`). Posé sur la carte
@@ -1084,14 +1084,14 @@ Ce qui a été laissé de côté est marqué « (passé) » dans
 Chaque dégât appliqué à une unité note d'abord son auteur sur elle : marque
 `degatDe` = `c<camp>` du tireur (`attribution` de `Combat.jsx`, et dépôt d'un
 dégât à la main dans `Interaction.jsx`), posée dans le même coup, avant le
-dégât. `auteurDesDegats` (`effets.js`) la relit. À « Retirer » une unité
+dégât. `auteurDesDegats` (`effets.js`) la relit. À « Terminer le combat » une unité
 détruite (`butinDe`, `retirer`, `Combat.jsx`), le camp du dernier dégât gagne
 le **pillage** de l'unité — `lirePillage` lit « #pill 2 », « #pill(#point(1)) »,
 « #Pill(#Infa(1) et #Point(1)) », « #pill #rerupt(3) » : commerce, points,
 infamie, recherche (notée au journal de recherche) — seulement s'il a encore
 une unité dans le système. Habilités : Maître du pillage (+1 commerce par
 pillage), Libre échange (1 infamie pour une unité commerciale non militaire
-détruite). Le bouton annonce le butin (« Retirer (butin) »), le coup et un
+détruite). Le bouton annonce le butin (« Terminer le combat »), le coup et un
 message orange le disent. Script `pillage-unite` (l'identifiant `pillage` est
 celui de la technologie).
 
@@ -1518,6 +1518,29 @@ s'ouvre depuis la fiche d'un système (`data-action="test-de-domination"`, `Espa
 conflit (`Domination`, `Controle.jsx`) applique à sa clôture les rackets en attente (compteurs
 `racket:<case>p<k>`, puis `racket:<case>p<k>:tour`). Signaux de « Signal capté » : piles
 `pioche:signal-1` à `4` et marqueurs libres « Signal N » (`ScriptsCarte.jsx`, `signaux`).
+
+### onglet Décision et destruction au combat (18 novembre, suite)
+
+`Decisions.jsx` : l'onglet « Décision » (`ONGLETS`, `Partie.jsx`) remplace les fenêtres
+surgissantes de choix. `decider({ titre, texte, choix, nombre })` (contexte de l'engine) rend
+une promesse — la valeur choisie, ou null si le joueur renonce —, ouvre l'onglet, puis revient
+à l'onglet d'origine (`repondre`). Y passent : la `demande` des scripts d'action (`lireQuestion`
+lit les choix écrits « 1 = … »), So Ata (`Combat.jsx`), Propagande (`PlateauGeneral.jsx`). Les
+décisions durables se lisent dans l'état : Recomposition (compteurs `joueur:<u>:recompCout`,
+`recompPhase`, `recomposition`, `recompositionJet`) ; `decisionsDurables(ctx)` les compte pour la
+pastille de l'onglet. Restent en fenêtre, parce qu'elles sont au milieu d'un coup construit
+d'une traite : le remplaçant d'un agent, Bio stimulant, Connexion, Ahk Ravin, Science intégrée.
+
+`Combat.jsx` : il n'y a plus de bouton « Retirer ». `condamnee(v)` (assez de dégâts) coche
+l'unité « détruit » (`data-detruit`) ; la case se décoche après confirmation (marque `epargne`
+du combat, `estDetruit` la respecte). `terminer` retire `aRetirer` (`retrait` : butin, capture
+de la Troupe de détournement), applique les sauvetages réussis (`sauvetage` : Memoria D,
+Médecine), cumule le coût des pertes biologiques pour Recomposition (`cumulRecomposition`),
+puis clôt le combat.
+
+Mandat (Winnu) : `Transaction.jsx`, `lire(ligne, t).regles` — avertissements d'une ligne
+(pas de Mecatol Rex, transaction proposée par un autre, déjà un mandat) ; `accepter` demande
+une confirmation (`confirmerRegle`) avant d'appliquer.
 
 ### verso de la faction : planète et forces
 

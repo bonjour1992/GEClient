@@ -266,7 +266,7 @@ export function Combat() {
 function CombatSysteme({ lieu }) {
 
     const {
-        etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser,
+        etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser, decider,
         connaissance, capaciteLogistique,
     } = useEngine();
 
@@ -832,10 +832,16 @@ function CombatSysteme({ lieu }) {
     // Résistance d'une unité, Blindage en duranium compris : { valeur, bonus }
     const pv = v => resistanceDe(v.u, v.camp, aScript);
 
-    const estDetruit = v => {
+    // Une unité qui a subi autant de dégâts que sa résistance est condamnée : elle est
+    // indiquée détruite, et « Terminer le combat » la retire. Un joueur peut l'épargner à la
+    // main (case « détruit » décochée, après confirmation : marque « epargne » de ce combat).
+    const condamnee = v => {
         const resistance = pv(v).valeur;
         return resistance > 0 && (Number(v.c.marques?.degat) || 0) >= resistance;
     };
+
+    const epargnee = v => v.c.marques?.epargne === `${lieu}:${etat.tour}`;
+    const estDetruit = v => condamnee(v) && !epargnee(v);
 
     // --------------------------------------------------------
     // PILLAGE (#pill, effets.js) et autres gains à la destruction
@@ -1008,27 +1014,30 @@ function CombatSysteme({ lieu }) {
         { type: "supprimer", c: v.id },
     ].filter(Boolean));
 
-    // Retire ces unités, et dit le butin de chacune (journal, message orange)
-    function retirer(liste) {
+    // (Le retrait se fait à « Terminer le combat » : il n'y a plus de bouton « Terminer le combat ».)
 
-        const butins = liste.map(butinDe).filter(Boolean).map(b => b.texte);
+    // Technologie Recomposition (Arborec) : le coût des unités biologiques détruites dans la
+    // phase est cumulé pour le jet (onglet Décision). Compteurs joueur:<u>:recompCout et
+    // joueur:<u>:recompPhase (tour × 100 + rang de la phase : un cumul d'une autre phase est remplacé)
+    const rangPhase = etat.tour * 100 + Number(/^(\d+)/.exec(etat.phase || "")?.[1] ?? 0);
 
-        envoyer(
-            [
-                ...liste.flatMap(retrait),
-                { type: "compteur", id: DETRUITS, delta: liste.length },
-                // Henry Storcher : les vaisseaux perdus de son joueur sont comptés
-                ...campsJoueurs.filter(u => aScript(u, "henry-storcher"))
-                    .map(u => ({ type: "compteur", id: PERDUS + u, delta: liste.filter(v => v.camp === u && estVaisseau(v)).length }))
-                    .filter(action => action.delta > 0),
-            ],
-            [`Combat : ${liste.length} unité(s) détruite(s) retirée(s)`, ...butins].join(" — ")
-        );
+    const cumulRecomposition = liste => campsJoueurs.filter(u => aScript(u, "recomposition")).flatMap(u => {
 
-        if (butins.length) {
-            aviser(butins.join(" ; "));
+        const cout = liste
+            .filter(v => v.camp === u && (v.u.mot_cle || []).includes("bio") && captureePar(v) === null)
+            .reduce((total, v) => total + (Number(v.u.cout) || 0), 0);
+
+        if (!cout) {
+            return [];
         }
-    }
+
+        const memePhase = Number(etat.compteurs[`joueur:${u}:recompPhase`]) === rangPhase;
+
+        return [
+            { type: "compteur", id: `joueur:${u}:recompCout`, valeur: (memePhase ? Number(etat.compteurs[`joueur:${u}:recompCout`]) || 0 : 0) + cout },
+            { type: "compteur", id: `joueur:${u}:recompPhase`, valeur: rangPhase },
+        ];
+    });
 
     // Script Médecine : une de mes unités biologiques, et son jet de capture
     const medecine = v => v.camp === moi && (v.u.mot_cle || []).includes("bio") && aScript(moi, "medecine");
@@ -1054,9 +1063,27 @@ function CombatSysteme({ lieu }) {
     const jetMemoria = v => Number(v.c.marques?.memoria) || 0;
     const sauveeMemoria = v => sauvableMemoria(v) && jetMemoria(v) > 0 && jetMemoria(v) <= 6;
 
-    // Unités détruites à retirer du jeu (bouton « Retirer tous les détruits »)
-    // (pas une frégate du khan dont la riposte n'est pas faite)
-    const aRetirer = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes") && !khanEnAttente(v));
+    // Unités détruites sauvées par un jet réussi (Memoria D : à bord ; Médecine : capturée dans
+    // mes éléments actifs) -> actions, ou null. « Terminer le combat » les applique si le
+    // bouton de l'unité n'a pas été cliqué.
+    const sauvetage = v => (sauveeMemoria(v)
+        ? [
+            { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+            { type: "marquer", c: v.id, marque: "memoria", valeur: null },
+            { type: "deplacer", c: v.id, sur: memoriaD.id },
+        ]
+        : (medecine(v) && jetMedecine(v) > 0 && jetMedecine(v) <= 5
+            ? [
+                { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+                { type: "marquer", c: v.id, marque: "medecine", valeur: null },
+                { type: "deplacer", c: v.id, vers: `joueur:${moi}:actif` },
+            ]
+            : null));
+
+    // Unités détruites que « Terminer le combat » retire du jeu (pas les indestructibles,
+    // seulement désactivées, ni celles qu'un jet a sauvées)
+    const aRetirer = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes") && !sauvetage(v));
+    const aSauver = vaisseaux.filter(v => estDetruit(v) && !aCapacite(v, "indes") && !!sauvetage(v));
 
     // --------------------------------------------------------
     // DÉGÂTS À ENCAISSER
@@ -1436,7 +1463,13 @@ function CombatSysteme({ lieu }) {
         const obstacles = [
             cochees.length > 1 &&
                 `Récupération est cochée par ${cochees.map(nomDe).join(" et ")} : une seule faction domine le système`,
+            // (une frégate du khan détruite attend sa riposte : elle sera retirée sans elle)
+            aRetirer.some(khanEnAttente) && "une frégate du khan détruite attend encore sa riposte (elle sera retirée sans elle)",
         ];
+
+        // Les unités indiquées détruites sont retirées (butin, capture), celles qu'un jet a
+        // sauvées vont où le jet le dit
+        const butins = aRetirer.map(butinDe).filter(Boolean).map(b => b.texte);
 
         const commentaire = obstacles.some(Boolean)
             ? confirmerRegle("Terminer le combat", obstacles)
@@ -1466,9 +1499,25 @@ function CombatSysteme({ lieu }) {
             // l'unité ne tire donc plus si ce bombardement est rouvert au même tour (issue #3)
             ...unites.filter(c => c.marques?.bombarde === CE_COMBAT)
                 .map(c => ({ type: "marquer", c: c.id, marque: "bombarde", valeur: "fini:" + CE_COMBAT })),
+            // Unités épargnées à la main : la marque ne vaut que pour ce combat
+            ...unites.filter(c => c.marques?.epargne !== undefined).map(c => ({ type: "marquer", c: c.id, marque: "epargne", valeur: null })),
+            // Destruction : les unités indiquées détruites quittent le jeu (après les
+            // effacements de marques ci-dessus : une unité retirée ne se marque plus)
+            ...cumulRecomposition(aRetirer),
+            ...aSauver.flatMap(sauvetage),
+            ...aRetirer.flatMap(retrait),
             // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
             { type: "compteur", id: COMBAT, valeur: 2 },
-        ], commentaire + (gain ? ` — Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}` : ""));
+        ], [
+            commentaire,
+            aRetirer.length > 0 && `${aRetirer.length} unité(s) détruite(s) retirée(s)`,
+            ...butins,
+            gain && `Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}`,
+        ].filter(Boolean).join(" — ").slice(0, 300));
+
+        if (butins.length) {
+            aviser(butins.join(" ; "));
+        }
     }
 
     const maSelection = selection.filter(id => parId[id]?.camp === moi);
@@ -1531,12 +1580,16 @@ function CombatSysteme({ lieu }) {
     }
 
     // So Ata : un vaisseau adverse détruit (pas encore retiré) est capturé — il va dans mes éléments actifs
-    function capturer(commentaire) {
+    async function capturer(commentaire) {
 
+        // (plusieurs vaisseaux capturables : le choix se fait dans l'onglet Décision)
         const reponse = capturables.length > 1
-            ? window.prompt("So Ata : quel vaisseau capturer ? Tapez son numéro :\n\n" +
-                capturables.map((v, k) => `${k + 1} : ${nomElement(search, v.c.ref)} (${nomCamp(v.camp)})`).join("\n"), "1")
-            : "1";
+            ? await decider({
+                titre: "So Ata",
+                texte: "Quel vaisseau détruit capturer ?",
+                choix: capturables.map((v, k) => ({ valeur: k + 1, libelle: `${nomElement(search, v.c.ref)} (${nomCamp(v.camp)})` })),
+            })
+            : 1;
 
         const v = capturables[Math.floor(Number(reponse)) - 1];
 
@@ -1624,7 +1677,7 @@ function CombatSysteme({ lieu }) {
             nom: "So Ata : capturer un vaisseau adverse détruit",
             libelle: `So Ata : capturer un vaisseau détruit${capturables.length ? ` (${capturables.length})` : ""}`,
             titre: "Fin du combat spatial : son cube part dans les agents usés ; un vaisseau adverse détruit, pas encore retiré (hors vaisseau amiral et soleil de guerre), va dans vos éléments actifs",
-            obstacles: [dejaUse(284), !capturables.length && "aucun vaisseau adverse détruit à capturer (avant « Retirer »)"],
+            obstacles: [dejaUse(284), !capturables.length && "aucun vaisseau adverse détruit à capturer (avant « Terminer le combat »)"],
             faire: commentaire => (capturables.length ? capturer(commentaire) : envoyer([...userMerc(284)], commentaire)),
         },
     ].filter(Boolean);
@@ -1737,7 +1790,9 @@ function CombatSysteme({ lieu }) {
         const aMoi = v.camp === moi;
         const degat = Number(v.c.marques?.degat) || 0;
         const { valeur: resistance, bonus: blindage } = pv(v);
-        const detruit = resistance > 0 && degat >= resistance;
+        // (condamnee : assez de dégâts ; detruit : et pas épargnée à la main)
+        const assezDeDegats = resistance > 0 && degat >= resistance;
+        const detruit = assezDeDegats && !epargnee(v);
         const indestructible = aCapacite(v, "indes");
         const engage = v.tire ? engagement(v) : [];
         const des = lireDes(v.c);
@@ -1854,8 +1909,40 @@ function CombatSysteme({ lieu }) {
                         </span>
                     )}
 
-                    {detruit && (
-                        <b style={{ color: "#c00" }}>{indestructible ? "désactivé" : "détruit"}</b>
+                    {detruit && indestructible && <b style={{ color: "#c00" }}>désactivé</b>}
+
+                    {/* Assez de dégâts : l'unité est indiquée détruite, et « Terminer le combat » la
+                        retire. La case se décoche à la main, après confirmation (l'unité est épargnée). */}
+                    {assezDeDegats && !indestructible && (
+                        <label
+                            data-detruit={detruit ? "oui" : "epargne"}
+                            title={detruit
+                                ? [butinDe(v)?.texte, "« Terminer le combat » la retirera. Décocher pour l'épargner (après confirmation)."].filter(Boolean).join(" — ")
+                                : "Épargnée à la main : elle ne sera pas retirée à la fin du combat. Cocher pour l'indiquer détruite."}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 3, fontWeight: "bold", color: detruit ? "#c00" : "#777" }}
+                        >
+                            <input
+                                type="checkbox"
+                                checked={detruit}
+                                disabled={!joueur}
+                                onChange={() => {
+                                    if (!detruit) {
+                                        envoyer([{ type: "marquer", c: v.id, marque: "epargne", valeur: null }], `Combat : ${v.nom} indiquée détruite`);
+                                        return;
+                                    }
+
+                                    const commentaire = confirmerRegle(`Épargner ${v.nom}`,
+                                        ["elle a subi assez de dégâts pour être détruite"]);
+
+                                    if (commentaire) {
+                                        envoyer([{ type: "marquer", c: v.id, marque: "epargne", valeur: CE_COMBAT }], commentaire);
+                                    }
+                                }}
+                            />
+                            {detruit
+                                ? (captureePar(v) !== null ? "détruit (capturé à la fin du combat)" : (butinDe(v) ? "détruit (butin)" : "détruit"))
+                                : "épargné"}
+                        </label>
                     )}
 
                     {/* Script Médecine : une de mes unités biologiques détruite peut être capturée
@@ -1961,18 +2048,6 @@ function CombatSysteme({ lieu }) {
                             style={{ ...styleBouton, backgroundColor: "#6a1b9a", color: "#fff", fontWeight: "bold" }}
                         >
                             ✹ Riposte du khan
-                        </button>
-                    )}
-
-                    {joueur && detruit && !indestructible && !khanEnAttente(v) && !sauveeMemoria(v) &&
-                        !(medecine(v) && jetMedecine(v) > 0 && jetMedecine(v) <= 5) && (
-                        <button
-                            type="button"
-                            style={styleBouton}
-                            title={butinDe(v)?.texte}
-                            onClick={() => retirer([v])}
-                        >
-                            Retirer{captureePar(v) !== null ? " (capturé)" : (butinDe(v) ? " (butin)" : "")}
                         </button>
                     )}
 
@@ -2263,15 +2338,12 @@ function CombatSysteme({ lieu }) {
 
                 {joueur && (
                     <>
-                        {/* Retire d'un coup toutes les unités détruites du combat */}
-                        <button
-                            type="button"
-                            disabled={!aRetirer.length}
-                            title="Retire du jeu toutes les unités détruites de ce combat (pas les unités indestructibles, qui sont seulement désactivées)"
-                            onClick={() => retirer(aRetirer)}
-                        >
-                            Retirer tous les détruits{aRetirer.length ? ` (${aRetirer.length})` : ""}
-                        </button>
+                        {/* (Les unités indiquées détruites sont retirées par « Terminer le combat ».) */}
+                        {aRetirer.length > 0 && (
+                            <span data-a-retirer={aRetirer.length} style={{ color: "#c00", fontSize: 13 }}>
+                                {aRetirer.length} unité(s) détruite(s) : retirée(s) à la fin du combat
+                            </span>
+                        )}
 
                         {/* Mercenaires de combat : un bouton par mercenaire dont j'ai la carte */}
                         {boutonsMercenaires.map(b => (

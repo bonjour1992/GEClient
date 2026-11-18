@@ -1,4 +1,4 @@
-import { Component, useCallback, useEffect, useMemo, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useSearch, getFromType } from "../../../lib/store";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
@@ -65,6 +65,7 @@ import { BoutonsScripts } from "./ActionsScript";
 import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
+import { Decisions, decisionsDurables } from "./Decisions";
 import { Vote, tradingFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
@@ -90,6 +91,7 @@ import { quiVoit } from "./etat";
 const ONGLETS = [
     ["espace", "Espace"],
     ["combat", "Conflit"],
+    ["decision", "Décision"],
     ["joueur", "Plateau joueur"],
     ["tech", "Technologie"],
     ["general", "Plateau général"],
@@ -247,6 +249,35 @@ export function Partie({ id }) {
     // « reglage » du jeu, réglé dans l'outil « Scripts de règles »)
     const [avis, setAvis] = useState("");
 
+    // Décisions ponctuelles en attente (onglet Décision, Decisions.jsx) : chacune porte la
+    // promesse de l'action qui l'attend, et l'onglet d'où elle vient
+    const [decisions, setDecisions] = useState([]);
+    const prochaineDecision = useRef(1);
+
+    const decider = decision => new Promise(resolve => {
+        const id = "d" + prochaineDecision.current++;
+
+        setDecisions(liste => [...liste, { ...decision, id, resolve, retour: onglet }]);
+        setOnglet("decision");
+    });
+
+    const repondre = (id, valeur) => {
+        const decision = decisions.find(d => d.id === id);
+
+        if (!decision) {
+            return;
+        }
+
+        setDecisions(liste => liste.filter(d => d.id !== id));
+
+        // (plus rien à décider : retour à l'onglet d'où l'action est partie)
+        if (decisions.length === 1 && decision.retour && decision.retour !== "decision") {
+            setOnglet(decision.retour);
+        }
+
+        decision.resolve(valeur);
+    };
+
     const reglage = useElement(
         search.find(e => e.type === "reglage" && e.name === SCRIPTS_DESACTIVES)?.id ?? -1
     );
@@ -357,6 +388,11 @@ export function Partie({ id }) {
         aviser: setAvis,
         scriptsDesactives,
 
+        // Onglet Décision : une action qui demande un choix crée une décision et attend la réponse
+        decider,
+        decisions,
+        repondre,
+
         // Script d'effet : il est en service et le joueur a débloqué sa technologie
         aScript: (userId, id) => {
             const script = SCRIPTS.find(s => s.id === id);
@@ -454,8 +490,11 @@ export function Partie({ id }) {
     const ongletFaveurs = faveurs.prevus > 0 && /[ée]v[ée]nement/i.test(etat.phase);
 
     const onglets = ongletFaveurs
-        ? [...ONGLETS.slice(0, 6), ["faveurs", "Faveurs"], ...ONGLETS.slice(6)]
+        ? [...ONGLETS.slice(0, 7), ["faveurs", "Faveurs"], ...ONGLETS.slice(7)]
         : ONGLETS;
+
+    // Décisions qui m'attendent : ponctuelles (ce navigateur) et durables (état de la partie)
+    const nombreDecisions = decisions.length + decisionsDurables(ctx);
 
     // Transactions proposées : l'onglet est mis en avant quand l'une d'elles
     // attend ma validation
@@ -1584,6 +1623,7 @@ export function Partie({ id }) {
                                             (cle === "chat" && messagesNonLus) ? "#ffe082"
                                                 : (cle === "combat" && combatEnCours)
                                                     ? (combatAvecMoi ? COULEUR_COMBAT.avecMoi : COULEUR_COMBAT.sansMoi)
+                                                    : (cle === "decision" && nombreDecisions) ? "#ffcc80"
                                                     : (cle === "faveurs" && faveurs.attendu) ? "#ffe082"
                                                         : (cle === "transactions" && transactionsEnCours.length)
                                                             ? (transactionPourMoi ? "#ffe082" : "#e0e0e0")
@@ -1591,6 +1631,7 @@ export function Partie({ id }) {
                                     }}
                                 >
                                     {libelle}{cle === "combat" && combatEnCours ? ` (${conflits})` : ""}
+                                    {cle === "decision" && nombreDecisions > 0 ? ` (${nombreDecisions})` : ""}
                                     {cle === "transactions" && transactionsEnCours.length > 0
                                         ? ` (${transactionsEnCours.length})`
                                         : ""}
@@ -1650,6 +1691,7 @@ export function Partie({ id }) {
                             {onglet === "notes" && <Notes />}
                             {onglet === "journal" && <Journal />}
                             {onglet === "aide" && <Aide />}
+                            {onglet === "decision" && <Decisions />}
                         </Barriere>
                     </div>
 

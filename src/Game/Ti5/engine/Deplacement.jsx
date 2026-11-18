@@ -289,8 +289,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const possedeShar = aScript(moi, "shar") && (index.parZone.get(`joueur:${moi}:actif`) || [])
         .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 275);
 
-    const sharIci = i => possedeShar &&
-        (systemes[tuiles[i]?.ref?.id]?.elems || []).some(lien => Number(lien?.id) === 275);
+    // (habilité Émanation du vide des Empyréens : aucune nébuleuse ne gêne mes déplacements)
+    const sharIci = i => aScript(moi, "emanation-du-vide") || (possedeShar &&
+        (systemes[tuiles[i]?.ref?.id]?.elems || []).some(lien => Number(lien?.id) === 275));
 
     const obstacles = [
         !enPhase && "ce n'est pas la phase de déplacement",

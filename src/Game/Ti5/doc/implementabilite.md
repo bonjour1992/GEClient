@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 95 | 85 | 4 | 6 | 38 | 18 | 42 |
-| Habilités | 60 | 33 | 3 | 24 | 23 | 5 | 13 |
-| Unités | 105 | 69 | 36 | 0 | 25 | 2 | 42 |
+| Technologies | 95 | 91 | 4 | 0 | 43 | 19 | 42 |
+| Habilités | 60 | 37 | 8 | 15 | 31 | 6 | 14 |
+| Unités | 112 | 72 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 19 | 5 | 2 | 12 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **350** | **233** | **65** | **52** | **125** | **57** | **108** |
+| **Total** | **357** | **246** | **74** | **37** | **138** | **60** | **109** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -81,7 +81,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 237 | Micro-téléporteur | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : « Micro-téléporteur » use un logisticien. | Le déplacement des unités se fait à la main (structures non vérifiées). |
 | 238 | Stargate | **oui** | automatique | Déplacement assisté : chaque système où vous avez un dock a un trou de ver alpha. | — |
 | 239 | Moteur FTL | **oui** | automatique | Déplacement assisté : +1 mouvement à tous vos vaisseaux. | — |
-| 242 | Médecine | **oui** | bouton existant modifié | Conflit : avant « Retirer » une de vos unités biologiques détruites, « Médecine : jet » (5 ou moins) permet de la capturer — elle va dans vos éléments actifs. | La remise en jeu (use un logisticien, planète à structure) se fait à la main. |
+| 242 | Médecine | **oui** | bouton existant modifié | Conflit : avant « Terminer le combat » une de vos unités biologiques détruites, « Médecine : jet » (5 ou moins) permet de la capturer — elle va dans vos éléments actifs. | La remise en jeu (use un logisticien, planète à structure) se fait à la main. |
 | 244 | Bouclier amplifié | **oui** | automatique | Résistance : +2 pour votre vaisseau amiral et vos systèmes de défense, +1 pour vos boucliers mobiles (en vert dans Conflit). | — |
 | 245 | Cuve de clonage | **oui** | nouveau bouton | Fiche d'un système, à côté de « Mobiliser » : « Cuve de clonage » use aussi un scientifique — une infanterie de plus, tout gratuit. | — |
 | 246 | Drain Spatial | **oui** | nouveau bouton | Conflit, cadre de blocage : avant d'entrer dans un système où vous avez un vaisseau amiral, un soleil de guerre ou un système de défense, vous exigez 1 ressource par vaisseau ou laissez passer ; le joueur paie ou s'arrête. | — |
@@ -100,7 +100,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 402 | Vaccin | **oui** | nouveau bouton | Plateau joueur, une seule fois : « Vaccin » +4 points, et une de vos faveurs si personne ne l'avait découvert à un tour précédent. | — |
 | 403 | Arme bactériologique | **oui** | nouveau bouton | Fiche d'un système, bombardement : use un scientifique, un dé par infanterie adverse des planètes du système — détruite sur 5 ou moins (1 si son propriétaire a le Vaccin). | « Système que vous contrôlez » : non vérifié. |
 | 419 | Réparation improvisée (Conglomérat mercantile d'Hacan) | **oui** | nouveau bouton | Version de Hacan de « Réparation improvisée » (195) : même bouton, sur la fiche d'un vaisseau endommagé. | Vaisseau « non bloqué » : non vérifié. |
-| 445 | Station météorologique | non | automatique (prévu) | — | Message orange si une station météorologique est produite sans cette technologie. (facile) |
+| 445 | Station météorologique | **oui** | bouton existant modifié | Production : produire une Station météorologique sans cette technologie demande une confirmation. | — |
 | 446 | Tempête électromagnétique | **partiel** | nouveau bouton | Fiche d'une nébuleuse, canons spatiaux : use un scientifique, active la nébuleuse, 4 dés de canon à 4 lancés par le serveur. | Répartition des touches à portée 1 : à la main. |
 | 447 | Générateur de tempête | **partiel** | nouveau bouton + automatique | Fiche d'un système, combat spatial : la technologie et un scientifique sont usés, 3 ressources — tous les vaisseaux du système ont −1 au combat ce tour (la tempête finie, pas les factions qui ont Adaptation de la visée). | La flotte ciblée (−1 de plus) : à la main. |
 | 448 | Exploitation des tempêtes | **oui** | nouveau bouton + automatique | Ravitaillement automatique : +3 ressources tant que la Tempête spatiale est active. Fiche d'une nébuleuse, science : use un scientifique et active le système, +4 ressources. | Nébuleuse « que vous contrôlez » : non vérifié. |
@@ -108,15 +108,15 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 482 | SIG-2 | **oui** | nouveau bouton | Plateau joueur : « SIG-2 : obtenir le signal n° 2 » (comme SIG-1). | — |
 | 483 | SIG-3 | **oui** | nouveau bouton | Plateau joueur : « SIG-3 : obtenir le signal n° 3 » (comme SIG-1). | — |
 | 484 | SIG-4 | **oui** | nouveau bouton | Plateau joueur : « SIG-4 : obtenir le signal n° 4 » (comme SIG-1). | — |
-| 592 | Recomposition | non | nouveau bouton + automatique (prévu) | — | Bouton de fin de combat : dés selon les pertes biologiques, puis production offerte. (moyenne) |
-| 593 | Croissance | non | nouveau bouton (prévu) | — | Bouton : remplace un vaisseau biologique choisi par un autre coûtant jusqu'à 2 de plus. (moyenne) |
+| 592 | Recomposition | **oui** | nouveau bouton | Conflit, « Terminer le combat » : le coût de vos unités biologiques détruites dans la phase est cumulé. Onglet Décision : le jet (autant de dés, réussite sur 3 ou moins), le nombre de réussites gardé, puis les vaisseaux produits dans le système choisi tant que leur coût cumulé tient dans ce nombre — un généticien (ou un logisticien) usé par vaisseau. | — |
+| 593 | Croissance | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux biologiques, production : deux boutons (use la technologie, ou use un généticien) ; le vaisseau de remplacement, qui coûte jusqu'à 2 de plus, se choisit dans l'onglet Décision. | — |
 | 594 | Vie fructifiante | **oui** | automatique | Ravitaillement automatique : Sève de vie rend 2 de résistance au lieu d'une. | — |
 | 787 | Réseau | **oui** | automatique | Ravitaillement automatique : +2 influence par satellite — stations possédées (planètes de type station) et unités satellites sur la carte. | — |
 | 788 | Stratégie d'évitement | **oui** | nouveau bouton | Conflit, combat spatial, avant les attaques : « Stratégie d'évitement : vaisseaux cochés » — ils ont −1 au combat, et un tireur dont le premier engagement ne vise qu'eux a −1. | — |
-| 789 | Contact mercenaire | non | nouveau bouton + automatique (prévu) | — | Bouton : use la carte, produit un vaisseau payé en influence ; portée non vérifiée. (moyenne) |
+| 789 | Contact mercenaire | **oui** | nouveau bouton | Fiche d'un système à portée 2 d'un satellite que vous possédez, diplomatie : la technologie est usée, un vaisseau militaire de votre faction (onglet Décision) est produit dans le système, payé en influence. | — |
 | 791 | Stimulant | **oui** | nouveau bouton | Plateau joueur : la technologie est usée, une fenêtre numérotée fait choisir un agent usé (cube noir d'un mercenaire compris), qui redevient disponible. | — |
 | 803 | Prévision des combats | **oui** | nouveau bouton | Fiche d'un système, combat spatial : la technologie et un scientifique sont usés — vos vaisseaux de ce système ont la frappe en premier ce tour (écran de combat). | — |
-| 804 | Calcul de probabilité | non | nouveau bouton (prévu) | — | Bouton : montre au seul joueur la prochaine carte du plateau déroulé. (moyenne) |
+| 804 | Calcul de probabilité | **oui** | nouveau bouton | Plateau joueur : « Calcul de probabilité » consulte pour vous seul les cartes face cachée du déroulé du tour prochain ; leur contenu s'affiche dans votre journal. | — |
 | 805 | Anticipation | **partiel** | nouveau bouton | Plateau joueur, combat spatial, quand Memoria est sur la carte : la technologie et un scientifique sont usés. | Le déplacement de Memoria : à la main. |
 | 806 | Opportunité prédite | **oui** | nouveau bouton | Plateau joueur, recrutement (une fois par tour) : une fenêtre numérotée fait choisir un agent de base ; un agent de ce type est pris dans le sac (ou créé) et posé sur la case de recrutement 4. | « À tout moment » : limité à une fois par tour. |
 | 807 | Relais d'influence | **oui** | automatique | Ravitaillement automatique : +2 influence par station possédée. | — |
@@ -128,27 +128,27 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 821 | Extraction de la faille | **oui** | automatique | Ravitaillement automatique : +3 ressources par Faille dominée (seul dans son espace, ou vainqueur d'un test de domination ce tour) ; une Faille disputée retient le ravitaillement jusqu'au test. | — |
 | 857 | Piraterie informatique | **oui** | nouveau bouton | Plateau joueur, deux boutons : le commerce choisi (fenêtre) est converti à 2 ressources, ou à 2 influence, chacun. | — |
 | 941 | Pluie d'astéroïdes (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète à portée 3 d'un champ d'astéroïdes non activé : le champ le plus proche est activé, un logisticien et un amiral sont usés, le marqueur « Ciblage astéroïde » est posé. Au bombardement, « attaque 4 sur chaque unité » : un dé par unité de la planète, 1 dégât sur 4 ou moins, marqueur retiré. | — |
-| 959 | Fouille des nébuleuses (Les Empyréens WIP) | non | bouton existant modifié (prévu) | — | « Fouiller » permis dans une nébuleuse : à brancher sur la fouille de la fiche d'un système. (moyenne) |
+| 959 | Fouille des nébuleuses (Les Empyréens WIP) | **oui** | nouveau bouton | Fiche d'une nébuleuse, science : use un scientifique, active la nébuleuse, +1 fragment spatial. | — |
 
 ## Habilités
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
-| 24 | Libre échange | **oui** | automatique | Conflit, « Retirer » : détruire une unité commerciale non militaire rapporte 1 infamie à qui a infligé le dernier dégât. | — |
+| 24 | Libre échange | **oui** | automatique | Conflit, « Terminer le combat » : détruire une unité commerciale non militaire rapporte 1 infamie à qui a infligé le dernier dégât. | — |
 | 36 | Vente au Bazaar | non | à définir (prévu) | — | Marché public avec achats par les autres factions : transactions non gérées. (difficile) |
 | 144 | Clé de l'empire | **oui** | nouveau bouton | Fiche du système, à côté de Mecatol Rex, production : « Clé de l'empire » — un logisticien est dépensé, les systèmes de défense de la planète perdent leurs dégâts. | — |
 | 145 | Destin légendaire | **oui** | bouton existant modifié | Ravitaillement automatique : +1 point par planète légendaire possédée. Prendre une planète légendaire (possession, revendication) : +1 point et +1 infamie. | — |
-| 146 | Mandat | non | automatique (prévu) | — | Mandats liés aux transactions et au contrôle permanent de Mecatol Rex. (difficile) |
+| 146 | Mandat | **partiel** | bouton existant modifié + nouveau bouton | Onglet Transactions : un mandat donné sans contrôler Mecatol Rex, hors d'une transaction que vous proposez, ou à une faction qui en a déjà un, est signalé et demande une confirmation à l'application. Plateau joueur : « Mandat : révoquer » (use un diplomate, choix dans l'onglet Décision) et « Mandat : épuiser / rétablir » selon que vous contrôlez Mecatol Rex. | Effets propres à chaque mandat : à la main. |
 | 156 | Raid | **oui** | nouveau bouton + automatique | Fiche d'un système, à côté d'une planète : « Raid » (une unité à raid dans l'espace). Conflit, combat « Raid » : seules les infanteries sont des cibles (s'il y a d'autres unités militaires, il faut cibler) ; chaque infanterie touchée est capturée (éléments actifs du raideur). Sans infanterie, une réussite capture un esclave de qui possède la planète. Les effets des bombardements s'appliquent. | — |
 | 157 | Esclaves | **oui** | nouveau bouton | Plateau joueur : « Esclaves : dépenser un esclave (+1 ressource) ». Un esclave est une infanterie d'un autre camp posée dans vos éléments actifs. | Capturer une infanterie : à la main (la déplacer dans ses éléments actifs). |
-| 158 | Exécuter les otages | non | à définir (prévu) | — | Contraint le vote d'une autre faction : votes non gérés au-delà du décompte. (difficile) |
-| 159 | Restituer les otages | non | nouveau bouton (prévu) | — | Bouton lors d'une livraison : rend jusqu'à 2 esclaves, infanteries posées chez le receveur. (moyenne) |
+| 158 | Exécuter les otages | **partiel** | nouveau bouton | Plateau joueur, prévote : « Exécuter les otages » dépense un de vos esclaves de la faction choisie (onglet Décision) ; un message rappelle ce qu'elle doit faire. | Vote forcé ou infamie de la faction visée : à la main. |
+| 159 | Restituer les otages | **oui** | nouveau bouton | Fiche de votre unité qui livre : « Restituer les otages » rend jusqu'à 2 de vos esclaves à la faction à comptoir du système, posés avec son comptoir (planète ou bord). | — |
 | 160 | Conclave secret | **partiel** | automatique | Ravitaillement automatique aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire est pioché dans la main. | Marquer l'objectif précédent : à la main. |
-| 166 | Vassalisation forcée | non | nouveau bouton (prévu) | — | Bouton : détruit un diplomate, marque une faction choisie vassale ; condition vérifiée à la main. (moyenne) |
+| 166 | Vassalisation forcée | **partiel** | nouveau bouton | Plateau joueur, diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs avec son marqueur. | Condition (5 systèmes, natal pour 3) : à vérifier à la main. |
 | 167 | Fierté | **partiel** | bouton existant modifié | Conflit d'accord (revendication) : « Accepter » est grisé pour le camp qui possède la planète revendiquée. | Décompte des points : à la main. |
-| 168 | Seigneur | non | nouveau bouton + automatique (prévu) | — | Bouton : transforme un agent choisi en Seigneur ; déclencheurs constatés à la main. (moyenne) |
+| 168 | Seigneur | **partiel** | nouveau bouton | Plateau joueur : « Seigneur » transforme un de vos agents disponibles (amiral, politique ou diplomate, choix dans l'onglet Décision) en Seigneur. | Déclencheurs (destruction, vote de siège, vassal) : constatés à la main. |
 | 254 | Domination | **oui** | nouveau bouton | Fiche d'un système, ravitaillement à partir du tour 7, à côté d'une planète légendaire ou militaire que vous ne contrôlez pas : « Domination : désigner ». Plateau joueur : « Domination : +2 points » si vous la contrôlez. | — |
-| 404 | Aide humanitaire | non | automatique (prévu) | — | Compteur du commerce livré par faction, puis points attribués trois tours plus tard. (moyenne) |
+| 404 | Aide humanitaire | **oui** | nouveau bouton | Fiche d'une de vos unités à livraison, dans un système à trou de ver alpha ou bêta : « Aide humanitaire : livrer » compte son commerce pour votre faction. Fiche de la carte : « faire le décompte » — 1 point par 4 commerce livrés, une faveur neutre à qui en a livré le plus (seul). | — |
 | 406 | Mouvement pirate | non | automatique (prévu) | — | Déplacement automatique des pirates avec recherche de chemin : déplacement non géré. (difficile) |
 | 427 | Sève de vie | **oui** | automatique | Ravitaillement automatique : chaque unité biologique du joueur posée sur la carte récupère 1 de résistance. | — |
 | 441 | Étude des tempêtes | **oui** | nouveau bouton | Fiche d'un système sans planète, phase de science : use un scientifique, active le système, +2 de recherche tempête (+4 dans une nébuleuse), notée au journal de recherche. | — |
@@ -169,8 +169,8 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 560 | Négocier avec les rebelles | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète où il y a des Rebelles, diplomatie : use un diplomate, 3 dés à 4, chaque réussite retire un Rebelle. | — |
 | 561 | Rébellion armée | **partiel** | nouveau bouton | Bandeau « À faire », combat terrestre : un combat terrestre est ouvert sur chaque planète où il y a 6 Rebelles ou plus. | Reprise de la planète à la revendication : à la main. |
 | 563 | Armer les rebelles | **oui** | nouveau bouton + automatique | Plateau joueur, combat terrestre, quand des Rebelles sont sur la carte : 3 ressources, les Rebelles ont +1 au combat ce tour (une fois par tour pour la table). | « Vos unités adjacentes » : non vérifié. |
-| 720 | Vote du conclave | non | nouveau bouton (prévu) | — | Bouton : jets des « Soutien politique », puis 1D10 ou 3D10 de votes. (moyenne) |
-| 722 | Achat de votes | non | nouveau bouton (prévu) | — | Bouton : use un diplomate, donne un soutien au Conclave, +5 commerce deux tours après. (moyenne) |
+| 720 | Vote du conclave | **partiel** | nouveau bouton | Bandeau « À faire », quand le Conclave secret est sur la table : prévote — un dé par Soutien politique du Conclave, activé sur 2 ou moins ; vote — 1D10 votes (3D10 si « Soutien au conclave » est en jeu), avec le rappel de ce qu'il vote. | Les votes du Conclave ne sont pas reliés à l'outil de vote. |
+| 722 | Achat de votes | **oui** | nouveau bouton | Bandeau « À faire », diplomatie, quand le Conclave secret est sur la table, une fois par tour : use un diplomate, un Soutien politique de valeur 3 à votre marqueur est posé chez le Conclave, 5 commerce vous attendent sur votre case du tour T+2. | — |
 | 725 | Milice au coeur du pouvoir | **oui** | automatique | « Nouveau tour », à partir du tour 8, habilité posée sur la table : 1D10 miliciens mercenaires sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu). | — |
 | 764 | Confrérie de mercenaire | **oui** | bouton existant modifié + nouveau bouton | Recrutement (Ctrl + clic sur un mercenaire) : le surcoût du tour est ignoré. Bandeau « À faire » du recrutement : « piocher un mercenaire » (dans la main, à poser sur la case de son choix), une fois par tour. | — |
 | 765 | Signal | **oui** | automatique | Ravitaillement automatique : un marqueur de signal est posé sur un système tiré au hasard. | — |
@@ -181,17 +181,17 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 839 | Enrôlement des milices | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète des Réfugiés, pour le détenteur de Tuteur des réfugiés : use un diplomate, la planète est activée, 3 Milices passent sous votre contrôle. | — |
 | 844 | Maître du pillage | **oui** | automatique | Chaque pillage rapporte 1 commerce de plus. | — |
 | 895 | Sans influence | **oui** | bouton existant modifié | Recrutement, propositions et boutons de script qui coûtent de l'influence : payés en ressources. Ravitaillement automatique : aucune influence gagnée. | Autres dépenses d'influence : à la main. |
-| 896 | Infiltration | **oui** | nouveau bouton + automatique | Conflit, « Retirer » : détruire un vaisseau donne un token Infiltration (éléments actifs, aux couleurs de la faction touchée). Plateau joueur, science : « Infiltration : +4 recherche » — use un scientifique et 2 infiltrations (usées jusqu'au nouveau tour), recherche notée au journal. | Prendre 2 infiltrations envers la même faction : à la main. |
+| 896 | Infiltration | **oui** | nouveau bouton + automatique | Conflit, « Terminer le combat » : détruire un vaisseau donne un token Infiltration (éléments actifs, aux couleurs de la faction touchée). Plateau joueur, science : « Infiltration : +4 recherche » — use un scientifique et 2 infiltrations (usées jusqu'au nouveau tour), recherche notée au journal. | Prendre 2 infiltrations envers la même faction : à la main. |
 | 913 | École militaire (Fédération de Sol WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 915 | Nomade (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 916 | Pillage (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 917 | Cartographie du chaos (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 919 | Menace (Néo-peste WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
-| 920 | Contamination (Néo-peste WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 920 | Contamination (Néo-peste WIP) | non | automatique (prévu) | — | Bombardement : les unités touchées deviennent des Infanteries infectées (#1014) au lieu d'être détruites — à brancher sur « Terminer le combat ». (moyenne) |
 | 922 | Recherche des alphas (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 923 | Menace (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 925 | Droit de passage (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
-| 926 | Émanation du vide (Les Empyréens WIP) | non | automatique (prévu) | — | Nébuleuses sans effet sur vos unités : à brancher sur le déplacement assisté et le combat. (moyenne) |
+| 926 | Émanation du vide (Les Empyréens WIP) | **oui** | automatique | Déplacement assisté : aucune nébuleuse ne met fin à vos mouvements. | — |
 | 927 | Influent (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 942 | Racket (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, ravitaillement, à côté d'une planète d'une autre faction dans un système où vous avez des unités militaires : « Racket » ouvre un test de domination (onglet Conflit) ; à sa clôture, si vous dominez, vous gagnez les ressources de la planète et son propriétaire les perd. Une fois par tour et par planète. | — |
 
@@ -203,25 +203,25 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 8 | Croiseur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 9 | Transporteur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 10 | Destroyeur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 11 | Frégate marchande | **oui** | nouveau bouton + automatique | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
+| 11 | Frégate marchande | **oui** | nouveau bouton + automatique | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
 | 12 | Infanterie | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 13 | Mech | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 14 | Dock | **partiel** | nouveau bouton | Phase de production : Ctrl + clic sur le dock ouvre une production comptée (un logisticien utilisé ; capacité logistique du joueur, vaisseaux et mechs ; le reste de la réserve est cerclé de rouge ; pose dans le système du dock). | Réparation et comptoir non contrôlés selon le système du dock. |
 | 15 | Système de défense | **oui** | nouveau bouton | Conflit, canons spatiaux : listé dans « Mes canons spatiaux à portée » (notation « 6** » lue : 6, 2 dés) ; le choisir use un amiral et pose un marqueur d'activation. | — |
 | 16 | Usine | **oui** | automatique | Ravitaillement automatique : +2 ressources par usine posée sur la carte. | — |
 | 17 | Soleil de guerre | **oui** | automatique | Produire un soleil de guerre sans la technologie « Soleil de guerre » demande une confirmation. | — |
-| 20 | Frégate marchande (Conglomérat mercantile d'Hacan) | **oui** | nouveau bouton + automatique | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
-| 21 | Soleil d'or (Conglomérat mercantile d'Hacan) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | −2 commerce au déplacement ; comptoir. |
+| 20 | Frégate marchande (Conglomérat mercantile d'Hacan) | **oui** | nouveau bouton + automatique | Fiche de l'unité : « Livraison commerciale (3) » si une autre faction a un comptoir dans le système — un négociant est utilisé, la frégate dépensée, les dettes réduites. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
+| 21 | Soleil d'or (Conglomérat mercantile d'Hacan) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | −2 commerce au déplacement ; comptoir. |
 | 22 | Mecha d'archéologie (Conglomérat mercantile d'Hacan) | **oui** | bouton existant modifié | « Fouiller la ruine » n'use pas de scientifique sur une planète où le joueur a un Mecha d'archéologie. | — |
-| 23 | Statue en or (Conglomérat mercantile d'Hacan) | **oui** | automatique | Ravitaillement automatique : +1 point par statue. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
+| 23 | Statue en or (Conglomérat mercantile d'Hacan) | **oui** | automatique | Ravitaillement automatique : +1 point par statue. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
 | 35 | Bazaar (Conglomérat mercantile d'Hacan) | partiel | à définir (prévu) | Caractéristiques de l'unité déjà utilisées. | Renvoie à « Vente au Bazaar » : marché et transactions non gérés. (difficile) |
 | 148 | Salai Sai Corian (Héritiers de Winnu) | **partiel** | automatique | Conflit, combat spatial : +1 par vaisseau adverse que visent ses engagements. | Production 1 non suivie. |
 | 151 | Gloire au juste (Héritiers de Winnu) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Ravitaillement automatique selon le possesseur de Mecatol Rex ; texte à clarifier. (moyenne) |
 | 152 | Raideur (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Conflit : raid (combat « Raid », 5 ×2), frappe en premier, furtif. | — |
 | 153 | Arche de l'ombre (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Conflit : raid (combat « Raid », 5 ×4), frappe en premier, furtif. | — |
-| 154 | Camp de travail (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Fiche de l'unité, production : « Camp de travail : +4 ressources » — le camp est usé, un esclave dépensé. Conflit, « Retirer » : détruit, il libère 2 esclaves de son propriétaire (ceux du destructeur d'abord), posés sur sa planète sous le contrôle de leur propriétaire. | — |
+| 154 | Camp de travail (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Fiche de l'unité, production : « Camp de travail : +4 ressources » — le camp est usé, un esclave dépensé. Conflit, « Terminer le combat » : détruit, il libère 2 esclaves de son propriétaire (ceux du destructeur d'abord), posés sur sa planète sous le contrôle de leur propriétaire. | — |
 | 155 | Portail de repli (Kabal de l’ombre) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Ravitaillement automatique : replace ici les « Raideur » détruits au tour précédent. (moyenne) |
-| 162 | Quetzalcoalt (Volée argentée) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Point de fin de combat avec trois vaisseaux militaires engagés. |
+| 162 | Quetzalcoalt (Volée argentée) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Point de fin de combat avec trois vaisseaux militaires engagés. |
 | 163 | Destroyeur (Volée argentée) | **oui** | nouveau bouton | Fiche de l'unité, combat spatial : « Deux attaques (1 influence) » — l'écran de combat lui donne deux fois plus de dés ce tour. | — |
 | 164 | Complexe de guerre (Volée argentée) | **partiel** | automatique | Ravitaillement automatique : un destroyeur de la faction est posé dans le système du complexe. Conflit, combat spatial : vos destroyers ont +1 (non cumulable) dans son système et les systèmes adjacents. | Contrôle du système non vérifié. |
 | 165 | Centre d'expansion (Volée argentée) | **oui** | nouveau bouton + automatique | Fiche d'un système où vous n'avez pas d'unité, ravitaillement (une fois par tour, avec un Centre d'expansion sur la carte) : +1 au combat spatial dans ce système pour le tour. | — |
@@ -235,11 +235,11 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 178 | Sphère de dyson (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, phase de science : use un scientifique, +2 ressources par niveau de connaissance spatiale. | Règle de pose (nébuleuse, supernova) non vérifiée. |
 | 199 | Soleil de guerre (Université de Jol-Nar) | **oui** | automatique | Confirmation à la production sans la technologie ; valeur de contrôle lue par `#con`. | — |
 | 243 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 407 | Vaisseau pirate (Pirate) | **oui** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Ses touches vont d'abord aux vaisseaux de commerce du camp visé ; furtif dans un système à anomalie. | — |
+| 407 | Vaisseau pirate (Pirate) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Ses touches vont d'abord aux vaisseaux de commerce du camp visé ; furtif dans un système à anomalie. | — |
 | 423 | Letani (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 428 | Arbre gardien (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 431 | Transporteur (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 444 | Station Météorologique | **oui** | automatique | Ravitaillement automatique : 2 de recherche tempête et 1 de recherche spatiale par station, notées au journal de recherche ; plus de recherche tempête après la « Fin de la tempête ». | Règle de pose (système sans planète) non vérifiée. |
+| 444 | Station Météorologique | **oui** | bouton existant modifié + automatique | Ravitaillement automatique : 2 de recherche tempête et 1 de recherche spatiale par station, notées au journal de recherche ; plus de recherche tempête après la « Fin de la tempête ». | Règle de pose (système sans planète) non vérifiée. |
 | 461 | Cuirassé (Omni-esprit d'Arborec) | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 462 | Croiseur (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 463 | Destroyeur (Omni-esprit d'Arborec) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -250,7 +250,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 470 | Graine d'eden (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | **oui** | nouveau bouton + automatique | Conflit, combat spatial : autant d'attaques que votre niveau de connaissance génétique. Bombardement : « Duha Menaimon : jet » — au plus ce niveau, un Letani est posé sur la planète. | — |
 | 490 | Armageddon | **partiel** | nouveau bouton | Fiche de l'unité : 3 fragments militaires, un scientifique est posé sur l'unité. | Portée du canon +1 et 2 points de plus au décompte : à la main. |
-| 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
+| 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
 | 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 512 | Station de combat | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
@@ -258,9 +258,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 514 | Canon restauré | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 516 | Mech géant | **oui** | automatique | Compte pour 3 dans la capacité d'un vaisseau (avertissement à l'embarquement, déplacement assisté) ; valeur de contrôle lue par `#con`. | — |
 | 524 | frégate du khan (Invasion du grand Khan) | **oui** | nouveau bouton | Conflit : détruite, « Riposte du khan » — son destructeur lance un dé (6 ou moins, 4 si l'unité qui l'a détruite a la frappe en premier) et encaisse 1 dégât sur une de ses unités ; elle se retire ensuite. | — |
-| 525 | Palais du khan (Invasion du grand Khan) | **oui** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage. | — |
+| 525 | Palais du khan (Invasion du grand Khan) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage. | — |
 | 527 | Soldat du Khan (Invasion du grand Khan) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 554 | Monument éternel | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer ; points par contributions. |
+| 554 | Monument éternel | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer ; points par contributions. |
 | 557 | Rebelle (Rébellion inter-planétaire) | **oui** | automatique | Conflit, combat terrestre : furtif — un engagement de groupe ne l'atteint pas, et il ne riposte qu'à qui le cible. | — |
 | 568 | Indigène | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un diplomate, lance 4 dés à 3 contre cette unité. (moyenne) |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
@@ -269,13 +269,13 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 572 | Étoile de mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique ; valeur de contrôle non calculée. (moyenne) |
 | 573 | Vaisseau gigantesque | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 574 | Ravageur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 575 | Corsaire | **oui** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
-| 576 | Vaisseau antique | **oui** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. (4 commerce et 1 point) | — |
+| 575 | Corsaire | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
+| 576 | Vaisseau antique | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. (4 commerce et 1 point) | — |
 | 578 | Canon de Meer | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 582 | Telluran | **oui** | automatique | Conflit, combat spatial : frappe en premier, furtif. | — |
-| 590 | Colonie Ladaran | **partiel** | automatique | Ravitaillement automatique : une infanterie de la faction est créée à bord. Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Points du décompte. |
+| 590 | Colonie Ladaran | **partiel** | automatique | Ravitaillement automatique : une infanterie de la faction est créée à bord. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Points du décompte. |
 | 591 | Destroyeur Tak'Qav | oui | — | Bombardement noté `#bomb(6)` sans nombre de dés : notation à vérifier. | — |
-| 597 | Myru Vos | **oui** | automatique | Conflit : précis, furtif ; « Retirer » d'un vaisseau de commerce qu'il a détruit : +2 commerce. | — |
+| 597 | Myru Vos | **oui** | automatique | Conflit : précis, furtif ; « Terminer le combat » d'un vaisseau de commerce qu'il a détruit : +2 commerce. | — |
 | 598 | Magmus | **oui** | nouveau bouton | Fiche de l'unité : « Un vaisseau détruit ici » — +1 de recherche militaire, notée au journal de recherche. | — |
 | 599 | Ggrocuto Rinn | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Déplacement furtif et exploration par déplacement : à brancher sur le déplacement assisté. (difficile) |
 | 600 | Nekro Acidos | **oui** | automatique | Conflit, combat terrestre : autant d'attaques que votre niveau de connaissance militaire (aucune à 0). | — |
@@ -291,19 +291,26 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 769 | Memoria D (Le Nomade) | **partiel** | nouveau bouton | Conflit : une de vos infanteries détruites — « Memoria D : jet (6 ou moins) », puis « Poser sur Memoria D » (à bord). | Dépense d'un signal (recherche de signal) : à la main. |
 | 770 | Memoria C (Le Nomade) | **partiel** | automatique | Ravitaillement automatique : une frégate marchande est créée dans le système. | Dépense d'un signal ; revendication. |
 | 786 | Centre de contrebande (Le Nomade) | **oui** | automatique | Ravitaillement automatique : 3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins. | — |
-| 810 | Nef de la rupture (Rupture de l'espace-temps) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Ignore blocage et trous de ver oméga. |
+| 810 | Nef de la rupture (Rupture de l'espace-temps) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Ignore blocage et trous de ver oméga. |
 | 835 | Milice (Réfugiés) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 836 | Entrepôt d'aide (Réfugiés) | **partiel** | automatique | Conflit, « Retirer » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Commerce posé sur l'entrepôt : à prendre à la main. |
+| 836 | Entrepôt d'aide (Réfugiés) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Commerce posé sur l'entrepôt : à prendre à la main. |
 | 845 | Croiseur (Pirate Mentak) | oui | — | Caractéristiques et précision déjà utilisées par l'outil. | — |
-| 846 | Troupe de détournement (Pirate Mentak) | **oui** | automatique | Conflit, combats spatial et terrestre : elle attaque en dernier (phases 5 et 6 « Dernières attaques », après les dégâts des autres attaques) ; un vaisseau qu'elle détruit est capturé — « Retirer (capturé) » l'envoie, réparé, dans les éléments actifs de son camp, qui en devient propriétaire. | — |
+| 846 | Troupe de détournement (Pirate Mentak) | **oui** | automatique | Conflit, combats spatial et terrestre : elle attaque en dernier (phases 5 et 6 « Dernières attaques », après les dégâts des autres attaques) ; un vaisseau qu'elle détruit est capturé — « Terminer le combat » l'envoie, réparé, dans les éléments actifs de son camp, qui en devient propriétaire. | — |
 | 847 | Soleil de capturé (Pirate Mentak) | oui | — | Texte informatif (non productible) ; bombardement noté « 6\*\*\* » à vérifier. | — |
 | 849 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 850 | Armageddon | **oui** | automatique | Conflit, « Retirer » : son destructeur prend le contrôle d'un Armageddon (#490) avec 1 de résistance restante. | — |
+| 850 | Armageddon | **oui** | automatique | Conflit, « Terminer le combat » : son destructeur prend le contrôle d'un Armageddon (#490) avec 1 de résistance restante. | — |
 | 854 | vaisseau relique | **oui** | nouveau bouton + automatique | Fiche de l'unité, quatre boutons : fragment militaire, +3 au combat spatial ce tour ; fragment spatial, +3 mouvement et déplacement furtif ce tour (déplacement assisté) ; fragment civil, rempli d'infanteries de votre faction jusqu'à sa capacité ; fragment ancien, réparé et +1 ressource. | — |
 | 856 | Lune noire (Pirate Mentak) | **oui** | automatique | Conflit : un engagement de groupe ne l'atteint jamais — elle doit être ciblée. | — |
 | 868 | Forge du vide (Fantômes de Creuss) | **oui** | automatique | Ravitaillement automatique : 1 ressource, 1 influence et 1 de recherche s'il y a un trou de ver delta dans son système. | — |
 | 893 | Usine (Virus de Nekro) | **partiel** | nouveau bouton + automatique | Ravitaillement automatique : +2 ressources (script de l'Usine) ; production comptée par `#prod(3, Drone)`. | Dévastation pour réduire un coût. |
 | 960 | Dynamo (Les Empyréens WIP) | partiel | — | Caractéristiques et #furtif déjà utilisés par l'outil (Conflit). | Ignorer 2 dégâts en usant l'unité et un diplomate : à la main. (moyenne) |
+| 1013 | Infanterie (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; sans le mot-clé « transportable », elle ne s'embarque pas. | — |
+| 1014 | Infanterie infectée (Néo-peste WIP) | partiel | — | Caractéristiques déjà utilisées ; non transportable. | « Ne peut jamais être déplacée » : non vérifié. (moyenne) |
+| 1015 | Cuirassé (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; bombardement 5 à une seule attaque. | — |
+| 1016 | Bombe bactériologique (Néo-peste WIP) | partiel | — | Caractéristiques et bombardement 5** déjà utilisés par l'outil. | La détruire quand elle bombarde : à la main. (facile) |
+| 1017 | Alpha (Sardakk N'orr WIP) | oui | — | Caractéristiques déjà utilisées (combat 6). | — |
+| 1018 | Exotrirème (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (combat 3). | 1 dégât infligé quand il est détruit : à la main. (moyenne) |
+| 1019 | Transporteur (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (capacité 3, mouvement 1). | Débarquer à la fin du déplacement : à la main. (moyenne) |
 
 ## Planètes
 
@@ -354,7 +361,7 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 281 | Claire Gibson | **oui** | nouveau bouton | Combat terrestre : « Claire Gibson : +1 à vos infanteries » — son cube part dans les agents usés, le bonus vaut pour ce combat. | — |
 | 282 | Ipswitch | non | — | — | Livraison envers n'importe quelle unité : hors du bouton de livraison actuel. (passé) |
 | 283 | M'aban | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Construire un second bâtiment : à la main. |
-| 284 | So Ata | **partiel** | nouveau bouton | Combat spatial, deux boutons : « désigner un vaisseau » (début du combat : son cube part dans les agents usés, un rappel s'affiche) ; « capturer un vaisseau détruit » (avant « Retirer » : le vaisseau adverse va dans vos éléments actifs, sans ses dégâts). | La restriction d'engagement du vaisseau désigné : à la main. |
+| 284 | So Ata | **partiel** | nouveau bouton | Combat spatial, deux boutons : « désigner un vaisseau » (début du combat : son cube part dans les agents usés, un rappel s'affiche) ; « capturer un vaisseau détruit » (avant « Terminer le combat » : le vaisseau adverse va dans vos éléments actifs, sans ses dégâts). | La restriction d'engagement du vaisseau désigné : à la main. |
 | 285 | Doctor Carrina | **partiel** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, 1 de recherche sociale, militaire, génétique et spatiale (journal de recherche). | Activer une planète ; ignorer un niveau de prérequis : à la main. |
 | 286 | Xuange | **oui** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, le joueur choisit X — 2X influence dépensée, X de recherche sociale. | — |
 | 287 | Aktaran | **oui** | nouveau bouton | Fiche de la carte, diplomatie : son cube part dans les agents usés, 4 de recherche (journal de recherche). | La livraison qui le déclenche n'est pas vérifiée. |
@@ -438,7 +445,7 @@ Deux sortes : les **capacités** écrites dans le texte d'une unité (`#furtif`,
 | `#con` contrôle | Valeur de contrôle de l'unité (1 par défaut). | 16 | **oui** | automatique | Blocage d'un déplacement, conflits de contrôle et de domination : chaque unité militaire vaut la valeur écrite (`#con(3)`), sinon 1 ; +1 avec Rayon tracteur. | Test de domination hors Exploitation du vide. (moyenne) |
 | `#furtif` furtif | Tant qu'ils n'ont engagé personne, ces vaisseaux doivent être ciblés. | 7 | **oui** | automatique | Conflit, combats spatial et terrestre : un engagement de faction n'atteint pas une unité furtive qui n'a rien engagé ; il faut la cibler. Un neutre défensif furtif ne riposte qu'à qui le cible. | — |
 | `#deplfurtif` déplacement furtif | Ne peut pas être bloqué par des vaisseaux adverses en se déplaçant. | 4 | **oui** | automatique | Cadre de blocage : ces vaisseaux ne comptent pas parmi ceux à arrêter ; un groupe entièrement furtif ne s'arrête pas pour des unités. | — |
-| `#pill` pillage | Qui détruit l'unité gagne le commerce indiqué (ou ce que dit le texte) — sauf s'il n'a aucune unité dans le système. | 16 | **oui** | automatique | Chaque dégât note son auteur sur l'unité touchée (marque `degatDe`). Conflit, « Retirer » : le camp du dernier dégât gagne le pillage lu dans le texte — commerce, points, infamie, recherche (notée au journal) — s'il a encore une unité dans le système ; le bouton l'annonce (« Retirer (butin) »). | Pillage hors de l'écran de combat (unité retirée à la main) : non géré. |
+| `#pill` pillage | Qui détruit l'unité gagne le commerce indiqué (ou ce que dit le texte) — sauf s'il n'a aucune unité dans le système. | 16 | **oui** | automatique | Chaque dégât note son auteur sur l'unité touchée (marque `degatDe`). Conflit, « Terminer le combat » : le camp du dernier dégât gagne le pillage lu dans le texte — commerce, points, infamie, recherche (notée au journal) — s'il a encore une unité dans le système ; le bouton l'annonce (« Terminer le combat »). | Pillage hors de l'écran de combat (unité retirée à la main) : non géré. |
 | `#comp` comptoir commercial | Permet de recevoir une livraison. | 11 | **oui** | automatique | Livraison commerciale : seules les factions qui ont une unité à comptoir dans le système peuvent être livrées. | — |
 | `#livr` livraison commerciale | L'unité, non bloquée, livre du commerce à une faction qui a un comptoir dans le système. | 6 | **oui** | nouveau bouton | Fiche de l'unité : « Livraison commerciale (n) » — choix de la faction s'il y a plusieurs comptoirs, commerce donné, dettes réduites, négociant utilisé et unité dépensée selon son texte. | « Non bloquée » : non vérifié. |
 | `#rep` réparation | Permet de réparer : 1 ressource par point de résistance. | 4 | **oui** | nouveau bouton | Réparation illimitée (`#rep` sans nombre : Dock) : à la phase de production (rouge gris sinon), la fiche de chacune de vos unités endommagées du système — non biologique — a « Réparer », 1 ressource par dégât, sans agent. La fiche d'un système garde « Réparer toutes mes unités ». | Réparation limitée (`#Rep 2`, Mech aérien) : non lue. (moyenne) |

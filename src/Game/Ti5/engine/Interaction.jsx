@@ -2276,6 +2276,10 @@ export function Plan({ children, style }) {
             unites.some(ref => typeUnite(contenuEnCache(ref.id)) === "sun") &&
             aScript(moi, "soleil-de-guerre-production") && !aScript(moi, "soleil-de-guerre") &&
                 "un soleil de guerre nécessite la technologie « Soleil de guerre »",
+            // Règle « Station météorologique » (#444) : elle demande sa technologie
+            unites.some(ref => ref.id === 444) &&
+            aScript(moi, "station-meteorologique-production") && !aScript(moi, "station-meteorologique-technologie") &&
+                "une Station météorologique nécessite la technologie « Station météorologique »",
         );
 
         // Phase de construction (case « Construction ») : on ne construit que des

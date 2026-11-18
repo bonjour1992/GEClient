@@ -162,6 +162,67 @@ const planetesDe = (atelier, x) => (x.systeme?.elems || []).flatMap((lien, k) =>
     return contenu && !["sat", "spe"].includes(contenu.type) ? [{ zone: `hex:${x.numero}:planete:${k}`, id: lien.id, contenu }] : [];
 });
 
+// Croissance (Arborec) : vaisseau biologique ; ceux de ma faction qui coûtent au plus 2 de plus
+const estVaisseauBio = contenu => (contenu?.mot_cle || []).includes("ship") && (contenu?.mot_cle || []).includes("bio");
+
+const optionsCroissance = outils => outils.unitesDeMaFaction().filter(u => u.id !== outils.c?.ref?.id && estVaisseauBio(u.contenu) &&
+    (Number(u.contenu.cout) || 0) <= (Number(outils.contenu?.cout) || 0) + 2);
+
+const questionCroissance = outils => "Croissance : par quel vaisseau biologique le remplacer ?\n" +
+    optionsCroissance(outils).map((u, k) => `${k + 1} = ${u.contenu.name} (coût ${Number(u.contenu.cout) || 0})`).join("\n");
+
+const croissance = (outils, x) => {
+
+    const options = optionsCroissance(outils);
+
+    if (x === undefined) {
+        return options.length ? {} : { sans: "aucun vaisseau biologique de votre faction ne coûte au plus 2 de plus" };
+    }
+
+    const choisi = options[x - 1];
+
+    return choisi && outils.c
+        ? {
+            actions: [{ type: "remplacer", c: outils.c.id, ref: { type: "unit", id: choisi.id } }],
+            avis: `Croissance : ${outils.contenu?.name || "le vaisseau"} devient ${choisi.contenu.name}.`,
+        }
+        : { sans: "choix invalide" };
+};
+
+// Vaisseaux militaires de ma faction (Contact mercenaire)
+const vaisseauxMilitaires = outils => outils.unitesDeMaFaction().filter(u =>
+    (u.contenu.mot_cle || []).includes("ship") && (u.contenu.mot_cle || []).includes("mil"));
+
+// Mes esclaves, groupés par faction d'origine : [{ camp, nom, esclaves }]
+const otages = outils => {
+
+    const groupes = new Map();
+
+    for (const e of outils.esclaves()) {
+        const camp = campDeUnite(e);
+
+        if (camp > 0) {
+            groupes.set(camp, [...(groupes.get(camp) || []), e]);
+        }
+    }
+
+    return [...groupes].map(([camp, esclaves]) => ({ camp, nom: outils.nomDe(camp), esclaves }));
+};
+
+// Un trou de ver dans ce système : une des planètes spéciales de sa tuile, ou un de ces tokens posé dedans
+const aTrouDeVer = (index, systeme, numero, planetes, tokens) =>
+    (systeme?.elems || []).some(lien => planetes.includes(Number(lien?.id))) ||
+    dansLeSysteme(index, numero).some(c => c.ref?.type === "token" && tokens.includes(c.ref.id));
+
+// Mandats (promesses de type « mand ») détenus par d'autres factions que moi
+const mandatsDonnes = outils => Object.values(outils.etat.composants).filter(x => !x.cache && x.ref?.type === "Promesse" &&
+    outils.contenuDe(x.ref.id)?.type === "mand" && /^joueur:\d+:(actif|tour:\d+)$/.test(x.zone || "") &&
+    !x.zone.startsWith(`joueur:${outils.moi}:`));
+
+// Le Conclave secret (faction neutre #718) est-il sur la table ?
+const conclaveEnJeu = etat => Object.values(etat.composants).some(c =>
+    !c.cache && c.ref?.type === "neutral" && c.ref.id === 718 && c.zone === "general:table");
+
 // Marqueur libre (étiquette de texte) et sa couleur par défaut — miseEnPlace.js (LIBRE)
 const LIBRE = "libre";
 
@@ -684,7 +745,7 @@ export const SCRIPTS = [
         "La portée de vos canons spatiaux passe de 1 à 2."),
 
     effet("medecine", 242, 1794335054872, "Médecine", "modifie",
-        "Conflit : « Retirer » d'une de vos unités biologiques détruites",
+        "Conflit : « Terminer le combat » d'une de vos unités biologiques détruites",
         "Avant de la retirer, un jet (5 ou moins sur un dé de 10) permet de la capturer : elle va dans vos éléments actifs, d'où vous la replacez (use un logisticien, à la main)."),
 
     effet("laser-longue-portee", 248, 1794343420984, "Laser longue portée", "auto",
@@ -827,15 +888,15 @@ export const SCRIPTS = [
     // Pillage (#pill) : rattaché à la frégate marchande, il vaut pour toute unité dont
     // le texte porte #pill
     regle("pillage-unite", "unit", 11, 1794049918173, "Pillage (#pill)", "auto",
-        "Conflit : « Retirer » une unité détruite",
+        "Conflit : « Terminer le combat » une unité détruite",
         "Le camp qui a infligé le dernier dégât à une unité à pillage gagne ce que dit son texte (commerce, points, infamie, recherche) quand elle est retirée — s'il a encore une unité dans le système."),
 
     regle("maitre-du-pillage", "habilite", 844, 1794049435795, "Maître du pillage", "auto",
-        "Conflit : « Retirer » une unité détruite",
+        "Conflit : « Terminer le combat » une unité détruite",
         "Chaque pillage vous rapporte 1 commerce de plus."),
 
     regle("libre-echange", "habilite", 24, 1787854389709, "Libre échange", "auto",
-        "Conflit : « Retirer » une unité détruite",
+        "Conflit : « Terminer le combat » une unité détruite",
         "Détruire une unité commerciale non militaire vous rapporte 1 infamie."),
 
     regle("jeollr", "planet", 59, 1794335054766, "Jeollr", "auto",
@@ -1203,7 +1264,7 @@ export const SCRIPTS = [
         "Ce qui se paie en influence se paie en ressources ; l'entretien ne rapporte pas d'influence."),
 
     regle("infiltration", "habilite", 896, 1794336276052, "Infiltration", "auto",
-        "Conflit : « Retirer » un vaisseau détruit",
+        "Conflit : « Terminer le combat » un vaisseau détruit",
         "Détruire un vaisseau vous donne un token Infiltration (dans vos éléments actifs, aux couleurs de la faction touchée)."),
 
     action("infiltration-recherche", "habilite", 896, 1794336276052, "Infiltration : recherche", "plateau",
@@ -1775,7 +1836,7 @@ export const SCRIPTS = [
         "L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan du combat, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage."),
 
     regle("myru-vos", "unit", 597, 1794339608757, "Myru Vos", "auto",
-        "Conflit : « Retirer » (butin)",
+        "Conflit : « Terminer le combat » (butin)",
         "Un vaisseau de commerce qu'il a détruit rapporte 2 commerce."),
 
     regle("nekro-acidos", "unit", 600, 1794339608760, "Nekro Acidos", "auto",
@@ -1791,7 +1852,7 @@ export const SCRIPTS = [
         "Un dé : 6 ou moins, l'infanterie est sauvée et posée à bord de votre Memoria D."),
 
     regle("armageddon-capture", "unit", 850, 1794339608774, "Armageddon (destruction)", "auto",
-        "Conflit : « Retirer » (butin)",
+        "Conflit : « Terminer le combat » (butin)",
         "Celui qui le détruit prend le contrôle d'un Armageddon (#490), avec 1 de résistance restante."),
 
     regle("lune-noire", "unit", 856, 1794335055092, "Lune noire", "auto",
@@ -1800,10 +1861,10 @@ export const SCRIPTS = [
 
     regle("troupe-de-detournement", "unit", 846, 1794122783355, "Troupe de détournement", "auto",
         "Conflit, combats spatial et terrestre : phases 5 et 6 « Dernières attaques »",
-        "Elle attaque après toutes les autres unités (un troisième « Prêt au combat », une fois les autres dégâts répartis). Un vaisseau qu'elle détruit est capturé : « Retirer (capturé) » l'envoie, réparé, dans les éléments actifs de son camp."),
+        "Elle attaque après toutes les autres unités (un troisième « Prêt au combat », une fois les autres dégâts répartis). Un vaisseau qu'elle détruit est capturé : « Terminer le combat » l'envoie, réparé, dans les éléments actifs de son camp."),
 
     regle("camp-de-travail-destruction", "unit", 154, 1794049918192, "Camp de travail (destruction)", "auto",
-        "Conflit : « Retirer » (butin)",
+        "Conflit : « Terminer le combat » (butin)",
         "Détruit, il libère 2 esclaves de son propriétaire (ceux du destructeur d'abord) : posés sur sa planète, sous le contrôle de leur propriétaire."),
 
     effet("strategie-d-evitement", 788, 1794343421174, "Stratégie d'évitement", "nouveau",
@@ -2470,6 +2531,458 @@ export const SCRIPTS = [
                 };
             },
             libelle: "Pluie d'astéroïdes : attaque 4 sur chaque unité de la planète",
+        }),
+
+    // --------------------------------------------------------
+    // Lot du 18 novembre (suite) : décisions et cartes restantes
+    // Les choix (« demande ») s'ouvrent dans l'onglet Décision (Decisions.jsx).
+    // --------------------------------------------------------
+
+    // ----- Omni-esprit d'Arborec -----
+
+    effet("recomposition", 592, 1794343421170, "Recomposition", "nouveau",
+        "Onglet Décision, à la fin des canons spatiaux et du combat spatial",
+        "Le coût de vos unités biologiques détruites dans la phase est cumulé à « Terminer le combat ». L'onglet Décision propose le jet (autant de dés, réussite sur 3 ou moins), garde le nombre de réussites, puis laisse produire des vaisseaux dans le système choisi tant que leur coût cumulé tient dans ce nombre — un généticien (ou un logisticien) usé par vaisseau."),
+
+    action("croissance", "tech", 593, 1794343421171, "Croissance", "unite",
+        "Production, sur la fiche d'un de vos vaisseaux biologiques : la technologie est usée, le vaisseau est remplacé par un vaisseau biologique qui coûte jusqu'à 2 de plus (choix dans l'onglet Décision).", {
+            phase: "production",
+            use: true,
+            cible: contenu => estVaisseauBio(contenu),
+            demande: { question: questionCroissance, max: () => 1 },
+            calcul: croissance,
+            libelle: "Croissance : remplacer ce vaisseau (use la technologie)",
+        }),
+
+    action("croissance-geneticien", "tech", 593, 1794343421171, "Croissance (généticien)", "unite",
+        "Production, sur la fiche d'un de vos vaisseaux biologiques : un généticien est usé, le vaisseau est remplacé par un vaisseau biologique qui coûte jusqu'à 2 de plus (choix dans l'onglet Décision).", {
+            phase: "production",
+            agent: { motif: "g[ée]n[ée]ticien", nom: "généticien", depense: false },
+            cible: contenu => estVaisseauBio(contenu),
+            demande: { question: questionCroissance, max: () => 1 },
+            calcul: croissance,
+            libelle: "Croissance : remplacer ce vaisseau (use un généticien)",
+        }),
+
+    // ----- Le Nomade -----
+
+    action("contact-mercenaire", "tech", 789, 1794343421175, "Contact mercenaire", "systeme",
+        "Diplomatie, dans un système à portée 2 d'un satellite que vous possédez : la technologie est usée, un vaisseau militaire de votre faction (choix dans l'onglet Décision) est produit dans le système, payé en influence.", {
+            phase: "diplomatie",
+            use: true,
+            visible: outils => outils.numero !== null && outils.casesDeMesSatellites().some(n => outils.distance(n, outils.numero) <= 2),
+            demande: {
+                question: outils => "Contact mercenaire : quel vaisseau militaire produire, payé en influence ?\n" +
+                    vaisseauxMilitaires(outils).map((u, k) => `${k + 1} = ${u.contenu.name} (${Number(u.contenu.cout) || 0} influence)`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                const options = vaisseauxMilitaires(outils);
+
+                if (x === undefined) {
+                    return options.length ? {} : { sans: "votre faction n'a aucun vaisseau militaire" };
+                }
+
+                const choisi = options[x - 1];
+                const cout = Number(choisi?.contenu.cout) || 0;
+
+                if (!choisi) {
+                    return { sans: "choix invalide" };
+                }
+
+                return outils.compte("inf") < cout
+                    ? { sans: `influence insuffisante : ${cout} à payer, vous avez ${outils.compte("inf")}` }
+                    : {
+                        cout: { inf: cout },
+                        actions: [{ type: "creer", ref: { type: "unit", id: choisi.id }, zone: "hex:" + outils.numero, proprio: outils.moi }],
+                        avis: `Contact mercenaire : ${choisi.contenu.name} produit pour ${cout} influence.`,
+                    };
+            },
+            libelle: "Contact mercenaire : produire un vaisseau militaire (payé en influence)",
+        }),
+
+    action("calcul-de-probabilite", "tech", 804, 1794343421178, "Calcul de probabilité", "plateau",
+        "Vous consultez, pour vous seul, les cartes face cachée du déroulé qui concernent le tour prochain (événement, objectif militaire…) : leur contenu s'affiche dans votre journal.", {
+            special: atelier => {
+
+                const suivant = atelier.etat.tour + 1;
+                const zones = [...atelier.index.parZone]
+                    .filter(([zone, contenu]) => new RegExp(`^general:[\\w-]+:${suivant}$`).test(zone) &&
+                        contenu.some(x => x.cache || x.face === "cache"))
+                    .map(([zone]) => zone);
+
+                return {
+                    actions: zones.map(zone => ({ type: "consulter", zone })),
+                    sans: zones.length ? null : "aucune carte face cachée du déroulé ne concerne le tour prochain",
+                    avis: `Calcul de probabilité : ${zones.length} case(s) du tour ${suivant} consultée(s) — leur contenu est dans votre journal (vous seul le voyez).`,
+                };
+            },
+            libelle: "Calcul de probabilité : consulter les cartes du tour prochain",
+        }),
+
+    // ----- Volée argentée -----
+
+    action("seigneur", "habilite", 168, 1794335054829, "Seigneur", "plateau",
+        "Quand vous détruisez un vaisseau amiral ou un soleil de guerre, gagnez un vote de siège ou obtenez un vassal : un de vos agents disponibles du type voulu (choix dans l'onglet Décision) devient un Seigneur.", {
+            demande: {
+                question: () => "Seigneur : quel agent transformer en Seigneur ?\n" +
+                    "1 = Amiral (vous avez détruit un vaisseau amiral ou un soleil de guerre)\n" +
+                    "2 = Politique (vous avez gagné un vote de siège au conseil)\n" +
+                    "3 = Diplomate (vous avez obtenu un vassal, une fois par faction)",
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                if (x === undefined) {
+                    return {};
+                }
+
+                const motif = [/amiral/i, /politique/i, /diplomate/i][x - 1];
+                const agent = motif && mesAgentsDisponibles(outils).find(a => motif.test(outils.nom(a.ref)));
+
+                return agent
+                    ? {
+                        actions: [{ type: "remplacer", c: agent.id, ref: { type: "agent", id: 169 } }],
+                        avis: `Seigneur : votre ${outils.nom(agent.ref)} devient un Seigneur.`,
+                    }
+                    : { sans: "vous n'avez pas d'agent de ce type disponible" };
+            },
+            libelle: "Seigneur : transformer un agent",
+        }),
+
+    action("vassalisation-forcee", "habilite", 166, 1794335054828, "Vassalisation forcée", "plateau",
+        "Diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs, avec son marqueur. La condition (5 systèmes où elle a des planètes, son système natal comptant pour 3) se vérifie à la main.", {
+            phase: "diplomatie",
+            agent: { motif: "diplomate", nom: "diplomate", depense: true },
+            demande: {
+                question: outils => "Vassalisation forcée : quelle faction devient votre vassal ?\n" +
+                    outils.joueurs.filter(j => j.userId !== outils.moi).map((j, k) => `${k + 1} = ${j.nom}`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                const autres = outils.joueurs.filter(j => j.userId !== outils.moi);
+
+                if (x === undefined) {
+                    return autres.length ? {} : { sans: "aucune autre faction dans la partie" };
+                }
+
+                const cible = autres[x - 1];
+                const local = "t" + Date.now();
+
+                return cible
+                    ? {
+                        actions: [
+                            { type: "creer", ref: { type: "Promesse", id: 224 }, zone: `joueur:${outils.moi}:actif`, proprio: outils.moi, idLocal: local },
+                            // (marqueur de faction : miseEnPlace.js, MARQUEUR)
+                            { type: "creer", jeton: "marqueur", sur: local, proprio: cible.userId },
+                        ],
+                        avis: `Vassalisation forcée : ${cible.nom} devient votre vassal (promesse Vassal dans vos éléments actifs). Pensez à « Seigneur » pour un diplomate.`,
+                    }
+                    : { sans: "choix invalide" };
+            },
+            libelle: "Vassalisation forcée : faire un vassal (dépense un diplomate)",
+        }),
+
+    // ----- Kabal de l'ombre -----
+
+    action("executer-les-otages", "habilite", 158, 1794335054823, "Exécuter les otages", "plateau",
+        "Prévote : un de vos esclaves de la faction choisie (onglet Décision) est dépensé ; elle doit appliquer un vote de plus à l'issue que vous annoncez, ou gagner un point d'infamie (à la main).", {
+            phase: "prevote",
+            demande: {
+                question: outils => "Exécuter les otages : de quelle faction dépenser un esclave ?\n" +
+                    otages(outils).map((g, k) => `${k + 1} = ${g.nom} (${g.esclaves.length} esclave(s))`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                const groupes = otages(outils);
+
+                if (x === undefined) {
+                    return groupes.length ? {} : { sans: "vous n'avez aucun esclave d'une autre faction" };
+                }
+
+                const groupe = groupes[x - 1];
+
+                return groupe
+                    ? {
+                        actions: [{ type: "supprimer", c: groupe.esclaves[0].id }],
+                        avis: `Exécuter les otages : ${groupe.nom} doit appliquer 1 vote de plus à l'issue que vous annoncez, ou gagner 1 point d'infamie.`,
+                    }
+                    : { sans: "choix invalide" };
+            },
+            libelle: "Exécuter les otages : dépenser un esclave",
+        }),
+
+    action("restituer-les-otages", "habilite", 159, 1794335054824, "Restituer les otages", "unite",
+        "Lors d'une livraison, sur la fiche de votre unité qui livre : jusqu'à 2 de vos esclaves de la faction à comptoir du système lui sont rendus, posés avec son comptoir (sur la planète, ou à bord).", {
+            cible: contenu => /#livr\(/i.test(contenu?.habilite || ""),
+            visible: outils => outils.esclaves().length > 0,
+            special: atelier => {
+
+                const m = /^hex:(\d+)/.exec(atelier.c?.zone || "");
+
+                const comptoirs = !m ? [] : dansLeSysteme(atelier.index, Number(m[1])).filter(x => x.ref?.type === "unit" &&
+                    campDeUnite(x) > 0 && campDeUnite(x) !== atelier.moi && /#comp\b/i.test(atelier.contenuDe(x.ref.id)?.habilite || ""));
+
+                const comptoir = comptoirs.find(x => atelier.esclaves().some(e => campDeUnite(e) === campDeUnite(x)));
+                const rendus = comptoir ? atelier.esclaves().filter(e => campDeUnite(e) === campDeUnite(comptoir)).slice(0, 2) : [];
+
+                return {
+                    actions: rendus.flatMap(e => [
+                        /:planete:/.test(comptoir.zone || "")
+                            ? { type: "deplacer", c: e.id, vers: comptoir.zone }
+                            : { type: "deplacer", c: e.id, sur: comptoir.id },
+                        e.marques?.possession !== undefined && { type: "marquer", c: e.id, marque: "possession", valeur: null },
+                    ].filter(Boolean)),
+                    sans: comptoir ? null : "aucune faction à comptoir de ce système dont vous ayez des esclaves",
+                    avis: comptoir ? `Restituer les otages : ${rendus.length} infanterie(s) rendue(s) à ${atelier.nomDe(campDeUnite(comptoir))}.` : "",
+                };
+            },
+            libelle: "Restituer les otages : rendre jusqu'à 2 esclaves",
+        }),
+
+    // ----- Aide humanitaire -----
+
+    action("aide-humanitaire-livrer", "habilite", 404, 1794335055008, "Aide humanitaire : livrer", "unite",
+        "Sur la fiche d'une de vos unités à livraison, dans un système à trou de ver alpha ou bêta : elle livre son commerce à l'aide humanitaire (négociant usé, unité dépensée ou usée, comme une livraison). Le total par faction est compté pour le décompte.", {
+            cible: contenu => /#livr\(\d+\)/i.test(contenu?.habilite || ""),
+            visible: outils => {
+                const m = /^hex:(\d+)/.exec(outils.c?.zone || "");
+                return !!m && aTrouDeVer(outils.index, outils.systemeDe(Number(m[1])), Number(m[1]), [25, 26], [826, 827]);
+            },
+            special: atelier => {
+
+                const texte = atelier.contenu?.habilite || "";
+                const valeur = Number(/#livr\((\d+)\)/i.exec(texte)?.[1]) || 0;
+                const negociant = /#use\s*#neg/i.test(texte) ? atelier.agent("n[ée]gociant") : null;
+                const depensee = /#spend[^<]*#livr/i.test(texte);
+
+                return {
+                    actions: [
+                        negociant && { type: "deplacer", c: negociant.id, vers: `joueur:${atelier.moi}:agentsUses` },
+                        { type: "compteur", id: `aide:${atelier.moi}`, delta: valeur },
+                        depensee ? { type: "supprimer", c: atelier.c.id } : { type: "marquer", c: atelier.c.id, marque: "use", valeur: true },
+                    ].filter(Boolean),
+                    sans: atelier.etat.compteurs["aide:fait"]
+                        ? "le décompte de l'aide humanitaire est déjà fait"
+                        : (/#use\s*#neg/i.test(texte) && !negociant ? "vous n'avez pas de négociant disponible (aucun ne sera usé)"
+                            : (!depensee && atelier.usee(atelier.c) ? "cette unité est déjà usée" : null)),
+                    avis: `Aide humanitaire : ${valeur} commerce livré (total : ${(Number(atelier.etat.compteurs[`aide:${atelier.moi}`]) || 0) + valeur}).`,
+                };
+            },
+            libelle: "Aide humanitaire : livrer sur le trou de ver",
+        }),
+
+    action("aide-humanitaire-decompte", "habilite", 404, 1794335055008, "Aide humanitaire : décompte", "carte",
+        "Trois tours après : chaque faction marque 1 point par 4 commerce livrés à l'aide humanitaire ; celle qui en a livré le plus (seule) gagne une faveur neutre.", {
+            special: atelier => {
+
+                if (atelier.etat.compteurs["aide:fait"]) {
+                    return { actions: [], sans: "le décompte de l'aide humanitaire est déjà fait" };
+                }
+
+                const livres = atelier.joueurs.map(j => ({ u: j.userId, n: Number(atelier.etat.compteurs[`aide:${j.userId}`]) || 0 }));
+                const max = Math.max(0, ...livres.map(x => x.n));
+                const premiers = livres.filter(x => max > 0 && x.n === max);
+
+                return {
+                    actions: [
+                        ...livres.flatMap(x => atelier.points(x.u, Math.floor(x.n / 4))),
+                        // (faveur neutre : jeton sans propriétaire — miseEnPlace.js, FAVEUR)
+                        ...(premiers.length === 1 ? [{ type: "creer", jeton: "faveur", zone: `joueur:${premiers[0].u}:faveurs` }] : []),
+                        { type: "compteur", id: "aide:fait", valeur: 1 },
+                    ],
+                    avis: "Aide humanitaire : " + livres.map(x => `${atelier.nomDe(x.u)} ${x.n} livré(s), +${Math.floor(x.n / 4)} point(s)`).join(" ; ") +
+                        (premiers.length === 1 ? ` — faveur neutre pour ${atelier.nomDe(premiers[0].u)}.` : " — pas de faveur neutre (égalité ou aucune livraison)."),
+                };
+            },
+            libelle: "Aide humanitaire : faire le décompte",
+        }),
+
+    // ----- Tempête spatiale -----
+
+    effet("station-meteorologique-technologie", 445, 1794343420996, "Station météorologique", "modifie",
+        "Production (case « Production » de la réserve)",
+        "Vous pouvez produire des Stations météorologiques."),
+
+    regle("station-meteorologique-production", "unit", 444, 1794335055030, "Station météorologique (production)", "modifie",
+        "Production (case « Production » de la réserve)",
+        "Produire une Station météorologique demande la technologie « Station météorologique » : sinon la production demande une confirmation."),
+
+    // ----- Les Empyréens (WIP) -----
+
+    regle("emanation-du-vide", "habilite", 926, 1795039776984, "Émanation du vide", "auto",
+        "Espace : déplacement assisté",
+        "Les nébuleuses ne gênent pas vos déplacements : y entrer ou en sortir ne met pas fin au mouvement."),
+
+    action("fouille-des-nebuleuses", "tech", 959, 1795041387418, "Fouille des nébuleuses", "systeme",
+        "Science, dans une nébuleuse : use un scientifique et active la nébuleuse, vous gagnez un fragment spatial.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            activer: true,
+            visible: outils => outils.systeme?.anomaly === "neb",
+            // (jeton du fragment spatial : miseEnPlace.js, FRAGMENTS.spa)
+            special: atelier => ({
+                actions: [{ type: "creer", jeton: "Fragment spatial", zone: `joueur:${atelier.moi}:fragments` }],
+                avis: "Fouille des nébuleuses : +1 fragment spatial.",
+            }),
+            libelle: "Fouille des nébuleuses : +1 fragment spatial (use un scientifique, active la nébuleuse)",
+        }),
+
+    // ----- Héritiers de Winnu : Mandat -----
+
+    regle("mandat", "habilite", 146, 1794335054819, "Mandat", "modifie",
+        "Onglet Transactions : donner un mandat (promesse de type mandat)",
+        "Un mandat ne se donne que si vous contrôlez Mecatol Rex, dans une transaction que vous proposez (vos diplomates), à une faction qui n'en a pas déjà un : sinon la transaction l'indique et demande une confirmation à l'application."),
+
+    action("mandat-revoquer", "habilite", 146, 1794335054819, "Mandat : révoquer", "plateau",
+        "Diplomatie : use un diplomate, le mandat choisi (onglet Décision) quitte la faction qui le détient et revient dans votre main ; ses marqueurs sont retirés.", {
+            phase: "diplomatie",
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            visible: outils => mandatsDonnes(outils).length > 0,
+            demande: {
+                question: outils => "Mandat : lequel révoquer ?\n" +
+                    mandatsDonnes(outils).map((x, k) => `${k + 1} = ${outils.nom(x.ref)} (${outils.nomDe(Number(/^joueur:(\d+):/.exec(x.zone)[1]))})`).join("\n"),
+                max: () => 1,
+            },
+            calcul: (outils, x) => {
+
+                const mandats = mandatsDonnes(outils);
+
+                if (x === undefined) {
+                    return mandats.length ? {} : { sans: "aucun mandat n'est détenu par une autre faction" };
+                }
+
+                const carte = mandats[x - 1];
+
+                return carte
+                    ? {
+                        actions: [
+                            ...Object.values(outils.etat.composants).filter(m => m.sur === carte.id).map(m => ({ type: "supprimer", c: m.id })),
+                            carte.marques?.use && { type: "marquer", c: carte.id, marque: "use", valeur: false },
+                            { type: "deplacer", c: carte.id, vers: `joueur:${outils.moi}:main` },
+                        ].filter(Boolean),
+                        avis: `Mandat : ${outils.nom(carte.ref)} révoqué, de retour dans votre main.`,
+                    }
+                    : { sans: "choix invalide" };
+            },
+            libelle: "Mandat : révoquer un mandat (use un diplomate)",
+        }),
+
+    action("mandat-epuiser", "habilite", 146, 1794335054819, "Mandat : Mecatol Rex", "plateau",
+        "Si vous perdez le contrôle de Mecatol Rex, vos mandats sont épuisés (cartes usées chez leurs détenteurs) ; ils le restent tant que vous ne le reprenez pas. Le bouton les épuise ou les rétablit selon que vous contrôlez Mecatol Rex.", {
+            visible: outils => mandatsDonnes(outils).some(x => !!x.marques?.use === outils.aCarte("planet", 34)),
+            special: atelier => {
+
+                const mecatol = atelier.proprietaire(34) === atelier.moi;
+                const mandats = Object.values(atelier.etat.composants).filter(x => !x.cache && x.ref?.type === "Promesse" &&
+                    atelier.contenuDe(x.ref.id)?.type === "mand" && /^joueur:\d+:(actif|tour:\d+)$/.test(x.zone || "") &&
+                    !x.zone.startsWith(`joueur:${atelier.moi}:`) && !!x.marques?.use === mecatol);
+
+                return {
+                    actions: mandats.map(x => ({ type: "marquer", c: x.id, marque: "use", valeur: !mecatol })),
+                    avis: mecatol
+                        ? `Mandat : vous contrôlez Mecatol Rex, ${mandats.length} mandat(s) rétabli(s).`
+                        : `Mandat : vous ne contrôlez plus Mecatol Rex, ${mandats.length} mandat(s) épuisé(s).`,
+                };
+            },
+            calcul: outils => ({
+                libelle: outils.aCarte("planet", 34)
+                    ? "Mandat : rétablir vos mandats (vous contrôlez Mecatol Rex)"
+                    : "Mandat : épuiser vos mandats (vous ne contrôlez plus Mecatol Rex)",
+            }),
+        }),
+
+    // ----- Conclave secret (faction neutre #718) -----
+
+    action("achat-de-votes", "habilite", 722, 1794335055068, "Achat de votes", "bandeau",
+        "Diplomatie, quand le Conclave secret est sur la table, une fois par tour et par faction : use un diplomate, un de vos Soutiens politiques de valeur 3 est donné au Conclave (posé sur son habilité, avec votre marqueur), et 5 commerce vous attendent sur votre case du tour T+2.", {
+            pourTous: true,
+            phase: "diplomatie",
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            parTour: true,
+            visible: outils => /diplomatie/i.test(outils.phase) && conclaveEnJeu(outils.etat),
+            special: atelier => {
+
+                const local = "t" + Date.now();
+                const tour = atelier.etat.tour + 2;
+
+                return {
+                    actions: [
+                        { type: "creer", ref: { type: "Promesse", id: 227 }, zone: "neutre:718:habilite:0", idLocal: local, marques: { valeur: 3 } },
+                        { type: "creer", jeton: "marqueur", sur: local, proprio: atelier.moi },
+                        // (jeton de commerce : miseEnPlace.js, RESSOURCES.commerce ; dernier tour : 10)
+                        tour <= 10 && { type: "creer", jeton: "Commerce", zone: `joueur:${atelier.moi}:tour:${tour}`, marques: { montant: 5 }, proprio: atelier.moi },
+                    ].filter(Boolean),
+                    sans: tour > 10 ? "le tour T+2 est après le dernier tour : les 5 commerce ne seront pas posés" : null,
+                    avis: `Achat de votes : un Soutien politique 3 est donné au Conclave ; 5 commerce vous attendent au tour ${tour}.`,
+                };
+            },
+            libelle: "Achat de votes : Soutien politique 3 au Conclave, 5 commerce à T+2 (use un diplomate)",
+        }),
+
+    action("vote-du-conclave-soutiens", "habilite", 720, 1794335055067, "Vote du conclave : soutiens", "bandeau",
+        "Prévote, quand le Conclave secret est sur la table : un dé par Soutien politique qu'il possède, activé sur 2 ou moins. Une fois par tour pour la table.", {
+            pourTous: true,
+            phase: "prevote",
+            visible: outils => /prevote/i.test(outils.phase) && conclaveEnJeu(outils.etat),
+            special: atelier => {
+
+                const cle = "conclave:prevote";
+                const tour = atelier.etat.tour;
+
+                const soutiens = Object.values(atelier.etat.composants).filter(x =>
+                    !x.cache && x.ref?.type === "Promesse" && x.ref.id === 227 && /^neutre:718:/.test(x.zone || ""));
+
+                return {
+                    actions: [{ type: "compteur", id: cle, valeur: tour }],
+                    sans: Number(atelier.etat.compteurs[cle]) === tour
+                        ? "les soutiens du Conclave sont déjà jetés ce tour"
+                        : (soutiens.length ? null : "le Conclave n'a aucun Soutien politique"),
+                    tirages: soutiens.map(x => ({
+                        c: x.id,
+                        suite: ([jet]) => ({
+                            actions: jet <= 2 ? [{ type: "marquer", c: x.id, marque: "actif", valeur: tour }] : [],
+                            texte: `soutien de ${atelier.nomDe(atelier.donneur(x))} ${jet}${jet <= 2 ? " (activé)" : ""}`,
+                        }),
+                    })),
+                };
+            },
+            libelle: "Vote du conclave : jets des Soutiens politiques (activés sur 2 ou moins)",
+        }),
+
+    action("vote-du-conclave-votes", "habilite", 720, 1794335055067, "Vote du conclave : votes", "bandeau",
+        "Vote, quand le Conclave secret est sur la table : 1D10 votes (3D10 si l'agenda « Soutien au conclave » est en jeu). Le message rappelle ce qu'il vote. Une fois par tour pour la table.", {
+            pourTous: true,
+            phase: "phase de vote",
+            nomPhase: "vote",
+            visible: outils => /phase de vote/i.test(outils.phase) && conclaveEnJeu(outils.etat),
+            special: atelier => {
+
+                const cle = "conclave:vote";
+                const tour = atelier.etat.tour;
+                const feuille = Object.values(atelier.etat.composants).find(x => !x.cache && x.ref?.type === "neutral" && x.ref.id === 718);
+
+                // « Soutien au conclave » (#727) voté : posé à côté du plateau du Conclave
+                const soutenu = Object.values(atelier.etat.composants).some(x =>
+                    !x.cache && x.ref?.type === "Agenda" && x.ref.id === 727 && /^(general:table|neutre:718:)/.test(x.zone || ""));
+
+                return {
+                    actions: [{ type: "compteur", id: cle, valeur: tour }],
+                    sans: Number(atelier.etat.compteurs[cle]) === tour ? "les votes du Conclave sont déjà lancés ce tour" : (feuille ? null : "feuille du Conclave introuvable"),
+                    tirages: feuille ? [{
+                        c: feuille.id,
+                        n: soutenu ? 3 : 1,
+                        suite: jets => ({
+                            texte: `${jets.join(" + ")} = ${jets.reduce((s, j) => s + j, 0)} vote(s) — contre « Lutte contre la corruption », ` +
+                                "pour « Ouverture bureau des mercenaires » et « Soutien au conclave », pour lui-même à « Dissolution du sénat » (avec tous ses Soutiens politiques)",
+                        }),
+                    }] : [],
+                };
+            },
+            libelle: "Vote du conclave : nombre de votes",
         }),
 ];
 

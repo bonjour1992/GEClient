@@ -377,6 +377,16 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Émanation du vide, promesses Conspirer ensemble et Chemin du vide, système Ténébreuse (nébuleuse,
   planète 3/5), vaisseau amiral Dynamo, technologie Fouille des nébuleuses, Culture courtisane
   débloquée (`migrate-factions-wip-2.mjs`). Graphique des forces : « Infanterie » au lieu de « Sol ».
+- ☑ Onglet Décision (2026-11-18) : les choix d'une action s'y ouvrent au lieu d'une fenêtre
+  (scripts à `demande`, So Ata, Propagande) ; Recomposition y est une décision durable (jet,
+  réussites gardées, vaisseaux produits). `Decisions.jsx`.
+- ☑ Combat (2026-11-18) : plus de bouton « Retirer » ; une unité qui a pris assez de dégâts est
+  cochée « détruit » (décochable après confirmation), « Terminer le combat » retire les détruites.
+- ☑ Cartes restantes (2026-11-18) : Croissance, Contact mercenaire, Calcul de probabilité, Seigneur,
+  Vassalisation forcée, Exécuter et Restituer les otages, Aide humanitaire, Station météorologique,
+  Émanation du vide, Fouille des nébuleuses (fragment spatial), Achat de votes et Vote du conclave,
+  Mandat (transactions, révocation, Mecatol Rex).
+- ☑ Données (2026-11-18) : unités de la Néo-peste et de Sardakk N'orr (`migrate-neopeste-sardakk.mjs`).
 - ☑ Issues GEClient #2 et #3 (2026-11-18) : unités de base dans la réserve neutre ; ni
   bombardement ni combat terrestre sur un satellite ou une planète spéciale (rouge gris) ;
   un seul bombardement par unité et par tour. Verso de faction : illustration, système et

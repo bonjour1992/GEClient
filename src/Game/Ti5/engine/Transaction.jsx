@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { turnNumber } from "../ti5Const";
-import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE } from "./Interaction";
+import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE, confirmerRegle } from "./Interaction";
 import { MARQUEUR, DETTE, estUniteMercenaire } from "./miseEnPlace";
 import { useElements } from "./sync";
 import { ERREUR_CARTE_ABSENTE } from "./etat";
@@ -110,12 +110,19 @@ export function transactionsEnAttente(index) {
 
 export function Transactions({ nouvelle }) {
 
-    const { etat, index, moi, joueur, search, nomDe, couleurDe, envoyer, signaler } = useEngine();
+    const { etat, index, moi, joueur, search, nomDe, couleurDe, envoyer, signaler, aScript } = useEngine();
 
     const transactions = transactionsEnAttente(index);
 
-    // Texte d'une ligne, et ce qui l'empêche d'être appliquée (ou null)
-    function lire(ligne) {
+    // Contenu des promesses en jeu ou proposées (habilité Mandat : lesquelles sont des mandats)
+    const promesses = useElements([...new Set([
+        ...Object.values(etat.composants).filter(c => !c.cache && c.ref?.type === "Promesse").map(c => c.ref.id),
+        ...transactions.flatMap(t => t.lignes.filter(l => l.marques.carteType === "Promesse").map(l => Number(l.marques.carteId))),
+    ])].sort((a, b) => a - b));
+
+    // Texte d'une ligne, ce qui l'empêche d'être appliquée (ou null), et les règles qu'elle
+    // ne respecte pas (regles : avertissements) ; t : sa transaction
+    function lire(ligne, t) {
 
         const m = ligne.marques;
 
@@ -138,10 +145,27 @@ export function Transactions({ nouvelle }) {
         }
 
         if (m.sorte === "carte") {
+
+            // Habilité Mandat (Winnu) : un mandat (promesse de type « mand ») ne se donne que
+            // s'il contrôle Mecatol Rex (#34), avec ses propres diplomates, à une faction qui
+            // n'en a pas déjà un. Avertissements : la transaction reste applicable, après confirmation.
+            const donneur = Number(m.de);
+            const mandat = m.carteType === "Promesse" && promesses[Number(m.carteId)]?.type === "mand" && aScript(donneur, "mandat");
+
+            const dejaUn = mandat && Object.values(etat.composants).some(c => !c.cache && c.ref?.type === "Promesse" &&
+                promesses[c.ref.id]?.type === "mand" && new RegExp(`^joueur:${Number(m.a)}:(actif|tour:\\d+)$`).test(c.zone || ""));
+
             return {
-                texte: `${nomDe(Number(m.de))} donne la carte « ${nomElement(search, { type: m.carteType, id: Number(m.carteId) })} » à ${nomDe(Number(m.a))}` +
+                texte: `${nomDe(donneur)} donne la carte « ${nomElement(search, { type: m.carteType, id: Number(m.carteId) })} » à ${nomDe(Number(m.a))}` +
                     " (vérifié à l'application)",
                 obstacle: null,
+                regles: !mandat ? [] : [
+                    !(index.parZone.get(`joueur:${donneur}:actif`) || []).some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 34) &&
+                        `Mandat : ${nomDe(donneur)} ne contrôle pas Mecatol Rex`,
+                    !!t && t.entete.proprio !== donneur &&
+                        `Mandat : seuls les diplomates de ${nomDe(donneur)} fournissent un mandat (la transaction doit être proposée par lui)`,
+                    dejaUn && `Mandat : ${nomDe(Number(m.a))} a déjà un mandat`,
+                ].filter(Boolean),
             };
         }
 
@@ -240,10 +264,17 @@ export function Transactions({ nouvelle }) {
             return;
         }
 
-        const obstacles = [...t.lignes.map(l => lire(l).obstacle), cout(t).obstacle].filter(Boolean);
+        const obstacles = [...t.lignes.map(l => lire(l, t).obstacle), cout(t).obstacle].filter(Boolean);
 
         if (obstacles.length) {
             signaler("Cette transaction n'est pas applicable : " + obstacles.join(" ; ") + ".");
+            return;
+        }
+
+        // Règles non respectées (habilité Mandat) : applicable après confirmation
+        const regles = t.lignes.flatMap(l => lire(l, t).regles || []);
+
+        if (regles.length && !confirmerRegle(`Appliquer la transaction ${nomDe(t.f1)} ↔ ${nomDe(t.f2)}`, regles)) {
             return;
         }
 
@@ -288,7 +319,7 @@ export function Transactions({ nouvelle }) {
 
                 const concerne = t.f1 === moi || t.f2 === moi;
                 const monAccord = t.f1 === moi ? t.ok1 : (t.f2 === moi ? t.ok2 : false);
-                const lues = t.lignes.map(lire);
+                const lues = t.lignes.map(l => lire(l, t));
                 const prix = cout(t);
                 const obstacles = [...lues.map(l => l.obstacle), prix.obstacle].filter(Boolean);
 
@@ -327,6 +358,9 @@ export function Transactions({ nouvelle }) {
                                 <li key={k}>
                                     {l.texte}
                                     {l.obstacle && <b style={{ color: "#c00" }}> — {l.obstacle}</b>}
+                                    {(l.regles || []).map(regle => (
+                                        <b key={regle} data-regle-transaction style={{ color: "#a15c00" }}> — {regle} (confirmation à l'application)</b>
+                                    ))}
                                 </li>
                             ))}
                         </ul>

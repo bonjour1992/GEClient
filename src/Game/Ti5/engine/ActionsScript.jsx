@@ -5,6 +5,7 @@ import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, t
 import { depenserAgent } from "./effets";
 import { actionsPossession } from "./Controle";
 import { noter } from "./recherche";
+import { lireQuestion } from "./Decisions";
 
 // ============================================================
 // BOUTONS D'ACTION DES SCRIPTS (sorte « action », scripts.js)
@@ -84,7 +85,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
     const {
         etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives, partie,
-        factionDe, techDuScript, aTechnologie,
+        factionDe, techDuScript, aTechnologie, decider,
     } = useEngine();
 
     // Mes promesses (éléments actifs, promesses à durée) : leur contenu dit lesquelles sont des alliances
@@ -111,6 +112,11 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
     useElements([...new Set(Object.values(systemesCarte)
         .flatMap(s => (s?.elems || []).map(lien => Number(lien?.id)))
         .filter(id => id > 0))].sort((a, b) => a - b));
+
+    // (les promesses en jeu aussi : habilité Mandat, qui cherche les mandats donnés)
+    useElements([...new Set(Object.values(etat.composants)
+        .filter(x => !x.cache && x.ref?.type === "Promesse")
+        .map(x => x.ref.id))].sort((a, b) => a - b));
 
     if (!joueur) {
         return null;
@@ -174,9 +180,24 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         // Joueur qui possède cette planète (sa carte est dans ses éléments actifs), ou null
         proprietaire: idPlanete => partie.joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
             .some(x => !x.cache && x.ref?.type === "planet" && x.ref.id === idPlanete))?.userId ?? null,
-        // Nom d'un joueur ; script en service pour moi
+        // Nom d'un joueur ; script en service pour moi ; joueurs de la partie
         nomDe,
         aScript: id => aScript(moi, id),
+        joueurs: partie.joueurs,
+        // Unités de ma faction : [{ id, contenu }]
+        unitesDeMaFaction: () => liensUnites.map(lien => ({ id: lien.id, contenu: unitesFaction[lien.id] })).filter(u => u.contenu),
+        // Mes esclaves (infanteries capturées de mes éléments actifs)
+        esclaves: () => mesActifs.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) !== moi &&
+            typeUnite(contenuEnCache(x.ref.id)) === "inf"),
+        // Cases des satellites (stations) que je possède ; distance entre deux cases ; contenu du système d'une case
+        casesDeMesSatellites: () => mesActifs
+            .filter(x => !x.cache && x.ref?.type === "planet" && contenuEnCache(x.ref.id)?.type === "sat")
+            .flatMap(x => zonesDePlanete(x.ref.id))
+            .map(z => Number(/^hex:(\d+)/.exec(z)[1])),
+        distance: distanceCases,
+        systemeDe,
+        // Contenu d'un élément déjà chargé
+        contenuDe: contenuEnCache,
         // Ai-je cette carte (éléments actifs, promesse à durée) ?
         aCarte: (type, id) => Object.values(etat.composants).some(x => !x.cache && x.ref?.type === type && x.ref.id === id && estAMoi(x)),
         // Mes agents usés (agents, cubes noirs des mercenaires)
@@ -411,13 +432,25 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
         const rechercheDe = e => (e.recherche || []).reduce((total, [, n]) => total + n, 0);
 
-        function faire(commentaire) {
+        async function faire(commentaire) {
 
-            // Montant choisi par le joueur : le script est recalculé avec lui
+            // Montant ou choix du joueur : une décision (onglet Décision) ; le script est
+            // recalculé avec sa réponse. Les choix sont écrits « 1 = … » dans la question.
             const question = typeof s.demande?.question === "function" ? s.demande.question(outils) : s.demande?.question;
+            const lue = s.demande ? lireQuestion(question) : null;
+
+            // (la fiche d'où part l'action se ferme : la décision se prend dans son onglet)
+            if (s.demande) {
+                apres?.();
+            }
 
             const x = s.demande
-                ? Math.floor(Number(window.prompt(question, String(s.demande.max(outils)))))
+                ? await decider({
+                    titre: s.nom,
+                    texte: lue.texte,
+                    choix: lue.choix,
+                    nombre: lue.choix.length ? undefined : { min: 1, max: s.demande.max(outils), defaut: s.demande.max(outils) },
+                })
                 : null;
 
             if (s.demande && !(x > 0)) {

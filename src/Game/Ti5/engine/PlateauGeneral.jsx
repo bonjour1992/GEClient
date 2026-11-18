@@ -772,13 +772,13 @@ function Pioche({
 
 export function PlateauGeneral() {
 
-    const { etat, index, partie, jouer, envoyer, joueur, moi, search, aScript } = useEngine();
+    const { etat, index, partie, jouer, envoyer, joueur, moi, search, aScript, decider } = useEngine();
 
     const [zoom, setZoom] = useState(0.7);
 
     // Clic sur le « + » de l'en-tête d'une piste du déroulé (data-action =
     // « points », « infamie » ou « sieges ») : mon marqueur avance d'une case.
-    function onClickDeroule(event) {
+    async function onClickDeroule(event) {
 
         const piste = event.target.closest("[data-action]")?.dataset.action;
 
@@ -786,18 +786,32 @@ export function PlateauGeneral() {
             return;
         }
 
-        // Script Propagande : au gain d'un point d'infamie, une fenêtre propose
-        // de dépenser un diplomate pour ne pas le gagner
+        // Script Propagande : au gain d'un point d'infamie, une décision (onglet Décision)
+        // propose de dépenser un diplomate pour ne pas le gagner
         const diplomate = piste === "infamie" && aScript(moi, "propagande")
             ? agentDisponible({ index, moi, search }, "diplomate")
             : null;
 
-        if (diplomate && window.confirm(
-            "Propagande : vous gagnez un point d'infamie.\n\n" +
-            "OK : dépenser un diplomate pour ne pas le gagner.\nAnnuler : gagner le point d'infamie.")) {
-            envoyer(depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
-                "Propagande : un diplomate dépensé, le point d'infamie n'est pas gagné");
-            return;
+        if (diplomate) {
+
+            const choix = await decider({
+                titre: "Propagande",
+                texte: "Vous gagnez un point d'infamie.",
+                choix: [
+                    { valeur: 1, libelle: "Dépenser un diplomate pour ne pas le gagner" },
+                    { valeur: 2, libelle: "Gagner le point d'infamie" },
+                ],
+            });
+
+            if (choix === null) {
+                return;
+            }
+
+            if (choix === 1) {
+                envoyer(depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
+                    "Propagande : un diplomate dépensé, le point d'infamie n'est pas gagné");
+                return;
+            }
         }
 
         jouer(actionsPiste(etat, moi, piste, 1));

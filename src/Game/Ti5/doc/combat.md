@@ -34,7 +34,7 @@ puis les cibles, **Militaires** (mot-clé `mil`) et **Non militaires**.
 
 Une ligne par unité : nom (cliquer ouvre sa fiche, on y dépose un dégât),
 attaque et nombre de dés, résistance (`PV`), dégâts subis, « frappe
-préventive » (`#fpre`), « détruit » avec un bouton « Retirer » (« désactivé »
+préventive » (`#fpre`), « détruit » avec un bouton « Terminer le combat » (« désactivé »
 pour une unité `#indes`). Liseré doré : unité qui n'est pas sur la fiche de
 faction de son joueur (mercenaire, relique, spéciale).
 
@@ -130,6 +130,17 @@ Engagement calculé, recalculé à chaque changement :
 
 Un neutre défensif furtif (Rebelle) ne répond qu'aux factions qui le ciblent.
 
+## destruction (18 novembre)
+
+Il n'y a plus de bouton « Retirer ». Une unité qui a pris autant de dégâts que sa
+résistance est cochée « détruit » (`data-detruit`) et ne tire plus ; un joueur peut la
+décocher, après confirmation (marque `epargne` du combat) : elle est alors épargnée.
+« Terminer le combat » retire les unités détruites (butin, capture par la Troupe de
+détournement), applique les sauvetages dont le jet a réussi (Memoria D, Médecine) et
+signale une frégate du khan dont la riposte n'est pas faite. Les unités indestructibles
+restent, « désactivées ». So Ata capture avant « Terminer le combat » ; s'il y a plusieurs
+vaisseaux, le choix se fait dans l'onglet Décision.
+
 ## planètes et bombardements (issues #2 et #3, 18 novembre)
 
 - Combat terrestre, bombardement et raid ne concernent que les vraies planètes : sur
@@ -176,7 +187,7 @@ Un neutre défensif furtif (Rebelle) ne répond qu'aux factions qui le ciblent.
   bombardement de sa planète ; Mech aérien tire au combat spatial depuis sa planète.
 - **Troupe de détournement** (Pirate Mentak) : tire seule au 3e temps (étape 3,
   phases 5 et 6) ; un vaisseau dont le dernier dégât vient d'elle (`degatPar`) a
-  « Retirer (capturé) » : marques de combat effacées, dégâts à 0, déplacé dans
+  « Terminer le combat » : marques de combat effacées, dégâts à 0, déplacé dans
   `joueur:<camp>:actif` avec ce camp pour propriétaire.
 
 ## ce que l'engine ne fait pas
