@@ -793,8 +793,6 @@ function CombatSysteme({ lieu }) {
             sorte === "spatial" && a("arme-amplifiee") && amplifie(v) && [2, "Arme amplifiée"],
             sorte === "spatial" && a("centre-de-coordination") &&
                 dansLeSysteme(v.camp).some(c => ["dock", "fs"].includes(contenuDe(c)?.type)) && [1, "Centre de coordination"],
-            sorte === "spatial" && a("pc") &&
-                dansLeSysteme(v.camp).some(c => ["dock", "fs"].includes(contenuDe(c)?.type)) && [1, "PC"],
             sorte === "spatial" && a("strategie-dominante") && aFrappePreventive(v) && [1, "Stratégie dominante"],
             aSaute(v) && [1, "Stratégie de saut"],
             // Cartographie de l'espace : les attaques contre ses vaisseaux ont −1 dans un système à anomalie

@@ -397,6 +397,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   terrestre, capture et dette), Partage de technologie (marqueur sur la technologie), Tuteur des
   réfugiés, Passage de Creuss et Navigation delta, Chemin du vide, Conspirer ensemble (+1 voix dans
   le décompte des votes, `decompteVotes`, `Vote.jsx`).
+- ☑ Review des données, erreurs sûres (2026-11-19, `migrate-review-s1.mjs`, détail dans
+  `demandes-ti5/review-donnees.md`) : Mentak — feuille sociale #858 au départ, Lune noire en
+  vaisseau amiral ; Kabal — `departNum` ; Hacan — lien parasite ; tech#192 « PC » supprimée (doublon
+  de Centre de coordination, script `pc` retiré) ; textes et noms corrigés ; remplacements `dom` et
+  `transac` dédoublonnés. Outils de contrôle : `dump-donnees.mjs`, `controle-donnees.mjs`,
+  `controle-structure.mjs`.
 - ☑ Cartes reliées au décompte des votes (2026-11-19) : colonne « Conclave » (voix du jet « Vote du
   conclave », ajustables), Soutien politique (loi et vote annoncés dans l'onglet Décision, « régler
   d'après le décompte »), Z'eu (X commerce → X voix), Harrugh Gefhara (commerce en quittant la phase

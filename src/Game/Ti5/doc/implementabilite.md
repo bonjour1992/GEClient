@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 102 | 95 | 4 | 3 | 43 | 19 | 46 |
+| Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
 | Habilités | 62 | 39 | 8 | 15 | 32 | 6 | 16 |
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **367** | **267** | **74** | **26** | **147** | **61** | **121** |
+| **Total** | **366** | **266** | **74** | **26** | **147** | **61** | **120** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -49,7 +49,6 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 189 | Capsule de secours | **oui** | nouveau bouton | Conflit : cadre « Sauvetage » d'un combat — un jet par infanterie d'un vaisseau détruit (6 ou moins sur un dé de 10), puis un bouton par arrivée possible. | Accord du propriétaire du dock : non géré, comme demandé. |
 | 190 | Écoles militaires | **oui** | bouton existant modifié | Recrutement (Ctrl + clic) : amiraux à −1. Fiche d'un système : « Combat spatial » donne +1 au premier combat que vous ouvrez dans le tour. | — |
 | 191 | Logistique améliorée | **oui** | bouton existant modifié + automatique | Recrutement (Ctrl + clic) : logisticiens à −1. Capacité logistique : 3, plus 1 par logisticien posé sur la technologie (onglet Technologie) — taille d'une flotte au déplacement, production d'un dock. | — |
-| 192 | PC | **oui** | automatique | Conflit, combat spatial : +1 si le système contient votre vaisseau amiral ou un de vos docks. | — |
 | 193 | IA industrielle | **oui** | automatique | Production ouverte avec un dock (Ctrl + clic) : 2 unités de plus ; sur une planète militaire, le coût total baisse de 2. | — |
 | 194 | Arme amplifiée | **oui** | nouveau bouton + automatique | Plateau joueur, « Actions de mes technologies » : « Arme amplifiée » pose un scientifique sur un type de vaisseau de votre feuille. Conflit, combat spatial : +2 à ces vaisseaux. | — |
 | 195 | Réparation improvisée | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux endommagés : « Réparation improvisée » use un logisticien et répare (1 ressource par dégât). | Vaisseau « non bloqué » : non vérifié. |
@@ -270,12 +269,12 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 525 | Palais du khan (Invasion du grand Khan) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage. | — |
 | 527 | Soldat du Khan (Invasion du grand Khan) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 554 | Monument éternel | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer ; points par contributions. |
-| 557 | Rebelle (Rébellion inter-planétaire) | **oui** | automatique | Conflit, combat terrestre : furtif — un engagement de groupe ne l'atteint pas, et il ne riposte qu'à qui le cible. | — |
+| 557 | Rebelle (Rébellion interplanétaire) | **oui** | automatique | Conflit, combat terrestre : furtif — un engagement de groupe ne l'atteint pas, et il ne riposte qu'à qui le cible. | — |
 | 568 | Indigène | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un diplomate, lance 4 dés à 3 contre cette unité. (moyenne) |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
 | 570 | Cuve de Clonage | **oui** | nouveau bouton | Fiche de l'unité, production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète. | — |
 | 571 | Arbre de vie éternelle | **partiel** | nouveau bouton | Fiche de l'unité, phase de production : l'arbre est usé et prend 1 dégât, +4 commerce. | Soin en phase de science (coût « #regen(2) » à préciser) ; points du décompte. |
-| 572 | Étoile de mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique ; valeur de contrôle non calculée. (moyenne) |
+| 572 | Étoile de la mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique ; valeur de contrôle non calculée. (moyenne) |
 | 573 | Vaisseau gigantesque | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 574 | Ravageur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 575 | Corsaire | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
@@ -305,7 +304,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 836 | Entrepôt d'aide (Réfugiés) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Commerce posé sur l'entrepôt : à prendre à la main. |
 | 845 | Croiseur (Pirate Mentak) | oui | — | Caractéristiques et précision déjà utilisées par l'outil. | — |
 | 846 | Troupe de détournement (Pirate Mentak) | **oui** | automatique | Conflit, combats spatial et terrestre : elle attaque en dernier (phases 5 et 6 « Dernières attaques », après les dégâts des autres attaques) ; un vaisseau qu'elle détruit est capturé — « Terminer le combat » l'envoie, réparé, dans les éléments actifs de son camp, qui en devient propriétaire. | — |
-| 847 | Soleil de capturé (Pirate Mentak) | oui | — | Texte informatif (non productible) ; bombardement noté « 6\*\*\* » à vérifier. | — |
+| 847 | Soleil capturé (Pirate Mentak) | oui | — | Texte informatif (non productible) ; bombardement noté « 6\*\*\* » à vérifier. | — |
 | 849 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 850 | Armageddon | **oui** | automatique | Conflit, « Terminer le combat » : son destructeur prend le contrôle d'un Armageddon (#490) avec 1 de résistance restante. | — |
 | 854 | vaisseau relique | **oui** | nouveau bouton + automatique | Fiche de l'unité, quatre boutons : fragment militaire, +3 au combat spatial ce tour ; fragment spatial, +3 mouvement et déplacement furtif ce tour (déplacement assisté) ; fragment civil, rempli d'infanteries de votre faction jusqu'à sa capacité ; fragment ancien, réparé et +1 ressource. | — |

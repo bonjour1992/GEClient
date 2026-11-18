@@ -37,7 +37,7 @@ const shipClasse = {
 const tag = {
     ship: "Vaisseau",
     struc: "Structure",
-    sattelite: "Sattelite",
+    sattelite: "Satellite",
     mil: "Militaire",
     civ: "Civil",
     com: "Commercial",

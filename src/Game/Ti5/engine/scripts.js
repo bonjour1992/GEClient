@@ -489,7 +489,7 @@ export const SCRIPTS = [
     }),
 
     evenement("evenement-rebellion-interplanetaire", 562, 1794335055058, "Rébellion interplanétaire", {
-        description: "La faction neutre « Rébellion inter-planétaire » sur la table ; l'agenda « Collaboration contre révolutionnaire » dans les lois à venir du tour T+1 ; " +
+        description: "La faction neutre « Rébellion interplanétaire » sur la table ; l'agenda « Collaboration contre révolutionnaire » dans les lois à venir du tour T+1 ; " +
             "un jet de rébellion (1D6) par planète possédée hors système natal — sauvage ou culturelle 3+, militaire 5+, autre 4+ — et 1D3 rebelles par jet réussi.",
         poses: [
             { type: "neutral", id: 559, vers: "table" },
@@ -642,10 +642,6 @@ export const SCRIPTS = [
     effet("logistique-amelioree-capacite", 191, 1794335054843, "Logistique améliorée", "auto",
         "Capacité logistique : taille d'une flotte (déplacement assisté), production d'un dock",
         "Chaque logisticien posé sur la technologie (onglet Technologie : le glisser sur sa carte) augmente votre capacité logistique de 1 (3 par défaut)."),
-
-    effet("pc", 192, 1793999783810, "PC", "auto",
-        "Conflit : combat spatial",
-        "Vous avez +1 au combat spatial dans un système qui contient votre vaisseau amiral ou un de vos docks."),
 
     effet("universite", 210, 1790237003321, "Université", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
