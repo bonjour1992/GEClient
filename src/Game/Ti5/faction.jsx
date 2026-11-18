@@ -58,7 +58,7 @@ class Faction extends aggregation(ElementContent, DepartCarac) {
 }
 
 // Axes du graphique des forces (verso) ; mêmes positions que le tableau « forces »
-export const FORCES = ["Espace", "Sol", "Technologie", "Commerce", "Économie", "Politique", "Défense", "Mobilité", "Exploration"]
+export const FORCES = ["Espace", "Infanterie", "Technologie", "Commerce", "Économie", "Politique", "Défense", "Mobilité", "Exploration"]
 const FORCE_MAX = 4
 
 const lignesPlanete = content => [

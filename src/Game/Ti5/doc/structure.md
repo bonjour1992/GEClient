@@ -1523,7 +1523,7 @@ conflit (`Domination`, `Controle.jsx`) applique à sa clôture les rackets en at
 
 Données de la faction (`faction.jsx`, classe `Faction`) : `planete`, `population`,
 `gouvernement`, `environnement`, `descriptionPlanete` (planète natale) et `forces`
-(9 valeurs de 0 à 4, dans l'ordre de `FORCES` : Espace, Sol, Technologie, Commerce,
+(9 valeurs de 0 à 4, dans l'ordre de `FORCES` : Espace, Infanterie, Technologie, Commerce,
 Économie, Politique, Défense, Mobilité, Exploration). Au verso, quand il y a des
 infos de planète, le haut des colonnes 2 et 3 devient une rangée (`data-haut-verso`) :
 illustration (largeur restante), système de départ (240 px, réduit à 70 % depuis son

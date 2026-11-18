@@ -371,6 +371,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Cache, Domination, Distorsion gravitationnelle, Débarquement du Khan, Négocier avec les
   rebelles, Rébellion armée, SIG-1 à SIG-4 (signaux tirés à la mise en place), Pluie
   d'astéroïdes (portée 3). Jets de dés des scripts : `tirages` (`ActionsScript.jsx`).
+- ☑ Données (2026-11-18) : systèmes de défense à canon « portée 1 », celui de Creuss tire au
+  travers des trous de ver (`migrate-sdp-portee.mjs`) ; factions WIP — 4 feuilles de technologie
+  par faction, unités de départ du CSV, agents de départ selon les forces ; Empyréens — habilité
+  Émanation du vide, promesses Conspirer ensemble et Chemin du vide, système Ténébreuse (nébuleuse,
+  planète 3/5), vaisseau amiral Dynamo, technologie Fouille des nébuleuses, Culture courtisane
+  débloquée (`migrate-factions-wip-2.mjs`). Graphique des forces : « Infanterie » au lieu de « Sol ».
 - ☑ Issues GEClient #2 et #3 (2026-11-18) : unités de base dans la réserve neutre ; ni
   bombardement ni combat terrestre sur un satellite ou une planète spéciale (rouge gris) ;
   un seul bombardement par unité et par tour. Verso de faction : illustration, système et

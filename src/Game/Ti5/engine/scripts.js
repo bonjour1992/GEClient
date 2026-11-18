@@ -1727,7 +1727,7 @@ export const SCRIPTS = [
         "Conflit, combat terrestre : « Annuler 1 » sur une unité qui doit encaisser",
         "Une autre de vos unités de la planète doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
 
-    regle("systeme-de-defense-annuler", "unit", 177, 1794341902859, "Système de défense : annuler une touche", "nouveau",
+    regle("systeme-de-defense-annuler", "unit", 177, 1795039696874, "Système de défense : annuler une touche", "nouveau",
         "Conflit, bombardement et raid : « Annuler 1 » sur une unité qui doit encaisser",
         "Une autre de vos unités de la planète doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
 

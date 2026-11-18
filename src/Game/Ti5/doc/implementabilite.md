@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 94 | 85 | 4 | 5 | 38 | 18 | 42 |
+| Technologies | 95 | 85 | 4 | 6 | 38 | 18 | 42 |
 | Habilités | 60 | 33 | 3 | 24 | 23 | 5 | 13 |
-| Unités | 104 | 69 | 35 | 0 | 25 | 2 | 42 |
+| Unités | 105 | 69 | 36 | 0 | 25 | 2 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
-| Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
+| Promesses | 19 | 5 | 2 | 12 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **346** | **233** | **64** | **49** | **125** | **57** | **108** |
+| **Total** | **350** | **233** | **65** | **52** | **125** | **57** | **108** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -128,6 +128,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 821 | Extraction de la faille | **oui** | automatique | Ravitaillement automatique : +3 ressources par Faille dominée (seul dans son espace, ou vainqueur d'un test de domination ce tour) ; une Faille disputée retient le ravitaillement jusqu'au test. | — |
 | 857 | Piraterie informatique | **oui** | nouveau bouton | Plateau joueur, deux boutons : le commerce choisi (fenêtre) est converti à 2 ressources, ou à 2 influence, chacun. | — |
 | 941 | Pluie d'astéroïdes (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète à portée 3 d'un champ d'astéroïdes non activé : le champ le plus proche est activé, un logisticien et un amiral sont usés, le marqueur « Ciblage astéroïde » est posé. Au bombardement, « attaque 4 sur chaque unité » : un dé par unité de la planète, 1 dégât sur 4 ou moins, marqueur retiré. | — |
+| 959 | Fouille des nébuleuses (Les Empyréens WIP) | non | bouton existant modifié (prévu) | — | « Fouiller » permis dans une nébuleuse : à brancher sur la fouille de la fiche d'un système. (moyenne) |
 
 ## Habilités
 
@@ -190,7 +191,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 922 | Recherche des alphas (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 923 | Menace (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 925 | Droit de passage (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
-| 926 | Émanation du vide (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 926 | Émanation du vide (Les Empyréens WIP) | non | automatique (prévu) | — | Nébuleuses sans effet sur vos unités : à brancher sur le déplacement assisté et le combat. (moyenne) |
 | 927 | Influent (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 942 | Racket (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, ravitaillement, à côté d'une planète d'une autre faction dans un système où vous avez des unités militaires : « Racket » ouvre un test de domination (onglet Conflit) ; à sa clôture, si vous dominez, vous gagnez les ressources de la planète et son propriétaire les perd. Une fois par tour et par planète. | — |
 
@@ -302,6 +303,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 856 | Lune noire (Pirate Mentak) | **oui** | automatique | Conflit : un engagement de groupe ne l'atteint jamais — elle doit être ciblée. | — |
 | 868 | Forge du vide (Fantômes de Creuss) | **oui** | automatique | Ravitaillement automatique : 1 ressource, 1 influence et 1 de recherche s'il y a un trou de ver delta dans son système. | — |
 | 893 | Usine (Virus de Nekro) | **partiel** | nouveau bouton + automatique | Ravitaillement automatique : +2 ressources (script de l'Usine) ; production comptée par `#prod(3, Drone)`. | Dévastation pour réduire un coût. |
+| 960 | Dynamo (Les Empyréens WIP) | partiel | — | Caractéristiques et #furtif déjà utilisés par l'outil (Conflit). | Ignorer 2 dégâts en usant l'unité et un diplomate : à la main. (moyenne) |
 
 ## Planètes
 
@@ -409,6 +411,8 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 | 454 | Tuteur des réfugiés | non | — | — | Lié aux réfugiés, non représentés. (passé) |
 | 458 | Pacte pirate | **partiel** | nouveau bouton | Obtenu par « Diplomatie pirate ». Fiche de la carte, ravitaillement : « payer 2 ressources » (une fois par tour). | Les pirates vous ignorent : à la main. |
 | 870 | Passage de Creuss | non | — | — | Usage des trous de ver delta : règle de déplacement. (passé) |
+| 963 | Conspirer ensemble (Les Empyréens WIP) | non | — | — | +1 vote si votre vote majoritaire suit celui des Empyréens : non relié au vote de l'outil. (passé) |
+| 964 | Chemin du vide (Les Empyréens WIP) | non | — | — | Anomalies sans effet sur vos déplacements : règle de déplacement. (passé) |
 
 ## Agents et reliques
 
