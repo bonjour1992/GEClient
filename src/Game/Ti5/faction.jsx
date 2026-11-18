@@ -14,6 +14,7 @@ import { imgURL } from "../../lib/styleUtils.js";
 import { LoadAndDisplay } from "../../Component/LoadAndDisplay.jsx";
 import FormBase from "../../Input/FormBase"
 import { NumberInput } from "../../Input/NumberInput.jsx";
+import { TextInput } from "../../Input/TextInput.jsx";
 import { bottomBorder } from "../../Component/style.jsx";
 import { A4Pa } from "../../Component/Size.jsx";
 
@@ -46,6 +47,100 @@ class Faction extends aggregation(ElementContent, DepartCarac) {
     setup = ""
     lore = ""
     system = new Link("system")
+    // Planète natale (verso, en haut à droite)
+    planete = ""
+    population = ""
+    gouvernement = ""
+    environnement = ""
+    descriptionPlanete = ""
+    // Forces de la faction, de 0 à FORCE_MAX, dans l'ordre de FORCES (verso, en bas à gauche)
+    forces = new Array(9).fill(0)
+}
+
+// Axes du graphique des forces (verso) ; mêmes positions que le tableau « forces »
+export const FORCES = ["Espace", "Sol", "Technologie", "Commerce", "Économie", "Politique", "Défense", "Mobilité", "Exploration"]
+const FORCE_MAX = 4
+
+const lignesPlanete = content => [
+    ["Population", content.population],
+    ["Gouvernement", content.gouvernement],
+    ["Environnement", content.environnement],
+].filter(([, v]) => v)
+
+const aInfosPlanete = content => Boolean(content.planete || content.descriptionPlanete || lignesPlanete(content).length > 0)
+
+// Infos de la planète natale (verso, en haut à droite) ; rien si elles sont vides
+function InfosPlanete({ content }) {
+
+    if (!aInfosPlanete(content)) {
+        return null
+    }
+
+    return (
+        <div data-planete-faction style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: "40%",
+            maxHeight: "92%",
+            overflow: "hidden",
+            backgroundColor: "#000000AA",
+            border: "1px solid " + (content.color2 || "#999999"),
+            borderRadius: 8,
+            padding: "4px 6px",
+            color: "white",
+            fontSize: 10,
+            lineHeight: 1.25,
+            zIndex: 1,
+        }}>
+            {content.planete && <div style={{ fontWeight: 700, fontSize: 12 }}>{content.planete}</div>}
+            {lignesPlanete(content).map(([nom, v]) => <div key={nom}><b>{nom} :</b> {v}</div>)}
+            {content.descriptionPlanete && <div style={{ fontStyle: "italic", marginTop: 3 }}>{content.descriptionPlanete}</div>}
+        </div>
+    )
+}
+
+// Graphique en étoile des forces (verso, en bas à gauche) ; rien si toutes valent 0
+function GraphiqueForces({ content }) {
+
+    const valeurs = FORCES.map((_, k) => Math.min(FORCE_MAX, Math.max(0, Number(content.forces?.[k]) || 0)))
+
+    if (!valeurs.some(v => v > 0)) {
+        return null
+    }
+
+    const largeur = 320, hauteur = 215, cx = 160, cy = 110, rayon = 74
+    const angle = k => -Math.PI / 2 + k * 2 * Math.PI / FORCES.length
+    const point = (k, v) => [cx + Math.cos(angle(k)) * rayon * v / FORCE_MAX, cy + Math.sin(angle(k)) * rayon * v / FORCE_MAX]
+    const polygone = vs => vs.map((v, k) => point(k, v).join(",")).join(" ")
+    const couleur = content.color || "#FFFFFF"
+
+    return (
+        <svg data-forces-faction width={largeur} height={hauteur} viewBox={`0 0 ${largeur} ${hauteur}`} style={{ display: "block", margin: "0 auto" }}>
+            {Array.from({ length: FORCE_MAX }, (_, i) => (
+                <polygon key={i} points={polygone(FORCES.map(() => i + 1))} fill="none" stroke="#FFFFFF" strokeOpacity={i === FORCE_MAX - 1 ? 0.6 : 0.25} />
+            ))}
+            {FORCES.map((_, k) => {
+                const [x, y] = point(k, FORCE_MAX)
+                return <line key={k} x1={cx} y1={cy} x2={x} y2={y} stroke="#FFFFFF" strokeOpacity={0.25} />
+            })}
+            <polygon points={polygone(valeurs)} fill={couleur} fillOpacity={0.4} stroke={couleur} strokeWidth={2} />
+            {valeurs.map((v, k) => {
+                const [x, y] = point(k, v)
+                return <circle key={k} cx={x} cy={y} r={2.5} fill={couleur} />
+            })}
+            {FORCES.map((nom, k) => {
+                const [x, y] = point(k, FORCE_MAX + 0.55)
+                const cos = Math.cos(angle(k))
+                return (
+                    <text key={nom} x={x} y={y} fill="white" fontSize={11} dominantBaseline="middle"
+                        textAnchor={Math.abs(cos) < 0.2 ? "middle" : (cos > 0 ? "start" : "end")}>
+                        {nom} <tspan fontWeight={700}>{valeurs[k]}</tspan>
+                    </text>
+                )
+            })}
+        </svg>
+    )
 }
 
 function Display({ content, style, context, explication }) {
@@ -175,6 +270,9 @@ export function Verso({ content, style, explication }) {
             backgroundColor: "#BBBBBB66",
             borderRadius: 12,
             padding: 4,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: 0,
         }}>
             {Array.from((new Faction).agents.keys()).map((i) => {
                 return content.agents && content.agents[i].id !== -1 && content.agentSetup[i] != 0 && <div key={i} >
@@ -194,6 +292,10 @@ export function Verso({ content, style, explication }) {
             <Separateur />
             <Text text={content.setup} style={{ color: "white", fontSize: 12 }} rule={explication} />
             <Depart content={content} />
+            {/* Forces de la faction, en bas de la colonne */}
+            <div style={{ marginTop: "auto" }}>
+                <GraphiqueForces content={content} />
+            </div>
         </div>
         <div style={{
             gridColumn: 2,
@@ -214,8 +316,11 @@ export function Verso({ content, style, explication }) {
         <div style={{
             gridColumn: 3,
             gridRow: 1,
+            position: "relative",
         }}>
-            <LoadAndDisplay link={content.system || new Link("system")} style={{ transform: "scale(0.7) ", marginTop: -30 }} />
+            {/* (décalé à gauche quand les infos de planète occupent la droite de la case) */}
+            <LoadAndDisplay link={content.system || new Link("system")} style={{ transform: (aInfosPlanete(content) ? "translateX(-45px) " : "") + "scale(0.7) ", marginTop: -30 }} />
+            <InfosPlanete content={content} />
         </div>
         <div style={{
             gridColumn: "2 / 4",
@@ -245,6 +350,9 @@ function Form({ content, onChange, onSubmit, style }) {
     }
     if (!content.unitNum) {
         content.unitNum = new Array(12).fill(0)
+    }
+    if (!content.forces) {
+        content.forces = new Array(FORCES.length).fill(0)
     }
 
 
@@ -287,6 +395,20 @@ function Form({ content, onChange, onSubmit, style }) {
             <DepartForm content={content} onChange={onChange} />
             <ModalPickerInput onChange={onChange} value={content} name="system" label="Systeme de depart" type={["system"]} />
             <EditorInput onChange={onChange} value={content} name="lore" label="Lore" />
+            <h2>Planète natale (verso, en haut à droite)</h2>
+            <TextInput onChange={onChange} value={content} name="planete" label="Planète(s)" />
+            <TextInput onChange={onChange} value={content} name="population" label="Population" />
+            <TextInput onChange={onChange} value={content} name="gouvernement" label="Gouvernement" />
+            <TextInput onChange={onChange} value={content} name="environnement" label="Environnement" />
+            <TextInput onChange={onChange} value={content} name="descriptionPlanete" label="Description" style={{ width: "100%" }} />
+            <h2>Forces (verso, en bas à gauche : 0 à {FORCE_MAX})</h2>
+            <div data-forces-formulaire style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {FORCES.map((nom, k) => (
+                    <div key={nom}>
+                        <NumberInput onChange={onChange} value={content} name="forces" index={k} min={0} max={FORCE_MAX} label={nom} />
+                    </div>
+                ))}
+            </div>
         </FormBase>
     )
 }

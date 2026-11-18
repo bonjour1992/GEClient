@@ -350,5 +350,11 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   d'évitement, Prévision des combats. Détail : `combat.md`, « mécaniques d'unités ».
 - ☑ Troupe de détournement (2026-11-11) : 3e temps d'attaque (phases 5 et 6 « Dernières
   attaques ») et capture des vaisseaux qu'elle détruit (« Retirer (capturé) »).
+- ☑ Factions du fichier ti5.csv (2026-11-18, `demandes-ti5/migrate-factions-csv.mjs`) : 16
+  factions « … WIP » créées sur la structure du modèle « template » (#18), avec logo,
+  illustration, couleurs, lore, infos de planète et forces ; leurs habilités sont vides (nom
+  seul, aucune règle). Les 10 factions existantes reçoivent seulement les infos de planète, les
+  forces et le lore quand il était vide. Verso : infos de planète en haut à droite, graphique
+  des forces en bas à gauche ; formulaire complété.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

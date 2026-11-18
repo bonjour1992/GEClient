@@ -1,6 +1,6 @@
 # Implémentabilité des règles TI5 dans l'outil de partie
 
-Pour chaque technologie, habilité, unité et planète : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 11 novembre 2026).
+Pour chaque technologie, habilité, unité et planète : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 18 novembre 2026).
 
 Colonnes :
 
@@ -20,13 +20,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 93 | 74 | 2 | 17 | 30 | 22 | 32 |
-| Habilités | 48 | 26 | 2 | 20 | 15 | 8 | 10 |
+| Habilités | 59 | 26 | 2 | 31 | 15 | 8 | 10 |
 | Unités | 104 | 69 | 35 | 0 | 25 | 13 | 34 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 11 | 6 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **333** | **215** | **61** | **57** | **109** | **78** | **82** |
+| **Total** | **344** | **215** | **61** | **68** | **109** | **78** | **82** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -180,6 +180,17 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 844 | Maître du pillage | **oui** | automatique | Chaque pillage rapporte 1 commerce de plus. | — |
 | 895 | Sans influence | **oui** | bouton existant modifié | Recrutement, propositions et boutons de script qui coûtent de l'influence : payés en ressources. « Entretien » : aucune influence gagnée. | Autres dépenses d'influence : à la main. |
 | 896 | Infiltration | **oui** | automatique + nouveau bouton | Conflit, « Retirer » : détruire un vaisseau donne un token Infiltration (éléments actifs, aux couleurs de la faction touchée). Plateau joueur, science : « Infiltration : +4 recherche » — use un scientifique et 2 infiltrations (usées jusqu'au nouveau tour), recherche notée au journal. | Prendre 2 infiltrations envers la même faction : à la main. |
+| 913 | École militaire (Fédération de Sol WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 915 | Nomade (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 916 | Pillage (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 917 | Cartographie du chaos (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 919 | Menace (Néo-peste WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 920 | Contamination (Néo-peste WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 922 | Recherche des alphas (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 923 | Menace (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 925 | Droit de passage (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 926 | Émanation du vide (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 927 | Influent (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 
 ## Unités
 

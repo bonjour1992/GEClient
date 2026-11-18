@@ -1491,6 +1491,18 @@ Sur la feuille de faction (`faction.jsx`) et celle d'une faction neutre
 ressources, fragments, cartes ; ils s'affichent en haut à droite de la carte
 (`stylePions`, `PlateauJoueur.jsx`).
 
+### verso de la faction : planète et forces
+
+Données de la faction (`faction.jsx`, classe `Faction`) : `planete`, `population`,
+`gouvernement`, `environnement`, `descriptionPlanete` (planète natale) et `forces`
+(9 valeurs de 0 à 4, dans l'ordre de `FORCES` : Espace, Sol, Technologie, Commerce,
+Économie, Politique, Défense, Mobilité, Exploration). Au verso, `InfosPlanete`
+(`data-planete-faction`) est en haut à droite, sur la case du système de départ, qui
+se décale alors de 45 px vers la gauche ; `GraphiqueForces` (`data-forces-faction`,
+graphique en étoile aux couleurs de la faction) est en bas de la colonne de gauche.
+L'un et l'autre ne s'affichent pas quand leurs données sont vides. Le formulaire
+a les sections « Planète natale » et « Forces » (`data-forces-formulaire`).
+
 ### jetons de ressource
 
 Dans le volet de droite, l'icône devant « Ressources », « Influence » et
