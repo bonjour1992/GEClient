@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 101 | 91 | 4 | 6 | 43 | 19 | 42 |
-| Habilités | 62 | 37 | 8 | 17 | 31 | 6 | 14 |
+| Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
+| Habilités | 62 | 39 | 8 | 15 | 32 | 6 | 15 |
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 19 | 5 | 2 | 12 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **366** | **247** | **74** | **45** | **138** | **60** | **109** |
+| **Total** | **366** | **252** | **74** | **40** | **139** | **60** | **113** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -129,9 +129,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 857 | Piraterie informatique | **oui** | nouveau bouton | Plateau joueur, deux boutons : le commerce choisi (fenêtre) est converti à 2 ressources, ou à 2 influence, chacun. | — |
 | 941 | Pluie d'astéroïdes (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète à portée 3 d'un champ d'astéroïdes non activé : le champ le plus proche est activé, un logisticien et un amiral sont usés, le marqueur « Ciblage astéroïde » est posé. Au bombardement, « attaque 4 sur chaque unité » : un dé par unité de la planète, 1 dégât sur 4 ou moins, marqueur retiré. | — |
 | 959 | Fouille des nébuleuses (Les Empyréens WIP) | **oui** | nouveau bouton | Fiche d'une nébuleuse, science : use un scientifique, active la nébuleuse, +1 fragment spatial. | — |
-| 1025 | Réacteurs solaires (Braises de Muaat WIP) | non | automatique (prévu) | — | +1 au mouvement des soleils de guerre : à brancher sur le déplacement assisté. (facile) |
-| 1026 | Coque stellaire (Braises de Muaat WIP) | non | automatique (prévu) | — | +1 de résistance des soleils de guerre : à brancher sur la résistance. (facile) |
-| 1027 | Armement solaire (Braises de Muaat WIP) | non | automatique (prévu) | — | +2 au combat des soleils de guerre : bonus de combat. (facile) |
+| 1025 | Réacteurs solaires (Braises de Muaat WIP) | **oui** | automatique | Déplacement assisté : +1 au mouvement de vos soleils de guerre. | — |
+| 1026 | Coque stellaire (Braises de Muaat WIP) | **oui** | automatique | Résistance de vos soleils de guerre : +1 (Conflit, fiche de l'unité). | — |
+| 1027 | Armement solaire (Braises de Muaat WIP) | **oui** | automatique | Conflit, combat spatial : +2 pour vos soleils de guerre. | — |
 | 1028 | Forge stellaire (Braises de Muaat WIP) | non | nouveau bouton (prévu) | — | Production de 3 vaisseaux ou mechs par un soleil de guerre dans une supernova. (moyenne) |
 | 1029 | Canon solaire (Braises de Muaat WIP) | non | automatique (prévu) | — | Canon 5*** portée 2 dans une supernova : la portée au-delà de 1 n'est pas gérée. (moyenne) |
 | 1030 | Cœur instable (Braises de Muaat WIP) | non | nouveau bouton (prévu) | — | Marqueur « Instable », explosion au bombardement suivant, système remplacé par une supernova. (difficile) |
@@ -200,8 +200,8 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 926 | Émanation du vide (Les Empyréens WIP) | **oui** | automatique | Déplacement assisté : aucune nébuleuse ne met fin à vos mouvements. | — |
 | 927 | Influent (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 942 | Racket (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, ravitaillement, à côté d'une planète d'une autre faction dans un système où vous avez des unités militaires : « Racket » ouvre un test de domination (onglet Conflit) ; à sa clôture, si vous dominez, vous gagnez les ressources de la planète et son propriétaire les perd. Une fois par tour et par planète. | — |
-| 1022 | Physiologie gashlai (Braises de Muaat WIP) | non | automatique (prévu) | — | Supernovas franchissables : à brancher sur le déplacement assisté. (facile) |
-| 1023 | Étude de la forge (Braises de Muaat WIP) | non | nouveau bouton (prévu) | — | Bouton sur une supernova : use un scientifique, active le système, +4 de recherche de forge d'arme. (facile) |
+| 1022 | Physiologie gashlai (Braises de Muaat WIP) | **oui** | automatique | Déplacement assisté : une supernova sur le trajet n'est plus un obstacle. | — |
+| 1023 | Étude de la forge (Braises de Muaat WIP) | **oui** | nouveau bouton | Fiche d'une supernova, science : use un scientifique, active le système, 4 de recherche de forge d'arme notée au journal de recherche. | Recherche de forge sur une planète : comme les autres sciences, à la main. |
 
 ## Unités
 

@@ -4,7 +4,7 @@ import { useElements, contenuEnCache } from "./sync";
 import { MARQUEUR } from "./miseEnPlace";
 import { centreCase, centreCaseBande } from "../plateauVue";
 import { COLONNES_BANDE } from "../hexSpirale";
-import { capaciteDe, depenserAgent, estDeplacementFurtif, placePrise } from "./effets";
+import { capaciteDe, depenserAgent, estDeplacementFurtif, placePrise, estSoleilDeGuerre } from "./effets";
 import {
     TRAJET, DEPART, useCarte, sorteEtape, sorteJet, campsAdverses, rangArret, passagesEnCours, Passage,
 } from "./Blocage";
@@ -270,7 +270,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const mouvement = v => (Number(contenus[v.ref.id]?.move) || 0) + ruptures +
         (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0) +
         // Vaisseau relique : un fragment spatial dépensé ce tour, +3 mouvement
-        (Number(v.marques?.reliqueSpa) === etat.tour ? 3 : 0) -
+        (Number(v.marques?.reliqueSpa) === etat.tour ? 3 : 0) +
+        // Réacteurs solaires (forge d'arme de Muaat) : +1 pour les soleils de guerre
+        (estSoleilDeGuerre(contenus[v.ref.id]) && aScript(moi, "reacteurs-solaires") ? 1 : 0) -
         // Habilité Tempête spatiale : −1 au mouvement (ignoré avec Adaptation des réacteurs)
         (aScript(moi, "tempete-spatiale") && !aScript(moi, "adaptation-des-reacteurs") ? 1 : 0);
 
@@ -301,7 +303,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         ...etapes.filter(e => e.sorte === "saut")
             .map(e => `${nomCase(e.de)} → ${nomCase(e.a)} : ni voisines, ni reliées par un trou de ver`),
         ...trajet.filter(i => !tuiles[i]).map(i => `${nomCase(i)} : pas de système sur cette case`),
-        ...trajet.filter(i => anomalie(i) === "sup").map(i => `${nomCase(i)} : supernova, le déplacement y est impossible`),
+        // Supernova : interdite, sauf avec l'habilité Physiologie gashlai (Braises de Muaat)
+        ...(aScript(moi, "physiologie-gashlai") ? [] : trajet.filter(i => anomalie(i) === "sup")
+            .map(i => `${nomCase(i)} : supernova, le déplacement y est impossible`)),
         // Champ d'astéroïdes : interdit, sauf avec le script Bouclier déflecteur
         ...(aScript(moi, "bouclier-deflecteur") ? [] : trajet.filter(i => anomalie(i) === "ast")
             .map(i => `${nomCase(i)} : champ d'astéroïdes, le déplacement y est interdit`)),

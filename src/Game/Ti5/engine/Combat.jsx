@@ -3,7 +3,7 @@ import {
     useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible, carteUsee, actionsUserCarte,
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { resistanceDe, victimesBombe } from "./effets";
+import { resistanceDe, victimesBombe, estSoleilDeGuerre } from "./effets";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR, ACTIVATION, actionsPiste, typeUnite } from "./miseEnPlace";
@@ -778,6 +778,8 @@ function CombatSysteme({ lieu }) {
             sorte === "terrestre" && v.u.type === "inf" && a("troupe-d-elite") && [1, "Troupe d'élite"],
             // Énergie de la faille, Soldats déphasés : +1 aux vaisseaux, aux forces terrestres
             sorte === "spatial" && a("energie-de-la-faille") && [1, "Énergie de la faille"],
+            // Armement solaire (forge d'arme de Muaat) : +2 aux soleils de guerre
+            sorte === "spatial" && estSoleilDeGuerre(v.u) && a("armement-solaire") && [2, "Armement solaire"],
             sorte === "terrestre" && a("soldats-dephases") && [1, "Soldats déphasés"],
             // Centre d'expansion : système désigné au ravitaillement (tour × 1000 + case + 1)
             sorte === "spatial" && v.camp !== NEUTRE &&

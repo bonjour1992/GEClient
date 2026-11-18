@@ -2831,6 +2831,35 @@ export const SCRIPTS = [
             libelle: "Fouille des nébuleuses : +1 fragment spatial (use un scientifique, active la nébuleuse)",
         }),
 
+    // ----- Braises de Muaat (WIP) : habilité et forge d'arme -----
+
+    regle("physiologie-gashlai", "habilite", 1022, 1795042399686, "Physiologie gashlai", "auto",
+        "Espace : déplacement assisté",
+        "Les supernovas ne bloquent pas vos déplacements."),
+
+    action("etude-de-la-forge", "habilite", 1023, 1795042399688, "Étude de la forge", "systeme",
+        "Science : use un scientifique et active une supernova : 4 de recherche de forge d'arme.", {
+            feuille: "forge",
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            activer: true,
+            recherche: [["forge", 4]],
+            visible: outils => outils.systeme?.anomaly === "sup",
+            libelle: "Étude de la forge : +4 recherche de forge d'arme (use un scientifique)",
+        }),
+
+    effet("reacteurs-solaires", 1025, 1795042399692, "Réacteurs solaires", "auto",
+        "Espace : déplacement assisté",
+        "Vos soleils de guerre ont +1 en mouvement."),
+
+    effet("coque-stellaire", 1026, 1795042399695, "Coque stellaire", "auto",
+        "Conflit, déplacement, fiche d'une unité : résistance",
+        "Vos soleils de guerre ont +1 en résistance."),
+
+    effet("armement-solaire", 1027, 1795042399696, "Armement solaire", "auto",
+        "Conflit : combat spatial",
+        "Vos soleils de guerre ont +2 au combat spatial."),
+
     // ----- Héritiers de Winnu : Mandat -----
 
     regle("mandat", "habilite", 146, 1794335054819, "Mandat", "modifie",

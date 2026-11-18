@@ -90,14 +90,20 @@ export function capaciteDe(contenu, possesseur, aScript) {
 // le type de l'unité, pas son nom (les cuirassés spéciaux en profitent).
 const TYPES_BLINDES = ["fs", "sun", "dn", "trans"];
 
+// Soleil de guerre : l'unité de ce type, ou celle qui en porte le nom (le vaisseau amiral
+// des Braises de Muaat est un soleil de guerre) — technologies de la forge d'arme
+export const estSoleilDeGuerre = contenu => contenu?.type === "sun" || /soleil de guerre/i.test(contenu?.name || "");
+
 // Bouclier amplifié : +2 pour le vaisseau amiral et les systèmes de défense,
 // +1 pour les boucliers mobiles.
+// Coque stellaire (forge d'arme de Muaat) : +1 pour les soleils de guerre.
 export function resistanceDe(contenu, possesseur, aScript) {
 
     const base = Number(contenu?.PV) || 0;
     const a = id => base > 0 && !!aScript?.(possesseur, id);
 
     const bonus =
+        (a("coque-stellaire") && estSoleilDeGuerre(contenu) ? 1 : 0) +
         (a("blindage-en-duranium") && TYPES_BLINDES.includes(contenu?.type) ? 1 : 0) +
         (a("bouclier-amplifie")
             ? (["fs", "pds"].includes(contenu?.type) ? 2 : (/bouclier mobile/i.test(contenu?.name || "") ? 1 : 0))
