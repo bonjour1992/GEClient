@@ -397,6 +397,11 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   terrestre, capture et dette), Partage de technologie (marqueur sur la technologie), Tuteur des
   réfugiés, Passage de Creuss et Navigation delta, Chemin du vide, Conspirer ensemble (+1 voix dans
   le décompte des votes, `decompteVotes`, `Vote.jsx`).
+- ☑ Cartes reliées au décompte des votes (2026-11-19) : colonne « Conclave » (voix du jet « Vote du
+  conclave », ajustables), Soutien politique (loi et vote annoncés dans l'onglet Décision, « régler
+  d'après le décompte »), Z'eu (X commerce → X voix), Harrugh Gefhara (commerce en quittant la phase
+  de vote), Ilyane Vorsk (compte comme un politicien, +1 voix par faction du même vote
+  majoritaire). Les scripts d'action acceptent `demandes`, une suite de décisions.
 - ☑ Braises de Muaat, règles simples (2026-11-19) : Physiologie gashlai, Réacteurs solaires, Coque
   stellaire, Armement solaire, Étude de la forge.
 - ☑ Issues GEClient #4, #5 et #6 (2026-11-18) : `#img[…]` accepte les apostrophes (`Text.jsx`) ;

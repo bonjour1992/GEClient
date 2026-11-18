@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
-import { MARQUEUR } from "./miseEnPlace";
+import { MARQUEUR, CUBES } from "./miseEnPlace";
 import { PlayerColor } from "../ti5Const";
 
 // ============================================================
@@ -107,8 +107,9 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
 
     const tour = etat.tour;
 
-    // Voix posées, par "<loi>:<colonne>:<joueur>"
+    // Voix posées, par "<loi>:<colonne>:<joueur>" ; cases où vote Ilyane Vorsk
     const posees = {};
+    const casesIlyane = new Set();
     let nombreLois = 0;
 
     for (const [zone, contenu] of index.parZone) {
@@ -126,10 +127,22 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
             ? contenu.filter(c => !c.cache && c.ref?.type === "agent" && /scientifique/i.test(nomElement(search, c.ref))).length
             : 0;
 
+        // Mercenaire Ilyane Vorsk (#910, « utilisable comme politique ») : son cube noir ou sa
+        // carte, posé sur une case de vote, compte comme un politicien
+        const ilyane = aScript?.(Number(m[1]), "ilyane-vorsk-votes")
+            ? contenu.filter(c => !c.cache && (
+                (c.ref?.type === "mercenaire" && c.ref.id === 910) ||
+                (!c.ref && c.jeton === CUBES[0][0] && etat.composants[c.marques?.carte]?.ref?.id === 910))).length
+            : 0;
+
         const cle = `${m[2]}:${m[3]}:${m[1]}`;
 
-        posees[cle] = (posees[cle] || 0) + politiciens * (m[4] ? 2 : 1) + scientifiques * 2;
+        posees[cle] = (posees[cle] || 0) + (politiciens + ilyane) * (m[4] ? 2 : 1) + scientifiques * 2;
         nombreLois = Math.max(nombreLois, Number(m[2]));
+
+        if (ilyane > 0) {
+            casesIlyane.add(cle);
+        }
     }
 
     const cleAjustement = (loi, col, u) => `vote:${tour}:${loi}:${col}:${u}`;
@@ -168,15 +181,76 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
     const conspire = (loi, col, u) => (conspirations.some(([detenteur, empyreen]) => detenteur === u &&
         majoritaire(loi, u) === col && majoritaire(loi, empyreen) === col) ? 1 : 0);
 
-    const voix = (loi, col, u) => propres(loi, col, u) + conspire(loi, col, u);
-    const total = (loi, col) => joueurs.reduce((s, j) => s + voix(loi, col, j.userId), 0);
+    // Ilyane Vorsk : là où elle vote, +1 voix par autre faction dont c'est le vote majoritaire
+    const ilyaneVorsk = (loi, col, u) => (casesIlyane.has(`${loi}:${col}:${u}`)
+        ? joueurs.filter(j => j.userId !== u && majoritaire(loi, j.userId) === col).length
+        : 0);
+
+    // Bonus des scripts sur les voix d'un joueur : [[n, nom]…]
+    const bonus = (loi, col, u) => [
+        conspire(loi, col, u) > 0 && [conspire(loi, col, u), "Conspirer ensemble"],
+        ilyaneVorsk(loi, col, u) > 0 && [ilyaneVorsk(loi, col, u), "Ilyane Vorsk"],
+    ].filter(Boolean);
+
+    const voix = (loi, col, u) => propres(loi, col, u) + bonus(loi, col, u).reduce((s, [n]) => s + n, 0);
+
+    // Conclave secret (faction neutre #718, sur la table) : il n'est pas un joueur. Ses voix du
+    // tour (compteur conclave:voix, lancées par « Vote du conclave : nombre de votes ») vont
+    // contre « Lutte contre la corruption » (#717), pour « Ouverture bureau des mercenaires »
+    // (#726) et « Soutien au conclave » (#727) ; « Dissolution du sénat » (#721) et le reste se
+    // règlent par l'ajustement manuel de sa colonne (joueur 0).
+    const conclaveEnJeu = Object.values(etat.composants).some(c =>
+        !c.cache && c.ref?.type === "neutral" && c.ref.id === 718 && c.zone === "general:table");
+
+    const lois = index.parZone.get("general:agenda:" + tour) || [];
+    const voixDuConclave = Number(etat.compteurs["conclave:vote"]) === tour ? Number(etat.compteurs["conclave:voix"]) || 0 : 0;
+
+    const conclave = (loi, col) => {
+
+        if (!conclaveEnJeu) {
+            return 0;
+        }
+
+        const agenda = lois[loi - 1] && !lois[loi - 1].cache ? lois[loi - 1].ref?.id : null;
+        const voulue = agenda === 717 ? 0 : ([726, 727].includes(agenda) ? 1 : null);
+
+        return (voulue === col ? voixDuConclave : 0) + ajustement(loi, col, 0);
+    };
+
+    const total = (loi, col) => joueurs.reduce((s, j) => s + voix(loi, col, j.userId), 0) + conclave(loi, col);
     const ordre = (loi, col) => Number(etat.compteurs[cleOrdre(loi, col)]) || 0;
 
     // Classement des colonnes d'une loi : total, puis l'ordre donné par le responsable du sénat
     const classement = loi => COLONNES.map((_, col) => col)
         .sort((a, b) => total(loi, b) - total(loi, a) || ordre(loi, b) - ordre(loi, a) || a - b);
 
-    return { nombreLois, cleAjustement, cleOrdre, ajustement, voix, total, ordre, classement, conspire };
+    return { nombreLois, cleAjustement, cleOrdre, ajustement, voix, total, ordre, classement, conspire, bonus, majoritaire, conclave, conclaveEnJeu };
+}
+
+// Mercenaire Harrugh Gefhara (#300), à la fin de la phase de vote : 1 commerce par loi
+// résolue selon le vote majoritaire de son joueur.
+//   -> { actions, messages }
+export function harrughFinDeVote({ etat, index, joueurs, search, aScript, nomDe }) {
+
+    const votes = decompteVotes({ etat, index, joueurs, search, aScript });
+    const actions = [];
+    const messages = [];
+
+    for (const j of joueurs.filter(x => aScript(x.userId, "harrugh-gefhara"))) {
+
+        const gagnees = Array.from({ length: votes.nombreLois }, (_, k) => k + 1).filter(loi => {
+            const premier = votes.classement(loi)[0];
+
+            return votes.total(loi, premier) > 0 && votes.majoritaire(loi, j.userId) === premier;
+        });
+
+        if (gagnees.length) {
+            actions.push({ type: "compteur", id: `joueur:${j.userId}:commerce`, delta: gagnees.length });
+            messages.push(`Harrugh Gefhara : ${nomDe(j.userId)} gagne ${gagnees.length} commerce (loi ${gagnees.join(", ")})`);
+        }
+    }
+
+    return { actions, messages };
 }
 
 // Trading, à la fin de la phase de vote : un négociant posé sur le plateau
@@ -226,7 +300,7 @@ function Decompte({ lois }) {
     const joueurs = partie.joueurs;
 
     const votes = decompteVotes({ etat, index, joueurs, search, aScript });
-    const { cleAjustement, cleOrdre, ajustement, voix, total, ordre, conspire } = votes;
+    const { cleAjustement, cleOrdre, ajustement, voix, total, ordre, bonus, conclave, conclaveEnJeu } = votes;
     const nombreLois = Math.max(lois.length, votes.nombreLois);
 
     // Responsable du sénat : le joueur de la dernière case d'initiative
@@ -369,7 +443,7 @@ function Decompte({ lois }) {
                     const classement = votes.classement(loi);
 
                     const affichees = classement.filter(col =>
-                        toutes || total(loi, col) !== 0 || joueurs.some(j => ajustement(loi, col, j.userId) !== 0));
+                        toutes || total(loi, col) !== 0 || joueurs.some(j => ajustement(loi, col, j.userId) !== 0) || conclave(loi, col) !== 0);
 
                     const egalite = col => total(loi, col) > 0 &&
                         classement.some(autre => autre !== col && total(loi, autre) === total(loi, col));
@@ -391,13 +465,15 @@ function Decompte({ lois }) {
                                             {j.nom}
                                         </th>
                                     ))}
+                                    {/* Conclave secret : ses voix du tour, et un ajustement manuel */}
+                                    {conclaveEnJeu && <th data-colonne-conclave style={{ ...styleCellule, borderBottom: "3px solid #9e9e9e" }}>Conclave</th>}
                                     <th style={styleCellule}>total</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {affichees.length === 0 && (
                                     <tr>
-                                        <td colSpan={joueurs.length + 3} style={{ ...styleCellule, color: "#666" }}>
+                                        <td colSpan={joueurs.length + 3 + (conclaveEnJeu ? 1 : 0)} style={{ ...styleCellule, color: "#666" }}>
                                             aucune voix
                                         </td>
                                     </tr>
@@ -456,19 +532,46 @@ function Decompte({ lois }) {
                                                             {" "}({corrige > 0 ? "+" : ""}{corrige})
                                                         </span>
                                                     )}
-                                                    {/* Promesse Conspirer ensemble : même vote majoritaire que les Empyréens */}
-                                                    {conspire(loi, col, j.userId) > 0 && (
+                                                    {/* Bonus des scripts : Conspirer ensemble, Ilyane Vorsk */}
+                                                    {bonus(loi, col, j.userId).map(([n, nom]) => (
                                                         <span
-                                                            data-conspirer-ensemble
-                                                            title="Conspirer ensemble : même vote majoritaire que la faction qui a fait la promesse, +1 voix"
+                                                            key={nom}
+                                                            data-bonus-vote={nom}
+                                                            title={`${nom} : +${n} voix (vote majoritaire)`}
                                                             style={{ fontSize: 11, color: "#6a1b9a" }}
                                                         >
-                                                            {" "}(+1 Conspirer ensemble)
+                                                            {" "}(+{n} {nom})
                                                         </span>
-                                                    )}
+                                                    ))}
                                                 </td>
                                             );
                                         })}
+
+                                        {conclaveEnJeu && (
+                                            <td data-voix-conclave={conclave(loi, col)} style={styleCellule}>
+                                                {joueur && (
+                                                    <button
+                                                        type="button"
+                                                        title="Conclave : une voix de moins (ajustement manuel)"
+                                                        style={styleMini}
+                                                        onClick={() => envoyer([{ type: "compteur", id: cleAjustement(loi, col, 0), delta: -1 }], "")}
+                                                    >
+                                                        −
+                                                    </button>
+                                                )}
+                                                <b style={{ display: "inline-block", minWidth: 22 }}>{conclave(loi, col)}</b>
+                                                {joueur && (
+                                                    <button
+                                                        type="button"
+                                                        title="Conclave : une voix de plus (ajustement manuel)"
+                                                        style={styleMini}
+                                                        onClick={() => envoyer([{ type: "compteur", id: cleAjustement(loi, col, 0), delta: 1 }], "")}
+                                                    >
+                                                        +
+                                                    </button>
+                                                )}
+                                            </td>
+                                        )}
 
                                         <td style={{ ...styleCellule, fontWeight: "bold" }}>{total(loi, col)}</td>
                                     </tr>

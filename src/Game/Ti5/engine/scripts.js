@@ -214,6 +214,19 @@ const aTrouDeVer = (index, systeme, numero, planetes, tokens) =>
     (systeme?.elems || []).some(lien => planetes.includes(Number(lien?.id))) ||
     dansLeSysteme(index, numero).some(c => c.ref?.type === "token" && tokens.includes(c.ref.id));
 
+// Vote : colonnes du plateau, questions « quelle loi » et « quel vote » (onglet Décision)
+const COLONNES_VOTE = ["Contre", "Pour", "1", "2", "3", "4", "5", "6"];
+
+const questionLoi = (titre, outils) => `${titre} : pour quelle loi ?\n` +
+    (outils.lois().length ? outils.lois() : ["loi 1"]).map((nom, k) => `${k + 1} = ${k + 1}. ${nom}`).join("\n");
+
+const questionColonne = titre => `${titre} : quel vote ?\n` + COLONNES_VOTE.map((nom, k) => `${k + 1} = ${nom}`).join("\n");
+
+// Soutien politique : la carte n'est plus engagée, l'issue annoncée est oubliée
+const effacerVote = carte => ["use", "voteLoi", "voteCol", "voteTour"]
+    .filter(m => carte?.marques?.[m] !== undefined)
+    .map(m => ({ type: "marquer", c: carte.id, marque: m, valeur: null }));
+
 // Mandats (promesses de type « mand ») détenus par d'autres factions que moi
 const mandatsDonnes = outils => Object.values(outils.etat.composants).filter(x => !x.cache && x.ref?.type === "Promesse" &&
     outils.contenuDe(x.ref.id)?.type === "mand" && /^joueur:\d+:(actif|tour:\d+)$/.test(x.zone || "") &&
@@ -2877,20 +2890,74 @@ export const SCRIPTS = [
     // ----- Soutien politique -----
 
     action("soutien-politique-annoncer", "Promesse", 227, 1794335054863, "Soutien politique : annoncer", "carte",
-        "Prévote : la promesse est engagée (carte usée) et vous annoncez une issue ; la faction qui l'a faite doit voter à hauteur de sa valeur.", {
+        "Prévote : la promesse est engagée (carte usée) et vous annoncez une issue — la loi et le vote se choisissent dans l'onglet Décision ; la faction qui l'a faite doit y mettre autant de voix que la valeur de la promesse.", {
             phase: "prevote",
-            special: atelier => {
-                const donneur = atelier.donneur(atelier.c);
+            visible: outils => !outils.c?.marques?.use,
+            demandes: [
+                { question: outils => questionLoi("Soutien politique", outils), max: () => 1 },
+                { question: () => questionColonne("Soutien politique"), max: () => 1 },
+            ],
+            calcul: (outils, xs) => {
+
+                if (!xs) {
+                    return outils.c?.marques?.use ? { sans: "cette promesse est déjà engagée" } : {};
+                }
+
+                const [loi, col] = xs;
+                const donneur = Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
 
                 return {
-                    actions: [{ type: "marquer", c: atelier.c.id, marque: "use", valeur: true }],
-                    sans: atelier.c?.marques?.use ? "cette promesse est déjà engagée" : null,
-                    avis: `Soutien politique : annoncez l'issue — ${donneur ? atelier.nomDe(donneur) : "la faction"} doit y mettre ` +
-                        `${atelier.c?.marques?.valeur ? atelier.c.marques.valeur + " voix" : "la valeur de la promesse"}, ou gagner 1 infamie.`,
+                    // (issue annoncée : loi, colonne à partir de 1, tour — pour « régler »)
+                    actions: [
+                        { type: "marquer", c: outils.c.id, marque: "use", valeur: true },
+                        { type: "marquer", c: outils.c.id, marque: "voteLoi", valeur: loi },
+                        { type: "marquer", c: outils.c.id, marque: "voteCol", valeur: col },
+                        { type: "marquer", c: outils.c.id, marque: "voteTour", valeur: outils.etat.tour },
+                    ],
+                    avis: `Soutien politique : issue annoncée — loi ${loi}, « ${COLONNES_VOTE[col - 1]} ». ${donneur ? outils.nomDe(donneur) : "La faction"} doit y mettre ` +
+                        `${outils.c?.marques?.valeur ? outils.c.marques.valeur + " voix" : "la valeur de la promesse"}, ou gagner 1 infamie.`,
                 };
             },
-            visible: outils => !outils.c?.marques?.use,
             libelle: "Soutien politique : engager la promesse (annoncer une issue)",
+        }),
+
+    action("soutien-politique-regler", "Promesse", 227, 1794335054863, "Soutien politique : régler", "carte",
+        "Après le vote, plateaux révélés : le décompte dit si la faction a mis assez de voix sur l'issue annoncée — la promesse retourne à la réserve, et la faction gagne 1 infamie si elle n'a pas tenu.", {
+            visible: outils => !!outils.c?.marques?.use && !!outils.c?.marques?.voteLoi,
+            special: atelier => {
+
+                const m = atelier.c?.marques || {};
+                const donneur = atelier.donneur(atelier.c);
+                const valeur = Number(m.valeur) || 0;
+
+                if (Number(m.voteTour) !== atelier.etat.tour) {
+                    return { actions: [], sans: "l'issue a été annoncée à un autre tour : réglez avec « respecté » ou « non respecté »" };
+                }
+
+                if (!donneur || !valeur) {
+                    return { actions: [], sans: "la valeur de la promesse (marque « valeur ») ou son marqueur manque : réglez avec « respecté » ou « non respecté »" };
+                }
+
+                const voix = atelier.votes().voix(Number(m.voteLoi), Number(m.voteCol) - 1, donneur);
+                const tenue = voix >= valeur;
+                const rompue = promesseRompue(atelier);
+
+                return {
+                    actions: [
+                        ...effacerVote(atelier.c),
+                        ...(tenue
+                            ? [
+                                ...atelier.marqueurs(atelier.c).map(x => ({ type: "supprimer", c: x.id })),
+                                { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+                            ]
+                            : rompue.actions),
+                    ],
+                    sans: atelier.voteRevele(donneur) ? null : `le plateau de vote de ${atelier.nomDe(donneur)} n'est pas révélé (ses voix ne sont pas connues)`,
+                    avis: `Soutien politique : ${atelier.nomDe(donneur)} a mis ${voix} voix sur ${valeur} dues — ` +
+                        (tenue ? "promesse tenue, elle retourne à la réserve." : "promesse non tenue : 1 infamie."),
+                };
+            },
+            libelle: "Soutien politique : régler d'après le décompte",
         }),
 
     action("soutien-politique-respecte", "Promesse", 227, 1794335054863, "Soutien politique : respecté", "carte",
@@ -2898,7 +2965,7 @@ export const SCRIPTS = [
             visible: outils => !!outils.c?.marques?.use,
             special: atelier => ({
                 actions: [
-                    { type: "marquer", c: atelier.c.id, marque: "use", valeur: false },
+                    ...effacerVote(atelier.c),
                     ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
                     { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
                 ],
@@ -2913,10 +2980,53 @@ export const SCRIPTS = [
             special: atelier => {
                 const rompue = promesseRompue(atelier);
 
-                return { ...rompue, actions: [{ type: "marquer", c: atelier.c.id, marque: "use", valeur: false }, ...rompue.actions] };
+                return { ...rompue, actions: [...effacerVote(atelier.c), ...rompue.actions] };
             },
             libelle: "Soutien politique : non respecté (la faction gagne 1 infamie)",
         }),
+
+    // ----- Mercenaires qui votent (décompte : Vote.jsx) -----
+
+    action("zeu", "mercenaire", 294, 1789968637695, "Z'eu", "carte",
+        "Vote : son cube part dans les agents usés, X commerce sont dépensés (4 au plus) pour X voix de plus sur la loi et le vote choisis (onglet Décision), ajoutées à votre colonne du décompte.", {
+            phase: "phase de vote",
+            nomPhase: "vote",
+            use: true,
+            demandes: [
+                {
+                    question: "Z'eu : combien de commerce dépenser (1 voix chacun, 4 au plus) ?",
+                    max: outils => Math.max(1, Math.min(4, outils.compte("commerce"))),
+                },
+                { question: outils => questionLoi("Z'eu", outils), max: () => 1 },
+                { question: () => questionColonne("Z'eu"), max: () => 1 },
+            ],
+            calcul: (outils, xs) => {
+
+                if (!xs) {
+                    return outils.compte("commerce") > 0 ? {} : { sans: "vous n'avez aucun commerce" };
+                }
+
+                const [x, loi, col] = xs;
+
+                return x > Math.min(4, outils.compte("commerce"))
+                    ? { sans: `commerce insuffisant ou plus de 4 : ${x} demandé, vous en avez ${outils.compte("commerce")}` }
+                    : {
+                        cout: { commerce: x },
+                        // (ajustement de mes voix : compteur vote:<tour>:<loi>:<colonne>:<joueur>)
+                        actions: [{ type: "compteur", id: `vote:${outils.etat.tour}:${loi}:${col - 1}:${outils.moi}`, delta: x }],
+                        avis: `Z'eu : ${x} voix de plus — loi ${loi}, « ${COLONNES_VOTE[col - 1]} ».`,
+                    };
+            },
+            libelle: "Z'eu : X commerce → X voix",
+        }),
+
+    regle("harrugh-gefhara", "mercenaire", 300, 1794335054898, "Harrugh Gefhara", "auto",
+        "En-tête : « Phase suivante », en quittant la phase de vote",
+        "Vous gagnez 1 commerce par loi résolue selon votre vote majoritaire (la colonne où vous avez, seule, le plus de voix)."),
+
+    regle("ilyane-vorsk-votes", "mercenaire", 910, 1794343464302, "Ilyane Vorsk : votes", "auto",
+        "Onglet Vote : décompte",
+        "Son cube noir (ou sa carte) posé sur une case de votre plateau de vote compte comme un politicien, et rapporte 1 voix de plus par autre faction dont c'est le vote majoritaire."),
 
     // ----- Mandats des Winnu -----
 
@@ -3263,8 +3373,10 @@ export const SCRIPTS = [
                         c: feuille.id,
                         n: soutenu ? 3 : 1,
                         suite: jets => ({
-                            texte: `${jets.join(" + ")} = ${jets.reduce((s, j) => s + j, 0)} vote(s) — contre « Lutte contre la corruption », ` +
-                                "pour « Ouverture bureau des mercenaires » et « Soutien au conclave », pour lui-même à « Dissolution du sénat » (avec tous ses Soutiens politiques)",
+                            // (compteur conclave:voix : le décompte des votes les compte dans la colonne « Conclave »)
+                            actions: [{ type: "compteur", id: "conclave:voix", valeur: jets.reduce((s, j) => s + j, 0) }],
+                            texte: `${jets.join(" + ")} = ${jets.reduce((s, j) => s + j, 0)} vote(s), comptés au décompte — contre « Lutte contre la corruption », ` +
+                                "pour « Ouverture bureau des mercenaires » et « Soutien au conclave » ; « Dissolution du sénat » (pour lui-même, avec tous ses Soutiens politiques) : ajustez sa colonne à la main",
                         }),
                     }] : [],
                 };

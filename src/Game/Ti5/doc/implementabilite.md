@@ -20,13 +20,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 102 | 95 | 4 | 3 | 43 | 19 | 46 |
-| Habilités | 62 | 39 | 8 | 15 | 32 | 6 | 15 |
+| Habilités | 62 | 39 | 8 | 15 | 32 | 6 | 16 |
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
-| Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
-| Promesses | 19 | 15 | 4 | 0 | 14 | 2 | 4 |
+| Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
+| Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **367** | **263** | **76** | **28** | **146** | **61** | **118** |
+| **Total** | **367** | **267** | **74** | **26** | **147** | **61** | **121** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -176,7 +176,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 560 | Négocier avec les rebelles | **oui** | nouveau bouton | Fiche d'un système, à côté d'une planète où il y a des Rebelles, diplomatie : use un diplomate, 3 dés à 4, chaque réussite retire un Rebelle. | — |
 | 561 | Rébellion armée | **partiel** | nouveau bouton | Bandeau « À faire », combat terrestre : un combat terrestre est ouvert sur chaque planète où il y a 6 Rebelles ou plus. | Reprise de la planète à la revendication : à la main. |
 | 563 | Armer les rebelles | **oui** | nouveau bouton + automatique | Plateau joueur, combat terrestre, quand des Rebelles sont sur la carte : 3 ressources, les Rebelles ont +1 au combat ce tour (une fois par tour pour la table). | « Vos unités adjacentes » : non vérifié. |
-| 720 | Vote du conclave | **partiel** | nouveau bouton | Bandeau « À faire », quand le Conclave secret est sur la table : prévote — un dé par Soutien politique du Conclave, activé sur 2 ou moins ; vote — 1D10 votes (3D10 si « Soutien au conclave » est en jeu), avec le rappel de ce qu'il vote. | Les votes du Conclave ne sont pas reliés à l'outil de vote. |
+| 720 | Vote du conclave | **partiel** | nouveau bouton + automatique | Bandeau « À faire », quand le Conclave secret est sur la table : prévote — un dé par Soutien politique du Conclave, activé sur 2 ou moins ; vote — 1D10 voix (3D10 si « Soutien au conclave » est en jeu). Onglet Vote : colonne « Conclave » du décompte, ses voix contre « Lutte contre la corruption », pour « Ouverture bureau des mercenaires » et « Soutien au conclave ». | « Dissolution du sénat » (pour lui-même, avec ses Soutiens politiques) : ajustement manuel de sa colonne. |
 | 722 | Achat de votes | **oui** | nouveau bouton | Bandeau « À faire », diplomatie, quand le Conclave secret est sur la table, une fois par tour : use un diplomate, un Soutien politique de valeur 3 à votre marqueur est posé chez le Conclave, 5 commerce vous attendent sur votre case du tour T+2. | — |
 | 725 | Milice au coeur du pouvoir | **oui** | automatique | « Nouveau tour », à partir du tour 8, habilité posée sur la table : 1D10 miliciens mercenaires sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu). | — |
 | 764 | Confrérie de mercenaire | **oui** | bouton existant modifié + nouveau bouton | Recrutement (Ctrl + clic sur un mercenaire) : le surcoût du tour est ignoré. Bandeau « À faire » du recrutement : « piocher un mercenaire » (dans la main, à poser sur la case de son choix), une fois par tour. | — |
@@ -381,12 +381,12 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 291 | Ahk Ravin | **oui** | bouton existant modifié | « Fouiller la ruine » : quand Ahk Ravin est le scientifique de la fouille (son cube posé sur le type Scientifique, choisi dans la fenêtre ou d'office), une fenêtre propose de dépenser 3 ressources pour 2 fragments au lieu d'un. | — |
 | 292 | Carth de Sabledor | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Le vaisseau de commerce gratuit : à la main. |
 | 293 | Elder Qanoj | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Ses 3 votes : non reliés au vote de l'outil. (passé) |
-| 294 | Z'eu | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 294 | Z'eu | **oui** | nouveau bouton | Fiche du mercenaire, phase de vote : son cube est usé, X commerce (4 au plus) sont dépensés pour X voix sur la loi et le vote choisis dans l'onglet Décision ; elles s'ajoutent à votre colonne du décompte. | — |
 | 295 | Viscount Unlenn | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Déplacement hors des règles de blocage : à la main. (passé) |
 | 297 | Artuno | **oui** | nouveau bouton | Fiche de la carte, diplomatie : son cube part dans les agents usés, 1 commerce par alliance en cours chez vous. | — |
 | 298 | Acamar | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Votes copiés sur une autre faction : non reliés au vote de l'outil. (passé) |
 | 299 | Sharsiss | **oui** | bouton existant modifié + nouveau bouton | Combat spatial : un bouton par autre faction du combat — son cube part dans les agents usés, autant de ses unités que vous en avez au combat ont +1 (les premières qui tirent). Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | — |
-| 300 | Harrugh Gefhara | non | — | — | Votes générés par le mercenaire : non reliés au vote de l'outil. (passé) |
+| 300 | Harrugh Gefhara | **oui** | automatique | « Phase suivante », en quittant la phase de vote : 1 commerce par loi résolue selon votre vote majoritaire. | — |
 | 301 | S'Ula Mentarion | non | — | — | Pose d'une unité liée dans un système non contrôlé. (passé) |
 | 302 | Ta Zern | **oui** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, 1 de recherche génétique par planète que vous possédez. | — |
 | 303 | Baggil Wildpaw | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Mercenaire posé sur la planète d'une autre faction, revenu détourné : à la main. (passé) |
@@ -403,7 +403,7 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 358 | Shipmonger Zsknck | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux non biologiques endommagés, production : le cube du mercenaire part dans les agents usés, le vaisseau perd ses dégâts sans rien payer. | — |
 | 359 | Sai Seravus (cartographe de Creuss) | non | — | — | Trous de ver alpha et bêta adjacents : règle de déplacement. (passé) |
 | 729 | Gabriel Gibbs | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Mobilisation jusqu'à la capacité logistique : à la main. |
-| 910 | Ilyane Vorsk | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Ses votes en plus : non reliés au vote de l'outil. (passé) |
+| 910 | Ilyane Vorsk | **oui** | bouton existant modifié + automatique | Utilisable comme l'agent indiqué (cube noir ou carte glissé sur ce type d'agent). Onglet Vote : son cube ou sa carte posé sur une case de vote compte comme un politicien, et rapporte 1 voix de plus par autre faction dont c'est le vote majoritaire. | — |
 
 ## Promesses
 
@@ -414,7 +414,7 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 | 224 | Vassal | **partiel** | bouton existant modifié + nouveau bouton | Conflit d'accord : « Accepter » est grisé pour le camp qui possède la planète revendiquée. Fiche de la carte : « Promesse rompue » (monde natal perdu) — retour à la réserve, la faction du marqueur gagne 1 infamie. | Donner sa faveur aux tours pairs ; fins de promesse sans infamie : à la main. |
 | 225 | Pacte de non-agression | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — la carte retourne à la réserve, son marqueur est retiré, la faction qui l'a faite gagne 1 infamie. | — |
 | 226 | Redevance de protection | **partiel** | nouveau bouton | Fiche de la promesse, chez la faction qui la détient : « payer 2 commerce au Mentak » (ravitaillement, une fois par tour), « dépenser la promesse » (sans payer), « le Mentak y met fin » (retour à la réserve, il gagne 1 infamie). | Les Mentaks ne peuvent pas engager le détenteur : non vérifié. |
-| 227 | Soutien politique | **partiel** | nouveau bouton | Fiche de la promesse : prévote, « engager la promesse » (carte usée, le message dit combien de voix sont dues) ; puis « respecté » (retour à la réserve) ou « non respecté » (la faction gagne 1 infamie). | Le vote réel n'est pas vérifié. |
+| 227 | Soutien politique | **oui** | nouveau bouton | Fiche de la promesse : prévote, « engager la promesse » — la loi et le vote annoncés se choisissent dans l'onglet Décision. Après le vote, « régler d'après le décompte » compare les voix de la faction à la valeur de la promesse : tenue, elle retourne à la réserve ; sinon la faction gagne 1 infamie. « respecté » et « non respecté » restent pour régler à la main. | — |
 | 228 | Concession commerciale | **oui** | bouton existant modifié | Fiche d'une unité à livraison, dans le système de Mecatol Rex : le détenteur du mandat (non épuisé) figure parmi les factions à comptoir, il peut être livré. | — |
 | 262 | Embuscade | **oui** | nouveau bouton | Fiche de la promesse : « Embuscade » — le système se choisit dans l'onglet Décision ; la Volée argentée répond dans le sien : poser un destroyer (un logisticien usé, 2 ressources) ou gagner 1 infamie. Conflit : ce destroyer est au détenteur pour ce combat spatial, frappe en premier et a +2 ; « Terminer le combat » le rend à la Volée. | — |
 | 335 | Accord de recherche | **oui** | nouveau bouton | Fiche de la carte : « +2 recherche », notée au journal de recherche. | Le déclenchement (la faction recherche une technologie) est à la main. |

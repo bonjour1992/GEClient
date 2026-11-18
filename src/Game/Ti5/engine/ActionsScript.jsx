@@ -6,6 +6,7 @@ import { depenserAgent } from "./effets";
 import { actionsPossession } from "./Controle";
 import { noter } from "./recherche";
 import { lireQuestion } from "./Decisions";
+import { decompteVotes } from "./Vote";
 
 // ============================================================
 // BOUTONS D'ACTION DES SCRIPTS (sorte « action », scripts.js)
@@ -201,6 +202,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         // Cases où j'ai une unité ; nom lisible d'une case
         mesCases: () => mesCases().sort((a, b) => a - b),
         nomCase,
+        // Lois du tour (case Agenda du tour, dans l'ordre des lignes du plateau de vote) : leurs noms
+        lois: () => (index.parZone.get("general:agenda:" + etat.tour) || [])
+            .map((x, k) => (!x.cache && x.ref ? nomElement(search, x.ref) : "loi " + (k + 1))),
         // Ai-je cette carte (éléments actifs, promesse à durée) ?
         aCarte: (type, id) => Object.values(etat.composants).some(x => !x.cache && x.ref?.type === type && x.ref.id === id && estAMoi(x)),
         // Mes agents usés (agents, cubes noirs des mercenaires)
@@ -277,6 +281,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         agent: motif => agentDisponible({ index, moi, search }, motif),
         // Ce joueur a-t-il débloqué cette technologie ?
         aTechnologie,
+        // Décompte des votes du tour (Vote.jsx) : voix(loi, colonne, joueur)… ; plateau révélé ?
+        votes: () => decompteVotes({ etat, index, joueurs: partie.joueurs, search, aScript }),
+        voteRevele: u => !!etat.compteurs[`joueur:${u}:voteRevele`],
     };
 
     // Le bouton est-il à montrer ici ?
@@ -439,28 +446,40 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
             // Montant ou choix du joueur : une décision (onglet Décision) ; le script est
             // recalculé avec sa réponse. Les choix sont écrits « 1 = … » dans la question.
-            const question = typeof s.demande?.question === "function" ? s.demande.question(outils) : s.demande?.question;
-            const lue = s.demande ? lireQuestion(question) : null;
+            // `demandes` : plusieurs décisions à la suite (un montant, puis une loi, puis une
+            // colonne…) ; le script reçoit alors le tableau des réponses, et chaque question
+            // les réponses déjà données.
+            const questions = s.demandes || (s.demande ? [s.demande] : []);
+            const reponses = [];
 
             // (la fiche d'où part l'action se ferme : la décision se prend dans son onglet)
-            if (s.demande) {
+            if (questions.length) {
                 apres?.();
             }
 
-            const x = s.demande
-                ? await decider({
+            for (const demande of questions) {
+
+                const question = typeof demande.question === "function" ? demande.question(outils, reponses) : demande.question;
+                const lue = lireQuestion(question);
+                const max = demande.max(outils, reponses);
+
+                const reponse = await decider({
                     titre: s.nom,
                     texte: lue.texte,
                     choix: lue.choix,
-                    nombre: lue.choix.length ? undefined : { min: 1, max: s.demande.max(outils), defaut: s.demande.max(outils) },
-                })
-                : null;
+                    nombre: lue.choix.length ? undefined : { min: 1, max, defaut: max },
+                });
 
-            if (s.demande && !(x > 0)) {
-                return;
+                if (!(reponse > 0)) {
+                    return;
+                }
+
+                reponses.push(reponse);
             }
 
-            const choisi = s.demande ? { ...s, ...s.calcul(outils, x) } : effet;
+            const x = s.demandes ? reponses : (s.demande ? reponses[0] : null);
+
+            const choisi = questions.length ? { ...s, ...s.calcul(outils, x) } : effet;
 
             if (choisi.sans) {
                 aviser(`${s.nom} : ${choisi.sans}.`);

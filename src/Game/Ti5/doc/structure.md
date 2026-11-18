@@ -447,8 +447,17 @@ Quatre sortes :
     `joueur:<u>:unite:<i>` du type de vaisseau —, Art du commerce, Réparation) ;
   - `Technologie.jsx`, `reactions` : Brevet (`brevet:<lui>:<chercheur>:<tech>`
     = tour), Soleil de guerre ;
-  - `Vote.jsx`, `tradingFinDeVote` (appelé par `changerPhase`) : Trading ;
-    `decompteVotes` est le décompte partagé ;
+  - `Vote.jsx`, `tradingFinDeVote` et `harrughFinDeVote` (appelés par
+    `changerPhase`) : Trading, Harrugh Gefhara (1 commerce par loi résolue selon
+    le vote majoritaire du détenteur) ; `decompteVotes` est le décompte partagé.
+    Il rend `voix`, `total`, `bonus` (Conspirer ensemble, Ilyane Vorsk — son
+    cube ou sa carte sur une case de vote compte comme un politicien),
+    `majoritaire`, `conclave` et `conclaveEnJeu` : la colonne « Conclave » du
+    tableau lit le compteur `conclave:voix` (posé par le jet « Vote du
+    conclave », valable le tour `conclave:vote`) et s'ajuste à la main
+    (`cleAjustement(loi, col, 0)`). Z'eu et Soutien politique écrivent ou lisent
+    les voix d'un joueur par `vote:<tour>:<loi>:<col>:<u>` ; la promesse garde
+    son annonce dans les marques `voteLoi`, `voteCol`, `voteTour` ;
   - `Partie.jsx`, `piocherPropositions` : École politique ;
   - `Blocage.jsx` : Rapport de force (`blocage:<case>:<joueur>:<camp>:plus`) ;
     `Deplacement.jsx` : champs d'astéroïdes interdits sans Bouclier déflecteur ;
@@ -967,7 +976,9 @@ mercenaire use sa carte (marque `use`, retirée à « Nouveau tour » avec celle
 des unités) ; avec `cible`, il est montré sur la fiche de mes unités qui
 conviennent (Shipmonger Zsknck) et c'est toujours la carte du mercenaire qui
 est usée. `demande` fait choisir un montant X au joueur, passé à
-`calcul(outils, X)` (Xuange). `outils` compte aussi les planètes possédées,
+`calcul(outils, X)` (Xuange) ; `demandes` en enchaîne plusieurs, dans l'onglet
+Décision, et `calcul` reçoit alors le tableau des réponses (Z'eu : montant, loi,
+vote). `outils` compte aussi les planètes possédées,
 les alliances, les anomalies occupées et les factions voisines. Promesse
 rompue (`promesseRompue`, `scripts.js`) : la carte retourne dans
 `general:promesses`, son marqueur est retiré, et la faction du marqueur gagne

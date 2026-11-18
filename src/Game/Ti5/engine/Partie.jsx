@@ -66,7 +66,7 @@ import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
 import { Decisions, decisionsDurables } from "./Decisions";
-import { Vote, tradingFinDeVote } from "./Vote";
+import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
@@ -688,9 +688,15 @@ export function Partie({ id }) {
         const phase = phases[iPhase + pas];
 
         // Script Trading : on quitte la phase de vote, les prédictions justes sont payées
-        const trading = pas > 0 && /^(?!.*pr[ée]).*vote/i.test(etat.phase)
-            ? tradingFinDeVote({ etat, index, joueurs, search, aScript: ctx.aScript, nomDe: ctx.nomDe })
-            : { actions: [], messages: [] };
+        // (mercenaire Harrugh Gefhara : 1 commerce par loi résolue selon son vote majoritaire)
+        const finDeVote = pas > 0 && /^(?!.*pr[ée]).*vote/i.test(etat.phase)
+            ? [tradingFinDeVote, harrughFinDeVote].map(f => f({ etat, index, joueurs, search, aScript: ctx.aScript, nomDe: ctx.nomDe }))
+            : [];
+
+        const trading = {
+            actions: finDeVote.flatMap(x => x.actions),
+            messages: finDeVote.flatMap(x => x.messages),
+        };
 
         // Nouvelle phase : plus personne n'a passé, le premier de l'ordre joue
         if (phase) {
