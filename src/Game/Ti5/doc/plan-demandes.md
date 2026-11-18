@@ -356,5 +356,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   seul, aucune règle). Les 10 factions existantes reçoivent seulement les infos de planète, les
   forces et le lore quand il était vide. Verso : infos de planète en haut à droite, graphique
   des forces en bas à gauche ; formulaire complété.
+- ☑ Pirate Mentak, données (2026-11-18, `demandes-ti5/migrate-mentak-asteroides.mjs`) :
+  technologie militaire « Pluie d'astéroïdes » (#941, niveau 4, feuille militaire de Mentak
+  case 3), marqueur « Ciblage astéroïde » (#940, `ti/token/ciblage.svg`), habilité « Racket »
+  (#942) ajoutée à la faction. Noms choisis faute d'indication ; règles non scriptées.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

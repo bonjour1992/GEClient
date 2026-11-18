@@ -19,14 +19,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 93 | 74 | 2 | 17 | 30 | 22 | 32 |
-| Habilités | 59 | 26 | 2 | 31 | 15 | 8 | 10 |
+| Technologies | 94 | 74 | 2 | 18 | 30 | 22 | 32 |
+| Habilités | 60 | 26 | 2 | 32 | 15 | 8 | 10 |
 | Unités | 104 | 69 | 35 | 0 | 25 | 13 | 34 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 11 | 6 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
 | Promesses | 17 | 5 | 2 | 10 | 7 | 1 | 0 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **344** | **215** | **61** | **68** | **109** | **78** | **82** |
+| **Total** | **346** | **215** | **61** | **70** | **109** | **78** | **82** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -127,6 +127,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 820 | Stabilisateur de rupture | non | automatique (prévu) | — | À brancher sur le jet de trou de ver oméga du déplacement assisté. (difficile) |
 | 821 | Extraction de la faille | non | bouton existant modifié (prévu) | — | Bouton de ravitaillement : +3 ressources par « Faille » dominée (domination à déterminer). (moyenne) |
 | 857 | Piraterie informatique | **oui** | nouveau bouton | Plateau joueur, deux boutons : le commerce choisi (fenêtre) est converti à 2 ressources, ou à 2 influence, chacun. | — |
+| 941 | Pluie d'astéroïdes (Pirate Mentak) | non | nouveau bouton + automatique (prévu) | — | Bouton sur la fiche d'un champ d'astéroïdes : l'active, use un logisticien et un amiral, pose le marqueur « Ciblage astéroïde » (#940) sur une planète choisie ; au bombardement de cette planète, une attaque 4 contre chaque unité. (moyenne) |
 
 ## Habilités
 
@@ -191,6 +192,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 925 | Droit de passage (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 926 | Émanation du vide (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 927 | Influent (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
+| 942 | Racket (Pirate Mentak) | non | bouton existant modifié (prévu) | — | « Entretien » : les ressources des planètes des systèmes que vous dominez vous reviennent au lieu de leur propriétaire (pas l'influence) ; la domination est déjà calculée (`Controle.jsx`). (moyenne) |
 
 ## Unités
 
