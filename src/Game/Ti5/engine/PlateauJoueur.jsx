@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import {
-    useEngine, Emplacements, Zone, Source, Defilable, IconeRessource, BoutonRegle, aMotCle, CUBE_MERCENAIRE, cubeDeMercenaire,
+    useEngine, Emplacements, Zone, Source, Defilable, IconeRessource,
 } from "./Interaction";
 import { useElement, useElements } from "./sync";
-import { LIMITES_UNITES, FAVEUR, RESSOURCES, typeUnite, actionsPoints } from "./miseEnPlace";
+import { LIMITES_UNITES, RESSOURCES, typeUnite } from "./miseEnPlace";
 import { ActionsTechnologies } from "./ActionsTechnologies";
 import { ReserveProductible } from "./Production";
 import { useExploitationDuVide } from "./Controle";
-import { useRevenus } from "./Revenus";
+import { EntretienAuto } from "./Entretien";
 import { BoutonsScripts } from "./ActionsScript";
 
 // ============================================================
@@ -222,180 +222,19 @@ export function CaseProduction() {
     );
 }
 
-// Entretien : chaque carte mercenaire du joueur retrouve son cube noir — celui qui en
-// vient (marque « carte »), sinon un autre de ses agents usés, sinon un cube neuf (un
-// mercenaire arrivé sans cube) ; un cube resté sans carte est retiré. -> actions
-function retourDesCubes(index, base, cubesUses) {
-
-    const sansCube = (index.parZone.get(base + ":actif") || [])
-        .filter(c => !c.cache && c.ref?.type === "mercenaire" && !cubeDeMercenaire(index, c));
-
-    const libres = [...cubesUses];
-    const actions = [];
-
-    for (const carte of sansCube) {
-
-        const k = libres.findIndex(x => x.marques?.carte === carte.id);
-        const i = k >= 0 ? k : libres.findIndex(x => !sansCube.some(autre => autre.id === x.marques?.carte));
-
-        if (i < 0) {
-            actions.push({ type: "creer", jeton: CUBE_MERCENAIRE, sur: carte.id });
-            continue;
-        }
-
-        const [cube] = libres.splice(i, 1);
-
-        actions.push({ type: "deplacer", c: cube.id, sur: carte.id });
-
-        if (cube.marques?.carte) {
-            actions.push({ type: "marquer", c: cube.id, marque: "carte", valeur: null });
-        }
-    }
-
-    return [...actions, ...libres.map(c => ({ type: "supprimer", c: c.id }))];
-}
-
 export function PlateauJoueur({ vu }) {
 
-    const { etat, index, jouer, envoyer, moi, joueur, aScript } = useEngine();
+    const { etat, index, jouer, envoyer, moi, joueur } = useEngine();
 
     const u = vu.userId;
     const base = "joueur:" + u;
 
     const faction = useElement(vu.faction);
 
-    // --------------------------------------------------------
-    // ENTRETIEN (une fois par tour, au ravitaillement)
-    //
-    // Ajoute les ressources et l'influence des planètes du joueur
-    // (éléments actifs) à ses compteurs, renvoie les agents usés
-    // parmi les agents disponibles, rend de nouveau disponibles les
-    // technologies utilisées ce tour, et donne une de ses faveurs au
-    // joueur qui possède une planète de son système natal.
-    // (Les unités « usées » redeviennent disponibles à chaque fin de
-    // phase : voir Partie.jsx.)
-    // --------------------------------------------------------
-
-    const planetes = (index.parZone.get(base + ":actif") || [])
-        .filter(c => c.ref?.type === "planet");
-
-    const contenuPlanetes = useElements(planetes.map(c => c.ref.id));
-
-    const somme = champ => planetes.reduce(
-        (total, c) => total + (Number(contenuPlanetes[c.ref.id]?.[champ]) || 0),
-        0
-    );
-
-    // Script Exploitation du vide : 1 ressource par système vide dominé (3 pour une
-    // nébuleuse) ; un système vide disputé demande un conflit de domination (Controle.jsx)
+    // L'entretien part tout seul au début du ravitaillement (Entretien.jsx).
+    // Script Exploitation du vide : un système vide disputé demande un conflit de
+    // domination (Controle.jsx) avant que l'entretien ne parte
     const vide = useExploitationDuVide(u);
-
-    // Scripts de revenu : ce que rapportent au ravitaillement les unités posées
-    // et les planètes possédées (Revenus.jsx)
-    const revenus = useRevenus(u, "ravit");
-
-    const ressources = somme("res") + vide.gain + revenus.res;
-
-    // Scripts d'entretien. Diversité : +1 influence par planète. Culture
-    // courtisane : +1 influence par alliance en jeu chez moi (promesse de
-    // type alliance dans mes éléments actifs ou sur une case de tour).
-    const promesses = [...index.parZone]
-        .filter(([zone]) => zone === base + ":actif" || zone.startsWith(base + ":tour:"))
-        .flatMap(([, contenu]) => contenu.filter(c => !c.cache && c.ref?.type === "Promesse"));
-
-    const contenuPromesses = useElements(promesses.map(c => c.ref.id));
-    const alliances = promesses.filter(c => contenuPromesses[c.ref.id]?.type === "alli").length;
-
-    const bonusInfluence = [
-        aScript(u, "diversite") && planetes.length > 0 && [planetes.length, "Diversité"],
-        aScript(u, "culture-courtisane-alliances") && alliances > 0 && [alliances, "Culture courtisane"],
-    ].filter(Boolean);
-
-    // (habilité Sans influence : l'entretien ne rapporte pas d'influence)
-    const influence = aScript(u, "sans-influence")
-        ? 0
-        : somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0) + revenus.inf;
-
-    // Habilités qui jouent à l'entretien (scripts de sorte « regle »)
-    //   Sève de vie       mes unités biologiques de la carte récupèrent 1 de résistance
-    //   Destin légendaire 1 point par planète légendaire possédée
-    //   Conclave secret   aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire en main
-    //   Signal            un marqueur de signal sur un système tiré au hasard
-    const bioBlessees = !aScript(u, "seve-de-vie") ? [] : Object.values(etat.composants).filter(c =>
-        !c.cache && c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio) === u && /^hex:\d+/.test(c.zone || "") &&
-        Number(c.marques?.degat) > 0 && aMotCle(c, "bio"));
-
-    const legendaires = aScript(u, "destin-legendaire")
-        ? planetes.filter(c => contenuPlanetes[c.ref.id]?.legendary).length
-        : 0;
-
-    const conclave = aScript(u, "conclave-secret") && [1, 4, 6, 8, 9, 10].includes(etat.tour);
-
-    const systemesPoses = !aScript(u, "signal") ? [] : [...index.parZone]
-        .filter(([zone, contenu]) => /^hex:\d{1,3}$/.test(zone) && contenu.some(c => c.ref?.type === "system"))
-        .map(([zone]) => zone);
-
-    const entretienHabilites = [
-        bioBlessees.length > 0 && `Sève de vie : ${bioBlessees.length} unité(s) soignée(s)`,
-        legendaires > 0 && `Destin légendaire : +${legendaires} point(s)`,
-        conclave && "Conclave secret : 1 objectif militaire",
-        systemesPoses.length > 0 && "Signal : 1 marqueur sur un système au hasard",
-    ].filter(Boolean);
-    const agentsUses = index.parZone.get(base + ":agentsUses") || [];
-
-    // Cubes noirs des mercenaires utilisés : à l'entretien, ils retournent sur leur carte
-    const cubesUses = agentsUses.filter(c => !c.ref && c.jeton === CUBE_MERCENAIRE);
-    const retourCubes = retourDesCubes(index, base, cubesUses);
-
-    // (le Noble cryogénisé usé redevient disponible)
-    const noblesUses = (index.parZone.get(base + ":actif") || [])
-        .filter(c => !c.cache && c.ref?.type === "relique" && c.ref.id === 396 && c.marques?.use);
-
-    const techsUtilisees = Object.keys(etat.compteurs)
-        .filter(id => id.startsWith(base + ":techUse:") && etat.compteurs[id]);
-
-    // --------------------------------------------------------
-    // FAVEUR DE L'ENTRETIEN
-    //
-    // Le joueur qui possède une planète de son système natal (sa
-    // carte est dans ses éléments actifs) reçoit une de ses faveurs.
-    // --------------------------------------------------------
-
-    const systemeNatal = useElement(faction?.system?.id);
-
-    const planetesNatales = (systemeNatal?.elems || [])
-        .filter(lien => lien?.id > 0)
-        .map(lien => lien.id);
-
-    const possedeNatale = planetesNatales.some(id => planetes.some(c => c.ref.id === id));
-
-    // Une fois par tour : le compteur garde le tour du dernier entretien
-    // (un second clic ne double rien)
-    const entretienFait = etat.tour > 0 && Number(etat.compteurs[base + ":entretien"]) === etat.tour;
-
-    function entretien(commentaire) {
-        envoyer([
-            // (si : refusé si l'entretien vient d'être fait depuis une autre fenêtre)
-            { type: "compteur", id: base + ":entretien", valeur: etat.tour, si: Number(etat.compteurs[base + ":entretien"]) || 0 },
-            ressources && { type: "compteur", id: base + ":res", delta: ressources },
-            influence && { type: "compteur", id: base + ":inf", delta: influence },
-            ...agentsUses.filter(c => !cubesUses.includes(c)).map(c => ({ type: "deplacer", c: c.id, vers: base + ":agents" })),
-            ...retourCubes,
-            ...noblesUses.map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false })),
-            ...techsUtilisees.map(id => ({ type: "compteur", id, valeur: 0 })),
-            ...revenus.actions,
-            ...bioBlessees.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: Number(c.marques.degat) - 1 })),
-            ...actionsPoints(etat, u, legendaires),
-            conclave && { type: "piocher", de: "pioche:militaire", vers: base + ":main" },
-            systemesPoses.length > 0 && {
-                type: "creer",
-                ref: { type: "token", id: 859 },
-                zone: systemesPoses[Math.floor(Math.random() * systemesPoses.length)],
-                proprio: u,
-            },
-            possedeNatale && { type: "creer", jeton: FAVEUR, zone: base + ":faveurs", proprio: u },
-        ].filter(Boolean), commentaire);
-    }
 
 
     // Le lien doit garder la même référence d'un rendu à l'autre
@@ -423,33 +262,9 @@ export function PlateauJoueur({ vu }) {
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
 
-                {/* L'entretien se fait à la phase de ravitaillement, une fois par tour.
-                    Hors de là, le bouton est rouge gris (utilisable après confirmation). */}
-                {joueur && u === moi && etat.tour > 0 && (
-                    <BoutonRegle
-                        nom="Entretien"
-                        obstacles={[
-                            !/ravitaill/i.test(etat.phase) && "ce n'est pas la phase de ravitaillement",
-                            entretienFait && "l'entretien de ce tour est déjà fait",
-                            vide.aResoudre.length > 0 &&
-                                `Exploitation du vide : ${vide.aResoudre.length} système(s) vide(s) disputé(s), conflit(s) de domination à résoudre (onglet Conflit)`,
-                        ]}
-                        faire={entretien}
-                        title={"Ajoute les ressources et l'influence de vos planètes, récupère vos agents usés, rend vos technologies disponibles" +
-                            (possedeNatale
-                                ? ", et vous donne une de vos faveurs (vous possédez une planète natale)"
-                                : " (pas de faveur : vous ne possédez aucune planète de votre système natal)")}
-                        style={{ padding: "4px 10px" }}
-                    >
-                        {(entretienFait ? "✔ Entretien fait ce tour — " : "Entretien : ") +
-                            `+${ressources} ressources${vide.gain ? ` (dont ${vide.gain} : Exploitation du vide)` : ""}, +${influence} influence` +
-                            bonusInfluence.map(([n, nom]) => ` (dont ${n} : ${nom})`).join("") + ", " +
-                            `${agentsUses.length} agent(s), ${techsUtilisees.length} technologie(s)` +
-                            (possedeNatale ? ", +1 faveur" : "") +
-                            (revenus.resume ? ` — ${revenus.resume}` : "") +
-                            entretienHabilites.map(texte => ` — ${texte}`).join("")}
-                    </BoutonRegle>
-                )}
+                {/* Ravitaillement automatique : compte rendu du tour, ou rattrapage s'il n'a pas
+                    été fait (Entretien.jsx) */}
+                {joueur && u === moi && <EntretienAuto plateau />}
 
                 {/* Script Exploitation du vide : ouvrir les conflits de domination qui manquent */}
                 {joueur && u === moi && vide.aResoudre.some(n => !etat.compteurs[`domination:${n}`]) && (

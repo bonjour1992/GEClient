@@ -694,7 +694,7 @@ export function useExploitationDuVide(userId) {
 
 function Domination({ conflit }) {
 
-    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aScript } = useEngine();
+    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aScript, partie } = useEngine();
 
     const { cle, numero, demandeur } = conflit;
 
@@ -726,6 +726,46 @@ function Domination({ conflit }) {
 
     const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
 
+    // Rackets en attente sur les planètes de ce système (script Racket, Pirate Mentak) :
+    // compteur racket:<case>p<k> = le joueur qui réclame. À la clôture, s'il domine, il
+    // gagne les ressources de la planète et son propriétaire les perd (au plus ce qu'il a).
+    const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+    const systeme = useElement(tuile?.ref.id ?? -1);
+    const liensPlanetes = (systeme?.elems || []).map(lien => Number(lien?.id) || 0);
+    const planetes = useElements(liensPlanetes.filter(id => id > 0));
+
+    const rackets = Object.keys(etat.compteurs)
+        .map(id => new RegExp(`^racket:${numero}p(\\d+)$`).exec(id))
+        .filter(m => m && etat.compteurs[m[0]])
+        .map(m => {
+            const idPlanete = liensPlanetes[Number(m[1])] || 0;
+            const proprietaire = partie.joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+                .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete))?.userId ?? null;
+            const res = Number(planetes[idPlanete]?.res) || 0;
+
+            return {
+                cle: m[0],
+                u: Number(etat.compteurs[m[0]]),
+                proprietaire,
+                res,
+                pris: proprietaire ? Math.min(res, Number(etat.compteurs[`joueur:${proprietaire}:res`]) || 0) : 0,
+                nom: planetes[idPlanete]?.name || "planète",
+            };
+        });
+
+    const actionsRackets = rackets.flatMap(r => [
+        { type: "compteur", id: r.cle, valeur: 0 },
+        ...(gagnant === r.u && r.proprietaire && r.proprietaire !== r.u ? [
+            { type: "compteur", id: `joueur:${r.u}:res`, delta: r.res },
+            r.pris > 0 && { type: "compteur", id: `joueur:${r.proprietaire}:res`, delta: -r.pris },
+            { type: "compteur", id: r.cle + ":tour", valeur: etat.tour },
+        ].filter(Boolean) : []),
+    ]);
+
+    const bilanRackets = rackets.map(r => (gagnant === r.u && r.proprietaire && r.proprietaire !== r.u
+        ? `Racket sur ${r.nom} : ${nomCamp(r.u)} +${r.res} ressource(s), ${nomCamp(r.proprietaire)} −${r.pris}`
+        : `Racket sur ${r.nom} : ${nomCamp(r.u)} ne domine pas, rien n'est pris`));
+
     const pastille = camp => (
         <span
             style={{
@@ -755,8 +795,18 @@ function Domination({ conflit }) {
             }}
         >
             <div>
-                <b>Domination du système {nomCase(numero)}</b> — conflit ouvert par {nomCamp(demandeur)} (Exploitation du vide).
+                <b>Domination du système {nomCase(numero)}</b> — test ouvert par {nomCamp(demandeur)}
+                {rackets.length > 0 ? " (Racket)" : ""}.
             </div>
+
+            {/* Rackets en attente du résultat (script Racket) */}
+            {rackets.map(r => (
+                <div key={r.cle} data-racket={r.cle} style={{ color: "#4a148c" }}>
+                    Racket de <b>{nomCamp(r.u)}</b> sur <b>{r.nom}</b>
+                    {r.proprietaire ? <> ({nomCamp(r.proprietaire)})</> : null} : s'il domine, +{r.res} ressource(s) pour lui,
+                    −{r.pris} pour le propriétaire.
+                </div>
+            ))}
 
             {camps.map(c => (
                 <div key={c.camp} data-camp={c.camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
@@ -797,7 +847,9 @@ function Domination({ conflit }) {
                         { type: "compteur", id: `dominant:${numero}:tour`, valeur: etat.tour },
                         ...camps.filter(c => etat.compteurs[cleChoix(c.camp)]).map(c => ({ type: "compteur", id: cleChoix(c.camp), valeur: 0 })),
                         { type: "compteur", id: cle, valeur: 0 },
-                    ], commentaire)}
+                        // (rackets en attente : appliqués si leur auteur domine, effacés dans tous les cas)
+                        ...actionsRackets,
+                    ], [commentaire, ...bilanRackets].join(" — ").slice(0, 300))}
                     title="Enregistre qui domine le système pour ce tour et clôt le conflit"
                     style={{ marginTop: 4, padding: "3px 14px" }}
                 >

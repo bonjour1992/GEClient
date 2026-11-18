@@ -1516,6 +1516,32 @@ function FicheSysteme({ numero, id, fermer }) {
                             {boutonCombat(numero + "c", "Canons spatiaux",
                                 "Les unités à canon spatial du système et des systèmes voisins tirent sur ses vaisseaux")}
 
+                            {/* Test de domination (Controle.jsx) : qui domine ce système ce tour — Racket,
+                                Extraction de la faille, Cache, Péage aux frontières, Exploitation du vide */}
+                            {new Set((index.parZone.get("hex:" + numero) || [])
+                                .filter(c => !c.cache && c.ref?.type === "unit" && !c.sur)
+                                .map(c => c.marques?.possession ?? c.proprio ?? 0)).size > 1 && (
+                                etat.compteurs["domination:" + numero]
+                                    ? <button type="button" onClick={() => allerA("combat")} style={{ fontWeight: "bold" }}>Voir : test de domination</button>
+                                    : (
+                                        <BoutonRegle
+                                            data-action="test-de-domination"
+                                            nom={`Test de domination (${nomCase(numero)})`}
+                                            obstacles={[
+                                                !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
+                                                Number(etat.compteurs[`dominant:${numero}:tour`]) === etat.tour &&
+                                                    "un test de domination de ce système a déjà été clos ce tour",
+                                            ]}
+                                            faire={commentaire => envoyer(
+                                                [{ type: "compteur", id: "domination:" + numero, valeur: moi }],
+                                                commentaire || "Test de domination ouvert")}
+                                            title="Plusieurs camps ont des unités dans l'espace de ce système : ouvre un test de domination (onglet Conflit), que chacun peut soutenir puis clore"
+                                        >
+                                            Test de domination
+                                        </BoutonRegle>
+                                    )
+                            )}
+
                             <BoutonRegle
                                 data-action="declarer-treve"
                                 nom={`Déclarer une trêve (${nomCase(numero)})`}

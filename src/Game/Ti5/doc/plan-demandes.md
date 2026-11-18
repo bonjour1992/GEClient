@@ -360,6 +360,17 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   technologie militaire « Pluie d'astéroïdes » (#941, niveau 4, feuille militaire de Mentak
   case 3), marqueur « Ciblage astéroïde » (#940, `ti/token/ciblage.svg`), habilité « Racket »
   (#942) ajoutée à la faction. Noms choisis faute d'indication ; règles non scriptées.
+- ☑ Ravitaillement automatique (2026-11-18) : plus de bouton « Entretien » ; l'entretien de chaque
+  joueur part tout seul au début de la phase de ravitaillement (`Entretien.jsx`), avec un compte
+  rendu détaillé ligne par ligne (en-tête pendant la phase, Plateau joueur ensuite) ; rattrapage
+  rouge gris s'il a été manqué.
+- ☑ Scripts manquants (2026-11-18) : Racket (bouton par planète, test de domination, ressources
+  prises à la clôture), test de domination ouvrable depuis la fiche d'un système, Exploitation de
+  masse, Enrôlement, Vie fructifiante, Adaptation des réacteurs, Stabilisateur de rupture,
+  Extraction de la faille, Tempête électromagnétique, Arme bactériologique, Péage aux frontières,
+  Cache, Domination, Distorsion gravitationnelle, Débarquement du Khan, Négocier avec les
+  rebelles, Rébellion armée, SIG-1 à SIG-4 (signaux tirés à la mise en place), Pluie
+  d'astéroïdes (portée 3). Jets de dés des scripts : `tirages` (`ActionsScript.jsx`).
 - ☑ Issues GEClient #2 et #3 (2026-11-18) : unités de base dans la réserve neutre ; ni
   bombardement ni combat terrestre sur un satellite ou une planète spéciale (rouge gris) ;
   un seul bombardement par unité et par tour. Verso de faction : illustration, système et

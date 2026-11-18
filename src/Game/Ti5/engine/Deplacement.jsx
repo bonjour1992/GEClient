@@ -271,8 +271,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0) +
         // Vaisseau relique : un fragment spatial dépensé ce tour, +3 mouvement
         (Number(v.marques?.reliqueSpa) === etat.tour ? 3 : 0) -
-        // Habilité Tempête spatiale : −1 au mouvement
-        (aScript(moi, "tempete-spatiale") ? 1 : 0);
+        // Habilité Tempête spatiale : −1 au mouvement (ignoré avec Adaptation des réacteurs)
+        (aScript(moi, "tempete-spatiale") && !aScript(moi, "adaptation-des-reacteurs") ? 1 : 0);
 
     // Moteur à gravité : un scientifique par vaisseau seul, deux par flotte
     const scientifiquesGravite = avecGravite ? disponibles("scientifique").slice(0, coutEnAgents(selection.length)) : [];

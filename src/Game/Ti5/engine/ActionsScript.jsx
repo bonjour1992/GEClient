@@ -1,4 +1,4 @@
-import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte } from "./Interaction";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte, distanceCases, nomCase } from "./Interaction";
 import { contenuEnCache, useElement, useElements } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite } from "./miseEnPlace";
@@ -84,7 +84,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
     const {
         etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives, partie,
-        factionDe, techDuScript,
+        factionDe, techDuScript, aTechnologie,
     } = useEngine();
 
     // Mes promesses (éléments actifs, promesses à durée) : leur contenu dit lesquelles sont des alliances
@@ -98,6 +98,19 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
     const liensUnites = (faction?.units || []).filter(lien => lien?.id > 0);
     const unitesFaction = useElements(liensUnites.map(lien => lien.id));
     const idInfanterie = liensUnites.find(lien => typeUnite(unitesFaction[lien.id]) === "inf")?.id ?? null;
+
+    // Toute la carte est chargée (tuiles posées, puis leurs planètes) : les scripts qui
+    // regardent d'autres systèmes que celui de la fiche (portée, planètes voisines) lisent
+    // ces contenus dans le cache, qu'ils aient déjà été affichés ou non
+    const idsTuiles = [...new Set(Object.values(etat.composants)
+        .filter(x => x.ref?.type === "system" && /^hex:\d+$/.test(x.zone || ""))
+        .map(x => x.ref.id))].sort((a, b) => a - b);
+
+    const systemesCarte = useElements(idsTuiles);
+
+    useElements([...new Set(Object.values(systemesCarte)
+        .flatMap(s => (s?.elems || []).map(lien => Number(lien?.id)))
+        .filter(id => id > 0))].sort((a, b) => a - b));
 
     if (!joueur) {
         return null;
@@ -148,6 +161,22 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         mesUnitesDansLeSysteme: () => numero === null ? 0 : Object.values(etat.composants).filter(x =>
             !x.cache && x.ref?.type === "unit" && campDe(x) === moi &&
             (x.zone === "hex:" + numero || x.zone?.startsWith(`hex:${numero}:`))).length,
+        // Mes unités militaires dans le système de la fiche ; zone et élément du lieu
+        mesMilitairesDansLeSysteme: () => numero === null ? 0 : Object.values(etat.composants).filter(x =>
+            !x.cache && x.ref?.type === "unit" && campDe(x) === moi &&
+            (x.zone === "hex:" + numero || x.zone?.startsWith(`hex:${numero}:`)) &&
+            (contenuEnCache(x.ref.id)?.mot_cle || []).includes("mil")).length,
+        // Mes structures posées au lieu (planète)
+        mesStructuresIci: () => ici.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) === moi &&
+            (contenuEnCache(x.ref.id)?.mot_cle || []).includes("struc")).length,
+        zone,
+        idElement,
+        // Joueur qui possède cette planète (sa carte est dans ses éléments actifs), ou null
+        proprietaire: idPlanete => partie.joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+            .some(x => !x.cache && x.ref?.type === "planet" && x.ref.id === idPlanete))?.userId ?? null,
+        // Nom d'un joueur ; script en service pour moi
+        nomDe,
+        aScript: id => aScript(moi, id),
         // Ai-je cette carte (éléments actifs, promesse à durée) ?
         aCarte: (type, id) => Object.values(etat.composants).some(x => !x.cache && x.ref?.type === type && x.ref.id === id && estAMoi(x)),
         // Mes agents usés (agents, cubes noirs des mercenaires)
@@ -195,6 +224,35 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         idElement,
         contenu: idElement ? contenuEnCache(idElement) : null,
         nom: ref => nomElement(search, ref),
+        // Joueur qui possède cette planète (sa carte est dans ses éléments actifs), ou null
+        proprietaire: outils.proprietaire,
+        // Unités posées dans une zone ; camp d'une unité ; contenu d'un élément déjà chargé
+        unites: z => (index.parZone.get(z) || []).filter(x => !x.cache && x.ref?.type === "unit"),
+        campDe,
+        contenuDe: contenuEnCache,
+        // Cases de la carte : [{ numero, tuile, systeme }] ; distance entre deux cases
+        cases: () => [...index.parZone].flatMap(([z, contenu]) => {
+            const m = /^hex:(\d+)$/.exec(z);
+            const tuile = m && contenu.find(x => x.ref?.type === "system");
+            return tuile ? [{ numero: Number(m[1]), tuile, systeme: contenuEnCache(tuile.ref.id) }] : [];
+        }),
+        distance: distanceCases,
+        nomCase,
+        aScript,
+        compte: (userId, cle) => Number(etat.compteurs[`joueur:${userId}:${cle}`]) || 0,
+        systeme,
+        // Tuile du système de la fiche (composant) : porte les jets de dés qui ne visent pas une unité
+        tuile: () => (numero === null ? null : (index.parZone.get("hex:" + numero) || []).find(x => x.ref?.type === "system") || null),
+        // Mes esclaves (infanteries capturées de mes éléments actifs)
+        esclaves: () => mesActifs.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) !== moi &&
+            typeUnite(contenuEnCache(x.ref.id)) === "inf"),
+        // Une unité ou une carte est-elle usée ? Actions qui l'usent
+        usee: x => carteUsee(index, x),
+        user: x => actionsUserCarte(index, moi, x),
+        // Un de mes agents disponibles (par son nom), en plus de celui du script
+        agent: motif => agentDisponible({ index, moi, search }, motif),
+        // Ce joueur a-t-il débloqué cette technologie ?
+        aTechnologie,
     };
 
     // Le bouton est-il à montrer ici ?
@@ -212,7 +270,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         }
 
         if (lieu === "planete") {
-            return s.carte.type === "habilite"
+            // (habilité ou technologie : sur la planète de son champ surPlanete)
+            return ["habilite", "tech"].includes(s.carte.type)
                 // (surPlanete true : n'importe quelle planète, le script dit où avec visible)
                 ? (s.surPlanete === true || s.surPlanete === idElement) && aScript(moi, s.id)
                 : [s.carte.id, ...(s.aussi || [])].includes(idElement);
@@ -378,7 +437,11 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 ? actionsPossession({ etat, moi, aScript, nomDe }, zone, idElement, null, false)
                 : { actions: [], messages: [] };
 
-            envoyer([
+            // Jets de dés du script : lancés par le serveur dans ce coup (marque « jetScript<k> »
+            // du composant), leur suite part dans un second coup
+            const tirages = propre.tirages || [];
+
+            const envoi = envoyer([
                 ...(agent ? (s.agent.depense
                     ? depenserAgent({ aScript, moi, etat }, agent, `le ${s.agent.nom} (${s.nom})`)
                     : [s.agent.surCarte && c
@@ -419,11 +482,36 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                 s.pioche && { type: "piocher", de: s.pioche.de, vers: `joueur:${moi}:${s.pioche.vers}`, n: s.pioche.n || 1 },
                 ...possession.actions,
                 ...(propre.actions || []),
+                ...tirages.map((t, k) => ({ type: "des", n: t.n || 1, faces: t.faces || 10, c: t.c, marque: "jetScript" + k })),
                 s.parTour && { type: "compteur", id: cleTour, valeur: etat.tour },
             ], [commentaire, ...possession.messages].join(" — "));
 
             if (choisi.avis || propre.avis) {
                 aviser([choisi.avis, propre.avis].filter(Boolean).join(" "));
+            }
+
+            if (tirages.length) {
+                Promise.resolve(envoi).then(reponse => {
+
+                    const suites = tirages
+                        .map((t, k) => ({ t, k, jet: reponse?.etat?.composants?.[t.c]?.marques?.["jetScript" + k] }))
+                        .filter(x => x.jet !== undefined)
+                        .map(x => ({ c: x.t.c, marque: "jetScript" + x.k, ...x.t.suite(String(x.jet).split(",").map(Number)) }));
+
+                    if (!suites.length) {
+                        return;
+                    }
+
+                    const resume = suites.map(x => x.texte).filter(Boolean).join(" ; ");
+
+                    // (detruit : la suite retire le composant qui porte le jet, sa marque part avec lui)
+                    envoyer(suites.flatMap(x => [
+                        ...(x.actions || []),
+                        !x.detruit && { type: "marquer", c: x.c, marque: x.marque, valeur: null },
+                    ]).filter(Boolean), `${s.nom} — ${resume}`.slice(0, 300));
+
+                    aviser([choisi.avis, propre.avis, `${s.nom} : ${resume}.`].filter(Boolean).join(" "));
+                });
             }
 
             apres?.();

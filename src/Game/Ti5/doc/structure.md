@@ -1491,6 +1491,34 @@ Sur la feuille de faction (`faction.jsx`) et celle d'une faction neutre
 ressources, fragments, cartes ; ils s'affichent en haut à droite de la carte
 (`stylePions`, `PlateauJoueur.jsx`).
 
+### ravitaillement automatique (18 novembre)
+
+Il n'y a plus de bouton « Entretien ». `Entretien.jsx` : `useEntretien(u, idFaction)` calcule
+l'entretien d'un joueur (planètes, scripts de revenu, Exploitation du vide, bonus d'influence,
+agents et cubes rendus, technologies, faveur natale, Sève de vie, Destin légendaire, Conclave
+secret, Signal) et son compte rendu (`lignes`). `EntretienAuto auto`, toujours monté dans
+`Partie.jsx`, l'envoie dès que la phase est le ravitaillement, que les données sont chargées
+(`pret`, dont `useRevenus(...).pret`) et que rien n'attend (`attente` : tests de domination
+d'Exploitation du vide, `attente` d'un script de revenu comme Extraction de la faille). Le
+compteur `joueur:<u>:entretien` garde le tour (avec `si` : pas de doublon entre fenêtres). Le
+compte rendu est gardé dans le navigateur (`localStorage`, par partie, joueur et tour) ; il
+s'affiche en tête pendant la phase (`data-ravitaillement`), puis sur le Plateau joueur
+(`EntretienAuto plateau`), où un bouton rouge gris rattrape un entretien manqué.
+
+### scripts d'action : jets de dés, carte, domination (18 novembre)
+
+`ActionsScript.jsx` : `special(atelier)` peut rendre `tirages: [{ c, n, faces, suite(jets) }]` —
+les dés sont lancés par le serveur dans le coup (marque `jetScript<k>` du composant `c`), puis
+`suite` rend `{ actions, texte, detruit }` envoyés dans un second coup. L'atelier a de quoi lire
+la carte (`cases()`, `distance`, `unites(zone)`, `tuile()`, `proprietaire(idPlanete)`,
+`esclaves()`, `agent(motif)`, `aTechnologie`), et le composant charge toutes les tuiles posées et
+leurs planètes. `scripts.js` : `dominantDe(etat, index, numero)` — camp du test de domination
+clos ce tour, sinon le seul camp présent dans l'espace (null : disputé). Un test de domination
+s'ouvre depuis la fiche d'un système (`data-action="test-de-domination"`, `Espace.jsx`) ; le
+conflit (`Domination`, `Controle.jsx`) applique à sa clôture les rackets en attente (compteurs
+`racket:<case>p<k>`, puis `racket:<case>p<k>:tour`). Signaux de « Signal capté » : piles
+`pioche:signal-1` à `4` et marqueurs libres « Signal N » (`ScriptsCarte.jsx`, `signaux`).
+
 ### verso de la faction : planète et forces
 
 Données de la faction (`faction.jsx`, classe `Faction`) : `planete`, `population`,

@@ -350,7 +350,8 @@ export function Passage({ passage }) {
 
     const de = v => Number(v.marques?.[JET]) || 0;
     const bloqueParJet = v => stade === "jets" && de(v) <= 3;
-    const touche = v => stade === "jets" && jet === "omega" && de(v) >= 9;
+    // (technologie Stabilisateur de rupture : les vaisseaux ignorent les touches des trous de ver oméga)
+    const touche = v => stade === "jets" && jet === "omega" && de(v) >= 9 && !aScript(mover, "stabilisateur-de-rupture");
 
     // --------------------------------------------------------
     // QUI S'ARRÊTE, QUI CONTINUE

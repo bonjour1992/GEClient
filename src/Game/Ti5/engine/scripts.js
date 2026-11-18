@@ -14,7 +14,7 @@
 //   effet         effet d'une technologie débloquée, codé là où il agit
 //                 (aScript, effets.js) ;
 //   revenu        ce que rapporte une unité ou une planète possédée à une
-//                 phase (Revenus.jsx) : ajouté à « Entretien » au ravitaillement,
+//                 phase (Revenus.jsx) : ajouté au ravitaillement automatique (Entretien.jsx),
 //                 bouton « Revenus de la phase » aux autres phases ;
 //   regle         règle propre à une unité, une planète ou une habilité, codée là
 //                 où elle agit — comme un effet, mais sans technologie à
@@ -124,6 +124,72 @@ const conversion = (outils, x, vers) => {
         : { cout: { commerce: x }, gains: { [vers]: 2 * x } };
 };
 const LOGISTICIEN = { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: false };
+
+// Camp d'une unité (celui qui la contrôle, sinon son propriétaire ; 0 : neutre)
+const campDeUnite = x => x.marques?.possession ?? x.proprio ?? 0;
+
+// Camp qui domine une case : celui du test de domination clos ce tour (Controle.jsx), sinon
+// le seul camp qui a des unités dans son espace. null : disputée sans test clos ; 0 : personne
+const dominantDe = (etat, index, numero) => {
+
+    if (Number(etat.compteurs[`dominant:${numero}:tour`]) === etat.tour) {
+        return Number(etat.compteurs[`dominant:${numero}`]) || 0;
+    }
+
+    const camps = [...new Set((index.parZone.get("hex:" + numero) || [])
+        .filter(x => !x.cache && x.ref?.type === "unit" && !x.sur)
+        .map(campDeUnite))];
+
+    return camps.length === 0 ? 0 : (camps.length === 1 ? camps[0] : null);
+};
+
+// Cases de la carte dont la tuile est ce système
+const casesDuSysteme = (index, idSysteme) => [...index.parZone].flatMap(([zone, contenu]) => {
+    const m = /^hex:(\d+)$/.exec(zone);
+    return m && contenu.some(x => x.ref?.type === "system" && x.ref.id === idSysteme) ? [Number(m[1])] : [];
+});
+
+// Composants d'un système (espace et planètes) ; ses fragments de relique
+const dansLeSysteme = (index, numero) => [...index.parZone]
+    .filter(([zone]) => zone === "hex:" + numero || zone.startsWith(`hex:${numero}:`))
+    .flatMap(([, contenu]) => contenu.filter(x => !x.cache));
+
+const fragmentsDuSysteme = (index, numero) => dansLeSysteme(index, numero).filter(x => !x.ref && /^Fragment /.test(x.jeton || ""));
+
+// Zones des planètes (ni satellite ni spéciale) d'une case : [{ zone, id, contenu }]
+const planetesDe = (atelier, x) => (x.systeme?.elems || []).flatMap((lien, k) => {
+    const contenu = lien?.id > 0 ? atelier.contenuDe(lien.id) : null;
+    return contenu && !["sat", "spe"].includes(contenu.type) ? [{ zone: `hex:${x.numero}:planete:${k}`, id: lien.id, contenu }] : [];
+});
+
+// Marqueur libre (étiquette de texte) et sa couleur par défaut — miseEnPlace.js (LIBRE)
+const LIBRE = "libre";
+
+// Signaux de l'événement « Signal capté » : la carte n° N attend, cachée, dans la pile
+// pioche:signal-N ; un marqueur libre « Signal N » la représente sur la table
+const pileSignal = n => `pioche:signal-${n}`;
+
+// Bouton SIG-N : la carte du signal n° N va dans mes éléments actifs, face visible
+const signal = (n, carte, ecritLe) => action(`sig-${n}`, "tech", carte, ecritLe, `SIG-${n}`, "plateau",
+    `Le signal n° ${n} de l'événement « Signal capté » (carte cachée, numérotée à la mise en place) arrive face visible dans vos éléments actifs ; son marqueur « Signal ${n} » est retiré de la table.`, {
+        special: atelier => {
+
+            const pile = atelier.index.parZone.get(pileSignal(n)) || [];
+            const marqueurs = (atelier.index.parZone.get("general:table") || [])
+                .filter(x => !x.ref && x.jeton === LIBRE && x.marques?.texte === `Signal ${n}`);
+
+            return {
+                actions: [
+                    pile.length > 0 && { type: "piocher", de: pileSignal(n), vers: `joueur:${atelier.moi}:actif` },
+                    ...marqueurs.map(x => ({ type: "supprimer", c: x.id })),
+                ].filter(Boolean),
+                sans: pile.length ? null : `le signal n° ${n} n'est pas en jeu (événement non mis en place, ou signal déjà pris)`,
+                avis: pile.length ? `SIG-${n} : le signal n° ${n} est dans vos éléments actifs.` : "",
+            };
+        },
+        visible: outils => (outils.index.parZone.get(pileSignal(n)) || []).length > 0,
+        libelle: `SIG-${n} : obtenir le signal n° ${n}`,
+    });
 
 export const SCRIPTS = [
 
@@ -323,19 +389,23 @@ export const SCRIPTS = [
     }),
 
     evenement("evenement-signal-capte", 485, 1794335055043, "Signal capté", {
-        description: "« Présence de cache » au tour T ; « Cache », « BDD technique », « vaisseau relique » et « Plan ancien » sur la table ; les 4 tuiles SIG mélangées aux 12 prochaines tuiles de la pioche.",
+        description: "« Présence de cache » au tour T ; les 4 signaux (« Cache », « BDD technique », « vaisseau relique » et « Plan ancien ») mélangés, cachés et numérotés de 1 à 4 — un marqueur libre « Signal N » par signal sur la table, que prend la technologie SIG-N ; les 4 tuiles SIG mélangées aux 12 prochaines tuiles de la pioche.",
         poses: [
             { type: "habilite", id: 491, vers: { evenement: 0 } },
-            { type: "habilite", id: 486, vers: "table" },
-            { type: "habilite", id: 487, vers: "table" },
-            { type: "unit", id: 854, vers: "table" },
-            { type: "relique", id: 853, vers: "table", n: 1 },
             { type: "system", id: 477, vers: { pioche: 12 } },
             { type: "system", id: 478, vers: { pioche: 12 } },
             { type: "system", id: 479, vers: { pioche: 12 } },
             { type: "system", id: 480, vers: { pioche: 12 } },
         ],
-        reste: "un fragment de relique sur chaque système exploré ; numérotez de 1 à 4, face cachée, les 4 cartes posées sur la table",
+        // Signaux : mélangés dans une pile, puis un par pile pioche:signal-N (personne ne
+        // les voit) ; un marqueur libre « Signal N » sur la table (ScriptsCarte.jsx)
+        signaux: [
+            { type: "habilite", id: 486 },
+            { type: "habilite", id: 487 },
+            { type: "unit", id: 854 },
+            { type: "relique", id: 853 },
+        ],
+        reste: "un fragment de relique sur chaque système exploré",
     }),
 
     evenement("evenement-grand-khan", 553, 1794335055053, "Grand Khan", {
@@ -393,12 +463,12 @@ export const SCRIPTS = [
         "Prendre possession d'une planète sans propriétaire, ou la revendiquer, y pose une infanterie ; " +
         "mobiliser sur une planète sauvage pose une infanterie gratuite de plus."),
 
-    effet("culture-courtisane-alliances", 140, 1794335054814, "Culture courtisane", "modifie",
-        "Plateau joueur : « Entretien »",
+    effet("culture-courtisane-alliances", 140, 1794335054814, "Culture courtisane", "auto",
+        "Ravitaillement automatique (début de la phase)",
         "L'entretien rapporte 1 influence de plus par alliance en jeu chez vous (éléments actifs et cases de tour du plateau)."),
 
-    effet("diversite", 141, 1790228044157, "Diversité", "modifie",
-        "Plateau joueur : « Entretien »",
+    effet("diversite", 141, 1790228044157, "Diversité", "auto",
+        "Ravitaillement automatique (début de la phase)",
         "L'entretien rapporte 1 influence de plus par planète possédée."),
 
     effet("batiment-resistant", 180, 1794335054834, "Bâtiment résistant", "auto",
@@ -631,9 +701,9 @@ export const SCRIPTS = [
         "Fiche d'un système : « Fouiller la ruine » ; bandeau de la phase de science : « Archéologie : piocher un plan »",
         "Une fouille rapporte deux fragments, dont vous gardez un (en haut du volet de droite). Nouveau bouton : la technologie et un scientifique sont utilisés, un plan de relique est pioché."),
 
-    effet("exploitation-du-vide", 232, 1790236251002, "Exploitation du vide", "modifie",
-        "Plateau joueur : « Entretien » ; Conflit : conflits de domination",
-        "L'entretien rapporte 1 ressource par système vide que vous dominez (3 pour une nébuleuse). Un système vide où d'autres ont des unités demande un conflit de domination : tant qu'il n'est pas résolu, « Entretien » est rouge gris."),
+    effet("exploitation-du-vide", 232, 1790236251002, "Exploitation du vide", "auto",
+        "Ravitaillement automatique (début de la phase) ; Conflit : conflits de domination",
+        "L'entretien rapporte 1 ressource par système vide que vous dominez (3 pour une nébuleuse). Un système vide où d'autres ont des unités demande un conflit de domination : tant qu'il n'est pas résolu, le ravitaillement automatique attend."),
 
     effet("drain-spatial", 246, 1794343420982, "Drain spatial", "nouveau",
         "Conflit : cadre de blocage d'un déplacement",
@@ -780,20 +850,20 @@ export const SCRIPTS = [
     // HABILITÉS (voir plus haut : à qui une habilité s'applique)
     // --------------------------------------------------------
 
-    regle("seve-de-vie", "habilite", 427, 1793999783813, "Sève de vie", "modifie",
-        "Plateau joueur : « Entretien »",
+    regle("seve-de-vie", "habilite", 427, 1793999783813, "Sève de vie", "auto",
+        "Ravitaillement automatique (début de la phase)",
         "À l'entretien, vos unités biologiques posées sur la carte récupèrent 1 de résistance."),
 
     regle("destin-legendaire", "habilite", 145, 1794335054818, "Destin légendaire", "modifie",
-        "Plateau joueur : « Entretien » ; fiche d'un système : prise de possession",
+        "Ravitaillement automatique (début de la phase) ; fiche d'un système : prise de possession",
         "L'entretien rapporte 1 point par planète légendaire possédée ; prendre une planète légendaire rapporte 1 point et 1 infamie."),
 
-    regle("conclave-secret", "habilite", 160, 1794335054825, "Conclave secret", "modifie",
-        "Plateau joueur : « Entretien »",
+    regle("conclave-secret", "habilite", 160, 1794335054825, "Conclave secret", "auto",
+        "Ravitaillement automatique (début de la phase)",
         "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main."),
 
-    regle("signal", "habilite", 765, 1794042800728, "Signal", "modifie",
-        "Plateau joueur : « Entretien »",
+    regle("signal", "habilite", 765, 1794042800728, "Signal", "auto",
+        "Ravitaillement automatique (début de la phase)",
         "L'entretien pose un marqueur de signal sur un système tiré au hasard."),
 
     regle("tempete-spatiale", "habilite", 442, 1793999783814, "Tempête spatiale", "auto",
@@ -1051,6 +1121,10 @@ export const SCRIPTS = [
             depense: [{ esclaves: 1 }],
             gains: { res: 1 },
             libelle: "Esclaves : dépenser un esclave (+1 ressource)",
+            // (technologie Exploitation de masse : 2 ressources)
+            calcul: outils => (outils.aScript("exploitation-de-masse")
+                ? { gains: { res: 2 }, libelle: "Esclaves : dépenser un esclave (+2 ressources, Exploitation de masse)" }
+                : {}),
         }),
 
     action("camp-de-travail", "unit", 154, 1794049918192, "Camp de travail", "unite",
@@ -1060,6 +1134,10 @@ export const SCRIPTS = [
             depense: [{ esclaves: 1 }],
             gains: { res: 4 },
             libelle: "Camp de travail : +4 ressources (usé, dépense un esclave)",
+            // (technologie Exploitation de masse : 2 ressources de plus)
+            calcul: outils => (outils.aScript("exploitation-de-masse")
+                ? { gains: { res: 6 }, libelle: "Camp de travail : +6 ressources (usé, dépense un esclave ; Exploitation de masse)" }
+                : {}),
         }),
 
     regle("fierte", "habilite", 167, 1794335054829, "Fierté", "modifie",
@@ -1121,7 +1199,7 @@ export const SCRIPTS = [
         "À partir du tour 8, à chaque nouveau tour : 1D10 miliciens sont posés sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu)."),
 
     regle("sans-influence", "habilite", 895, 1794336276050, "Sans influence", "modifie",
-        "Recrutement, propositions, boutons qui coûtent de l'influence ; « Entretien »",
+        "Recrutement, propositions, boutons qui coûtent de l'influence ; ravitaillement automatique",
         "Ce qui se paie en influence se paie en ressources ; l'entretien ne rapporte pas d'influence."),
 
     regle("infiltration", "habilite", 896, 1794336276052, "Infiltration", "auto",
@@ -1910,6 +1988,489 @@ export const SCRIPTS = [
             visible: outils => /recrut/i.test(outils.phase),
             libelle: "Confrérie de mercenaire : piocher un mercenaire (à poser sur une case de recrutement)",
         }),
+
+    // --------------------------------------------------------
+    // Lot du 18 novembre : scripts manquants
+    // --------------------------------------------------------
+
+    // ----- Kabal de l'ombre -----
+
+    effet("exploitation-de-masse", 273, 1794343420990, "Exploitation de masse", "modifie",
+        "Plateau joueur : « Esclaves » ; fiche du Camp de travail",
+        "Un esclave dépensé rapporte 2 ressources au lieu d'une ; le Camp de travail rapporte 2 ressources de plus (6)."),
+
+    action("enrolement", "tech", 274, 1794343420992, "Enrôlement", "planete",
+        "Débarquement, sur une planète où vous avez une structure : use un logisticien et la structure, 2 de vos esclaves sont posés sur la planète, sous votre contrôle. S'ils sont en vie à la fin du combat terrestre, recapturez-les à la main (glissez-les dans vos éléments actifs).", {
+            surPlanete: true,
+            phase: "d[ée]barquement",
+            nomPhase: "débarquement",
+            agent: LOGISTICIEN,
+            visible: outils => outils.mesStructuresIci() > 0,
+            special: atelier => {
+
+                const structure = atelier.unites(atelier.zone).find(x => atelier.campDe(x) === atelier.moi &&
+                    (atelier.contenuDe(x.ref.id)?.mot_cle || []).includes("struc") && !atelier.usee(x));
+
+                const esclaves = atelier.esclaves().slice(0, 2);
+
+                return {
+                    actions: [
+                        ...(structure ? atelier.user(structure) : []),
+                        ...esclaves.flatMap(x => [
+                            { type: "deplacer", c: x.id, vers: atelier.zone },
+                            { type: "marquer", c: x.id, marque: "possession", valeur: atelier.moi },
+                        ]),
+                    ],
+                    sans: !structure
+                        ? "aucune de vos structures non usée sur cette planète (aucune ne sera usée)"
+                        : (esclaves.length < 2 ? `il faut 2 esclaves, vous en avez ${esclaves.length} (seuls ceux-là seront posés)` : null),
+                    avis: `Enrôlement : ${esclaves.length} esclave(s) posé(s) sous votre contrôle. S'ils survivent au combat terrestre, recapturez-les à la main.`,
+                };
+            },
+            libelle: "Enrôlement : poser 2 esclaves (use un logisticien et une structure)",
+        }),
+
+    // ----- Omni-esprit d'Arborec -----
+
+    effet("vie-fructifiante", 594, 1794343421172, "Vie fructifiante", "auto",
+        "Ravitaillement automatique : Sève de vie",
+        "Sève de vie rend 2 de résistance au lieu d'une."),
+
+    // ----- Tempête spatiale, Rupture de l'espace-temps -----
+
+    effet("adaptation-des-reacteurs", 399, 1794343420992, "Adaptation des réacteurs", "auto",
+        "Espace : déplacement assisté",
+        "Le malus de 1 au mouvement de la Tempête spatiale est ignoré."),
+
+    action("tempete-electromagnetique", "tech", 446, 1794343420997, "Tempête électromagnétique", "systeme",
+        "Canons spatiaux, dans une nébuleuse : use un scientifique et active la nébuleuse, 4 dés de canon à 4. Les touches se répartissent à la main dans un système à portée 1.", {
+            phase: "canon",
+            nomPhase: "canons spatiaux",
+            agent: SCIENTIFIQUE,
+            activer: true,
+            visible: outils => outils.systeme?.anomaly === "neb",
+            special: atelier => {
+
+                const tuile = atelier.tuile();
+
+                return {
+                    actions: [],
+                    sans: tuile ? null : "tuile du système introuvable",
+                    tirages: tuile ? [{
+                        c: tuile.id,
+                        n: 4,
+                        suite: jets => ({
+                            texte: `canon (4,4) : ${jets.join(", ")} — ${jets.filter(j => j <= 4).length} touche(s), à répartir à la main dans un système à portée 1`,
+                        }),
+                    }] : [],
+                };
+            },
+            libelle: "Tempête électromagnétique : canon (4,4) (use un scientifique, active la nébuleuse)",
+        }),
+
+    effet("stabilisateur-de-rupture", 820, 1794343421186, "Stabilisateur de rupture", "auto",
+        "Conflit : cadre de blocage (passage par un trou de ver oméga)",
+        "Vos vaisseaux ignorent les touches des trous de ver oméga (9 ou plus : plus de touche)."),
+
+    revenu("extraction-de-la-faille", "tech", 821, 1794343421187, "Extraction de la faille", "ravit",
+        "+3 ressources par Faille que vous dominez (seul dans son espace, ou vainqueur d'un test de domination ce tour). Une Faille disputée fait attendre le ravitaillement : ouvrez un test de domination depuis la fiche du système.", {
+            calcul: (source, outils) => {
+
+                const failles = casesDuSysteme(outils.index, 811);
+                const dominees = failles.filter(n => dominantDe(outils.etat, outils.index, n) === outils.userId);
+
+                const disputees = failles.filter(n => dominantDe(outils.etat, outils.index, n) === null &&
+                    (outils.index.parZone.get("hex:" + n) || []).some(x => !x.cache && x.ref?.type === "unit" && campDeUnite(x) === outils.userId));
+
+                return {
+                    gains: { res: 3 * dominees.length },
+                    note: `${dominees.length} Faille(s) dominée(s)`,
+                    attente: disputees.length
+                        ? `${disputees.length} Faille(s) disputée(s) : test de domination à ouvrir (fiche du système) et à clore`
+                        : null,
+                };
+            },
+        }),
+
+    // ----- Habilités d'événements -----
+
+    action("peage-aux-frontieres", "habilite", 452, 1794339360466, "Péage aux frontières", "carte",
+        "Phase d'événement : la faction qui domine chaque système à trou de ver alpha gagne 3 commerce (seule dans son espace, ou vainqueur d'un test de domination ce tour).", {
+            phase: "[ée]v[ée]nement",
+            nomPhase: "événement",
+            special: atelier => {
+
+                if (Number(atelier.etat.compteurs["peage:tour"]) === atelier.etat.tour) {
+                    return { actions: [], sans: "le péage de ce tour est déjà perçu" };
+                }
+
+                // Trou de ver alpha : la planète spéciale #25 de la tuile, ou le token #826 posé dans le système
+                const alphas = atelier.cases().filter(x => (x.systeme?.elems || []).some(lien => Number(lien?.id) === 25) ||
+                    dansLeSysteme(atelier.index, x.numero).some(c => c.ref?.type === "token" && c.ref.id === 826));
+
+                const etats = alphas.map(x => ({ n: x.numero, d: dominantDe(atelier.etat, atelier.index, x.numero) }));
+                const payes = etats.filter(x => x.d > 0);
+                const disputes = etats.filter(x => x.d === null);
+
+                return {
+                    actions: [
+                        ...payes.map(x => ({ type: "compteur", id: `joueur:${x.d}:commerce`, delta: 3 })),
+                        { type: "compteur", id: "peage:tour", valeur: atelier.etat.tour },
+                    ],
+                    sans: disputes.length
+                        ? `système(s) disputé(s) sans test de domination clos ce tour (${disputes.map(x => atelier.nomCase(x.n)).join(", ")}) : ils ne rapporteront rien`
+                        : null,
+                    avis: "Péage aux frontières : " + (payes.length
+                        ? payes.map(x => `${atelier.nomDe(x.d)} +3 commerce (${atelier.nomCase(x.n)})`).join(", ")
+                        : "aucun système à trou de ver alpha n'est dominé") + ".",
+                };
+            },
+            libelle: "Percevoir le péage aux frontières",
+        }),
+
+    action("cache", "habilite", 486, 1793999783821, "Cache", "systeme",
+        "Revendication, dans un système que vous dominez et qui contient un fragment de relique : vous prenez un fragment.", {
+            phase: "revendication",
+            visible: outils => outils.numero !== null && fragmentsDuSysteme(outils.index, outils.numero).length > 0,
+            special: atelier => {
+
+                const fragment = fragmentsDuSysteme(atelier.index, atelier.numero)[0];
+                const dominant = dominantDe(atelier.etat, atelier.index, atelier.numero);
+
+                return {
+                    actions: fragment ? [{ type: "deplacer", c: fragment.id, vers: `joueur:${atelier.moi}:fragments` }] : [],
+                    sans: !fragment
+                        ? "aucun fragment de relique dans ce système"
+                        : (dominant === atelier.moi ? null
+                            : (dominant === null ? "système disputé : faites d'abord un test de domination" : "vous ne dominez pas ce système")),
+                    avis: fragment ? `Cache : ${fragment.jeton} pris.` : "",
+                };
+            },
+            libelle: "Cache : prendre un fragment de relique",
+        }),
+
+    action("domination-designer", "habilite", 254, 1794335054878, "Domination : désigner", "planete",
+        "Ravitaillement, à partir du tour 7 : désignez une planète légendaire ou militaire que vous ne contrôlez pas. Si vous la contrôlez à la fin du tour, « Domination : +2 points » (plateau joueur).", {
+            surPlanete: true,
+            phase: "ravitaill",
+            nomPhase: "ravitaillement",
+            visible: outils => outils.etat.tour >= 7 && (!!outils.contenu?.legendary || outils.contenu?.planetType === "mil") &&
+                outils.proprietaire(outils.idElement) !== outils.moi,
+            special: atelier => ({
+                actions: [
+                    { type: "compteur", id: `joueur:${atelier.moi}:dominationPlanete`, valeur: atelier.idElement },
+                    { type: "compteur", id: `joueur:${atelier.moi}:dominationTour`, valeur: atelier.etat.tour },
+                ],
+                sans: Math.abs(Number(atelier.etat.compteurs[`joueur:${atelier.moi}:dominationTour`])) === atelier.etat.tour
+                    ? "vous avez déjà désigné une planète ce tour (celle-ci la remplacera)"
+                    : null,
+                avis: `Domination : ${atelier.contenu?.name || "planète"} désignée. Si vous la contrôlez à la fin du tour : « Domination : +2 points » (plateau joueur).`,
+            }),
+            libelle: "Domination : désigner cette planète",
+        }),
+
+    action("domination-points", "habilite", 254, 1794335054878, "Domination : points", "plateau",
+        "Fin du tour : si vous contrôlez la planète désignée au ravitaillement, +2 points.", {
+            visible: outils => Number(outils.etat.compteurs[`joueur:${outils.moi}:dominationTour`]) === outils.etat.tour,
+            special: atelier => {
+
+                const idPlanete = Number(atelier.etat.compteurs[`joueur:${atelier.moi}:dominationPlanete`]) || 0;
+
+                return {
+                    actions: [
+                        ...atelier.points(atelier.moi, 2),
+                        // (négatif : les points de ce tour sont marqués)
+                        { type: "compteur", id: `joueur:${atelier.moi}:dominationTour`, valeur: -atelier.etat.tour },
+                    ],
+                    sans: atelier.proprietaire(idPlanete) === atelier.moi
+                        ? null
+                        : `vous ne contrôlez pas ${atelier.nom({ type: "planet", id: idPlanete })}`,
+                    avis: "Domination : +2 points.",
+                };
+            },
+            libelle: "Domination : +2 points (planète désignée contrôlée)",
+        }),
+
+    action("distorsion-gravitationnelle", "habilite", 515, 1794335055047, "Distorsion gravitationnelle", "systeme",
+        "Ravitaillement, dans le système qui porte l'habilité (Avar) : un dé par unité du système, 1 dégât si le dé fait le numéro du tour ou moins. Une fois par tour.", {
+            pourTous: true,
+            phase: "ravitaill",
+            nomPhase: "ravitaillement",
+            visible: outils => Number(outils.systeme?.nativeUnit?.id) === 515,
+            special: atelier => {
+
+                const cle = `distorsion:${atelier.numero}`;
+                const unites = dansLeSysteme(atelier.index, atelier.numero).filter(x => x.ref?.type === "unit");
+                const tour = atelier.etat.tour;
+
+                return {
+                    actions: [{ type: "compteur", id: cle, valeur: tour }],
+                    sans: Number(atelier.etat.compteurs[cle]) === tour
+                        ? "la distorsion de ce tour est déjà appliquée"
+                        : (unites.length ? null : "aucune unité dans ce système"),
+                    tirages: unites.map(x => ({
+                        c: x.id,
+                        suite: ([jet]) => ({
+                            actions: jet <= tour
+                                ? [{ type: "marquer", c: x.id, marque: "degat", valeur: (Number(x.marques?.degat) || 0) + 1 }]
+                                : [],
+                            texte: `${atelier.nom(x.ref)} ${jet}${jet <= tour ? " (touchée)" : ""}`,
+                        }),
+                    })),
+                };
+            },
+            libelle: "Distorsion gravitationnelle : un dé par unité (touche sur le numéro du tour ou moins)",
+        }),
+
+    action("debarquement-du-khan", "habilite", 530, 1794335055052, "Débarquement du Khan", "bandeau",
+        "Débarquement, quand le Palais du khan est sur la carte : chaque planète à portée 1 du Khan reçoit 1D6 Soldats du Khan. Une fois par tour pour la table.", {
+            pourTous: true,
+            phase: "d[ée]barquement",
+            nomPhase: "débarquement",
+            visible: outils => /d[ée]barquement/i.test(outils.phase) && outils.surLaCarte(525),
+            special: atelier => {
+
+                const cle = "khan:debarquement";
+                const palais = Object.values(atelier.etat.composants).find(x =>
+                    !x.cache && x.ref?.type === "unit" && x.ref.id === 525 && /^hex:\d+/.test(x.zone || ""));
+
+                const ici = palais ? Number(/^hex:(\d+)/.exec(palais.zone)[1]) : null;
+
+                const planetes = ici === null ? [] : atelier.cases()
+                    .filter(x => atelier.distance(ici, x.numero) <= 1)
+                    .flatMap(x => planetesDe(atelier, x).map(p => ({ ...p, tuile: x.tuile })));
+
+                return {
+                    actions: [{ type: "compteur", id: cle, valeur: atelier.etat.tour }],
+                    sans: Number(atelier.etat.compteurs[cle]) === atelier.etat.tour
+                        ? "le débarquement de ce tour est déjà fait"
+                        : (planetes.length ? null : "aucune planète à portée 1 du Palais du khan"),
+                    tirages: planetes.map(p => ({
+                        c: p.tuile.id,
+                        faces: 6,
+                        suite: ([jet]) => ({
+                            actions: [{ type: "creer", ref: { type: "unit", id: 527 }, zone: p.zone, n: jet }],
+                            texte: `${p.contenu.name} ${jet} soldat(s)`,
+                        }),
+                    })),
+                };
+            },
+            libelle: "Débarquement du Khan : 1D6 Soldats du Khan par planète à portée 1",
+        }),
+
+    action("negocier-avec-les-rebelles", "habilite", 560, 1786887365787, "Négocier avec les rebelles", "planete",
+        "Diplomatie, sur une planète où il y a des Rebelles : use un diplomate, 3 dés à 4 — chaque réussite retire un Rebelle.", {
+            pourTous: true,
+            surPlanete: true,
+            phase: "diplomatie",
+            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            visible: outils => outils.ici(557) > 0,
+            special: atelier => {
+
+                const rebelles = atelier.unites(atelier.zone).filter(x => x.ref.id === 557);
+                const tuile = atelier.tuile();
+
+                return {
+                    actions: [],
+                    sans: tuile ? null : "tuile du système introuvable",
+                    tirages: tuile ? [{
+                        c: tuile.id,
+                        n: 3,
+                        suite: jets => {
+                            const touches = Math.min(rebelles.length, jets.filter(j => j <= 4).length);
+
+                            return {
+                                actions: rebelles.slice(0, touches).map(x => ({ type: "supprimer", c: x.id })),
+                                texte: `${jets.join(", ")} — ${touches} Rebelle(s) retiré(s)`,
+                            };
+                        },
+                    }] : [],
+                };
+            },
+            libelle: "Négocier avec les rebelles : attaque 4 ×3 (use un diplomate)",
+        }),
+
+    action("rebellion-armee", "habilite", 561, 1794335055057, "Rébellion armée", "bandeau",
+        "Combat terrestre : un combat terrestre est ouvert sur chaque planète où il y a au moins 6 Rebelles. (À la revendication, leur tentative de reprendre la planète se fait à la main.)", {
+            pourTous: true,
+            phase: "combat terrestre",
+            visible: outils => /combat terrestre/i.test(outils.phase) && [...outils.index.parZone].some(([zone, contenu]) =>
+                /^hex:\d+:planete:\d+$/.test(zone) && contenu.filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === 557).length >= 6),
+            special: atelier => {
+
+                const lieux = [...atelier.index.parZone]
+                    .filter(([zone, contenu]) => /^hex:\d+:planete:\d+$/.test(zone) &&
+                        contenu.filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === 557).length >= 6)
+                    .map(([zone]) => zone.replace(/^hex:(\d+):planete:(\d+)$/, "$1p$2"))
+                    .filter(lieu => !atelier.etat.compteurs["combat:" + lieu]);
+
+                return {
+                    actions: lieux.map(lieu => ({ type: "compteur", id: "combat:" + lieu, valeur: 1 })),
+                    sans: lieux.length ? null : "les combats de ces planètes sont déjà ouverts",
+                    avis: `Rébellion armée : ${lieux.length} combat(s) terrestre(s) ouvert(s) (onglet Conflit).`,
+                };
+            },
+            libelle: "Rébellion armée : ouvrir les combats terrestres (6 Rebelles ou plus)",
+        }),
+
+    action("arme-bacteriologique", "tech", 403, 1794335055007, "Arme bactériologique", "systeme",
+        "Bombardement, dans un système où d'autres camps ont des infanteries : use un scientifique, un dé par infanterie adverse des planètes du système — détruite sur 5 ou moins (1 si son propriétaire a le Vaccin).", {
+            phase: "bombardement",
+            agent: SCIENTIFIQUE,
+            visible: outils => outils.numero !== null && dansLeSysteme(outils.index, outils.numero).some(x =>
+                x.ref?.type === "unit" && /:planete:/.test(x.zone || "") && campDeUnite(x) !== outils.moi),
+            special: atelier => {
+
+                const infanteries = dansLeSysteme(atelier.index, atelier.numero).filter(x => x.ref?.type === "unit" &&
+                    /:planete:/.test(x.zone || "") && campDeUnite(x) !== atelier.moi && atelier.contenuDe(x.ref.id)?.type === "inf");
+
+                const seuil = x => (campDeUnite(x) > 0 && atelier.aTechnologie(campDeUnite(x), 402) ? 1 : 5);
+
+                return {
+                    actions: [],
+                    sans: infanteries.length ? null : "aucune infanterie adverse sur les planètes de ce système",
+                    tirages: infanteries.map(x => ({
+                        c: x.id,
+                        suite: ([jet]) => ({
+                            actions: jet <= seuil(x) ? [{ type: "supprimer", c: x.id }] : [],
+                            detruit: jet <= seuil(x),
+                            texte: `${atelier.nom(x.ref)} ${jet}${jet <= seuil(x) ? " (détruite)" : ""}`,
+                        }),
+                    })),
+                };
+            },
+            libelle: "Arme bactériologique : un dé par infanterie adverse (use un scientifique)",
+        }),
+
+    // ----- Signal capté : SIG-1 à SIG-4 -----
+
+    signal(1, 481, 1794343421167),
+    signal(2, 482, 1794343421168),
+    signal(3, 483, 1794343421169),
+    signal(4, 484, 1794343421170),
+
+    // ----- Pirate Mentak -----
+
+    action("racket", "habilite", 942, 1795028826685, "Racket", "planete",
+        "Ravitaillement, à côté d'une planète d'une autre faction, dans un système où vous avez des unités militaires : ouvre un test de domination du système (onglet Conflit). À sa clôture, si vous dominez, vous gagnez les ressources de la planète et son propriétaire les perd. Une fois par tour et par planète.", {
+            surPlanete: true,
+            phase: "ravitaill",
+            nomPhase: "ravitaillement",
+            visible: outils => outils.mesMilitairesDansLeSysteme() > 0 &&
+                ![null, outils.moi].includes(outils.proprietaire(outils.idElement)),
+            special: atelier => {
+
+                const m = /^hex:(\d+):planete:(\d+)$/.exec(atelier.zone || "");
+                const compteurs = atelier.etat.compteurs;
+                const tour = atelier.etat.tour;
+
+                if (!m) {
+                    return { actions: [], sans: "planète introuvable sur la carte" };
+                }
+
+                const cle = `racket:${m[1]}p${m[2]}`;
+                const proprietaire = atelier.proprietaire(atelier.idElement);
+                const res = Number(atelier.contenu?.res) || 0;
+
+                if (Number(compteurs[cle + ":tour"]) === tour) {
+                    return { actions: [], sans: "les ressources de cette planète ont déjà été réclamées ce tour" };
+                }
+
+                if (compteurs[cle]) {
+                    return { actions: [], sans: "le test de domination de ce racket est déjà en cours (onglet Conflit)" };
+                }
+
+                if (!res) {
+                    return { actions: [], sans: "cette planète ne rapporte aucune ressource" };
+                }
+
+                // Test de domination déjà clos ce tour : le résultat s'applique tout de suite
+                if (Number(compteurs[`dominant:${m[1]}:tour`]) === tour) {
+
+                    if (Number(compteurs[`dominant:${m[1]}`]) !== atelier.moi) {
+                        return { actions: [], sans: "vous ne dominez pas ce système (test de domination clos ce tour)" };
+                    }
+
+                    const pris = Math.min(res, atelier.compte(proprietaire, "res"));
+
+                    return {
+                        actions: [
+                            { type: "compteur", id: `joueur:${atelier.moi}:res`, delta: res },
+                            pris > 0 && { type: "compteur", id: `joueur:${proprietaire}:res`, delta: -pris },
+                            { type: "compteur", id: cle + ":tour", valeur: tour },
+                        ].filter(Boolean),
+                        avis: `Racket : vous dominez le système, +${res} ressource(s) ; ${atelier.nomDe(proprietaire)} en perd ${pris}.`,
+                    };
+                }
+
+                return {
+                    actions: [
+                        !compteurs[`domination:${m[1]}`] && { type: "compteur", id: `domination:${m[1]}`, valeur: atelier.moi },
+                        { type: "compteur", id: cle, valeur: atelier.moi },
+                    ].filter(Boolean),
+                    avis: `Racket : test de domination ouvert (onglet Conflit). À sa clôture, si vous dominez, +${res} ressource(s) prises à ${atelier.nomDe(proprietaire)}.`,
+                };
+            },
+            libelle: "Racket : réclamer les ressources (test de domination)",
+        }),
+
+    action("pluie-d-asteroides", "tech", 941, 1795038954354, "Pluie d'astéroïdes", "planete",
+        "À côté d'une planète à portée 3 d'un champ d'astéroïdes non activé : le champ le plus proche est activé, un logisticien et un amiral sont usés, le marqueur « Ciblage astéroïde » est posé sur la planète.", {
+            surPlanete: true,
+            agent: LOGISTICIEN,
+            visible: outils => !["sat", "spe"].includes(outils.contenu?.type),
+            special: atelier => {
+
+                const champ = atelier.cases()
+                    .filter(x => x.systeme?.anomaly === "ast" && atelier.distance(x.numero, atelier.numero) <= 3 && !atelier.activee("hex:" + x.numero))
+                    .sort((a, b) => atelier.distance(a.numero, atelier.numero) - atelier.distance(b.numero, atelier.numero))[0];
+
+                const amiral = atelier.agent("amiral");
+                const deja = (atelier.index.parZone.get(atelier.zone) || []).some(x => x.ref?.type === "token" && x.ref.id === 940);
+
+                return {
+                    actions: [
+                        // (marqueur d'activation : miseEnPlace.js, ACTIVATION)
+                        champ && { type: "creer", jeton: "activation", zone: "hex:" + champ.numero },
+                        amiral && { type: "deplacer", c: amiral.id, vers: `joueur:${atelier.moi}:agentsUses` },
+                        !deja && { type: "creer", ref: { type: "token", id: 940 }, zone: atelier.zone, proprio: atelier.moi },
+                    ].filter(Boolean),
+                    sans: deja
+                        ? "cette planète porte déjà un marqueur « Ciblage astéroïde »"
+                        : (!champ ? "aucun champ d'astéroïdes non activé à portée 3 de cette planète"
+                            : (!amiral ? "vous n'avez pas d'amiral disponible (aucun ne sera usé)" : null)),
+                    avis: champ ? `Pluie d'astéroïdes : champ d'astéroïdes de la ${atelier.nomCase(champ.numero)} activé, ciblage posé.` : "",
+                };
+            },
+            libelle: "Pluie d'astéroïdes : poser le ciblage (use un logisticien et un amiral)",
+        }),
+
+    action("pluie-d-asteroides-frappe", "tech", 941, 1795038954354, "Pluie d'astéroïdes : frappe", "planete",
+        "Bombardement, à côté d'une planète qui porte un marqueur « Ciblage astéroïde » : un dé par unité de la planète, 1 dégât sur 4 ou moins ; le marqueur est retiré.", {
+            surPlanete: true,
+            phase: "bombardement",
+            visible: outils => (outils.index.parZone.get(outils.zone) || []).some(x => x.ref?.type === "token" && x.ref.id === 940),
+            special: atelier => {
+
+                const marqueurs = (atelier.index.parZone.get(atelier.zone) || []).filter(x => x.ref?.type === "token" && x.ref.id === 940);
+                const unites = atelier.unites(atelier.zone);
+
+                return {
+                    actions: marqueurs.map(x => ({ type: "supprimer", c: x.id })),
+                    sans: unites.length ? null : "aucune unité sur cette planète (le marqueur sera retiré)",
+                    tirages: unites.map(x => ({
+                        c: x.id,
+                        suite: ([jet]) => ({
+                            actions: jet <= 4
+                                ? [{ type: "marquer", c: x.id, marque: "degat", valeur: (Number(x.marques?.degat) || 0) + 1 }]
+                                : [],
+                            texte: `${atelier.nom(x.ref)} ${jet}${jet <= 4 ? " (touchée)" : ""}`,
+                        }),
+                    })),
+                };
+            },
+            libelle: "Pluie d'astéroïdes : attaque 4 sur chaque unité de la planète",
+        }),
 ];
 
 // Bouton d'action d'une unité, d'une planète ou d'une habilité (ActionsScript.jsx)
@@ -1949,9 +2510,9 @@ function revenu(id, type, carte, ecritLe, nom, phase, description, effet) {
     return {
         id,
         sorte: "revenu",
-        mode: phase === "ravit" ? "modifie" : "nouveau",
+        mode: phase === "ravit" ? "auto" : "nouveau",
         ou: phase === "ravit"
-            ? "Plateau joueur : « Entretien »"
+            ? "Ravitaillement automatique (début de la phase)"
             : `Bandeau « À faire », phase de ${phase} : « Revenus de la phase »`,
         carte: { type, id: carte },
         aussi,
@@ -1986,7 +2547,7 @@ function effet(id, carte, ecritLe, nom, mode, ou, description, aussi = []) {
 }
 
 // Script de mise en place d'un événement (bouton de sa fiche)
-function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, rebellion, reste }) {
+function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, rebellion, signaux, reste }) {
     return {
         id,
         sorte: "bouton",
@@ -2000,6 +2561,7 @@ function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, reb
         poses,
         anomalies,
         rebellion,
+        signaux,
         reste,
     };
 }

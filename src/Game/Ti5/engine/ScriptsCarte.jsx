@@ -3,7 +3,7 @@ import { chargerContenu, useElement, useElements } from "./sync";
 import { normaliserPlateau } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
-import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires } from "./miseEnPlace";
+import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires, LIBRE, COULEUR_LIBRE } from "./miseEnPlace";
 import { LivraisonCommerciale } from "./Livraison";
 import { BoutonsScripts } from "./ActionsScript";
 
@@ -370,8 +370,27 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
             return;
         }
 
+        // Signaux (Signal capté) : les cartes sont mélangées dans une pile, puis réparties une
+        // par une dans les piles pioche:signal-1 à N — personne ne voit laquelle est où. Un
+        // marqueur libre « Signal N » les représente sur la table ; la technologie SIG-N
+        // pioche la carte de sa pile (scripts.js).
+        const signaux = script.signaux || [];
+        const PILE_SIGNAUX = "pioche:signaux";
+
+        const actionsSignaux = signaux.length ? [
+            ...signaux.map(ref => ({ type: "creer", ref, zone: PILE_SIGNAUX })),
+            { type: "melanger", zone: PILE_SIGNAUX },
+            ...signaux.map((_, k) => ({ type: "verser", de: PILE_SIGNAUX, vers: `pioche:signal-${k + 1}`, n: 1 })),
+            ...signaux.map((_, k) => ({
+                type: "creer",
+                jeton: LIBRE,
+                zone: "general:table",
+                marques: { texte: `Signal ${k + 1}`, couleur: COULEUR_LIBRE },
+            })),
+        ] : [];
+
         envoyer(
-            [...actions, ...melange, ...pirates, ...rebellion.actions, { type: "compteur", id: compteur, valeur: 1 }],
+            [...actions, ...melange, ...pirates, ...rebellion.actions, ...actionsSignaux, { type: "compteur", id: compteur, valeur: 1 }],
             // (le journal garde le détail des jets, dans la limite d'un commentaire)
             [commentaire, rebellion.bilan].filter(Boolean).join(" — ").slice(0, 300)
         );

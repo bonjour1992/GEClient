@@ -60,6 +60,7 @@ import { PlateauJoueur, SourcesIllimitees, CaseProduction, MesCompteurs } from "
 import { Technologie } from "./Technologie";
 import { effacerRecherches } from "./recherche";
 import { RevenusDePhase } from "./Revenus";
+import { EntretienAuto } from "./Entretien";
 import { BoutonsScripts } from "./ActionsScript";
 import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
@@ -1412,6 +1413,10 @@ export function Partie({ id }) {
                         </>)}
                     </div>
                 )}
+
+                {/* Ravitaillement automatique : mon entretien part tout seul au début de la phase ;
+                    son compte rendu s'affiche ici pendant la phase (Entretien.jsx) */}
+                {estJoueur && etat.tour > 0 && <EntretienAuto auto />}
 
                 {etat.tour > 0 && (!aideVide ||
                     ((enDeplacement || enDiplomatie || enScience || enProduction || enConstruction || enProposition || enTreve || enRecrutement) && estJoueur)) && (

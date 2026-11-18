@@ -130,8 +130,27 @@ export function useRevenus(userId, phase) {
             distanceCases(source.numero, Number(/^hex:(\d+)/.exec(c.zone)[1])) <= distance).length,
     };
 
+    // Nom de la planète où est posée une unité (compte rendu du ravitaillement : « Usine sur
+    // Archon Tau ») ; null dans l'espace ou pour une planète
+    const planeteDe = source => {
+        const m = source.ref?.type === "unit" && /^hex:(\d+):planete:(\d+)$/.exec(source.zone || "");
+        const tuile = m && tuiles.find(t => t.numero === Number(m[1]));
+        const lien = tuile && (systemes[tuile.id]?.elems || [])[Number(m[2])];
+
+        return lien?.id > 0 ? nomElement(search, { type: "planet", id: lien.id }) : null;
+    };
+
+    // Tout ce dont les scripts ont besoin est-il chargé ? (le ravitaillement automatique attend)
+    const charges = (ids, contenus) => ids.every(id => !(id > 0) || id in contenus);
+
+    const pret = scripts.length === 0 || (
+        (!scripts.some(s => s.carte.type === "planet") || charges(tuiles.map(t => t.id), systemes)) &&
+        (!scripts.some(s => s.carte.type === "tech") || charges(idsPossedees, contenusPossedees)) &&
+        (!(factionDe(userId) > 0) || !!faction) && charges(liensUnites.map(lien => lien.id), mesUnites));
+
     const lignes = [];
     const actions = [];
+    const attentes = [];
     let res = 0;
     let inf = 0;
 
@@ -157,6 +176,11 @@ export function useRevenus(userId, phase) {
 
             const nom = nomElement(search, source.ref);
             const effet = script.calcul ? script.calcul(source, outils) : script;
+
+            // (attente : le ravitaillement automatique attend que ce soit réglé — test de domination…)
+            if (effet?.attente) {
+                attentes.push(`${nom} : ${effet.attente}`);
+            }
 
             if (!effet || effet.sans) {
                 if (effet?.sans) {
@@ -228,12 +252,14 @@ export function useRevenus(userId, phase) {
             }
 
             if (morceaux.length) {
-                lignes.push({ nom, texte: morceaux.join(", ") + (effet.note ? ` — ${effet.note}` : "") });
+                lignes.push({ nom, ou: planeteDe(source), texte: morceaux.join(", ") + (effet.note ? ` — ${effet.note}` : "") });
             }
         }
     }
 
     return {
+        pret,
+        attentes,
         lignes,
         res,
         inf,
