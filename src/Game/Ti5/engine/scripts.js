@@ -3081,6 +3081,10 @@ export const SCRIPTS = [
         "Espace : déplacement assisté",
         "Vous pouvez emprunter les trous de ver delta."),
 
+    regle("conspirer-ensemble", "Promesse", 963, 1795039776981, "Conspirer ensemble", "auto",
+        "Onglet Vote : décompte",
+        "Pour chaque loi, si votre vote majoritaire (la colonne où vous avez, seule, le plus de voix) est le même que celui des Empyréens, vous avez 1 voix de plus dans cette colonne — une fois les deux plateaux révélés."),
+
     regle("chemin-du-vide", "Promesse", 964, 1795039776983, "Chemin du vide", "auto",
         "Espace : déplacement assisté",
         "Les anomalies que contrôlent les Empyréens (eux seuls, avec vous au plus, ont des unités dans leur espace) ne gênent pas vos déplacements : supernova, champ d'astéroïdes, nébuleuse."),

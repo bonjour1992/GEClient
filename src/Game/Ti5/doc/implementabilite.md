@@ -24,9 +24,9 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 15 | 18 | 7 | 17 | 21 | 0 |
-| Promesses | 19 | 14 | 4 | 1 | 14 | 2 | 3 |
+| Promesses | 19 | 15 | 4 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **367** | **262** | **76** | **29** | **146** | **61** | **117** |
+| **Total** | **367** | **263** | **76** | **28** | **146** | **61** | **118** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -428,7 +428,7 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 | 454 | Tuteur des réfugiés | **oui** | nouveau bouton | Fiche de la promesse : « j'attaque mes Réfugiés » (promesse dépensée, +1 infamie). Fiche d'un système, phase d'événement, à côté d'une planète à Entrepôt d'aide : l'entrepôt est usé, 4 commerce posés dessus sont dépensés, +1 faveur des Réfugiés. | — |
 | 458 | Pacte pirate | **partiel** | nouveau bouton | Obtenu par « Diplomatie pirate ». Fiche de la carte, ravitaillement : « payer 2 ressources » (une fois par tour). | Les pirates vous ignorent : à la main. |
 | 870 | Passage de Creuss | **oui** | automatique | Déplacement assisté : une étape par un trou de ver delta n'est plus signalée (sans cette promesse ni Navigation delta, elle demande une confirmation). | — |
-| 963 | Conspirer ensemble (Les Empyréens WIP) | non | — | — | +1 vote si votre vote majoritaire suit celui des Empyréens : non relié au vote de l'outil. (passé) |
+| 963 | Conspirer ensemble (Les Empyréens WIP) | **oui** | automatique | Onglet Vote, décompte : pour chaque loi, si le vote majoritaire du détenteur (la colonne où il a, seule, le plus de voix) est le même que celui des Empyréens, il a 1 voix de plus dans cette colonne, une fois les deux plateaux révélés. | — |
 | 964 | Chemin du vide (Les Empyréens WIP) | **oui** | automatique | Déplacement assisté : une supernova, un champ d'astéroïdes ou une nébuleuse que contrôlent les Empyréens (eux seuls, avec vous au plus, y ont des unités) ne gêne pas votre trajet. | — |
 
 ## Agents et reliques

@@ -136,7 +136,39 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
     const cleOrdre = (loi, col) => `vote:${tour}:${loi}:ordre:${col}`;
 
     const ajustement = (loi, col, u) => Number(etat.compteurs[cleAjustement(loi, col, u)]) || 0;
-    const voix = (loi, col, u) => (posees[`${loi}:${col}:${u}`] || 0) + ajustement(loi, col, u);
+
+    // Voix d'un joueur hors promesses : posées, plus l'ajustement manuel
+    const propres = (loi, col, u) => (posees[`${loi}:${col}:${u}`] || 0) + ajustement(loi, col, u);
+
+    // Vote majoritaire d'un joueur pour une loi : la colonne où il a, seule, le plus de voix
+    // (null : aucune voix, ou égalité entre deux colonnes)
+    const majoritaire = (loi, u) => {
+        const parColonne = COLONNES.map((_, col) => propres(loi, col, u));
+        const max = Math.max(...parColonne);
+
+        return max > 0 && parColonne.filter(v => v === max).length === 1 ? parColonne.indexOf(max) : null;
+    };
+
+    // Promesse Conspirer ensemble (#963, Empyréens) : si le vote majoritaire de son détenteur
+    // pour une loi est le même que celui de la faction qui la lui a donnée (marqueur posé sur
+    // la carte), il a 1 voix de plus dans cette colonne. Rien tant qu'un des deux plateaux
+    // est caché : ses voix ne sont pas connues.
+    const conspirations = Object.values(etat.composants)
+        .filter(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === 963 && /^joueur:\d+:(actif|tour:\d+)$/.test(c.zone || ""))
+        .flatMap(carte => {
+            const detenteur = Number(/^joueur:(\d+):/.exec(carte.zone)[1]);
+
+            return aScript?.(detenteur, "conspirer-ensemble")
+                ? Object.values(etat.composants)
+                    .filter(m => m.sur === carte.id && !m.ref && m.proprio > 0 && m.proprio !== detenteur)
+                    .map(m => [detenteur, m.proprio])
+                : [];
+        });
+
+    const conspire = (loi, col, u) => (conspirations.some(([detenteur, empyreen]) => detenteur === u &&
+        majoritaire(loi, u) === col && majoritaire(loi, empyreen) === col) ? 1 : 0);
+
+    const voix = (loi, col, u) => propres(loi, col, u) + conspire(loi, col, u);
     const total = (loi, col) => joueurs.reduce((s, j) => s + voix(loi, col, j.userId), 0);
     const ordre = (loi, col) => Number(etat.compteurs[cleOrdre(loi, col)]) || 0;
 
@@ -144,7 +176,7 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
     const classement = loi => COLONNES.map((_, col) => col)
         .sort((a, b) => total(loi, b) - total(loi, a) || ordre(loi, b) - ordre(loi, a) || a - b);
 
-    return { nombreLois, cleAjustement, cleOrdre, ajustement, voix, total, ordre, classement };
+    return { nombreLois, cleAjustement, cleOrdre, ajustement, voix, total, ordre, classement, conspire };
 }
 
 // Trading, à la fin de la phase de vote : un négociant posé sur le plateau
@@ -194,7 +226,7 @@ function Decompte({ lois }) {
     const joueurs = partie.joueurs;
 
     const votes = decompteVotes({ etat, index, joueurs, search, aScript });
-    const { cleAjustement, cleOrdre, ajustement, voix, total, ordre } = votes;
+    const { cleAjustement, cleOrdre, ajustement, voix, total, ordre, conspire } = votes;
     const nombreLois = Math.max(lois.length, votes.nombreLois);
 
     // Responsable du sénat : le joueur de la dernière case d'initiative
@@ -422,6 +454,16 @@ function Decompte({ lois }) {
                                                     {corrige !== 0 && (
                                                         <span title="dont ajustement manuel" style={{ fontSize: 11, color: "#a15c00" }}>
                                                             {" "}({corrige > 0 ? "+" : ""}{corrige})
+                                                        </span>
+                                                    )}
+                                                    {/* Promesse Conspirer ensemble : même vote majoritaire que les Empyréens */}
+                                                    {conspire(loi, col, j.userId) > 0 && (
+                                                        <span
+                                                            data-conspirer-ensemble
+                                                            title="Conspirer ensemble : même vote majoritaire que la faction qui a fait la promesse, +1 voix"
+                                                            style={{ fontSize: 11, color: "#6a1b9a" }}
+                                                        >
+                                                            {" "}(+1 Conspirer ensemble)
                                                         </span>
                                                     )}
                                                 </td>

@@ -395,7 +395,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   Embuscade et Pupille de l'empire (le donneur répond dans son onglet Décision), Protecteur de
   l'empire (boutons du combat, cumul détenteur + Winnu), Commerce d'esclave (jet au combat
   terrestre, capture et dette), Partage de technologie (marqueur sur la technologie), Tuteur des
-  réfugiés, Passage de Creuss et Navigation delta, Chemin du vide. Reste : Conspirer ensemble (vote).
+  réfugiés, Passage de Creuss et Navigation delta, Chemin du vide, Conspirer ensemble (+1 voix dans
+  le décompte des votes, `decompteVotes`, `Vote.jsx`).
 - ☑ Braises de Muaat, règles simples (2026-11-19) : Physiologie gashlai, Réacteurs solaires, Coque
   stellaire, Armement solaire, Étude de la forge.
 - ☑ Issues GEClient #4, #5 et #6 (2026-11-18) : `#img[…]` accepte les apostrophes (`Text.jsx`) ;
