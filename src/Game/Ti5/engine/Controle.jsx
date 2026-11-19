@@ -1,6 +1,6 @@
-import { useEngine, BoutonRegle, nomCase, nomElement, agentDisponible } from "./Interaction";
-import { useElement, useElements, contenuEnCache } from "./sync";
-import { typeUnite, actionsPiste } from "./miseEnPlace";
+import { useEngine, BoutonRegle, nomCase, nomElement, agentDisponible, tuileDe, nomDuCamp, pastilleCamp, styleMini, possesseurDe, carteDePlanete } from "./Interaction";
+import { useElement, useElements, contenuEnCache, useUnitesDeFaction } from "./sync";
+import { typeUnite, actionsPiste, NEUTRE, campDe, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace";
 import { controleDe } from "./effets";
 
 // ============================================================
@@ -26,16 +26,10 @@ import { controleDe } from "./effets";
 //   controle:<case>p<planète>:agent    station spéciale : rang (1 à 6) de l'agent choisi
 // ============================================================
 
-const NEUTRE = 0;
-
 const CHOIX = [[1, "S'abstenir", "s'abstient"], [2, "Soutenir", "soutient"], [3, "S'opposer", "s'oppose"]];
 const nomChoix = valeur => CHOIX.find(c => c[0] === valeur)?.[2];
 
-const campDe = c => c.marques?.possession ?? c.proprio ?? NEUTRE;
-
 export const cleControle = (numero, k) => `controle:${numero}p${k}`;
-
-const styleMini = { fontSize: 12, padding: "1px 6px" };
 
 // Conflits de contrôle en cours : [{ cle, numero, k, demandeur }]
 export function controlesEnCours(etat) {
@@ -52,8 +46,7 @@ export function controlesEnCours(etat) {
 // vole 2 commerce (ce qu'elle a, au plus). -> { actions, messages }
 export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, idPlanete, idInfanterie, militaire = true) {
 
-    const carte = Object.values(etat.composants)
-        .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");
+    const carte = carteDePlanete(etat, idPlanete);
 
     const zone = `joueur:${moi}:actif`;
 
@@ -121,9 +114,9 @@ export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, id
 // [type de station, nom de l'agent, motif de son nom]
 export const AGENTS_STATION = [
     ["mil", "amiral", "amiral"],
-    ["log", "logisticien", "logisticien|g[ée]n[ée]ticien"],
+    ["log", "logisticien", MOTIF_LOGISTICIEN],
     ["scien", "scientifique", "scientifique"],
-    ["com", "négociant", "n[ée]gociant"],
+    ["com", "négociant", MOTIF_NEGOCIANT],
     ["diplo", "diplomate", "diplomate"],
     ["pol", "politique", "politi"],
 ];
@@ -149,8 +142,7 @@ export function actionsSatellite({ etat, index, moi, search }, zonePlanete, voul
     // (l'agent est posé sur la station : pas de remplaçant)
     const agent = voulu ? agentDisponible({ index, moi, search }, voulu.motif, { sansRemplacant: true }) : null;
 
-    const carte = Object.values(etat?.composants || {})
-        .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");
+    const carte = carteDePlanete(etat, idPlanete);
 
     const ancien = Number(/^joueur:(\d+):actif$/.exec(carte?.zone || "")?.[1]) || null;
 
@@ -197,7 +189,7 @@ function Controle({ conflit }) {
     const { cle, numero, k, demandeur } = conflit;
     const zonePlanete = `hex:${numero}:planete:${k}`;
 
-    const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+    const tuile = tuileDe(index, numero);
     const systeme = useElement(tuile ? tuile.ref.id : -1);
     const idPlanete = Number(systeme?.elems?.[k]?.id) || -1;
     const planete = useElement(idPlanete);
@@ -234,12 +226,10 @@ function Controle({ conflit }) {
     const [pour, contre] = [controle(2), controle(3)];
 
     // Mon infanterie (script Assimilation)
-    const faction = useElement(factionDe(moi) ?? -1);
-    const liens = (faction?.units || []).filter(lien => lien?.id > 0);
-    const mesUnites = useElements(liens.map(lien => lien.id));
+    const { liens, contenus: mesUnites } = useUnitesDeFaction(factionDe(moi));
     const idInfanterie = liens.find(lien => typeUnite(mesUnites[lien.id]) === "inf")?.id ?? null;
 
-    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+    const nomCamp = camp => nomDuCamp(nomDe, camp);
     const nomPlanete = planete?.name || "la planète";
     const estDemandeur = !!joueur && moi === demandeur;
 
@@ -265,19 +255,7 @@ function Controle({ conflit }) {
         }
     }
 
-    const pastille = camp => (
-        <span
-            style={{
-                display: "inline-block",
-                width: 10,
-                height: 10,
-                marginRight: 4,
-                borderRadius: "50%",
-                border: "1px solid #000",
-                backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
-            }}
-        />
-    );
+    const pastille = camp => pastilleCamp(couleurDe, camp);
 
     return (
         <div
@@ -432,7 +410,7 @@ function Accord({ conflit }) {
     const { cle, numero, k, demandeur } = conflit;
     const zonePlanete = `hex:${numero}:planete:${k}`;
 
-    const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+    const tuile = tuileDe(index, numero);
     const systeme = useElement(tuile ? tuile.ref.id : -1);
     const idPlanete = Number(systeme?.elems?.[k]?.id) || -1;
     const planete = useElement(idPlanete);
@@ -450,9 +428,7 @@ function Accord({ conflit }) {
     const choixDe = camp => Number(etat.compteurs[cleChoix(camp)]) || (camp === NEUTRE ? 3 : 0);
 
     // Infanterie du demandeur (script Assimilation)
-    const faction = useElement(factionDe(demandeur) ?? -1);
-    const liens = (faction?.units || []).filter(lien => lien?.id > 0);
-    const sesUnites = useElements(liens.map(lien => lien.id));
+    const { liens, contenus: sesUnites } = useUnitesDeFaction(factionDe(demandeur));
     const idInfanterie = liens.find(lien => typeUnite(sesUnites[lien.id]) === "inf")?.id ?? null;
 
     const diplomate = agentDisponible({ index, moi: demandeur, search }, "diplomate");
@@ -464,7 +440,7 @@ function Accord({ conflit }) {
         ? actionsSatellite({ etat, index, moi: demandeur, search }, zonePlanete, agentDeStation(planete, etat.compteurs[cle + ":agent"]), idPlanete)
         : { actions: [], obstacles: [] };
 
-    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+    const nomCamp = camp => nomDuCamp(nomDe, camp);
     const nomPlanete = planete?.name || "la planète";
     const estDemandeur = !!joueur && moi === demandeur;
 
@@ -510,19 +486,7 @@ function Accord({ conflit }) {
         );
     }
 
-    const pastille = camp => (
-        <span
-            style={{
-                display: "inline-block",
-                width: 10,
-                height: 10,
-                marginRight: 4,
-                borderRadius: "50%",
-                border: "1px solid #000",
-                backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
-            }}
-        />
-    );
+    const pastille = camp => pastilleCamp(couleurDe, camp);
 
     const refus = camps.filter(c => choixDe(c) === 3);
     const muets = camps.filter(c => !choixDe(c));
@@ -667,7 +631,7 @@ export function useExploitationDuVide(userId) {
     const { etat, index, aScript } = useEngine();
 
     const actif = aScript(userId, "exploitation-du-vide");
-    const tuile = n => (index.parZone.get("hex:" + n) || []).find(c => c.ref?.type === "system");
+    const tuile = n => tuileDe(index, n);
 
     const cases = !actif ? [] : [...new Set(Object.values(etat.composants)
         .filter(c => c.ref?.type === "unit" && campDe(c) === userId && /^hex:\d+$/.test(c.zone || ""))
@@ -695,7 +659,7 @@ export function useExploitationDuVide(userId) {
 
 function Domination({ conflit }) {
 
-    const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aScript, partie } = useEngine();
+    const { etat, index, envoyer, moi, joueur, nomDe, couleurDe, aScript, partie } = useEngine();
 
     const { cle, numero, demandeur } = conflit;
 
@@ -725,12 +689,12 @@ function Domination({ conflit }) {
     const classes = [...totaux].sort((a, b) => b[1] - a[1]);
     const gagnant = classes.length && (classes.length === 1 || classes[0][1] > classes[1][1]) ? classes[0][0] : null;
 
-    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+    const nomCamp = camp => nomDuCamp(nomDe, camp);
 
     // Rackets en attente sur les planètes de ce système (script Racket, Pirate Mentak) :
     // compteur racket:<case>p<k> = le joueur qui réclame. À la clôture, s'il domine, il
     // gagne les ressources de la planète et son propriétaire les perd (au plus ce qu'il a).
-    const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+    const tuile = tuileDe(index, numero);
     const systeme = useElement(tuile?.ref.id ?? -1);
     const liensPlanetes = (systeme?.elems || []).map(lien => Number(lien?.id) || 0);
     const planetes = useElements(liensPlanetes.filter(id => id > 0));
@@ -740,8 +704,7 @@ function Domination({ conflit }) {
         .filter(m => m && etat.compteurs[m[0]])
         .map(m => {
             const idPlanete = liensPlanetes[Number(m[1])] || 0;
-            const proprietaire = partie.joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
-                .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete))?.userId ?? null;
+            const proprietaire = possesseurDe(index, partie.joueurs, idPlanete);
             const res = Number(planetes[idPlanete]?.res) || 0;
 
             return {
@@ -767,19 +730,7 @@ function Domination({ conflit }) {
         ? `Racket sur ${r.nom} : ${nomCamp(r.u)} +${r.res} ressource(s), ${nomCamp(r.proprietaire)} −${r.pris}`
         : `Racket sur ${r.nom} : ${nomCamp(r.u)} ne domine pas, rien n'est pris`));
 
-    const pastille = camp => (
-        <span
-            style={{
-                display: "inline-block",
-                width: 10,
-                height: 10,
-                marginRight: 4,
-                borderRadius: "50%",
-                border: "1px solid #000",
-                backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
-            }}
-        />
-    );
+    const pastille = camp => pastilleCamp(couleurDe, camp);
 
     return (
         <div

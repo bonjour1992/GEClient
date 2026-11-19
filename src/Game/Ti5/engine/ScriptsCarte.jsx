@@ -3,7 +3,8 @@ import { chargerContenu, useElement, useElements } from "./sync";
 import { normaliserPlateau } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
-import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires, LIBRE, COULEUR_LIBRE } from "./miseEnPlace";
+import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires, LIBRE, COULEUR_LIBRE, MOTIF_LOGISTICIEN } from "./miseEnPlace";
+import { lotsDeDes, desDeLaReponse } from "./effets";
 import { LivraisonCommerciale } from "./Livraison";
 import { BoutonsScripts } from "./ActionsScript";
 
@@ -74,7 +75,7 @@ function ReparationImprovisee({ c, fermer }) {
         return null;
     }
 
-    const logisticien = agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
     const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
 
     return (
@@ -288,14 +289,11 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
         }
 
         // (un jet de dés du serveur compte 30 dés au plus)
-        const lots = cotes => Array.from({ length: Math.ceil(cibles.length / 30) },
-            (_, i) => ({ type: "des", n: Math.min(30, cibles.length - 30 * i), faces: cotes }));
+        const lots = cotes => lotsDeDes(cibles.length, cotes);
 
         const r = await envoyer([...lots(faces), ...lots(renforts)], `${nom} : jets de rébellion (${cibles.length} planète(s))`);
 
-        const des = [...(r?.coups || [])]
-            .sort((a, b) => b.n - a.n)
-            .find(x => x.auteur === moi)?.actions.filter(a => a.type === "des").flatMap(a => a.resultats || []);
+        const des = desDeLaReponse(r, moi);
 
         if (!Array.isArray(des) || des.length !== 2 * cibles.length) {
             return null;

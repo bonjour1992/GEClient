@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, nomCase, nomElement, Pions } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, nomElement, Pions, styleMini } from "./Interaction";
 import { useElements, contenuEnCache } from "./sync";
-import { MARQUEUR } from "./miseEnPlace";
+import { MARQUEUR, campDe, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace";
 import { centreCase, centreCaseBande } from "../plateauVue";
 import { COLONNES_BANDE } from "../hexSpirale";
 import { capaciteDe, depenserAgent, estDeplacementFurtif, placePrise, estSoleilDeGuerre } from "./effets";
@@ -63,8 +63,8 @@ import {
 // Agent du déplacement, selon les mots-clés du vaisseau
 const AGENTS = {
     amiral: { nom: "amiral", pluriel: "amiraux", motif: "amiral" },
-    negociant: { nom: "négociant", pluriel: "négociants", motif: "n[ée]gociant" },
-    logisticien: { nom: "logisticien", pluriel: "logisticiens", motif: "logisticien|g[ée]n[ée]ticien" },
+    negociant: { nom: "négociant", pluriel: "négociants", motif: MOTIF_NEGOCIANT },
+    logisticien: { nom: "logisticien", pluriel: "logisticiens", motif: MOTIF_LOGISTICIEN },
     scientifique: { nom: "scientifique", pluriel: "scientifiques", motif: "scientifique" },
 };
 
@@ -102,8 +102,6 @@ const ANOMALIES = {
 };
 
 const NOMS_TROU = { alpha: "alpha", beta: "bêta", gamma: "gamma", delta: "delta", omega: "oméga" };
-
-const styleMini = { fontSize: 12, padding: "1px 6px" };
 
 // Vaisseaux déplacés par le joueur depuis son dernier « Finir le déplacement »
 export const compteurDeplaces = u => `joueur:${u}:deplaces`;
@@ -302,7 +300,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const cheminDuVide = i => empyreens.length > 0 && (() => {
         const camps = new Set((index.parZone.get("hex:" + i) || [])
             .filter(c => !c.cache && c.ref?.type === "unit" && !c.sur)
-            .map(c => c.marques?.possession ?? c.proprio ?? 0));
+            .map(campDe));
 
         return empyreens.some(u => camps.has(u)) && [...camps].every(u => u === moi || empyreens.includes(u));
     })();

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import {
     useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible, carteUsee, actionsUserCarte,
+    tuileDe, esclavesDe, nomDuCamp,
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceD10 } from "./effets";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
-import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, actionsPiste, typeUnite } from "./miseEnPlace";
+import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
 import { turnNumber } from "../ti5Const";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
@@ -123,9 +124,6 @@ function capacite(u, cle) {
     return m ? [Number(m[1]), Number(m[2]) || 1] : null;
 }
 
-// Camp des unités sans propriétaire
-const NEUTRE = 0;
-
 const FACES = 10;
 
 const liste = valeur => String(valeur ?? "").split(",").filter(x => x !== "");
@@ -188,7 +186,7 @@ export function Combat() {
     const combats = combatsEnCours(etat);
 
     const tuiles = combats.map(lieu =>
-        (index.parZone.get("hex:" + lireLieu(lieu).numero) || []).find(c => c.ref?.type === "system"));
+        tuileDe(index, lireLieu(lieu).numero));
 
     const systemes = useElements(tuiles.filter(Boolean).map(t => t.ref.id));
 
@@ -279,9 +277,9 @@ function CombatSysteme({ lieu }) {
     // (combat:<lieu>:perdus:<camp>, pour Henry Storcher)
     const MERC = id => `${COMBAT}:merc${id}:`;
     const PERDUS = COMBAT + ":perdus:";
-    const estVaisseau = v => (v.u.mot_cle || []).includes("ship");
+    const estVaisseau = v => aMot(v.u, "ship");
 
-    const tuile = (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+    const tuile = tuileDe(index, numero);
     const systeme = useElement(tuile ? tuile.ref.id : -1);
     const laPlanete = useElement(planete === null ? -1 : (systeme?.elems?.[planete]?.id ?? -1));
 
@@ -354,8 +352,7 @@ function CombatSysteme({ lieu }) {
     // Mes unités cochées, pour leur ajouter un engagement
     const [selection, setSelection] = useState([]);
 
-    const campDe = c => c.marques?.possession ?? c.proprio ?? NEUTRE;
-    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+    const nomCamp = camp => nomDuCamp(nomDe, camp);
 
     // Canons spatiaux : distance d'une unité au système, et portée — 1, +1 avec le
     // script Canon longue portée ; une case de plus encore avec Laser longue
@@ -552,7 +549,7 @@ function CombatSysteme({ lieu }) {
 
         // Raid : des unités militaires autres que des infanteries défendent la planète — il faut cibler
         if (sorte === "raid" && !code.startsWith("@") && unitesDe(zone).some(c => campDe(c) === campVise &&
-            (contenus[c.ref.id]?.mot_cle || []).includes("mil") && typeUnite(contenus[c.ref.id]) !== "inf")) {
+            aMot(contenus[c.ref.id], "mil") && typeUnite(contenus[c.ref.id]) !== "inf")) {
             signaler("Raid : des unités militaires autres que des infanteries défendent la planète — il faut cibler les infanteries une à une.");
             return;
         }
@@ -651,7 +648,7 @@ function CombatSysteme({ lieu }) {
 
     // Script Prévision des combats : la flotte du joueur dans ce système a la frappe en premier
     // ce tour (compteur joueur:<u>:prevision = tour × 1000 + case + 1)
-    const prevision = v => sorte === "spatial" && v.camp !== NEUTRE && (v.u.mot_cle || []).includes("ship") &&
+    const prevision = v => sorte === "spatial" && v.camp !== NEUTRE && aMot(v.u, "ship") &&
         Number(etat.compteurs[`joueur:${v.camp}:prevision`]) === etat.tour * 1000 + numero + 1;
 
     // (scripts : Avantage aérien pour les infanteries au combat terrestre, Stratégie de saut,
@@ -890,10 +887,6 @@ function CombatSysteme({ lieu }) {
     // -> { camp, texte, actions } ou null
     // --------------------------------------------------------
 
-    // Esclaves d'un joueur : infanteries d'un autre camp dans ses éléments actifs
-    const esclavesDe = u => (index.parZone.get(`joueur:${u}:actif`) || []).filter(x => !x.cache && x.ref?.type === "unit" &&
-        campDe(x) !== u && typeUnite(contenuEnCache(x.ref.id)) === "inf");
-
     // Conséquences d'une destruction, données avec le butin (pas de pillage nécessaire) :
     //   Myru Vos : un vaisseau de commerce qu'il détruit (marque « degatPar ») rapporte 2 commerce ;
     //   Armageddon (#850) : son destructeur prend le contrôle d'un Armageddon (#490), 1 de résistance restante ;
@@ -935,7 +928,7 @@ function CombatSysteme({ lieu }) {
         }
 
         if (v.c.ref?.id === 154 && v.camp !== NEUTRE && aScript(v.camp, "camp-de-travail-destruction")) {
-            const depenses = esclavesDe(v.camp)
+            const depenses = esclavesDe(index, v.camp)
                 .sort((a, b) => (campDe(a) === camp) - (campDe(b) === camp))
                 .slice(0, 2);
 
@@ -1024,14 +1017,14 @@ function CombatSysteme({ lieu }) {
             }
         }
 
-        if ((v.u.mot_cle || []).includes("com") && !(v.u.mot_cle || []).includes("mil") && aScript(camp, "libre-echange")) {
+        if (aMot(v.u, "com") && !aMot(v.u, "mil") && aScript(camp, "libre-echange")) {
             actions.push(...actionsPiste(etat, camp, "infamie", 1));
             gains.push("1 infamie (Libre échange)");
         }
 
         // Habilité Infiltration : détruire un vaisseau donne un token Infiltration,
         // aux couleurs de la faction touchée
-        if ((v.u.mot_cle || []).includes("ship") && aScript(camp, "infiltration")) {
+        if (aMot(v.u, "ship") && aScript(camp, "infiltration")) {
             actions.push({
                 type: "creer",
                 ref: { type: "token", id: 882 },
@@ -1078,7 +1071,7 @@ function CombatSysteme({ lieu }) {
     const cumulRecomposition = liste => campsJoueurs.filter(u => aScript(u, "recomposition")).flatMap(u => {
 
         const cout = liste
-            .filter(v => v.camp === u && (v.u.mot_cle || []).includes("bio") && captureePar(v) === null)
+            .filter(v => v.camp === u && aMot(v.u, "bio") && captureePar(v) === null)
             .reduce((total, v) => total + (Number(v.u.cout) || 0), 0);
 
         if (!cout) {
@@ -1094,7 +1087,7 @@ function CombatSysteme({ lieu }) {
     });
 
     // Script Médecine : une de mes unités biologiques, et son jet de capture
-    const medecine = v => v.camp === moi && (v.u.mot_cle || []).includes("bio") && aScript(moi, "medecine");
+    const medecine = v => v.camp === moi && aMot(v.u, "bio") && aScript(moi, "medecine");
     const jetMedecine = v => faceDe(v.c.marques?.medecine);
 
     // Frégate du khan détruite : un dé pour son destructeur — 6 ou moins (4 si l'unité qui l'a
@@ -1254,7 +1247,7 @@ function CombatSysteme({ lieu }) {
 
     // Dégâts que cette unité peut encaisser : ceux qui la ciblent, puis ceux de son groupe
     // Vaisseau pirate : ses dés qui font 0 touchent d'abord un vaisseau de commerce du camp visé
-    const estCommerce = x => estVaisseau(x) && (x.u.mot_cle || []).includes("com");
+    const estCommerce = x => estVaisseau(x) && aMot(x.u, "com");
     const dePirate = d => d.v.c.ref?.id === 407 && aScript(moi, "vaisseau-pirate") && lireDes(d.v.c)[d.k] === 0;
     const permis = (x, d) => !(dePirate(d) && !estCommerce(x) &&
         vaisseaux.some(y => y.camp === x.camp && y.cible && debout(y) && estCommerce(y)));
@@ -1809,7 +1802,7 @@ function CombatSysteme({ lieu }) {
     const reussitesRaid = sansInfanterie
         ? vaisseaux.filter(v => v.camp === moi).reduce((n, v) => n + touchesLibres(v).length, 0)
         : 0;
-    const esclavePris = possesseur && possesseur !== moi ? esclavesDe(possesseur)[0] : null;
+    const esclavePris = possesseur && possesseur !== moi ? esclavesDe(index, possesseur)[0] : null;
 
     const duha = sorte === "bombardement" && aScript(moi, "duha-menaimon-letani")
         ? unitesDe("hex:" + numero).find(c => c.ref.id === 472 && campDe(c) === moi) : null;

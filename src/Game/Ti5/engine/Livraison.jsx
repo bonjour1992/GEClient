@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, agentDisponible, nomElement } from "./Interaction";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, tuileDe } from "./Interaction";
 import { useElement, contenuEnCache } from "./sync";
-import { DETTE } from "./miseEnPlace";
+import { DETTE, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
 
 // ============================================================
 // LIVRAISON COMMERCIALE
@@ -23,8 +23,6 @@ import { DETTE } from "./miseEnPlace";
 // scientifique : la faction livrée gagne 4 cases de recherche d'une
 // technologie que je possède, qu'elle ajoute à la main).
 // ============================================================
-
-const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
 
 // Actions d'une livraison de `valeur` commerce à `cible` -> { actions, messages }
 export function livrer({ etat, index, moi, search, aScript, nomDe }, cible, valeur) {
@@ -105,7 +103,7 @@ export function LivraisonCommerciale({ c, fermer }) {
 
     // Promesse Concession commerciale (#228, mandat des Winnu) : son détenteur compte comme
     // ayant un comptoir sur Mecatol Rex (#34) — dans le système qui la porte, mandat non épuisé
-    const tuile = (ctx.index.parZone.get(m[0]) || []).find(x => x.ref?.type === "system");
+    const tuile = tuileDe(ctx.index, m[1]);
     const mecatolIci = (contenuEnCache(tuile?.ref.id)?.elems || []).some(lien => Number(lien?.id) === 34);
 
     const concessions = !mecatolIci ? [] : ctx.partie.joueurs.map(j => j.userId).filter(u => u !== moi && ctx.aScript(u, "concession-commerciale") &&
@@ -123,7 +121,7 @@ export function LivraisonCommerciale({ c, fermer }) {
     // D'après le texte : un négociant est utilisé, l'unité est dépensée
     const avecNegociant = /#use\s*#neg/i.test(texte);
     const depensee = /#spend[^<]*#livr/i.test(texte);
-    const negociant = avecNegociant ? agentDisponible({ index, moi, search }, "n[ée]gociant") : null;
+    const negociant = avecNegociant ? agentDisponible({ index, moi, search }, MOTIF_NEGOCIANT) : null;
 
     function faire(commentaire) {
 

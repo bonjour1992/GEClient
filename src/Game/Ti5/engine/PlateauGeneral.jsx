@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
+import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, agentDisponible } from "./Interaction";
 import { depenserAgent, faceD10 } from "./effets";
 import { getHandler } from "../../games";
 import {

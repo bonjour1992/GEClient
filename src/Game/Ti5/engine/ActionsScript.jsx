@@ -1,7 +1,7 @@
-import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte, distanceCases, nomCase } from "./Interaction";
-import { contenuEnCache, useElement, useElements } from "./sync";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte, distanceCases, nomCase, tuileDe, esclavesDe, possesseurDe } from "./Interaction";
+import { contenuEnCache, useElements, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
-import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite } from "./miseEnPlace";
+import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
 import { depenserAgent, faceD10 } from "./effets";
 import { actionsPossession } from "./Controle";
 import { noter } from "./recherche";
@@ -80,8 +80,6 @@ import { decompteVotes } from "./Vote";
 
 const NOMS = { res: "ressource", inf: "influence", commerce: "commerce", points: "point" };
 
-const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
-
 export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null, zone = null, possede = true, systeme = null, idSysteme = null, apres }) {
 
     const {
@@ -96,9 +94,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
     const contenuPromesses = useElements(mesPromesses.map(x => x.ref.id));
 
     // Infanterie de ma faction (cree : { unite: "inf" })
-    const faction = useElement(factionDe(moi) ?? -1);
-    const liensUnites = (faction?.units || []).filter(lien => lien?.id > 0);
-    const unitesFaction = useElements(liensUnites.map(lien => lien.id));
+    const { liens: liensUnites, contenus: unitesFaction } = useUnitesDeFaction(factionDe(moi));
     const idInfanterie = liensUnites.find(lien => typeUnite(unitesFaction[lien.id]) === "inf")?.id ?? null;
 
     // Toute la carte est chargée (tuiles posées, puis leurs planètes) : les scripts qui
@@ -132,7 +128,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         .map(x => Number(/^hex:(\d+)/.exec(x.zone)[1])))];
 
     const systemeDe = n => {
-        const tuile = (index.parZone.get("hex:" + n) || []).find(x => x.ref?.type === "system");
+        const tuile = tuileDe(index, n);
         return tuile ? contenuEnCache(tuile.ref.id) : null;
     };
 
@@ -172,15 +168,14 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         mesMilitairesDansLeSysteme: () => numero === null ? 0 : Object.values(etat.composants).filter(x =>
             !x.cache && x.ref?.type === "unit" && campDe(x) === moi &&
             (x.zone === "hex:" + numero || x.zone?.startsWith(`hex:${numero}:`)) &&
-            (contenuEnCache(x.ref.id)?.mot_cle || []).includes("mil")).length,
+            aMot(contenuEnCache(x.ref.id), "mil")).length,
         // Mes structures posées au lieu (planète)
         mesStructuresIci: () => ici.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) === moi &&
-            (contenuEnCache(x.ref.id)?.mot_cle || []).includes("struc")).length,
+            aMot(contenuEnCache(x.ref.id), "struc")).length,
         zone,
         idElement,
         // Joueur qui possède cette planète (sa carte est dans ses éléments actifs), ou null
-        proprietaire: idPlanete => partie.joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
-            .some(x => !x.cache && x.ref?.type === "planet" && x.ref.id === idPlanete))?.userId ?? null,
+        proprietaire: idPlanete => possesseurDe(index, partie.joueurs, idPlanete),
         // Nom d'un joueur ; script en service pour moi ; joueurs de la partie
         nomDe,
         aScript: id => aScript(moi, id),
@@ -188,8 +183,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         // Unités de ma faction : [{ id, contenu }]
         unitesDeMaFaction: () => liensUnites.map(lien => ({ id: lien.id, contenu: unitesFaction[lien.id] })).filter(u => u.contenu),
         // Mes esclaves (infanteries capturées de mes éléments actifs)
-        esclaves: () => mesActifs.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) !== moi &&
-            typeUnite(contenuEnCache(x.ref.id)) === "inf"),
+        esclaves: () => esclavesDe(index, moi),
         // Cases des satellites (stations) que je possède ; distance entre deux cases ; contenu du système d'une case
         casesDeMesSatellites: () => mesActifs
             .filter(x => !x.cache && x.ref?.type === "planet" && contenuEnCache(x.ref.id)?.type === "sat")
@@ -270,10 +264,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         compte: (userId, cle) => Number(etat.compteurs[`joueur:${userId}:${cle}`]) || 0,
         systeme,
         // Tuile du système de la fiche (composant) : porte les jets de dés qui ne visent pas une unité
-        tuile: () => (numero === null ? null : (index.parZone.get("hex:" + numero) || []).find(x => x.ref?.type === "system") || null),
+        tuile: () => (numero === null ? null : tuileDe(index, numero) || null),
         // Mes esclaves (infanteries capturées de mes éléments actifs)
-        esclaves: () => mesActifs.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) !== moi &&
-            typeUnite(contenuEnCache(x.ref.id)) === "inf"),
+        esclaves: () => esclavesDe(index, moi),
         // Une unité ou une carte est-elle usée ? Actions qui l'usent
         usee: x => carteUsee(index, x),
         user: x => actionsUserCarte(index, moi, x),
@@ -350,8 +343,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
     }
 
     // Esclaves : infanteries capturées — unités d'infanterie d'un autre camp dans mes éléments actifs
-    const esclaves = mesActifs.filter(x => !x.cache && x.ref?.type === "unit" && campDe(x) !== moi &&
-        typeUnite(contenuEnCache(x.ref.id)) === "inf");
+    const esclaves = esclavesDe(index, moi);
 
     // Ce qu'une ligne de « depense » retire : { voulus, trouves, nom }
     const depenseDe = ligne => (ligne.esclaves

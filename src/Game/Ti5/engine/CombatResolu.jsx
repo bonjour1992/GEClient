@@ -1,5 +1,6 @@
 import { useEngine, BoutonRegle, agentDisponible, nomElement } from "./Interaction";
 import { useElements } from "./sync";
+import { campDe, MOTIF_LOGISTICIEN } from "./miseEnPlace";
 
 // ============================================================
 // COMBAT RÉSOLU (onglet Conflit)
@@ -16,8 +17,6 @@ import { useElements } from "./sync";
 // dans mes éléments actifs (voir la capture, Production.jsx).
 // ============================================================
 
-const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
-
 export function CombatResolu({ lieu, compteur, titre }) {
 
     const { etat, index, envoyer, moi, joueur, search, nomDe, aScript } = useEngine();
@@ -32,7 +31,7 @@ export function CombatResolu({ lieu, compteur, titre }) {
     const prises = detruites.filter(c => campDe(c) !== moi &&
         contenus[c.ref.id]?.mot_cle?.includes("ship") && !["sun", "fs"].includes(contenus[c.ref.id]?.type));
 
-    const logisticien = agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
 
     return (
         <div

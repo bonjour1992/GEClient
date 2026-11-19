@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useEngine, BoutonRegle, agentDisponible, nomElement } from "./Interaction";
 import { useElement, useElements } from "./sync";
-import { MARQUEUR, DETTE } from "./miseEnPlace";
+import { MARQUEUR, DETTE, MOTIF_LOGISTICIEN } from "./miseEnPlace";
 import { turnNumber } from "../ti5Const";
 import { livrer } from "./Livraison";
 
@@ -401,7 +401,7 @@ function MicroTeleporteur() {
 
     const { etat, index, envoyer, moi, search, aviser, capaciteLogistique } = useEngine();
 
-    const logisticien = agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
 
     return (
         <div data-script="micro-teleporteur" style={styleBloc}>

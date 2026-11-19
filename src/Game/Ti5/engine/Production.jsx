@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { useEngine, nomCase, nomElement, agentDisponible } from "./Interaction";
+import { useEngine, nomCase, nomElement, agentDisponible, tuileDe } from "./Interaction";
 import { contenuEnCache, chargerContenu } from "./sync";
-import { ACTIVATION, typeUnite } from "./miseEnPlace";
+import { ACTIVATION, typeUnite, MOTIF_LOGISTICIEN } from "./miseEnPlace";
 
 // ============================================================
 // PRODUCTION
@@ -36,9 +36,6 @@ import { ACTIVATION, typeUnite } from "./miseEnPlace";
 // logistique), IA industrielle (docks : +2 ; sur une planète
 // militaire, le coût total baisse de 2).
 // ============================================================
-
-// Le Généticien d'Arborec produit comme un logisticien
-const LOGISTICIEN = "logisticien|g[ée]n[ée]ticien";
 
 const sansAccent = texte => String(texte || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 
@@ -108,7 +105,7 @@ export async function ouvrirProduction(ctx, c, confirmer) {
     let militaire = false;
 
     if (ia && m[2] !== undefined) {
-        const tuile = (index.parZone.get("hex:" + numero) || []).find(x => x.ref?.type === "system");
+        const tuile = tuileDe(index, numero);
         const systeme = tuile && await chargerContenu(tuile.ref.id);
         const planete = await chargerContenu(Number(systeme?.elems?.[Number(m[2])]?.id) || -1);
 
@@ -120,7 +117,7 @@ export async function ouvrirProduction(ctx, c, confirmer) {
     const commentaire = confirmer(`Produire avec ${nom} (${nomCase(numero)})`, [
         !/production/i.test(etat.phase) && "ce n'est pas la phase de production",
         dejaActivee && "cette unité est déjà activée",
-        !agentDisponible({ index, moi, search }, LOGISTICIEN) && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+        !agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN) && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
     ]);
 
     if (!commentaire) {
@@ -144,7 +141,7 @@ export function ouvrirProductionLieu(ctx, lieu, commentaire) {
 
     const { index, moi, search, envoyer, setProduction, capaciteLogistique } = ctx;
 
-    const logisticien = agentDisponible({ index, moi, search }, LOGISTICIEN);
+    const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
     const base = lieu.capacite.quantite === "clog" ? capaciteLogistique(moi) : lieu.capacite.quantite;
 
     envoyer([

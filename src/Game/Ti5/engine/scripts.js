@@ -46,6 +46,8 @@
 // faisable de la même façon.
 // ============================================================
 
+import { campDe, aMot, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace.js";
+
 // Nom de l'élément « reglage » qui garde la liste des scripts désactivés
 export const SCRIPTS_DESACTIVES = "Scripts désactivés";
 
@@ -91,7 +93,7 @@ const ROMPUE = "Promesse rompue : retour à la réserve, la faction gagne 1 infa
 
 // Nefs de la rupture (#810) de l'espace d'un système qui ne sont pas à moi
 const nefsIci = (etat, numero, moi) => Object.values(etat.composants).filter(x => !x.cache && x.ref?.type === "unit" &&
-    x.ref.id === 810 && x.zone === "hex:" + numero && (x.marques?.possession ?? x.proprio ?? 0) !== moi);
+    x.ref.id === 810 && x.zone === "hex:" + numero && campDe(x) !== moi);
 
 // Planètes des Réfugiés : celles où est posé un Entrepôt d'aide (#836)
 const planetesDesRefugies = etat => [...new Set(Object.values(etat.composants)
@@ -123,10 +125,7 @@ const conversion = (outils, x, vers) => {
         ? { sans: `commerce insuffisant : ${x} demandé, vous en avez ${outils.compte("commerce")}` }
         : { cout: { commerce: x }, gains: { [vers]: 2 * x } };
 };
-const LOGISTICIEN = { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: false };
-
-// Camp d'une unité (celui qui la contrôle, sinon son propriétaire ; 0 : neutre)
-const campDeUnite = x => x.marques?.possession ?? x.proprio ?? 0;
+const LOGISTICIEN = { motif: MOTIF_LOGISTICIEN, nom: "logisticien", depense: false };
 
 // Camp qui domine une case : celui du test de domination clos ce tour (Controle.jsx), sinon
 // le seul camp qui a des unités dans son espace. null : disputée sans test clos ; 0 : personne
@@ -138,7 +137,7 @@ const dominantDe = (etat, index, numero) => {
 
     const camps = [...new Set((index.parZone.get("hex:" + numero) || [])
         .filter(x => !x.cache && x.ref?.type === "unit" && !x.sur)
-        .map(campDeUnite))];
+        .map(campDe))];
 
     return camps.length === 0 ? 0 : (camps.length === 1 ? camps[0] : null);
 };
@@ -163,7 +162,7 @@ const planetesDe = (atelier, x) => (x.systeme?.elems || []).flatMap((lien, k) =>
 });
 
 // Croissance (Arborec) : vaisseau biologique ; ceux de ma faction qui coûtent au plus 2 de plus
-const estVaisseauBio = contenu => (contenu?.mot_cle || []).includes("ship") && (contenu?.mot_cle || []).includes("bio");
+const estVaisseauBio = contenu => aMot(contenu, "ship") && aMot(contenu, "bio");
 
 const optionsCroissance = outils => outils.unitesDeMaFaction().filter(u => u.id !== outils.c?.ref?.id && estVaisseauBio(u.contenu) &&
     (Number(u.contenu.cout) || 0) <= (Number(outils.contenu?.cout) || 0) + 2);
@@ -191,7 +190,7 @@ const croissance = (outils, x) => {
 
 // Vaisseaux militaires de ma faction (Contact mercenaire)
 const vaisseauxMilitaires = outils => outils.unitesDeMaFaction().filter(u =>
-    (u.contenu.mot_cle || []).includes("ship") && (u.contenu.mot_cle || []).includes("mil"));
+    aMot(u.contenu, "ship") && aMot(u.contenu, "mil"));
 
 // Mes esclaves, groupés par faction d'origine : [{ camp, nom, esclaves }]
 const otages = outils => {
@@ -199,7 +198,7 @@ const otages = outils => {
     const groupes = new Map();
 
     for (const e of outils.esclaves()) {
-        const camp = campDeUnite(e);
+        const camp = campDe(e);
 
         if (camp > 0) {
             groupes.set(camp, [...(groupes.get(camp) || []), e]);
@@ -378,7 +377,7 @@ export const SCRIPTS = [
         actions: plan => {
 
             // L'Anneau Arcturus (#784) est une station commerciale : un négociant la tient
-            const negociant = plan.agent("n[ée]gociant");
+            const negociant = plan.agent(MOTIF_NEGOCIANT);
             const anneau = plan.zonePlanete(784);
 
             return [
@@ -970,7 +969,7 @@ export const SCRIPTS = [
         "Production : dépensez un logisticien, un Mech géant est posé sur Hopeld (que vous possédez).", {
             phase: "production",
             possede: true,
-            agent: { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: true },
+            agent: { motif: MOTIF_LOGISTICIEN, nom: "logisticien", depense: true },
             cree: { unite: 516, n: 1 },
             libelle: "Produire un Mech géant (dépense un logisticien)",
         }),
@@ -1149,7 +1148,7 @@ export const SCRIPTS = [
 
     revenu("anneau-monde-negociant", "planet", 45, 1794335054763, "Anneau monde (négociant)", "production",
         "Avec un négociant posé sur la station : 2 frégates marchandes gratuites dans le système.", {
-            calcul: (source, outils) => (outils.agentsSur(source, "n[ée]gociant") ? { cree: { unite: "com", n: 2, ou: "espace" } } : null),
+            calcul: (source, outils) => (outils.agentsSur(source, MOTIF_NEGOCIANT) ? { cree: { unite: "com", n: 2, ou: "espace" } } : null),
         }),
 
     action("anneau-monde-diplomate", "planet", 45, 1794335054763, "Anneau monde (diplomate) : faveur", "planete",
@@ -1200,7 +1199,7 @@ export const SCRIPTS = [
         "Production : dépensez un logisticien, les systèmes de défense de Mecatol Rex perdent leurs dégâts.", {
             surPlanete: 34,
             phase: "production",
-            agent: { motif: "logisticien|g[ée]n[ée]ticien", nom: "logisticien", depense: true },
+            agent: { motif: MOTIF_LOGISTICIEN, nom: "logisticien", depense: true },
             soigne: "pds",
             libelle: "Clé de l'empire : réparer le système de défense (dépense un logisticien)",
         }),
@@ -1405,7 +1404,7 @@ export const SCRIPTS = [
         "Production : le cube du mercenaire part dans les agents usés, un de vos vaisseaux non biologiques est réparé gratuitement (bouton de la fiche du vaisseau).", {
             phase: "production",
             use: true,
-            cible: (contenu, c) => (contenu?.mot_cle || []).includes("ship") && !(contenu?.mot_cle || []).includes("bio") &&
+            cible: (contenu, c) => aMot(contenu, "ship") && !aMot(contenu, "bio") &&
                 Number(c?.marques?.degat) > 0,
             degat: -99,
             libelle: "Shipmonger Zsknck : réparer ce vaisseau gratuitement",
@@ -1796,7 +1795,7 @@ export const SCRIPTS = [
             visible: outils => outils.ici(836) > 0 && outils.aCarte("Promesse", 454),
             special: atelier => {
                 const milices = (atelier.index.parZone.get(atelier.zone) || []).filter(x => !x.cache && x.ref?.type === "unit" &&
-                    x.ref.id === 835 && (x.marques?.possession ?? x.proprio ?? 0) !== atelier.moi).slice(0, 3);
+                    x.ref.id === 835 && campDe(x) !== atelier.moi).slice(0, 3);
 
                 return {
                     actions: milices.map(x => ({ type: "marquer", c: x.id, marque: "possession", valeur: atelier.moi })),
@@ -2106,7 +2105,7 @@ export const SCRIPTS = [
             special: atelier => {
 
                 const structure = atelier.unites(atelier.zone).find(x => atelier.campDe(x) === atelier.moi &&
-                    (atelier.contenuDe(x.ref.id)?.mot_cle || []).includes("struc") && !atelier.usee(x));
+                    aMot(atelier.contenuDe(x.ref.id), "struc") && !atelier.usee(x));
 
                 const esclaves = atelier.esclaves().slice(0, 2);
 
@@ -2177,7 +2176,7 @@ export const SCRIPTS = [
                 const dominees = failles.filter(n => dominantDe(outils.etat, outils.index, n) === outils.userId);
 
                 const disputees = failles.filter(n => dominantDe(outils.etat, outils.index, n) === null &&
-                    (outils.index.parZone.get("hex:" + n) || []).some(x => !x.cache && x.ref?.type === "unit" && campDeUnite(x) === outils.userId));
+                    (outils.index.parZone.get("hex:" + n) || []).some(x => !x.cache && x.ref?.type === "unit" && campDe(x) === outils.userId));
 
                 return {
                     gains: { res: 3 * dominees.length },
@@ -2415,13 +2414,13 @@ export const SCRIPTS = [
             phase: "bombardement",
             agent: SCIENTIFIQUE,
             visible: outils => outils.numero !== null && dansLeSysteme(outils.index, outils.numero).some(x =>
-                x.ref?.type === "unit" && /:planete:/.test(x.zone || "") && campDeUnite(x) !== outils.moi),
+                x.ref?.type === "unit" && /:planete:/.test(x.zone || "") && campDe(x) !== outils.moi),
             special: atelier => {
 
                 const infanteries = dansLeSysteme(atelier.index, atelier.numero).filter(x => x.ref?.type === "unit" &&
-                    /:planete:/.test(x.zone || "") && campDeUnite(x) !== atelier.moi && atelier.contenuDe(x.ref.id)?.type === "inf");
+                    /:planete:/.test(x.zone || "") && campDe(x) !== atelier.moi && atelier.contenuDe(x.ref.id)?.type === "inf");
 
-                const seuil = x => (campDeUnite(x) > 0 && atelier.aTechnologie(campDeUnite(x), 402) ? 1 : 5);
+                const seuil = x => (campDe(x) > 0 && atelier.aTechnologie(campDe(x), 402) ? 1 : 5);
 
                 return {
                     actions: [],
@@ -2760,10 +2759,10 @@ export const SCRIPTS = [
                 const m = /^hex:(\d+)/.exec(atelier.c?.zone || "");
 
                 const comptoirs = !m ? [] : dansLeSysteme(atelier.index, Number(m[1])).filter(x => x.ref?.type === "unit" &&
-                    campDeUnite(x) > 0 && campDeUnite(x) !== atelier.moi && /#comp\b/i.test(atelier.contenuDe(x.ref.id)?.habilite || ""));
+                    campDe(x) > 0 && campDe(x) !== atelier.moi && /#comp\b/i.test(atelier.contenuDe(x.ref.id)?.habilite || ""));
 
-                const comptoir = comptoirs.find(x => atelier.esclaves().some(e => campDeUnite(e) === campDeUnite(x)));
-                const rendus = comptoir ? atelier.esclaves().filter(e => campDeUnite(e) === campDeUnite(comptoir)).slice(0, 2) : [];
+                const comptoir = comptoirs.find(x => atelier.esclaves().some(e => campDe(e) === campDe(x)));
+                const rendus = comptoir ? atelier.esclaves().filter(e => campDe(e) === campDe(comptoir)).slice(0, 2) : [];
 
                 return {
                     actions: rendus.flatMap(e => [
@@ -2773,7 +2772,7 @@ export const SCRIPTS = [
                         e.marques?.possession !== undefined && { type: "marquer", c: e.id, marque: "possession", valeur: null },
                     ].filter(Boolean)),
                     sans: comptoir ? null : "aucune faction à comptoir de ce système dont vous ayez des esclaves",
-                    avis: comptoir ? `Restituer les otages : ${rendus.length} infanterie(s) rendue(s) à ${atelier.nomDe(campDeUnite(comptoir))}.` : "",
+                    avis: comptoir ? `Restituer les otages : ${rendus.length} infanterie(s) rendue(s) à ${atelier.nomDe(campDe(comptoir))}.` : "",
                 };
             },
             libelle: "Restituer les otages : rendre jusqu'à 2 esclaves",
@@ -2792,7 +2791,7 @@ export const SCRIPTS = [
 
                 const texte = atelier.contenu?.habilite || "";
                 const valeur = Number(/#livr\((\d+)\)/i.exec(texte)?.[1]) || 0;
-                const negociant = /#use\s*#neg/i.test(texte) ? atelier.agent("n[ée]gociant") : null;
+                const negociant = /#use\s*#neg/i.test(texte) ? atelier.agent(MOTIF_NEGOCIANT) : null;
                 const depensee = /#spend[^<]*#livr/i.test(texte);
 
                 return {

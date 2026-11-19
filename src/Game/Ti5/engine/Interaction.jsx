@@ -22,6 +22,10 @@ import {
     typeUnite as typeDeUnite,
     estUniteMercenaire,
     CUBES,
+    campDe,
+    NEUTRE,
+    aMot,
+    MOTIF_LOGISTICIEN,
 } from "./miseEnPlace";
 import { joueurDeMain, estPioche } from "./etat";
 import { distanceIndex, distanceBande } from "../hexSpirale";
@@ -232,6 +236,43 @@ export function Repli({ cle, titre, children, style }) {
 // OUTILS
 // ============================================================
 
+// Tuile système posée sur une case de la carte (undefined : case vide)
+export const tuileDe = (index, numero) =>
+    (index.parZone.get("hex:" + numero) || []).find(c => c.ref?.type === "system");
+
+// Esclaves d'un joueur : infanteries d'un autre camp dans ses éléments actifs
+export const esclavesDe = (index, u) => (index.parZone.get(`joueur:${u}:actif`) || []).filter(x =>
+    !x.cache && x.ref?.type === "unit" && campDe(x) !== u && typeUnite(contenuEnCache(x.ref.id)) === "inf");
+
+// Écrans de conflit et de déplacement : nom d'un camp (les unités sans
+// propriétaire sont « Neutres »), pastille ronde à sa couleur, petit bouton
+export const nomDuCamp = (nomDe, camp) => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+
+export const pastilleCamp = (couleurDe, camp) => (
+    <span
+        style={{
+            display: "inline-block",
+            width: 10,
+            height: 10,
+            marginRight: 4,
+            borderRadius: "50%",
+            border: "1px solid #000",
+            backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
+        }}
+    />
+);
+
+export const styleMini = { fontSize: 12, padding: "1px 6px" };
+
+// Joueur qui possède une planète (sa carte est dans ses éléments actifs), ou null
+export const possesseurDe = (index, joueurs, idPlanete) =>
+    joueurs.find(j => (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+        .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete))?.userId ?? null;
+
+// Carte d'une planète déjà en jeu (chez un joueur), ou undefined
+export const carteDePlanete = (etat, idPlanete) => Object.values(etat?.composants || {})
+    .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");
+
 // Composants rangés par zone et par porteur
 export function indexer(etat) {
 
@@ -423,7 +464,7 @@ export function nomZone(zone, nomDe) {
 // Une unité peut-elle être posée sur une planète ? Seulement si elle porte le
 // mot-clé « Terrestre » (terre). Contenu pas encore chargé : on laisse faire.
 export function estTerrestre(contenu) {
-    return !contenu || (contenu.mot_cle || []).includes("terre");
+    return !contenu || aMot(contenu, "terre");
 }
 
 // Zone d'une planète
@@ -2240,7 +2281,7 @@ export function Plan({ children, style }) {
             const activee = ici.some(c => !c.ref && c.jeton === ACTIVATION && !c.marques?.ruine);
             const besoin = construites.length > 0 && (!surPlanete || !activee);
             const depense = surPlanete && presentes.length > 0;
-            const logisticien = besoin ? agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien") : null;
+            const logisticien = besoin ? agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN) : null;
 
             obstacles.push(
                 construites.length < unites.length &&
@@ -2460,7 +2501,7 @@ export function Plan({ children, style }) {
                         type: "marquer",
                         c: touchee.id,
                         marque: "degatDe",
-                        valeur: "c" + (tireur.marques?.possession ?? tireur.proprio ?? 0),
+                        valeur: "c" + campDe(tireur),
                     },
                     {
                         type: "marquer",

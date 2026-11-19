@@ -300,7 +300,7 @@ function Decompte({ lois }) {
     const joueurs = partie.joueurs;
 
     const votes = decompteVotes({ etat, index, joueurs, search, aScript });
-    const { cleAjustement, cleOrdre, ajustement, voix, total, ordre, bonus, conclave, conclaveEnJeu } = votes;
+    const { cleAjustement, cleOrdre, ajustement, voix, total, bonus, conclave, conclaveEnJeu } = votes;
     const nombreLois = Math.max(lois.length, votes.nombreLois);
 
     // Responsable du sénat : le joueur de la dernière case d'initiative

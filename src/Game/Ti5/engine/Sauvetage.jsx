@@ -1,6 +1,7 @@
 import { useEngine, nomCase, distanceCases, nomElement } from "./Interaction";
 import { useElements } from "./sync";
 import { faceD10 } from "./effets";
+import { campDe } from "./miseEnPlace";
 
 // ============================================================
 // SAUVETAGE (script Capsule de secours, dans un combat du système)
@@ -14,8 +15,6 @@ import { faceD10 } from "./effets";
 
 const JET = "jetSauv";
 const SEUIL = 6;
-
-const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
 
 // navires : composants des vaisseaux détruits du combat ; planetes : rangs des planètes du système
 export function Sauvetage({ numero, navires, planetes }) {

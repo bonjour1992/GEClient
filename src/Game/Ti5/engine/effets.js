@@ -4,8 +4,11 @@
 // Calculs partagés par plusieurs écrans. Chacun prend `aScript`
 // (contexte de la partie) : aScript(joueur, id) dit si le script est
 // en service et si le joueur a débloqué sa technologie. Ce fichier
-// n'importe rien : tout écran peut s'en servir.
+// n'importe que miseEnPlace.js (constantes et fonctions pures) : tout
+// écran peut s'en servir.
 // ============================================================
+
+import { campDe } from "./miseEnPlace.js";
 
 // ------------------------------------------------------------
 // DÉ À 10 FACES : NUMÉROTÉ DE 0 À 9
@@ -20,6 +23,18 @@
 // ------------------------------------------------------------
 
 export const faceD10 = tirage => (Number(tirage) === 10 ? 0 : Number(tirage));
+
+// Dés lancés par le serveur et lus dans sa réponse. Un coup lance 30 dés au
+// plus : lotsDeDes découpe un jet en actions « des ». desDeLaReponse rend,
+// dans l'ordre, les tirages bruts des dés du dernier coup de `moi` dans la
+// réponse d'envoyer() — undefined si elle est illisible. (Les D10 se lisent
+// ensuite par faceD10.)
+export const lotsDeDes = (n, faces) => Array.from({ length: Math.ceil(n / 30) },
+    (_, i) => ({ type: "des", n: Math.min(30, n - 30 * i), faces }));
+
+export const desDeLaReponse = (reponse, moi) => [...(reponse?.coups || [])]
+    .sort((a, b) => b.n - a.n)
+    .find(x => x.auteur === moi)?.actions.filter(a => a.type === "des").flatMap(a => a.resultats || []);
 
 // ------------------------------------------------------------
 // PILLAGE (#pill)
@@ -179,11 +194,10 @@ export function victimesBombe(etat, touchee, contenu, deja = []) {
     }
 
     const resistance = Number(contenu.PV) || 1;
-    const camp = c => c.marques?.possession ?? c.proprio ?? 0;
 
     return Object.values(etat.composants)
         .filter(c => c.id !== touchee.id && !deja.includes(c.id) && c.zone === touchee.zone &&
-            c.ref?.type === "unit" && c.ref.id === touchee.ref.id && camp(c) === camp(touchee) &&
+            c.ref?.type === "unit" && c.ref.id === touchee.ref.id && campDe(c) === campDe(touchee) &&
             (Number(c.marques?.degat) || 0) < resistance)
         .slice(0, 2)
         .map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: resistance }));

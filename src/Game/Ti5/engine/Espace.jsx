@@ -7,7 +7,7 @@ import { nombreCases, anneauDeIndex, distanceIndex, COLONNES_BANDE } from "../he
 import { techType } from "../ti5Const";
 import {
     useEngine, Emplacements, Pions, Zone, Defilable, agentDisponible, aMotCle, tokenTreve,
-    DECALAGE_SECONDAIRE, estSecondaire, nomCase, distanceCases, BoutonRegle, confirmerRegle,
+    DECALAGE_SECONDAIRE, estSecondaire, nomCase, distanceCases, BoutonRegle, confirmerRegle, carteDePlanete,
 } from "./Interaction";
 import {
     PIOCHE_TUILES,
@@ -18,9 +18,11 @@ import {
     SAC_FRAGMENTS,
     FRAGMENTS,
     typeUnite,
+    campDe,
+    MOTIF_LOGISTICIEN,
 } from "./miseEnPlace";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
+import { useElement, useElements, chargerContenu, contenuEnCache, useUnitesDeFaction } from "./sync";
 import { cleCombat, combatsActifs, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
@@ -923,7 +925,7 @@ function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
 function FicheSysteme({ numero, id, fermer }) {
 
     const {
-        etat, index, jouer, envoyer, joueur, moi, nomDe, search, signaler, factionDe, allerA, setCombatVu,
+        etat, index, envoyer, joueur, moi, nomDe, search, signaler, factionDe, allerA, setCombatVu,
         aScript, aviser, setProduction, capaciteLogistique,
     } = useEngine();
 
@@ -1013,7 +1015,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Scientifique et logisticien disponibles (le Généticien d'Arborec mobilise comme un logisticien)
     const aScientifique = !!agentDisponible({ index, moi, search }, "scientifique");
-    const aLogisticien = !!agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const aLogisticien = !!agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
 
     const zoneEspace = "hex:" + numero;
     const zonePlanete = k => `${zoneEspace}:planete:${k}`;
@@ -1040,9 +1042,7 @@ function FicheSysteme({ numero, id, fermer }) {
     const ruineActivee = (k, ruine) => activations(k).some(c => c.marques?.ruine === ruine);
 
     // Mon infanterie (unité de ma faction), pour la mobilisation
-    const maFaction = useElement(factionDe(moi) ?? -1);
-    const liensUnites = (maFaction?.units || []).filter(lien => lien?.id > 0);
-    const unites = useElements(liensUnites.map(lien => lien.id));
+    const { liens: liensUnites, contenus: unites } = useUnitesDeFaction(factionDe(moi));
     const lienInfanterie = liensUnites.find(lien => typeUnite(unites[lien.id]) === "inf");
     const infanterie = lienInfanterie ? unites[lienInfanterie.id] : null;
     const idInfanterie = lienInfanterie?.id ?? null;
@@ -1188,7 +1188,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         envoyer([
             // Un logisticien, ou le Généticien (Arborec) qui mobilise comme lui
-            utiliser("logisticien|g[ée]n[ée]ticien"),
+            utiliser(MOTIF_LOGISTICIEN),
             clonage && utiliser("scientifique"),
             cout && { type: "compteur", id: `joueur:${moi}:res`, delta: -cout },
             ...Array.from({ length: n }, () => ({
@@ -1224,8 +1224,7 @@ function FicheSysteme({ numero, id, fermer }) {
     }
 
     // Carte d'une planète déjà en jeu (chez un joueur), ou undefined
-    const cartePlanete = idPlanete => Object.values(etat.composants)
-        .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete && c.zone !== "horsJeu");
+    const cartePlanete = idPlanete => carteDePlanete(etat, idPlanete);
 
     // La carte de la planète va dans mes éléments actifs (elle est créée si
     // personne ne l'avait encore). Deux façons d'y arriver :
@@ -1290,7 +1289,7 @@ function FicheSysteme({ numero, id, fermer }) {
     function demanderPossession(idPlanete, k, commentaire) {
 
         const opposants = (index.parZone.get(zonePlanete(k)) || []).some(c =>
-            c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio ?? 0) !== moi &&
+            c.ref?.type === "unit" && campDe(c) !== moi &&
             contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
 
         if (!opposants) {
@@ -1335,7 +1334,7 @@ function FicheSysteme({ numero, id, fermer }) {
     function demanderStation(idPlanete, k, planete, commentaire) {
 
         const opposants = (index.parZone.get(zoneEspace) || []).some(c =>
-            c.ref?.type === "unit" && !c.sur && (c.marques?.possession ?? c.proprio ?? 0) !== moi &&
+            c.ref?.type === "unit" && !c.sur && campDe(c) !== moi &&
             contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
 
         if (!opposants) {
@@ -1517,7 +1516,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                 Extraction de la faille, Cache, Péage aux frontières, Exploitation du vide */}
                             {new Set((index.parZone.get("hex:" + numero) || [])
                                 .filter(c => !c.cache && c.ref?.type === "unit" && !c.sur)
-                                .map(c => c.marques?.possession ?? c.proprio ?? 0)).size > 1 && (
+                                .map(campDe)).size > 1 && (
                                 etat.compteurs["domination:" + numero]
                                     ? <button type="button" onClick={() => allerA("combat")} style={{ fontWeight: "bold" }}>Voir : test de domination</button>
                                     : (

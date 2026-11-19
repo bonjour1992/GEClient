@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDisponible } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDisponible, nomDuCamp, pastilleCamp, styleMini } from "./Interaction";
 import { useElements } from "./sync";
-import { MARQUEUR } from "./miseEnPlace";
+import { MARQUEUR, NEUTRE, campDe } from "./miseEnPlace";
 import { estHyperlane, hyperlaneRelie } from "./hyperlane";
 import { controleDe, estDeplacementFurtif, faceD10 } from "./effets";
 import { contenuEnCache } from "./sync";
@@ -43,18 +43,11 @@ const PASSE = "passe";              // « c13 » : le blocage par unités de cet
 const JET = "jetDepl";              // son jet (rupture, trou de ver oméga) sur cette case
 const DRAIN = "drainOk";            // « c13 » : le Drain spatial de la case suivante est réglé
 
-const NEUTRE = 0;
-
 const CHOIX = [[1, "S'abstenir", "s'abstient"], [2, "Aider à passer", "aide à passer"], [3, "Bloquer", "bloque"]];
 const nomChoix = valeur => CHOIX.find(c => c[0] === valeur)?.[2];
 
-// Camp d'une unité : son possesseur, sinon son propriétaire ; 0 pour une unité neutre
-export const campDe = c => c.marques?.possession ?? c.proprio ?? NEUTRE;
-
 // Catégorie d'un trou de ver, d'après son image (/ti/icon/wormhole/alpha.png)
 const typeTrou = image => /wormhole\/(\w+)\./.exec(image || "")?.[1] || null;
-
-const styleMini = { fontSize: 12, padding: "1px 6px" };
 
 // ------------------------------------------------------------
 // Déplacements en cours : les vaisseaux en route, groupés par
@@ -268,7 +261,7 @@ export function Passage({ passage }) {
     const arrivee = trajet[trajet.length - 1];
 
     const nom = c => nomElement(search, c.ref);
-    const nomCamp = camp => (camp === NEUTRE ? "Neutres" : nomDe(camp));
+    const nomCamp = camp => nomDuCamp(nomDe, camp);
     const estMilitaire = v => !!carte.contenus[v.ref.id]?.mot_cle?.includes("mil");
 
     // --------------------------------------------------------
@@ -477,19 +470,7 @@ export function Passage({ passage }) {
     // AFFICHAGE
     // --------------------------------------------------------
 
-    const pastille = camp => (
-        <span
-            style={{
-                display: "inline-block",
-                width: 10,
-                height: 10,
-                marginRight: 4,
-                borderRadius: "50%",
-                border: "1px solid #000",
-                backgroundColor: camp === NEUTRE ? "#9e9e9e" : couleurDe(camp) || "#888",
-            }}
-        />
-    );
+    const pastille = camp => pastilleCamp(couleurDe, camp);
 
     const titreStade = {
         charge: "chargement…",

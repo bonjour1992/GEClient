@@ -569,6 +569,17 @@ export function useElements(ids) {
     return contenus;
 }
 
+// Unités de la fiche d'une faction : { faction (son contenu), liens (les liens
+// valides de son champ « units »), contenus ({ <id> : contenu }) }
+export function useUnitesDeFaction(idFaction) {
+
+    const faction = useElement(idFaction ?? -1);
+    const liens = (faction?.units || []).filter(lien => lien?.id > 0);
+    const contenus = useElements(liens.map(lien => lien.id));
+
+    return { faction, liens, contenus };
+}
+
 export function useElement(id) {
 
     const valide = Number.isInteger(id) && id > 0;

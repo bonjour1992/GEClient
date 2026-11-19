@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase } from "./Interaction";
-import { useElement, useElements } from "./sync";
-import { MARQUEUR, actionsPiste, typeUnite } from "./miseEnPlace";
-import { faceD10 } from "./effets";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase, tuileDe } from "./Interaction";
+import { useUnitesDeFaction } from "./sync";
+import { MARQUEUR, actionsPiste, typeUnite, MOTIF_LOGISTICIEN, aMot } from "./miseEnPlace";
+import { faceD10, lotsDeDes, desDeLaReponse } from "./effets";
 
 // ============================================================
 // ONGLET « DÉCISION »
@@ -208,16 +208,15 @@ function Embuscade() {
     const numero = (Number(etat.compteurs[`embuscade:${moi}:case`]) || 0) - 1;
 
     // Mon destroyer : l'unité de type « dest » de ma faction
-    const faction = useElement(factionDe(moi) ?? -1);
-    const liens = (faction?.units || []).filter(lien => lien?.id > 0).map(lien => lien.id);
-    const unites = useElements(liens);
+    const { liens: liensFaction, contenus: unites } = useUnitesDeFaction(factionDe(moi));
+    const liens = liensFaction.map(lien => lien.id);
     const idDestroyer = liens.find(id => typeUnite(unites[id]) === "dest") ?? null;
 
     if (!detenteur) {
         return null;
     }
 
-    const logisticien = agentDisponible({ index, moi, search }, "logisticien|g[ée]n[ée]ticien");
+    const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
     const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
     const carte = cartePromesse(etat, detenteur, 262, moi);
 
@@ -338,9 +337,8 @@ function Recomposition() {
     const [caseChoisie, setCaseChoisie] = useState("");
 
     // Vaisseaux de ma faction
-    const faction = useElement(factionDe(moi) ?? -1);
-    const liens = (faction?.units || []).filter(lien => lien?.id > 0).map(lien => lien.id);
-    const unites = useElements(liens);
+    const { liens: liensFaction, contenus: unites } = useUnitesDeFaction(factionDe(moi));
+    const liens = liensFaction.map(lien => lien.id);
 
     if (!recomposition) {
         return null;
@@ -349,7 +347,7 @@ function Recomposition() {
     const { credit, pertes, jet } = recomposition;
 
     const vaisseaux = liens
-        .filter(id => (unites[id]?.mot_cle || []).includes("ship"))
+        .filter(id => aMot(unites[id], "ship"))
         .map(id => ({ id, nom: unites[id].name, cout: Number(unites[id].cout) || 0 }))
         .filter(v => v.cout <= credit);
 
@@ -359,7 +357,7 @@ function Recomposition() {
         .map(c => Number(/^hex:(\d+)/.exec(c.zone)[1])))].sort((a, b) => a - b);
 
     const nomDuSysteme = n => {
-        const tuile = (index.parZone.get("hex:" + n) || []).find(c => c.ref?.type === "system");
+        const tuile = tuileDe(index, n);
         return `${nomCase(n)}${tuile ? " — " + nomElement(search, tuile.ref) : ""}`;
     };
 
@@ -371,13 +369,10 @@ function Recomposition() {
     // Le jet : les dés sont lancés par le serveur, leur résultat lu dans la réponse
     async function lancer(commentaire) {
 
-        const lots = Array.from({ length: Math.ceil(voulu / 30) }, (_, i) => ({ type: "des", n: Math.min(30, voulu - 30 * i), faces: 10 }));
-        const r = await envoyer(lots, commentaire || `Recomposition : ${voulu} dé(s)`);
+        const r = await envoyer(lotsDeDes(voulu, 10), commentaire || `Recomposition : ${voulu} dé(s)`);
 
         // (D10 numérotés de 0 à 9 : faceD10, effets.js)
-        const des = [...(r?.coups || [])]
-            .sort((a, b) => b.n - a.n)
-            .find(x => x.auteur === moi)?.actions.filter(a => a.type === "des").flatMap(a => a.resultats || []).map(faceD10);
+        const des = desDeLaReponse(r, moi)?.map(faceD10);
 
         if (!Array.isArray(des) || des.length !== voulu) {
             aviser("Recomposition : les dés n'ont pas pu être lus, relancez.");

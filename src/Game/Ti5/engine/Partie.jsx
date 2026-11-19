@@ -10,13 +10,10 @@ import { depenserAgent, faceD10 } from "./effets";
 import { MiseEnPlaceJoueur } from "./MiseEnPlaceJoueur";
 import { ScriptsCarte } from "./ScriptsCarte";
 import {
-    TYPES_PIOCHE,
-    SAC,
     MARQUEUR,
     DETTE,
     ACTIVATION,
     FRAGMENTS,
-    RESSOURCES,
     LIMITES_UNITES,
     LIBRE,
     COULEUR_LIBRE,
@@ -44,7 +41,6 @@ import {
     useRepli,
     COULEUR_A_FAIRE,
     COULEUR_NEUTRE,
-    STYLE_INDISPONIBLE,
     estTreve,
     BoutonRegle,
     confirmerRegle,
@@ -553,10 +549,6 @@ export function Partie({ id }) {
             attente = "N'ont pas encore passé : " + nonPasses.map(j => j.nom).join(", ");
         }
     }
-
-    // Avancer alors que tout le monde n'a pas passé : on demande confirmation
-    const confirmerAvance = () => !attente ||
-        window.confirm(attente + ".\n\nAvancer quand même ?");
 
     const enDeplacement = /d[ée]placement/i.test(etat.phase);
     const enDiplomatie = /diplomatie/i.test(etat.phase);

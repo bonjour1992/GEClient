@@ -79,6 +79,21 @@ export const LIMITES_UNITES = {
 // Type d'une unité (champ « type » : inf, mech, dest, com…), ou null
 export const typeUnite = contenu => contenu?.type ?? null;
 
+// Le contenu d'une unité porte-t-il ce mot-clé (ship, mil, terre, bio, com…) ?
+export const aMot = (contenu, mot) => (contenu?.mot_cle || []).includes(mot);
+
+// Camp d'un composant : le joueur qui le contrôle (marque « possession » : unité
+// capturée, prise de contrôle), sinon son propriétaire ; NEUTRE pour un
+// composant sans propriétaire.
+export const NEUTRE = 0;
+
+export const campDe = c => c.marques?.possession ?? c.proprio ?? NEUTRE;
+
+// Motifs du nom d'un agent (expression régulière, sans tenir compte de la casse).
+// Le Généticien d'Arborec agit comme un logisticien.
+export const MOTIF_LOGISTICIEN = "logisticien|g[ée]n[ée]ticien";
+export const MOTIF_NEGOCIANT = "n[ée]gociant";
+
 // Sac d'agents : on y tire au hasard les jetons du recrutement
 export const SAC = "pioche:sac";
 

@@ -1,7 +1,7 @@
 import { useEngine, BoutonRegle, nomElement, distanceCases } from "./Interaction";
-import { useElement, useElements, contenuEnCache } from "./sync";
+import { useElements, contenuEnCache, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
-import { actionsPoints, typeUnite } from "./miseEnPlace";
+import { actionsPoints, typeUnite, campDe } from "./miseEnPlace";
 import { noter, numeroPhase } from "./recherche";
 
 // ============================================================
@@ -30,8 +30,6 @@ import { noter, numeroPhase } from "./recherche";
 //   calcul     (source, outils) -> { gains, recherche, cree, sans } qui remplace
 //              ce qui précède (sans : raison pour laquelle la source ne rapporte rien)
 // ============================================================
-
-const campDe = c => c.marques?.possession ?? c.proprio ?? 0;
 
 const NOMS_GAINS = { res: "ressource", inf: "influence", commerce: "commerce", points: "point" };
 
@@ -71,9 +69,7 @@ export function useRevenus(userId, phase) {
     const contenusPossedees = useElements(scripts.some(s => s.carte.type === "tech") ? idsPossedees : []);
 
     // Unités de ma faction (créations « inf », « dest »)
-    const faction = useElement(scripts.length ? (factionDe(userId) ?? -1) : -1);
-    const liensUnites = (faction?.units || []).filter(lien => lien?.id > 0);
-    const mesUnites = useElements(liensUnites.map(lien => lien.id));
+    const { faction, liens: liensUnites, contenus: mesUnites } = useUnitesDeFaction(scripts.length ? factionDe(userId) : -1);
 
     const uniteDeType = type => liensUnites.find(lien => typeUnite(mesUnites[lien.id]) === type)?.id ?? null;
 
