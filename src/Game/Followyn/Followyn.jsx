@@ -11,6 +11,7 @@ import ConditionHandler from "./Condition"
 import CompetenceHandler from "./Competence"
 import CharacterHandler from "./Character"
 import BlessureHandler from "./Blessure"
+import TypeDegatHandler from "./TypeDegat"
 
 
 export const Handler = {
@@ -26,6 +27,7 @@ export const Handler = {
 "lore":LoreHandler,
 "condition":ConditionHandler,
 "character":CharacterHandler,
-"blessure":BlessureHandler
+"blessure":BlessureHandler,
+"degat":TypeDegatHandler
 }
 

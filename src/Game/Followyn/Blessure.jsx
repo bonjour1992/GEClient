@@ -15,10 +15,10 @@ const elementColor = "#64366a"
 
 const enumMenbres ={
     1:"bras gauche",
-    2:"bras doit",
+    2:"bras droit",
     3:"jambes",
     4:"torse",
-    5:"tete",
+    5:"tête",
     6:"nécrotique"
 }
 class Classe extends aggregation(ElementJDR,JetCarac, TableResolutionCarac, EffetCarac) {
@@ -33,11 +33,37 @@ function Nom({ content, explication, style = {} }) {
     )
 }
 
+// Localisations d'une blessure, en clair (« toute localisation » si le corps entier est possible).
+function localisations(content) {
+    const menbres = (content.menbres || []).map(String)
+    if (["1", "2", "3", "4", "5"].every(m => menbres.includes(m))) return "toute localisation"
+    return menbres.map(m => enumMenbres[m]).filter(Boolean).join(", ")
+}
+
+// Une ligne de table de blessure : nom, localisations, gravité.
+function Ligne({ content, style = {} }) {
+    const lieux = localisations(content)
+    return (
+        <span data-blessure-ligne style={{ fontFamily: "EB Garamond, sans-serif", fontWeight: 500, ...style }}>
+            <span style={{ color: elementColor, fontWeight: 700 }}>{content.name}</span>
+            <span style={{ color: "#555" }}>{lieux ? " — " + lieux : ""} · gravité {content.gravité}</span>
+        </span>
+    )
+}
+
 function Display({ content, explication, style }) {
+
+    const lieux = localisations(content)
 
     return (
         <Card content={content} color={elementColor}>
             <Description content={content} explication={explication}/>
+
+            <div data-blessure-infos style={{ fontFamily: "EB Garamond, sans-serif", fontWeight: 500, margin: "2px 0 4px" }}>
+                {lieux && (<span><b>Localisation :</b> {lieux} · </span>)}
+                <span><b>Gravité :</b> {content.gravité}</span>
+                {content.intensite > 0 && (<span> · <b>Intensité :</b> {content.intensite}</span>)}
+            </div>
 
             <div
                 style={{
@@ -101,5 +127,5 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Blessure", classe: Classe, form: Form, display: { default: Display, nom: Nom }, editor: "noSplit" }
+export default { name: "Blessure", classe: Classe, form: Form, display: { default: Display, nom: Nom, ligne: Ligne }, editor: "noSplit" }
 
