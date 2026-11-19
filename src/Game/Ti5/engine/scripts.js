@@ -71,6 +71,101 @@ const reductionAgent = (id, carte, ecritLe, nom, motif, pluriel) => ({
 
 // Agents utilisés par plusieurs boutons d'action
 const SCIENTIFIQUE = { motif: "scientifique", nom: "scientifique", depense: false };
+const DIPLOMATE = { motif: "diplomate", nom: "diplomate", depense: false };
+
+// « Une fois par tour pour la table » : le compteur `cle` garde le tour de la dernière fois.
+// -> { actions, sans } : l'action qui le note ; `deja` s'il l'est déjà ce tour, sinon `sinon`
+const uneFoisParTour = (atelier, cle, deja, sinon = null) => ({
+    actions: [{ type: "compteur", id: cle, valeur: atelier.etat.tour }],
+    sans: Number(atelier.etat.compteurs[cle]) === atelier.etat.tour ? deja : sinon,
+});
+
+// Choix d'un élément dans une liste, par l'onglet Décision : la question numérote les
+// options (« 1 = … »), le calcul lit la réponse. -> { demande, calcul }, à étaler dans le script.
+//   titre         : première ligne de la question
+//   options       : outils -> liste des options
+//   libelle       : (outils, option) -> texte de sa ligne
+//   vide          : message quand il n'y a aucune option
+//   appliquer     : (outils, option) -> effet du script pour l'option choisie
+//   invalide      : message d'un numéro hors liste
+//   videAvantTout : la liste vide passe avant le numéro (sinon, elle n'est dite qu'avant le choix)
+const choixDansListe = ({ titre, options, libelle, vide, appliquer, invalide = "choix invalide", videAvantTout = false }) => ({
+    demande: {
+        question: outils => titre + "\n" + options(outils).map((o, k) => `${k + 1} = ${libelle(outils, o)}`).join("\n"),
+        max: () => 1,
+    },
+    calcul: (outils, x) => {
+
+        const liste = options(outils);
+
+        if (!liste.length && (videAvantTout || x === undefined)) {
+            return { sans: vide };
+        }
+
+        if (x === undefined) {
+            return {};
+        }
+
+        const choisi = liste[x - 1];
+
+        return choisi ? appliquer(outils, choisi) : { sans: invalide };
+    },
+});
+
+// Action : un dégât de plus sur cette unité (aussi : tirages du début de tour, Partie.jsx)
+export const unDegat = x => ({ type: "marquer", c: x.id, marque: "degat", valeur: (Number(x.marques?.degat) || 0) + 1 });
+
+// Tirage « un dé par unité » : 1 dégât si le dé fait `seuil` ou moins
+const tirageDegat = (atelier, x, seuil) => ({
+    c: x.id,
+    suite: ([jet]) => ({
+        actions: jet <= seuil ? [unDegat(x)] : [],
+        texte: `${atelier.nom(x.ref)} ${jet}${jet <= seuil ? " (touchée)" : ""}`,
+    }),
+});
+
+// Actions qui rendent une promesse à la réserve : ses marqueurs sont retirés, la carte
+// retourne dans la réserve de promesses
+const rendrePromesse = atelier => [
+    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
+    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+];
+
+// Vaccin : tour où il a été découvert (0 : jamais), et si on le découvre « le premier »
+// (personne ne l'avait avant ce tour)
+const vaccin = etat => {
+    const decouvert = Number(etat.compteurs["general:vaccin"]) || 0;
+
+    return { decouvert, premier: !decouvert || decouvert === etat.tour };
+};
+
+// Ceux qui ont le plus grand `n` d'une liste [{ u, n }] (personne si tous sont à 0)
+const lesPremiers = liste => {
+    const max = Math.max(0, ...liste.map(x => x.n));
+
+    return liste.filter(x => max > 0 && x.n === max);
+};
+
+// Le système de la fiche est une nébuleuse
+const dansUneNebuleuse = outils => outils.systeme?.anomaly === "neb";
+
+// Lieu d'un effet valable ce tour dans ce système, gardé dans un compteur : tour × 1000 + case + 1
+// (relu au combat : Combat.jsx)
+const lieuDuTour = atelier => atelier.etat.tour * 1000 + atelier.numero + 1;
+
+// Planètes où il y a au moins 6 Rebelles (#557) : leurs zones
+const planetesEnRebellion = index => [...index.parZone]
+    .filter(([zone, contenu]) => /^hex:\d+:planete:\d+$/.test(zone) &&
+        contenu.filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === 557).length >= 6)
+    .map(([zone]) => zone);
+
+// Les autres joueurs de la partie
+const autresJoueurs = outils => outils.joueurs.filter(j => j.userId !== outils.moi);
+
+// Faction qui a donné la promesse de la fiche, lue dans le calcul d'un script (avant
+// l'action) : le propriétaire du jeton posé sur la carte, ou null
+const donneurDe = outils =>
+    Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
 
 // Promesse rompue (bouton de sa fiche) : la carte retourne à la réserve de promesses, son
 // marqueur est retiré, et la faction qui l'avait faite gagne 1 infamie
@@ -80,8 +175,7 @@ const promesseRompue = atelier => {
 
     return {
         actions: [
-            ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
-            { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+            ...rendrePromesse(atelier),
             ...(donneur ? atelier.infamie(donneur, 1) : []),
         ],
         sans: donneur ? null : "aucun marqueur de faction sur cette promesse (personne ne gagnera d'infamie)",
@@ -167,26 +261,18 @@ const estVaisseauBio = contenu => aMot(contenu, "ship") && aMot(contenu, "bio");
 const optionsCroissance = outils => outils.unitesDeMaFaction().filter(u => u.id !== outils.c?.ref?.id && estVaisseauBio(u.contenu) &&
     (Number(u.contenu.cout) || 0) <= (Number(outils.contenu?.cout) || 0) + 2);
 
-const questionCroissance = outils => "Croissance : par quel vaisseau biologique le remplacer ?\n" +
-    optionsCroissance(outils).map((u, k) => `${k + 1} = ${u.contenu.name} (coût ${Number(u.contenu.cout) || 0})`).join("\n");
-
-const croissance = (outils, x) => {
-
-    const options = optionsCroissance(outils);
-
-    if (x === undefined) {
-        return options.length ? {} : { sans: "aucun vaisseau biologique de votre faction ne coûte au plus 2 de plus" };
-    }
-
-    const choisi = options[x - 1];
-
-    return choisi && outils.c
+const choixCroissance = choixDansListe({
+    titre: "Croissance : par quel vaisseau biologique le remplacer ?",
+    options: optionsCroissance,
+    libelle: (outils, u) => `${u.contenu.name} (coût ${Number(u.contenu.cout) || 0})`,
+    vide: "aucun vaisseau biologique de votre faction ne coûte au plus 2 de plus",
+    appliquer: (outils, choisi) => (outils.c
         ? {
             actions: [{ type: "remplacer", c: outils.c.id, ref: { type: "unit", id: choisi.id } }],
             avis: `Croissance : ${outils.contenu?.name || "le vaisseau"} devient ${choisi.contenu.name}.`,
         }
-        : { sans: "choix invalide" };
-};
+        : { sans: "choix invalide" }),
+});
 
 // Vaisseaux militaires de ma faction (Contact mercenaire)
 const vaisseauxMilitaires = outils => outils.unitesDeMaFaction().filter(u =>
@@ -1081,7 +1167,7 @@ export const SCRIPTS = [
         "Diplomatie : use un diplomate et dépensez 3 influence, vous obtenez une faveur neutre.", {
             phase: "diplomatie",
             possede: true,
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             cout: { inf: 3 },
             faveurNeutre: 1,
             libelle: "Faveur neutre (use un diplomate, 3 influence)",
@@ -1243,8 +1329,7 @@ export const SCRIPTS = [
                 }
 
                 const niveaux = atelier.joueurs.map(j => ({ u: j.userId, n: atelier.connaissance(j.userId, "storm") }));
-                const max = Math.max(0, ...niveaux.map(x => x.n));
-                const premiers = niveaux.filter(x => max > 0 && x.n === max);
+                const premiers = lesPremiers(niveaux);
                 const gain = x => 2 * x.n + (premiers.length === 1 && premiers[0].u === x.u ? 3 : 0);
 
                 return {
@@ -1267,7 +1352,7 @@ export const SCRIPTS = [
         "Diplomatie, quand des vaisseaux pirates sont sur la carte : use un diplomate et dépensez 3 commerce, l'alliance Pacte pirate arrive dans vos éléments actifs.", {
             pourTous: true,
             phase: "diplomatie",
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             cout: { commerce: 3 },
             donne: [{ type: "Promesse", id: 458 }],
             visible: outils => /diplomatie/i.test(outils.phase) && outils.surLaCarte(407),
@@ -1497,15 +1582,9 @@ export const SCRIPTS = [
         "Une seule fois : +4 points, et une faveur neutre si personne n'avait le vaccin avant ce tour.", {
             gains: { points: 4 },
             visible: outils => !Number(outils.etat.compteurs[`joueur:${outils.moi}:vaccin`]),
-            calcul: outils => {
-                const decouvert = Number(outils.etat.compteurs["general:vaccin"]) || 0;
-                const premier = !decouvert || decouvert === outils.etat.tour;
-
-                return { libelle: `Vaccin : +4 points${premier ? " et une faveur neutre" : ""}` };
-            },
+            calcul: outils => ({ libelle: `Vaccin : +4 points${vaccin(outils.etat).premier ? " et une faveur neutre" : ""}` }),
             special: atelier => {
-                const decouvert = Number(atelier.etat.compteurs["general:vaccin"]) || 0;
-                const premier = !decouvert || decouvert === atelier.etat.tour;
+                const { decouvert, premier } = vaccin(atelier.etat);
 
                 return {
                     actions: [
@@ -1538,43 +1617,32 @@ export const SCRIPTS = [
             agent: SCIENTIFIQUE,
             activer: true,
             gains: { res: 4 },
-            visible: outils => outils.systeme?.anomaly === "neb",
+            visible: dansUneNebuleuse,
             libelle: "Exploitation des tempêtes : +4 ressources (use un scientifique, active la nébuleuse)",
         }),
 
     action("stimulant", "tech", 791, 1794343421176, "Stimulant", "plateau",
         "La technologie est usée : un de vos agents usés (mercenaire compris) redevient disponible.", {
             use: true,
-            demande: {
-                question: outils => "Stimulant : quel agent usé rafraîchir ?\n" + outils.agentsUses().map((x, k) => `${k + 1} = ${nomAgentUse(outils, x)}`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
-                const uses = outils.agentsUses();
+            ...choixDansListe({
+                titre: "Stimulant : quel agent usé rafraîchir ?",
+                options: outils => outils.agentsUses(),
+                libelle: nomAgentUse,
+                vide: "aucun agent usé",
+                invalide: "numéro inconnu",
+                videAvantTout: true,
+                appliquer: (outils, agent) => {
 
-                if (!uses.length) {
-                    return { sans: "aucun agent usé" };
-                }
+                    // (cube noir d'un mercenaire : il retourne sur sa carte)
+                    const carte = !agent.ref && agent.marques?.carte ? outils.etat.composants[agent.marques.carte] : null;
 
-                if (x === undefined) {
-                    return {};
-                }
-
-                const agent = uses[x - 1];
-
-                if (!agent) {
-                    return { sans: "numéro inconnu" };
-                }
-
-                // (cube noir d'un mercenaire : il retourne sur sa carte)
-                const carte = !agent.ref && agent.marques?.carte ? outils.etat.composants[agent.marques.carte] : null;
-
-                return {
-                    actions: carte
-                        ? [{ type: "deplacer", c: agent.id, sur: carte.id }, { type: "marquer", c: agent.id, marque: "carte", valeur: null }]
-                        : [{ type: "deplacer", c: agent.id, vers: `joueur:${outils.moi}:agents` }],
-                };
-            },
+                    return {
+                        actions: carte
+                            ? [{ type: "deplacer", c: agent.id, sur: carte.id }, { type: "marquer", c: agent.id, marque: "carte", valeur: null }]
+                            : [{ type: "deplacer", c: agent.id, vers: `joueur:${outils.moi}:agents` }],
+                    };
+                },
+            }),
             libelle: "Stimulant : rafraîchir un agent usé (use la technologie)",
         }),
 
@@ -1592,37 +1660,25 @@ export const SCRIPTS = [
         "Recrutement : un agent de base de votre choix est ajouté sur la case de recrutement 4 (une fois par tour).", {
             phase: "recrutement",
             parTour: true,
-            demande: {
-                question: outils => "Opportunité prédite : quel agent de base ajouter sur la case de recrutement 4 ?\n" +
-                    (outils.etat.references?.agentsBase || []).map((id, k) => `${k + 1} = ${outils.nom({ type: "agent", id })}`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
-                const base = outils.etat.references?.agentsBase || [];
+            ...choixDansListe({
+                titre: "Opportunité prédite : quel agent de base ajouter sur la case de recrutement 4 ?",
+                options: outils => outils.etat.references?.agentsBase || [],
+                libelle: (outils, id) => outils.nom({ type: "agent", id }),
+                vide: "les agents de base de la partie sont inconnus",
+                invalide: "numéro inconnu",
+                videAvantTout: true,
+                appliquer: (outils, id) => {
 
-                if (!base.length) {
-                    return { sans: "les agents de base de la partie sont inconnus" };
-                }
+                    // (un agent de ce type tiré du sac, sinon un nouveau)
+                    const duSac = (outils.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === id);
 
-                if (x === undefined) {
-                    return {};
-                }
-
-                const id = base[x - 1];
-
-                if (!id) {
-                    return { sans: "numéro inconnu" };
-                }
-
-                // (un agent de ce type tiré du sac, sinon un nouveau)
-                const duSac = (outils.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === id);
-
-                return {
-                    actions: [duSac
-                        ? { type: "deplacer", c: duSac.id, vers: "general:boite:4" }
-                        : { type: "creer", ref: { type: "agent", id }, zone: "general:boite:4" }],
-                };
-            },
+                    return {
+                        actions: [duSac
+                            ? { type: "deplacer", c: duSac.id, vers: "general:boite:4" }
+                            : { type: "creer", ref: { type: "agent", id }, zone: "general:boite:4" }],
+                    };
+                },
+            }),
             libelle: "Opportunité prédite : un agent de base sur la case de recrutement 4",
         }),
 
@@ -1636,7 +1692,7 @@ export const SCRIPTS = [
 
     action("communication-faille", "tech", 817, 1794343421183, "Communication avec les êtres de la faille", "systeme",
         "Use un diplomate et dépensez 4 influence : une Nef de la rupture de ce système passe sous votre contrôle.", {
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             cout: { inf: 4 },
             visible: outils => nefsIci(outils.etat, outils.numero, outils.moi).length > 0,
             special: atelier => {
@@ -1667,38 +1723,28 @@ export const SCRIPTS = [
         "Recrutement : dépensez un de vos agents disponibles, vous obtenez un politique.", {
             phase: "recrutement",
             visible: outils => outils.aCarte("planet", 229),
-            demande: {
-                question: outils => "Mecatol Rex : quel agent dépenser pour obtenir un politique ?\n" +
-                    mesAgentsDisponibles(outils).map((a, k) => `${k + 1} = ${outils.nom(a.ref)}`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
-                const agents = mesAgentsDisponibles(outils);
+            ...choixDansListe({
+                titre: "Mecatol Rex : quel agent dépenser pour obtenir un politique ?",
+                options: mesAgentsDisponibles,
+                libelle: (outils, a) => outils.nom(a.ref),
+                vide: "aucun agent disponible",
+                invalide: "numéro inconnu",
+                videAvantTout: true,
+                appliquer: (outils, agent) => {
 
-                if (!agents.length) {
-                    return { sans: "aucun agent disponible" };
-                }
+                    // Le politique : tiré du sac s'il y en a un, sinon un nouveau
+                    const base = outils.etat.references?.agentsBase || [];
+                    const idPolitique = base.find(id => /politi/i.test(outils.nom({ type: "agent", id }))) ?? 6;
+                    const duSac = (outils.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === idPolitique);
 
-                if (x === undefined) {
-                    return {};
-                }
-
-                if (!agents[x - 1]) {
-                    return { sans: "numéro inconnu" };
-                }
-
-                // Le politique : tiré du sac s'il y en a un, sinon un nouveau
-                const base = outils.etat.references?.agentsBase || [];
-                const idPolitique = base.find(id => /politi/i.test(outils.nom({ type: "agent", id }))) ?? 6;
-                const duSac = (outils.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === idPolitique);
-
-                return {
-                    agentDepense: agents[x - 1],
-                    actions: [duSac
-                        ? { type: "deplacer", c: duSac.id, vers: `joueur:${outils.moi}:agents`, proprio: outils.moi }
-                        : { type: "creer", ref: { type: "agent", id: idPolitique }, zone: `joueur:${outils.moi}:agents`, proprio: outils.moi }],
-                };
-            },
+                    return {
+                        agentDepense: agent,
+                        actions: [duSac
+                            ? { type: "deplacer", c: duSac.id, vers: `joueur:${outils.moi}:agents`, proprio: outils.moi }
+                            : { type: "creer", ref: { type: "agent", id: idPolitique }, zone: `joueur:${outils.moi}:agents`, proprio: outils.moi }],
+                    };
+                },
+            }),
             libelle: "Mecatol Rex : dépenser un agent, obtenir un politique",
         }),
 
@@ -1790,7 +1836,7 @@ export const SCRIPTS = [
         "Détenteur de Tuteur des réfugiés : activez une planète des Réfugiés et usez un diplomate — 3 Milices de la planète passent sous votre contrôle.", {
             pourTous: true,
             surPlanete: true,
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             activer: true,
             visible: outils => outils.ici(836) > 0 && outils.aCarte("Promesse", 454),
             special: atelier => {
@@ -1912,7 +1958,7 @@ export const SCRIPTS = [
             use: true,
             agent: SCIENTIFIQUE,
             special: atelier => ({
-                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:prevision`, valeur: atelier.etat.tour * 1000 + atelier.numero + 1 }],
+                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:prevision`, valeur: lieuDuTour(atelier) }],
                 avis: "Prévision des combats : vos vaisseaux de ce système ont la frappe en premier ce tour (écran de combat).",
             }),
             libelle: "Prévision des combats : frappe en premier (use la technologie et un scientifique)",
@@ -1924,7 +1970,7 @@ export const SCRIPTS = [
             parTour: true,
             visible: outils => outils.mienneSurLaCarte(165) && outils.mesUnitesDansLeSysteme() === 0,
             special: atelier => ({
-                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:expansion`, valeur: atelier.etat.tour * 1000 + atelier.numero + 1 }],
+                actions: [{ type: "compteur", id: `joueur:${atelier.moi}:expansion`, valeur: lieuDuTour(atelier) }],
                 avis: "Centre d'expansion : +1 au combat spatial dans ce système pour ce tour.",
             }),
             libelle: "Centre d'expansion : +1 au combat spatial ici ce tour",
@@ -2144,7 +2190,7 @@ export const SCRIPTS = [
             nomPhase: "canons spatiaux",
             agent: SCIENTIFIQUE,
             activer: true,
-            visible: outils => outils.systeme?.anomaly === "neb",
+            visible: dansUneNebuleuse,
             special: atelier => {
 
                 const tuile = atelier.tuile();
@@ -2295,24 +2341,12 @@ export const SCRIPTS = [
             visible: outils => Number(outils.systeme?.nativeUnit?.id) === 515,
             special: atelier => {
 
-                const cle = `distorsion:${atelier.numero}`;
                 const unites = dansLeSysteme(atelier.index, atelier.numero).filter(x => x.ref?.type === "unit");
-                const tour = atelier.etat.tour;
 
                 return {
-                    actions: [{ type: "compteur", id: cle, valeur: tour }],
-                    sans: Number(atelier.etat.compteurs[cle]) === tour
-                        ? "la distorsion de ce tour est déjà appliquée"
-                        : (unites.length ? null : "aucune unité dans ce système"),
-                    tirages: unites.map(x => ({
-                        c: x.id,
-                        suite: ([jet]) => ({
-                            actions: jet <= tour
-                                ? [{ type: "marquer", c: x.id, marque: "degat", valeur: (Number(x.marques?.degat) || 0) + 1 }]
-                                : [],
-                            texte: `${atelier.nom(x.ref)} ${jet}${jet <= tour ? " (touchée)" : ""}`,
-                        }),
-                    })),
+                    ...uneFoisParTour(atelier, `distorsion:${atelier.numero}`, "la distorsion de ce tour est déjà appliquée",
+                        unites.length ? null : "aucune unité dans ce système"),
+                    tirages: unites.map(x => tirageDegat(atelier, x, atelier.etat.tour)),
                 };
             },
             libelle: "Distorsion gravitationnelle : un dé par unité (touche sur le numéro du tour ou moins)",
@@ -2326,7 +2360,6 @@ export const SCRIPTS = [
             visible: outils => /d[ée]barquement/i.test(outils.phase) && outils.surLaCarte(525),
             special: atelier => {
 
-                const cle = "khan:debarquement";
                 const palais = Object.values(atelier.etat.composants).find(x =>
                     !x.cache && x.ref?.type === "unit" && x.ref.id === 525 && /^hex:\d+/.test(x.zone || ""));
 
@@ -2337,10 +2370,8 @@ export const SCRIPTS = [
                     .flatMap(x => planetesDe(atelier, x).map(p => ({ ...p, tuile: x.tuile })));
 
                 return {
-                    actions: [{ type: "compteur", id: cle, valeur: atelier.etat.tour }],
-                    sans: Number(atelier.etat.compteurs[cle]) === atelier.etat.tour
-                        ? "le débarquement de ce tour est déjà fait"
-                        : (planetes.length ? null : "aucune planète à portée 1 du Palais du khan"),
+                    ...uneFoisParTour(atelier, "khan:debarquement", "le débarquement de ce tour est déjà fait",
+                        planetes.length ? null : "aucune planète à portée 1 du Palais du khan"),
                     tirages: planetes.map(p => ({
                         c: p.tuile.id,
                         faces: 6,
@@ -2359,7 +2390,7 @@ export const SCRIPTS = [
             pourTous: true,
             surPlanete: true,
             phase: "diplomatie",
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             visible: outils => outils.ici(557) > 0,
             special: atelier => {
 
@@ -2390,14 +2421,11 @@ export const SCRIPTS = [
         "Combat terrestre : un combat terrestre est ouvert sur chaque planète où il y a au moins 6 Rebelles. (À la revendication, leur tentative de reprendre la planète se fait à la main.)", {
             pourTous: true,
             phase: "combat terrestre",
-            visible: outils => /combat terrestre/i.test(outils.phase) && [...outils.index.parZone].some(([zone, contenu]) =>
-                /^hex:\d+:planete:\d+$/.test(zone) && contenu.filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === 557).length >= 6),
+            visible: outils => /combat terrestre/i.test(outils.phase) && planetesEnRebellion(outils.index).length > 0,
             special: atelier => {
 
-                const lieux = [...atelier.index.parZone]
-                    .filter(([zone, contenu]) => /^hex:\d+:planete:\d+$/.test(zone) &&
-                        contenu.filter(x => !x.cache && x.ref?.type === "unit" && x.ref.id === 557).length >= 6)
-                    .map(([zone]) => zone.replace(/^hex:(\d+):planete:(\d+)$/, "$1p$2"))
+                const lieux = planetesEnRebellion(atelier.index)
+                    .map(zone => zone.replace(/^hex:(\d+):planete:(\d+)$/, "$1p$2"))
                     .filter(lieu => !atelier.etat.compteurs["combat:" + lieu]);
 
                 return {
@@ -2554,15 +2582,7 @@ export const SCRIPTS = [
                 return {
                     actions: marqueurs.map(x => ({ type: "supprimer", c: x.id })),
                     sans: unites.length ? null : "aucune unité sur cette planète (le marqueur sera retiré)",
-                    tirages: unites.map(x => ({
-                        c: x.id,
-                        suite: ([jet]) => ({
-                            actions: jet <= 4
-                                ? [{ type: "marquer", c: x.id, marque: "degat", valeur: (Number(x.marques?.degat) || 0) + 1 }]
-                                : [],
-                            texte: `${atelier.nom(x.ref)} ${jet}${jet <= 4 ? " (touchée)" : ""}`,
-                        }),
-                    })),
+                    tirages: unites.map(x => tirageDegat(atelier, x, 4)),
                 };
             },
             libelle: "Pluie d'astéroïdes : attaque 4 sur chaque unité de la planète",
@@ -2584,8 +2604,7 @@ export const SCRIPTS = [
             phase: "production",
             use: true,
             cible: contenu => estVaisseauBio(contenu),
-            demande: { question: questionCroissance, max: () => 1 },
-            calcul: croissance,
+            ...choixCroissance,
             libelle: "Croissance : remplacer ce vaisseau (use la technologie)",
         }),
 
@@ -2594,8 +2613,7 @@ export const SCRIPTS = [
             phase: "production",
             agent: { motif: "g[ée]n[ée]ticien", nom: "généticien", depense: false },
             cible: contenu => estVaisseauBio(contenu),
-            demande: { question: questionCroissance, max: () => 1 },
-            calcul: croissance,
+            ...choixCroissance,
             libelle: "Croissance : remplacer ce vaisseau (use un généticien)",
         }),
 
@@ -2606,34 +2624,24 @@ export const SCRIPTS = [
             phase: "diplomatie",
             use: true,
             visible: outils => outils.numero !== null && outils.casesDeMesSatellites().some(n => outils.distance(n, outils.numero) <= 2),
-            demande: {
-                question: outils => "Contact mercenaire : quel vaisseau militaire produire, payé en influence ?\n" +
-                    vaisseauxMilitaires(outils).map((u, k) => `${k + 1} = ${u.contenu.name} (${Number(u.contenu.cout) || 0} influence)`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
+            ...choixDansListe({
+                titre: "Contact mercenaire : quel vaisseau militaire produire, payé en influence ?",
+                options: vaisseauxMilitaires,
+                libelle: (outils, u) => `${u.contenu.name} (${Number(u.contenu.cout) || 0} influence)`,
+                vide: "votre faction n'a aucun vaisseau militaire",
+                appliquer: (outils, choisi) => {
 
-                const options = vaisseauxMilitaires(outils);
+                    const cout = Number(choisi.contenu.cout) || 0;
 
-                if (x === undefined) {
-                    return options.length ? {} : { sans: "votre faction n'a aucun vaisseau militaire" };
-                }
-
-                const choisi = options[x - 1];
-                const cout = Number(choisi?.contenu.cout) || 0;
-
-                if (!choisi) {
-                    return { sans: "choix invalide" };
-                }
-
-                return outils.compte("inf") < cout
-                    ? { sans: `influence insuffisante : ${cout} à payer, vous avez ${outils.compte("inf")}` }
-                    : {
-                        cout: { inf: cout },
-                        actions: [{ type: "creer", ref: { type: "unit", id: choisi.id }, zone: "hex:" + outils.numero, proprio: outils.moi }],
-                        avis: `Contact mercenaire : ${choisi.contenu.name} produit pour ${cout} influence.`,
-                    };
-            },
+                    return outils.compte("inf") < cout
+                        ? { sans: `influence insuffisante : ${cout} à payer, vous avez ${outils.compte("inf")}` }
+                        : {
+                            cout: { inf: cout },
+                            actions: [{ type: "creer", ref: { type: "unit", id: choisi.id }, zone: "hex:" + outils.numero, proprio: outils.moi }],
+                            avis: `Contact mercenaire : ${choisi.contenu.name} produit pour ${cout} influence.`,
+                        };
+                },
+            }),
             libelle: "Contact mercenaire : produire un vaisseau militaire (payé en influence)",
         }),
 
@@ -2690,33 +2698,25 @@ export const SCRIPTS = [
         "Diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs, avec son marqueur. La condition (5 systèmes où elle a des planètes, son système natal comptant pour 3) se vérifie à la main.", {
             phase: "diplomatie",
             agent: { motif: "diplomate", nom: "diplomate", depense: true },
-            demande: {
-                question: outils => "Vassalisation forcée : quelle faction devient votre vassal ?\n" +
-                    outils.joueurs.filter(j => j.userId !== outils.moi).map((j, k) => `${k + 1} = ${j.nom}`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
+            ...choixDansListe({
+                titre: "Vassalisation forcée : quelle faction devient votre vassal ?",
+                options: autresJoueurs,
+                libelle: (outils, j) => j.nom,
+                vide: "aucune autre faction dans la partie",
+                appliquer: (outils, cible) => {
 
-                const autres = outils.joueurs.filter(j => j.userId !== outils.moi);
+                    const local = "t" + Date.now();
 
-                if (x === undefined) {
-                    return autres.length ? {} : { sans: "aucune autre faction dans la partie" };
-                }
-
-                const cible = autres[x - 1];
-                const local = "t" + Date.now();
-
-                return cible
-                    ? {
+                    return {
                         actions: [
                             { type: "creer", ref: { type: "Promesse", id: 224 }, zone: `joueur:${outils.moi}:actif`, proprio: outils.moi, idLocal: local },
                             // (marqueur de faction : miseEnPlace.js, MARQUEUR)
                             { type: "creer", jeton: "marqueur", sur: local, proprio: cible.userId },
                         ],
                         avis: `Vassalisation forcée : ${cible.nom} devient votre vassal (promesse Vassal dans vos éléments actifs). Pensez à « Seigneur » pour un diplomate.`,
-                    }
-                    : { sans: "choix invalide" };
-            },
+                    };
+                },
+            }),
             libelle: "Vassalisation forcée : faire un vassal (dépense un diplomate)",
         }),
 
@@ -2725,28 +2725,16 @@ export const SCRIPTS = [
     action("executer-les-otages", "habilite", 158, 1794335054823, "Exécuter les otages", "plateau",
         "Prévote : un de vos esclaves de la faction choisie (onglet Décision) est dépensé ; elle doit appliquer un vote de plus à l'issue que vous annoncez, ou gagner un point d'infamie (à la main).", {
             phase: "prevote",
-            demande: {
-                question: outils => "Exécuter les otages : de quelle faction dépenser un esclave ?\n" +
-                    otages(outils).map((g, k) => `${k + 1} = ${g.nom} (${g.esclaves.length} esclave(s))`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
-
-                const groupes = otages(outils);
-
-                if (x === undefined) {
-                    return groupes.length ? {} : { sans: "vous n'avez aucun esclave d'une autre faction" };
-                }
-
-                const groupe = groupes[x - 1];
-
-                return groupe
-                    ? {
-                        actions: [{ type: "supprimer", c: groupe.esclaves[0].id }],
-                        avis: `Exécuter les otages : ${groupe.nom} doit appliquer 1 vote de plus à l'issue que vous annoncez, ou gagner 1 point d'infamie.`,
-                    }
-                    : { sans: "choix invalide" };
-            },
+            ...choixDansListe({
+                titre: "Exécuter les otages : de quelle faction dépenser un esclave ?",
+                options: otages,
+                libelle: (outils, g) => `${g.nom} (${g.esclaves.length} esclave(s))`,
+                vide: "vous n'avez aucun esclave d'une autre faction",
+                appliquer: (outils, groupe) => ({
+                    actions: [{ type: "supprimer", c: groupe.esclaves[0].id }],
+                    avis: `Exécuter les otages : ${groupe.nom} doit appliquer 1 vote de plus à l'issue que vous annoncez, ou gagner 1 point d'infamie.`,
+                }),
+            }),
             libelle: "Exécuter les otages : dépenser un esclave",
         }),
 
@@ -2820,8 +2808,7 @@ export const SCRIPTS = [
                 }
 
                 const livres = atelier.joueurs.map(j => ({ u: j.userId, n: Number(atelier.etat.compteurs[`aide:${j.userId}`]) || 0 }));
-                const max = Math.max(0, ...livres.map(x => x.n));
-                const premiers = livres.filter(x => max > 0 && x.n === max);
+                const premiers = lesPremiers(livres);
 
                 return {
                     actions: [
@@ -2862,7 +2849,7 @@ export const SCRIPTS = [
             phase: "science",
             agent: SCIENTIFIQUE,
             activer: true,
-            visible: outils => outils.systeme?.anomaly === "neb",
+            visible: dansUneNebuleuse,
             // (jeton du fragment spatial : miseEnPlace.js, FRAGMENTS.spa)
             special: atelier => ({
                 actions: [{ type: "creer", jeton: "Fragment spatial", zone: `joueur:${atelier.moi}:fragments` }],
@@ -2899,10 +2886,7 @@ export const SCRIPTS = [
     action("redevance-de-protection-rendre", "Promesse", 226, 1794335054862, "Redevance de protection : rendre", "carte",
         "Ravitaillement, à la place du paiement — ou si vous engagez ou bloquez les Mentaks : la promesse est dépensée (retour à la réserve).", {
             special: atelier => ({
-                actions: [
-                    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
-                    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
-                ],
+                actions: rendrePromesse(atelier),
                 avis: "Redevance de protection : promesse dépensée, de retour à la réserve.",
             }),
             libelle: "Redevance de protection : dépenser la promesse (sans payer)",
@@ -2931,7 +2915,7 @@ export const SCRIPTS = [
                 }
 
                 const [loi, col] = xs;
-                const donneur = Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
+                const donneur = donneurDe(outils);
 
                 return {
                     // (issue annoncée : loi, colonne à partir de 1, tour — pour « régler »)
@@ -2972,12 +2956,7 @@ export const SCRIPTS = [
                 return {
                     actions: [
                         ...effacerVote(atelier.c),
-                        ...(tenue
-                            ? [
-                                ...atelier.marqueurs(atelier.c).map(x => ({ type: "supprimer", c: x.id })),
-                                { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
-                            ]
-                            : rompue.actions),
+                        ...(tenue ? rendrePromesse(atelier) : rompue.actions),
                     ],
                     sans: atelier.voteRevele(donneur) ? null : `le plateau de vote de ${atelier.nomDe(donneur)} n'est pas révélé (ses voix ne sont pas connues)`,
                     avis: `Soutien politique : ${atelier.nomDe(donneur)} a mis ${voix} voix sur ${valeur} dues — ` +
@@ -2993,8 +2972,7 @@ export const SCRIPTS = [
             special: atelier => ({
                 actions: [
                     ...effacerVote(atelier.c),
-                    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
-                    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+                    ...rendrePromesse(atelier),
                 ],
                 avis: "Soutien politique : respecté, la promesse retourne à la réserve.",
             }),
@@ -3070,13 +3048,13 @@ export const SCRIPTS = [
             phase: "revendication",
             demande: {
                 question: outils => "Pupille de l'empire : quelle faction vous a conquis une planète ?\n" +
-                    outils.joueurs.filter(j => j.userId !== outils.moi).map((j, k) => `${k + 1} = ${j.nom}`).join("\n"),
+                    autresJoueurs(outils).map((j, k) => `${k + 1} = ${j.nom}`).join("\n"),
                 max: () => 1,
             },
             calcul: (outils, x) => {
 
-                const autres = outils.joueurs.filter(j => j.userId !== outils.moi);
-                const winnu = Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
+                const autres = autresJoueurs(outils);
+                const winnu = donneurDe(outils);
 
                 if (x === undefined) {
                     return !winnu
@@ -3111,7 +3089,7 @@ export const SCRIPTS = [
             calcul: (outils, x) => {
 
                 const cases = outils.mesCases();
-                const volee = Object.values(outils.etat.composants).find(m => outils.c && m.sur === outils.c.id && !m.ref && m.proprio > 0)?.proprio ?? null;
+                const volee = donneurDe(outils);
 
                 if (x === undefined) {
                     return !volee
@@ -3153,8 +3131,7 @@ export const SCRIPTS = [
         "Si vous attaquez vos Réfugiés : la promesse est dépensée (retour à la réserve) et vous gagnez 1 infamie.", {
             special: atelier => ({
                 actions: [
-                    ...atelier.marqueurs(atelier.c).map(m => ({ type: "supprimer", c: m.id })),
-                    { type: "deplacer", c: atelier.c.id, vers: "general:promesses" },
+                    ...rendrePromesse(atelier),
                     ...atelier.infamie(atelier.moi, 1),
                 ],
                 avis: "Tuteur des réfugiés : promesse dépensée, vous gagnez 1 infamie.",
@@ -3264,34 +3241,22 @@ export const SCRIPTS = [
     action("mandat-revoquer", "habilite", 146, 1794335054819, "Mandat : révoquer", "plateau",
         "Diplomatie : use un diplomate, le mandat choisi (onglet Décision) quitte la faction qui le détient et revient dans votre main ; ses marqueurs sont retirés.", {
             phase: "diplomatie",
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             visible: outils => mandatsDonnes(outils).length > 0,
-            demande: {
-                question: outils => "Mandat : lequel révoquer ?\n" +
-                    mandatsDonnes(outils).map((x, k) => `${k + 1} = ${outils.nom(x.ref)} (${outils.nomDe(Number(/^joueur:(\d+):/.exec(x.zone)[1]))})`).join("\n"),
-                max: () => 1,
-            },
-            calcul: (outils, x) => {
-
-                const mandats = mandatsDonnes(outils);
-
-                if (x === undefined) {
-                    return mandats.length ? {} : { sans: "aucun mandat n'est détenu par une autre faction" };
-                }
-
-                const carte = mandats[x - 1];
-
-                return carte
-                    ? {
-                        actions: [
-                            ...Object.values(outils.etat.composants).filter(m => m.sur === carte.id).map(m => ({ type: "supprimer", c: m.id })),
-                            carte.marques?.use && { type: "marquer", c: carte.id, marque: "use", valeur: false },
-                            { type: "deplacer", c: carte.id, vers: `joueur:${outils.moi}:main` },
-                        ].filter(Boolean),
-                        avis: `Mandat : ${outils.nom(carte.ref)} révoqué, de retour dans votre main.`,
-                    }
-                    : { sans: "choix invalide" };
-            },
+            ...choixDansListe({
+                titre: "Mandat : lequel révoquer ?",
+                options: mandatsDonnes,
+                libelle: (outils, x) => `${outils.nom(x.ref)} (${outils.nomDe(Number(/^joueur:(\d+):/.exec(x.zone)[1]))})`,
+                vide: "aucun mandat n'est détenu par une autre faction",
+                appliquer: (outils, carte) => ({
+                    actions: [
+                        ...Object.values(outils.etat.composants).filter(m => m.sur === carte.id).map(m => ({ type: "supprimer", c: m.id })),
+                        carte.marques?.use && { type: "marquer", c: carte.id, marque: "use", valeur: false },
+                        { type: "deplacer", c: carte.id, vers: `joueur:${outils.moi}:main` },
+                    ].filter(Boolean),
+                    avis: `Mandat : ${outils.nom(carte.ref)} révoqué, de retour dans votre main.`,
+                }),
+            }),
             libelle: "Mandat : révoquer un mandat (use un diplomate)",
         }),
 
@@ -3301,9 +3266,7 @@ export const SCRIPTS = [
             special: atelier => {
 
                 const mecatol = atelier.proprietaire(34) === atelier.moi;
-                const mandats = Object.values(atelier.etat.composants).filter(x => !x.cache && x.ref?.type === "Promesse" &&
-                    atelier.contenuDe(x.ref.id)?.type === "mand" && /^joueur:\d+:(actif|tour:\d+)$/.test(x.zone || "") &&
-                    !x.zone.startsWith(`joueur:${atelier.moi}:`) && !!x.marques?.use === mecatol);
+                const mandats = mandatsDonnes(atelier).filter(x => !!x.marques?.use === mecatol);
 
                 return {
                     actions: mandats.map(x => ({ type: "marquer", c: x.id, marque: "use", valeur: !mecatol })),
@@ -3325,7 +3288,7 @@ export const SCRIPTS = [
         "Diplomatie, quand le Conclave secret est sur la table, une fois par tour et par faction : use un diplomate, un de vos Soutiens politiques de valeur 3 est donné au Conclave (posé sur son habilité, avec votre marqueur), et 5 commerce vous attendent sur votre case du tour T+2.", {
             pourTous: true,
             phase: "diplomatie",
-            agent: { motif: "diplomate", nom: "diplomate", depense: false },
+            agent: DIPLOMATE,
             parTour: true,
             visible: outils => /diplomatie/i.test(outils.phase) && conclaveEnJeu(outils.etat),
             special: atelier => {
@@ -3354,17 +3317,14 @@ export const SCRIPTS = [
             visible: outils => /prevote/i.test(outils.phase) && conclaveEnJeu(outils.etat),
             special: atelier => {
 
-                const cle = "conclave:prevote";
                 const tour = atelier.etat.tour;
 
                 const soutiens = Object.values(atelier.etat.composants).filter(x =>
                     !x.cache && x.ref?.type === "Promesse" && x.ref.id === 227 && /^neutre:718:/.test(x.zone || ""));
 
                 return {
-                    actions: [{ type: "compteur", id: cle, valeur: tour }],
-                    sans: Number(atelier.etat.compteurs[cle]) === tour
-                        ? "les soutiens du Conclave sont déjà jetés ce tour"
-                        : (soutiens.length ? null : "le Conclave n'a aucun Soutien politique"),
+                    ...uneFoisParTour(atelier, "conclave:prevote", "les soutiens du Conclave sont déjà jetés ce tour",
+                        soutiens.length ? null : "le Conclave n'a aucun Soutien politique"),
                     tirages: soutiens.map(x => ({
                         c: x.id,
                         suite: ([jet]) => ({
@@ -3385,8 +3345,6 @@ export const SCRIPTS = [
             visible: outils => /phase de vote/i.test(outils.phase) && conclaveEnJeu(outils.etat),
             special: atelier => {
 
-                const cle = "conclave:vote";
-                const tour = atelier.etat.tour;
                 const feuille = Object.values(atelier.etat.composants).find(x => !x.cache && x.ref?.type === "neutral" && x.ref.id === 718);
 
                 // « Soutien au conclave » (#727) voté : posé à côté du plateau du Conclave
@@ -3394,8 +3352,8 @@ export const SCRIPTS = [
                     !x.cache && x.ref?.type === "Agenda" && x.ref.id === 727 && /^(general:table|neutre:718:)/.test(x.zone || ""));
 
                 return {
-                    actions: [{ type: "compteur", id: cle, valeur: tour }],
-                    sans: Number(atelier.etat.compteurs[cle]) === tour ? "les votes du Conclave sont déjà lancés ce tour" : (feuille ? null : "feuille du Conclave introuvable"),
+                    ...uneFoisParTour(atelier, "conclave:vote", "les votes du Conclave sont déjà lancés ce tour",
+                        feuille ? null : "feuille du Conclave introuvable"),
                     tirages: feuille ? [{
                         c: feuille.id,
                         n: soutenu ? 3 : 1,

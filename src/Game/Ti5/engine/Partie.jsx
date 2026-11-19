@@ -5,7 +5,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { Text } from "../../../Component/Text";
 import { getHandler } from "../../games";
 import { usePartie, useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
-import { SCRIPTS, SCRIPTS_DESACTIVES, scriptsDeRecrutement, technologiesDe } from "./scripts";
+import { SCRIPTS, SCRIPTS_DESACTIVES, scriptsDeRecrutement, technologiesDe, unDegat } from "./scripts";
 import { depenserAgent, faceD10 } from "./effets";
 import { MiseEnPlaceJoueur } from "./MiseEnPlaceJoueur";
 import { ScriptsCarte } from "./ScriptsCarte";
@@ -786,9 +786,7 @@ export function Partie({ id }) {
                 c: c.id,
                 faces: 10,
                 suite: jet => ({
-                    actions: jet <= 4
-                        ? [{ type: "marquer", c: c.id, marque: "degat", valeur: (Number(c.marques?.degat) || 0) + 1 }]
-                        : [],
+                    actions: jet <= 4 ? [unDegat(c)] : [],
                     texte: `Cormund, ${nomElement(search, c.ref)} : ${jet}${jet <= 4 ? " (touchée)" : ""}`,
                 }),
             });
