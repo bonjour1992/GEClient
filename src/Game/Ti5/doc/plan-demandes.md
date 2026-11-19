@@ -397,6 +397,10 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   terrestre, capture et dette), Partage de technologie (marqueur sur la technologie), Tuteur des
   réfugiés, Passage de Creuss et Navigation delta, Chemin du vide, Conspirer ensemble (+1 voix dans
   le décompte des votes, `decompteVotes`, `Vote.jsx`).
+- ☑ Promesses de faction à la main de départ, tous les exemplaires (2026-11-19,
+  `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
+  ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
+  ajoutées. Le nombre suit le champ `exemplaires` de la carte.
 - ☑ Review des données, suites (2026-11-19, `migrate-review-s2.mjs`, 324 écritures) : mot-clé
   `mil` sur six unités neutres ; promesses #228, #370 (Winnu) et #421 (Jol-Nar) liées à leur
   faction ; « technologies de même nom » dans les règles de la phase de science ; en-têtes de
