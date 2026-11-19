@@ -406,7 +406,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `#raid`, `#comp`, `#fav`, `#infa`, `#prec`, `#res`, `#point`, `#def`, `#aggre`, types de planète,
   trous de ver, phases de production / proposition / revendication, `#gene`) sont réécrites à
   partir des phases et des règles en base (copie d'origine :
-  `demandes-ti5/sauvegarde-remplacements-s4.json`) ; ponctuation et espaces de 27 éléments.
+  `demandes-ti5/sauvegarde-remplacements-s4.json`) ; ponctuation et espaces de 27 éléments ;
+  trous de ver delta et gamma typés « spe » comme les autres (ils étaient « pla » : l'outil de
+  partie y proposait bombardement et combat terrestre).
 - ☑ Review des données, suites (2026-11-19, `migrate-review-s2.mjs`, 324 écritures) : mot-clé
   `mil` sur six unités neutres ; promesses #228, #370 (Winnu) et #421 (Jol-Nar) liées à leur
   faction ; « technologies de même nom » dans les règles de la phase de science ; en-têtes de
