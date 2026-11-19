@@ -1,7 +1,7 @@
 import { LoadLink } from "../../../Component/LoadAndDisplay";
 import { Text } from "../../../Component/Text";
 import { TableInput } from "../../../Input/TableInput";
-import { NumberInput } from "../../../Input/NumberInput";
+import { Link } from "../../../lib/datatype";
 import { TextInput } from "../../../Input/TextInput";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
 import { EditorInput, stripTags } from "../../../Input/EditorInput";
@@ -10,16 +10,16 @@ import { EditorInput, stripTags } from "../../../Input/EditorInput";
 /*
  * Ressource à seuil : une ressource dont l'accumulation déclenche des effets.
  *
- * Le palier d'un personnage est la quantité qu'il a de la ressource, divisée
- * par son seuil et arrondie à l'inférieur ; il subit toutes les lignes dont le
+ * Le seuil d'un personnage est sa puissance dans une compétence (Volonté pour
+ * la peur, Endurance pour la fatigue…). Son palier est la quantité qu'il a de
+ * la ressource, divisée par ce seuil et arrondie à l'inférieur ; il subit toutes les lignes dont le
  * palier est inférieur ou égal au sien.
  *
  * Un palier est un texte et non un nombre : certains dépendent du personnage
  * (« 5 + puissance de Résilience »).
  */
 export class PalierCarac {
-    seuilNom = "";          // nom du seuil (« Seuil d'humeur »)
-    seuilBase = 0;          // valeur habituelle du seuil, 0 = non précisée
+    seuilCompetence = new Link("competence");   // le seuil est la puissance de cette compétence
     paliers = [];           // [texte] palier de la ligne
     paliersCondition = [];  // [Link] condition subie à ce palier
     paliersTexte = [];      // [texte] effet sans condition, ou précision
@@ -38,8 +38,7 @@ export function PalierForm({ content, onChange }) {
     }
 
     return (<>
-        <TextInput onChange={onChange} name="seuilNom" value={content} label="Nom du seuil" />
-        <NumberInput onChange={onChange} name="seuilBase" value={content} min={0} label="Seuil habituel" />
+        <ModalPickerInput onChange={onChange} name="seuilCompetence" value={content} type={["competence"]} label="Seuil : puissance de" />
         <TableInput onChange={onChange} Line={palierLine} name="palierNum" value={content} label="Paliers"
             composant={["paliers", "paliersCondition", "paliersTexte"]} />
     </>);
@@ -48,8 +47,7 @@ export function PalierForm({ content, onChange }) {
 
 export function Palier({ content, explication }) {
     const {
-        seuilNom = "",
-        seuilBase = 0,
+        seuilCompetence,
         paliers = [],
         paliersCondition = [],
         paliersTexte = [],
@@ -68,17 +66,18 @@ export function Palier({ content, explication }) {
         }
     }
 
-    if (!seuilNom && !lignes.length) {
+    const seuil = seuilCompetence?.id > 0 ? seuilCompetence.id : null;
+
+    if (!seuil && !lignes.length) {
         return null;
     }
 
     return (
         <div data-paliers style={{ width: "100%", marginTop: 6 }}>
 
-            {seuilNom && (
-                <div data-seuil style={{ marginBottom: 4, fontFamily: "EB Garamond, sans-serif", fontWeight: 500 }}>
-                    <span style={{ fontWeight: "bold" }}>{seuilNom}</span>
-                    {seuilBase ? ` : habituellement ${seuilBase}` : null}
+            {seuil && (
+                <div data-seuil style={{ marginBottom: 4 }}>
+                    <Text text={`<b>Seuil :</b> #pui (|${seuil}|)`} rule={explication} />
                 </div>
             )}
 
