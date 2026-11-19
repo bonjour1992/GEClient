@@ -401,6 +401,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Review des données, règles des remplacements (2026-11-19, `migrate-review-s4.mjs`, 50
+  écritures) : les 23 règles de macro recopiées par erreur, tronquées ou vides (`#con`, `#fpre`,
+  `#raid`, `#comp`, `#fav`, `#infa`, `#prec`, `#res`, `#point`, `#def`, `#aggre`, types de planète,
+  trous de ver, phases de production / proposition / revendication, `#gene`) sont réécrites à
+  partir des phases et des règles en base (copie d'origine :
+  `demandes-ti5/sauvegarde-remplacements-s4.json`) ; ponctuation et espaces de 27 éléments.
 - ☑ Review des données, suites (2026-11-19, `migrate-review-s2.mjs`, 324 écritures) : mot-clé
   `mil` sur six unités neutres ; promesses #228, #370 (Winnu) et #421 (Jol-Nar) liées à leur
   faction ; « technologies de même nom » dans les règles de la phase de science ; en-têtes de
