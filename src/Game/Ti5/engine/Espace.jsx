@@ -55,6 +55,31 @@ const pasTuile = c => !estTuile(c);
 
 const RE_HEX = /^hex:(\d+)$/;
 
+// Obstacle d'un bouton : l'agent demandé manque (il ne sera donc ni usé ni détruit)
+const manque = (nom, verbe = "usé") => `vous n'avez pas de ${nom} disponible (aucun ne sera ${verbe})`;
+
+// Cases d'une vue (carte : sans décalage ; bande des systèmes secondaires : décalée),
+// d'après la signature des tuiles « case:système:rotation;… » : { type, systems, rotates }
+function casesDeVue(signature, n, decalage = 0) {
+
+    const type = Array(n).fill("vide");
+    const systems = Array(n).fill(null);
+    const rotates = Array(n).fill(0);
+
+    for (const morceau of signature ? signature.split(";") : []) {
+        const [i, id, rotation] = morceau.split(":").map(Number);
+        const j = i - decalage;
+
+        if (j >= 0 && j < n) {
+            type[j] = "select";
+            systems[j] = { type: "system", id, __link: true };
+            rotates[j] = rotation;
+        }
+    }
+
+    return { type, systems, rotates };
+}
+
 export function Espace() {
 
     const { etat, index, jouer, envoyer, joueur, moi, partie, couleurDe, nomDe, search, signaler, aScript } = useEngine();
@@ -167,26 +192,10 @@ export function Espace() {
         ? anneaux + 1
         : anneaux;
 
-    const content = useMemo(() => {
-
-        const n = nombreCases(anneauxAffiches);
-        const type = Array(n).fill("vide");
-        const systems = Array(n).fill(null);
-        const rotates = Array(n).fill(0);
-
-        for (const morceau of signature ? signature.split(";") : []) {
-            const [i, id, rotation] = morceau.split(":").map(Number);
-
-            if (i < n) {
-                type[i] = "select";
-                systems[i] = { type: "system", id, __link: true };
-                rotates[i] = rotation;
-            }
-        }
-
-        return { anneaux: anneauxAffiches, type, systems, rotates };
-
-    }, [anneauxAffiches, signature]);
+    const content = useMemo(
+        () => ({ anneaux: anneauxAffiches, ...casesDeVue(signature, nombreCases(anneauxAffiches)) }),
+        [anneauxAffiches, signature]
+    );
 
     // --------------------------------------------------------
     // SYSTÈMES SECONDAIRES
@@ -210,37 +219,28 @@ export function Espace() {
 
     const lignes2 = Math.max(1, lignesOccupees, Math.min(MAX_LIGNES, Number(etat.compteurs[LIGNES_SECONDAIRES]) || 3));
 
-    const content2 = useMemo(() => {
+    const content2 = useMemo(
+        () => ({
+            colonnes: COLONNES_BANDE,
+            lignes: lignes2,
+            ...casesDeVue(signature, COLONNES_BANDE * lignes2, DECALAGE_SECONDAIRE),
+        }),
+        [lignes2, signature]
+    );
 
-        const n = COLONNES_BANDE * lignes2;
-        const type = Array(n).fill("vide");
-        const systems = Array(n).fill(null);
-        const rotates = Array(n).fill(0);
-
-        for (const morceau of signature ? signature.split(";") : []) {
-            const [i, id, rotation] = morceau.split(":").map(Number);
-            const j = i - DECALAGE_SECONDAIRE;
-
-            if (j >= 0 && j < n) {
-                type[j] = "select";
-                systems[j] = { type: "system", id, __link: true };
-                rotates[j] = rotation;
-            }
-        }
-
-        return { colonnes: COLONNES_BANDE, lignes: lignes2, type, systems, rotates };
-
-    }, [lignes2, signature]);
+    // Une case qui porte quelque chose (zone hex:<n>…) vérifie-t-elle ce test ? test(n) : n en texte
+    const caseOccupee = test => [...index.parZone.keys()].some(zone => {
+        const m = /^hex:(\d+)/.exec(zone);
+        return m && test(m[1]);
+    });
 
     function changerLignes2(delta) {
 
         const nouveau = Math.max(1, Math.min(MAX_LIGNES, lignes2 + delta));
 
         // (une case occupée ne disparaît pas de l'écran sans prévenir)
-        const occupe = delta < 0 && [...index.parZone.keys()].some(zone => {
-            const m = /^hex:(\d+)/.exec(zone);
-            return m && estSecondaire(m[1]) && Number(m[1]) - DECALAGE_SECONDAIRE >= COLONNES_BANDE * nouveau;
-        });
+        const occupe = delta < 0 && caseOccupee(n =>
+            estSecondaire(n) && Number(n) - DECALAGE_SECONDAIRE >= COLONNES_BANDE * nouveau);
 
         if (occupe) {
             signaler(`La ligne ${lignes2} des systèmes secondaires n'est pas vide : retirez d'abord ce qui s'y trouve.`);
@@ -322,17 +322,10 @@ export function Espace() {
 
         const nouveau = Math.max(0, anneaux + delta);
 
-        if (delta < 0) {
-            const occupe = [...index.parZone.keys()].some(zone => {
-                const m = /^hex:(\d+)/.exec(zone);
-                // (les systèmes secondaires ne sont pas sur la carte)
-                return m && !estSecondaire(m[1]) && anneauDeIndex(Number(m[1])) > nouveau;
-            });
-
-            if (occupe) {
-                signaler(`L'anneau ${anneaux} n'est pas vide : retirez d'abord ce qui s'y trouve.`);
-                return;
-            }
+        // (les systèmes secondaires ne sont pas sur la carte)
+        if (delta < 0 && caseOccupee(n => !estSecondaire(n) && anneauDeIndex(Number(n)) > nouveau)) {
+            signaler(`L'anneau ${anneaux} n'est pas vide : retirez d'abord ce qui s'y trouve.`);
+            return;
         }
 
         jouer({ type: "partie", anneaux: nouveau });
@@ -359,8 +352,8 @@ export function Espace() {
             // (script Exploration : l'exploration vient de cette technologie)
             !aScript(moi, "exploration") && "vous n'avez pas la technologie « Exploration »",
             !explorables.has(numero) && "il faut un emplacement vide à côté d'un système où vous avez une unité",
-            !logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
-            !scientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+            !logisticien && manque("logisticien"),
+            !scientifique && manque("scientifique"),
         ]);
 
         if (!commentaire) {
@@ -680,6 +673,23 @@ export function Espace() {
         };
     }
 
+    // Cadre commun à la carte et à la bande des systèmes secondaires : clic, poignées du
+    // déplacement assisté, emplacements des pions (vue : le plateau ; fleches : le trajet)
+    const cadreCarte = (vue, fleches) => (
+        <div
+            onClick={onClick}
+            {...poigneesDeplacement}
+            style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
+        >
+            <Emplacements stylePions={stylePions} extra={etendard} petit>
+                <div style={{ position: "relative", width: "max-content" }}>
+                    {vue}
+                    {fleches}
+                </div>
+            </Emplacements>
+        </div>
+    );
+
     return (
         <div>
 
@@ -765,23 +775,15 @@ export function Espace() {
             {/* CARTE */}
 
             <Defilable style={{ maxHeight: "80vh", backgroundColor: "#111" }}>
-                <div
-                    onClick={onClick}
-                    {...poigneesDeplacement}
-                    style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
-                >
-                    <Emplacements stylePions={stylePions} extra={etendard} petit>
-                        <div style={{ position: "relative", width: "max-content" }}>
-                            <PlateauView
-                                content={content}
-                                renduCase={renduCase}
-                                styleCase={styleCase}
-                            />
-                            {/* Trajet du déplacement assisté, en flèches */}
-                            {deplacement.fleches(false, anneauxAffiches)}
-                        </div>
-                    </Emplacements>
-                </div>
+                {cadreCarte(
+                    <PlateauView
+                        content={content}
+                        renduCase={renduCase}
+                        styleCase={styleCase}
+                    />,
+                    // Trajet du déplacement assisté, en flèches
+                    deplacement.fleches(false, anneauxAffiches)
+                )}
             </Defilable>
 
             {/* SYSTÈMES SECONDAIRES : à part du plan central, on y accède par
@@ -799,23 +801,15 @@ export function Espace() {
                     </div>
 
                     <Defilable style={{ maxHeight: "60vh" }}>
-                        <div
-                            onClick={onClick}
-                            {...poigneesDeplacement}
-                            style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
-                        >
-                            <Emplacements stylePions={stylePions} extra={etendard} petit>
-                                <div style={{ position: "relative", width: "max-content" }}>
-                                    <BandeView
-                                        content={content2}
-                                        decalage={DECALAGE_SECONDAIRE}
-                                        renduCase={renduCase}
-                                        styleCase={styleCase}
-                                    />
-                                    {deplacement.fleches(true, 0)}
-                                </div>
-                            </Emplacements>
-                        </div>
+                        {cadreCarte(
+                            <BandeView
+                                content={content2}
+                                decalage={DECALAGE_SECONDAIRE}
+                                renduCase={renduCase}
+                                styleCase={styleCase}
+                            />,
+                            deplacement.fleches(true, 0)
+                        )}
                     </Defilable>
                 </div>
             )}
@@ -871,6 +865,24 @@ const lienValide = lien => lien && lien.id > 0;
 
 // Nombre d'infanteries à mobiliser sur une planète, puis le bouton
 // obstacles(n) : raisons pour lesquelles mobiliser n infanteries ne devrait pas se faire
+// Unités natives d'un système ou d'une planète (contenu), sous un titre ; rien s'il n'y en a pas
+function Natives({ contenu, titre }) {
+
+    if (!lienValide(contenu?.nativeUnit)) {
+        return null;
+    }
+
+    return (
+        <div>
+            <b>
+                {titre}
+                {contenu.nativeUnit.type === "unit" && ` : ${contenu.unitNum || 1} ×`}
+            </b>
+            <LoadAndDisplay link={contenu.nativeUnit} />
+        </div>
+    );
+}
+
 function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
 
     const [n, setN] = useState(max);
@@ -1011,6 +1023,9 @@ function FicheSysteme({ numero, id, fermer }) {
     const zonePlanete = k => `${zoneEspace}:planete:${k}`;
     const uses = `joueur:${moi}:agentsUses`;
 
+    // Mes ressources (mobiliser, réparer, fouiller avec Ahk Ravin)
+    const mesRessources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
+
     // Mon drapeau (je possède une planète ou une station du système) compte
     // comme une unité pour ce qui demande une unité dans le système :
     // rechercher, fouiller, revendiquer, prendre une station.
@@ -1018,10 +1033,16 @@ function FicheSysteme({ numero, id, fermer }) {
         !c.cache && c.ref?.type === "planet" && c.ref.id === lien.id && c.zone === `joueur:${moi}:actif`));
 
     const mesUnitesIci = mesUnitesReelles || monDrapeauIci;
+    const sansUniteIci = !mesUnitesIci && "il faut une de vos unités dans le système";
+
+    // Mes unités sur la planète k (filtre : celles à garder, toutes par défaut)
+    const mesUnitesSur = (k, filtre = () => true) => (index.parZone.get(zonePlanete(k)) || []).filter(c =>
+        c.ref?.type === "unit" && c.proprio === moi && filtre(c));
+
+    const estInfanterie = c => typeUnite(contenuEnCache(c.ref.id)) === "inf";
 
     // Ai-je une infanterie sur la planète k ? Prendre possession le demande.
-    const monInfanterieSur = k => (index.parZone.get(zonePlanete(k)) || []).some(c =>
-        c.ref?.type === "unit" && c.proprio === moi && typeUnite(contenuEnCache(c.ref.id)) === "inf");
+    const monInfanterieSur = k => mesUnitesSur(k, estInfanterie).length > 0;
 
     // Marqueurs d'activation d'une planète : sur la planète elle-même, ou
     // sur une de ses ruines (marques.ruine = 1 ou 2)
@@ -1054,8 +1075,8 @@ function FicheSysteme({ numero, id, fermer }) {
     // Phase de science, rechercher : active la planète et utilise un
     // scientifique. La recherche gagnée s'ajoute à la main (onglet Technologie).
     // Une de mes unités de cet élément est-elle sur la planète k ?
-    const monUniteSur = (k, idUnite) => (index.parZone.get(zonePlanete(k)) || []).some(c =>
-        c.ref?.type === "unit" && c.proprio === moi && (idUnite === undefined || c.ref.id === idUnite));
+    const monUniteSur = (k, idUnite) =>
+        mesUnitesSur(k, c => idUnite === undefined || c.ref.id === idUnite).length > 0;
 
     // La recherche est notée au journal de recherche du tour (onglet Technologie).
     // Règle du Laboratoire : 1 de recherche de plus sur une planète où j'en ai un.
@@ -1080,11 +1101,9 @@ function FicheSysteme({ numero, id, fermer }) {
     // Fouiller demande une unité dans le système et un scientifique ; sur Cormund,
     // au moins 3 de mes infanteries (règles du Mecha d'archéologie et de Cormund)
     const obstaclesFouille = (k, idPlanete) => [
-        !mesUnitesIci && "il faut une de vos unités dans le système",
-        !aScientifique && !mechaSur(k) && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
-        aScript(moi, "cormund") && idPlanete === 49 &&
-            (index.parZone.get(zonePlanete(k)) || []).filter(c => c.ref?.type === "unit" && c.proprio === moi &&
-                typeUnite(contenuEnCache(c.ref.id)) === "inf").length < 3 &&
+        sansUniteIci,
+        !aScientifique && !mechaSur(k) && manque("scientifique"),
+        aScript(moi, "cormund") && idPlanete === 49 && mesUnitesSur(k, estInfanterie).length < 3 &&
             "il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines",
     ];
 
@@ -1129,7 +1148,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         const double = parAhk && (fragment || sac >= (archeologie ? 2 : 1) + 1) && window.confirm(
             "Ahk Ravin fouille cette ruine.\n\n" +
-            `OK : dépenser 3 ressources pour 2 fragments au lieu d'un (vous avez ${Number(etat.compteurs[`joueur:${moi}:res`]) || 0} ressource(s)).\n` +
+            `OK : dépenser 3 ressources pour 2 fragments au lieu d'un (vous avez ${mesRessources} ressource(s)).\n` +
             "Annuler : un seul fragment, sans rien payer.");
 
         envoyer([
@@ -1149,12 +1168,10 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Phase de production, mobiliser : use un logisticien, dépense les
     // ressources, pose l'infanterie sur la planète et l'active.
-    const mesRes = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
-
     const obstaclesMobilisation = n => [
-        mesRes < n * coutInfanterie &&
-            `ressources insuffisantes : ${n} infanterie(s) coûtent ${n * coutInfanterie}, vous avez ${mesRes}`,
-        !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+        mesRessources < n * coutInfanterie &&
+            `ressources insuffisantes : ${n} infanterie(s) coûtent ${n * coutInfanterie}, vous avez ${mesRessources}`,
+        !aLogisticien && manque("logisticien"),
     ];
 
     //   clonage : script Cuve de clonage — un scientifique est usé, une infanterie
@@ -1203,7 +1220,6 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Réparer coûte 1 ressource par dégât ; indisponible sans les ressources
     const coutReparation = aReparer.reduce((total, c) => total + Number(c.marques.degat), 0);
-    const mesRessources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
 
     function reparer(commentaire) {
         envoyer([
@@ -1227,6 +1243,14 @@ function FicheSysteme({ numero, id, fermer }) {
     // (ils sont alors rouge gris) : l'engine prévient, les joueurs décident.
     //   station : contenu de la planète quand c'est une station (satellite) — en plus
     //             du diplomate, l'agent adapté à la station y est posé
+    //   (poseSurStation : actions et obstacles de la pose de cet agent, Controle.jsx)
+    const poseSurStation = (k, station, idPlanete) =>
+        actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(station, agentStation), idPlanete);
+
+    //   (agentRetenu : station spéciale, l'agent choisi est retenu pour la fin du conflit)
+    const agentRetenu = (station, cle) =>
+        station?.stationType === "spe" ? [{ type: "compteur", id: cle + ":agent", valeur: agentStation }] : [];
+
     function revendiquer(idPlanete, k, commentaire, station = null) {
 
         // D'autres camps ont des unités militaires dans le système (espace, planète) :
@@ -1239,8 +1263,7 @@ function FicheSysteme({ numero, id, fermer }) {
                 cle,
                 accordsEnCours(etat).some(a => a.cle === cle),
                 commentaire + " — accord demandé",
-                // (station spéciale : l'agent choisi est retenu pour la fin du conflit)
-                station?.stationType === "spe" ? [{ type: "compteur", id: cle + ":agent", valeur: agentStation }] : [],
+                agentRetenu(station, cle),
                 "D'autres camps ont des unités militaires dans le système : leur accord est demandé (onglet Conflit)."
             );
             return;
@@ -1251,9 +1274,7 @@ function FicheSysteme({ numero, id, fermer }) {
         // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
         prendre(idPlanete, k, commentaire, [
             ...(diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : []),
-            ...(station
-                ? actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(station, agentStation), idPlanete).actions
-                : []),
+            ...(station ? poseSurStation(k, station, idPlanete).actions : []),
         ], false, !!station);
     }
 
@@ -1276,26 +1297,33 @@ function FicheSysteme({ numero, id, fermer }) {
     // planète, un conflit de contrôle s'ouvre dans l'onglet Conflit (Controle.jsx)
     // au lieu de la prise immédiate. (Une unité dont le contenu n'est pas encore
     // connu est comptée comme militaire.)
+    const estMilitaireAdverse = c =>
+        c.ref?.type === "unit" && campDe(c) !== moi &&
+        contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false;
+
     function demanderPossession(idPlanete, k, commentaire) {
 
-        const opposants = (index.parZone.get(zonePlanete(k)) || []).some(c =>
-            c.ref?.type === "unit" && campDe(c) !== moi &&
-            contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
+        const opposants = (index.parZone.get(zonePlanete(k)) || []).some(estMilitaireAdverse);
 
         if (!opposants) {
             prendre(idPlanete, k, commentaire);
             return;
         }
 
-        const cle = cleControle(numero, k);
-
-        ouvrirConflit(
-            cle,
-            controlesEnCours(etat).some(c => c.cle === cle),
+        ouvrirControle(
+            k,
             commentaire + " — conflit de contrôle ouvert",
-            [],
+            () => [],
             "D'autres unités militaires sont sur la planète : un conflit de contrôle est ouvert (onglet Conflit)."
         );
+    }
+
+    // Ouvre le conflit de contrôle de la planète k (extra(cle) : compteurs propres à ce conflit)
+    function ouvrirControle(k, commentaire, extra, avis) {
+
+        const cle = cleControle(numero, k);
+
+        ouvrirConflit(cle, controlesEnCours(etat).some(c => c.cle === cle), commentaire, extra(cle), avis);
     }
 
     // Ouvre un conflit de l'onglet Conflit (contrôle, accord) s'il ne l'est pas
@@ -1323,24 +1351,17 @@ function FicheSysteme({ numero, id, fermer }) {
     // un conflit de contrôle spatial s'ouvre d'abord (Controle.jsx).
     function demanderStation(idPlanete, k, planete, commentaire) {
 
-        const opposants = (index.parZone.get(zoneEspace) || []).some(c =>
-            c.ref?.type === "unit" && !c.sur && campDe(c) !== moi &&
-            contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false);
+        const opposants = (index.parZone.get(zoneEspace) || []).some(c => !c.sur && estMilitaireAdverse(c));
 
         if (!opposants) {
-            const station = actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation), idPlanete);
-
-            prendre(idPlanete, k, commentaire, station.actions, true, true);
+            prendre(idPlanete, k, commentaire, poseSurStation(k, planete, idPlanete).actions, true, true);
             return;
         }
 
-        const cle = cleControle(numero, k);
-
-        ouvrirConflit(
-            cle,
-            controlesEnCours(etat).some(c => c.cle === cle),
+        ouvrirControle(
+            k,
             commentaire + " — conflit de contrôle spatial ouvert",
-            planete?.stationType === "spe" ? [{ type: "compteur", id: cle + ":agent", valeur: agentStation }] : [],
+            cle => agentRetenu(planete, cle),
             "D'autres unités militaires sont dans l'espace du système : un conflit de contrôle spatial est ouvert (onglet Conflit)."
         );
     }
@@ -1365,6 +1386,7 @@ function FicheSysteme({ numero, id, fermer }) {
     }
 
     const enRevendication = /revendication/i.test(etat.phase);
+    const horsRevendication = !enRevendication && "ce n'est pas la phase de revendication";
 
     // Abandonner une planète ou une station que je possède : sa carte quitte mes
     // éléments actifs (mon drapeau disparaît de la carte : il en découle) ; sur une
@@ -1380,6 +1402,7 @@ function FicheSysteme({ numero, id, fermer }) {
     }
 
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
+    const sansDiplomate = !aDiplomate && manque("diplomate");
 
     // Script Manipulation mentale : use un diplomate, pose une de mes infanteries
     // sur une planète de ce système — une de mes unités doit être ici ou à côté
@@ -1408,7 +1431,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const obstaclesTreve = [
         !enTreve && "ce n'est pas la phase de trêve",
-        !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera détruit)",
+        !aDiplomate && manque("diplomate", "détruit"),
     ].filter(Boolean);
 
     function declarerTreve(commentaire) {
@@ -1427,8 +1450,8 @@ function FicheSysteme({ numero, id, fermer }) {
 
     // Rechercher et fouiller demandent une unité dans le système et un scientifique
     const obstaclesScience = [
-        !mesUnitesIci && "il faut une de vos unités dans le système",
-        !aScientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+        sansUniteIci,
+        !aScientifique && manque("scientifique"),
     ];
 
     const nomPlanete = planete => planete?.name || "la planète";
@@ -1546,15 +1569,7 @@ function FicheSysteme({ numero, id, fermer }) {
                             style={{ minWidth: 260 }}
                         />
 
-                        {lienValide(systeme?.nativeUnit) && (
-                            <div>
-                                <b>
-                                    Dans l'espace
-                                    {systeme.nativeUnit.type === "unit" && ` : ${systeme.unitNum || 1} ×`}
-                                </b>
-                                <LoadAndDisplay link={systeme.nativeUnit} />
-                            </div>
-                        )}
+                        <Natives contenu={systeme} titre="Dans l'espace" />
 
                         {liensPlanetes.map(({ lien, k }) => {
                             const planete = planetes[lien.id];
@@ -1572,6 +1587,11 @@ function FicheSysteme({ numero, id, fermer }) {
                             const specialites = (planete?.techSpe || [])
                                 .map(t => techType[t] || t)
                                 .join(", ");
+
+                            // Station à prendre : l'agent qui y serait posé, et ce que sa pose demande
+                            const stationAPrendre = joueur && !aMoi && planete?.type === "sat";
+                            const agentPose = stationAPrendre ? agentDeStation(planete, agentStation) : null;
+                            const pose = stationAPrendre ? poseSurStation(k, planete, lien.id) : null;
 
                             return (
                                 <div
@@ -1598,7 +1618,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                             <BoutonRegle
                                                 data-action="abandonner-planete"
                                                 nom={`Abandonner ${nomPlanete(planete)}`}
-                                                obstacles={[!enRevendication && "ce n'est pas la phase de revendication"]}
+                                                obstacles={[horsRevendication]}
                                                 faire={commentaire => abandonner(carte, k, planete, commentaire)}
                                                 title={"Retire votre drapeau : la carte quitte vos éléments actifs" +
                                                     (planete?.type === "sat" ? " et votre agent posé sur la station revient, usé, dans vos agents" : "")}
@@ -1609,7 +1629,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                         )}
 
                                         {/* Toujours utilisables ; rouge gris si la condition manque */}
-                                        {joueur && !aMoi && planete?.type === "sat" && (
+                                        {stationAPrendre && (
                                             <span style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
                                                 {planete.stationType === "spe" && (
                                                     <select
@@ -1623,31 +1643,22 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     data-action="prendre-station"
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
-                                                    obstacles={[
-                                                        !enRevendication && "ce n'est pas la phase de revendication",
-                                                        !mesUnitesIci && "il faut une de vos unités dans le système",
-                                                        ...actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation), lien.id).obstacles,
-                                                    ]}
+                                                    obstacles={[horsRevendication, sansUniteIci, ...pose.obstacles]}
                                                     faire={commentaire => demanderStation(lien.id, k, planete, commentaire)}
                                                     title="Station : il faut une de vos unités dans le système. L'agent adapté à la station y est posé (celui qui s'y trouvait est rendu, usé, à son joueur) et sa carte va dans vos éléments actifs. Si un autre camp a des unités militaires dans l'espace du système, un conflit de contrôle spatial s'ouvre d'abord (onglet Conflit)"
                                                 >
                                                     Prendre possession
-                                                    {agentDeStation(planete, agentStation) ? ` (pose un ${agentDeStation(planete, agentStation).nom})` : ""}
+                                                    {agentPose ? ` (pose un ${agentPose.nom})` : ""}
                                                 </BoutonRegle>
                                                 <BoutonRegle
                                                     data-action="revendiquer-station"
                                                     nom={`Revendiquer ${nomPlanete(planete)}`}
-                                                    obstacles={[
-                                                        !enRevendication && "ce n'est pas la phase de revendication",
-                                                        !mesUnitesIci && "il faut une de vos unités dans le système",
-                                                        !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
-                                                        ...actionsSatellite({ etat, index, moi, search }, zonePlanete(k), agentDeStation(planete, agentStation), lien.id).obstacles,
-                                                    ]}
+                                                    obstacles={[horsRevendication, sansUniteIci, sansDiplomate, ...pose.obstacles]}
                                                     faire={commentaire => revendiquer(lien.id, k, commentaire, planete)}
                                                     title="Station : vous avez une unité dans le système. Use un diplomate et pose sur la station l'agent adapté (celui qui s'y trouvait est rendu, usé, à son joueur) ; sa carte va dans vos éléments actifs. Si d'autres camps ont des unités militaires dans le système, leur accord est d'abord demandé (onglet Conflit)"
                                                 >
                                                     Revendiquer (use un diplomate
-                                                    {agentDeStation(planete, agentStation) ? `, pose un ${agentDeStation(planete, agentStation).nom}` : ""})
+                                                    {agentPose ? `, pose un ${agentPose.nom}` : ""})
                                                 </BoutonRegle>
                                             </span>
                                         )}
@@ -1657,7 +1668,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
                                                     obstacles={[
-                                                        !enRevendication && "ce n'est pas la phase de revendication",
+                                                        horsRevendication,
                                                         !monInfanterieSur(k) && "il faut une de vos infanteries sur la planète",
                                                     ]}
                                                     faire={commentaire => demanderPossession(lien.id, k, commentaire)}
@@ -1668,9 +1679,9 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Revendiquer ${nomPlanete(planete)}`}
                                                     obstacles={[
-                                                        !enRevendication && "ce n'est pas la phase de revendication",
-                                                        !mesUnitesIci && "il faut une de vos unités dans le système",
-                                                        !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                                                        horsRevendication,
+                                                        sansUniteIci,
+                                                        sansDiplomate,
                                                         // (règle d'Avar et d'Arcturus)
                                                         aScript(moi, "avar") && [61, 783].includes(lien.id) && !monUniteSur(k) &&
                                                             "cette planète ne peut pas être possédée sans unité dessus",
@@ -1709,7 +1720,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 obstacles={[
                                                     !enProduction && "ce n'est pas la phase de production",
                                                     !monUniteProche && "il faut une de vos unités dans ce système ou un système voisin",
-                                                    !aDiplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
+                                                    sansDiplomate,
                                                 ]}
                                                 faire={commentaire => manipuler(k, commentaire)}
                                                 title="Manipulation mentale : use un diplomate et pose une de vos infanteries sur cette planète"
@@ -1775,7 +1786,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 obstacles={[
                                                     !enProduction && "ce n'est pas la phase de production",
                                                     activee && "elle est déjà activée",
-                                                    !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
+                                                    !aLogisticien && manque("logisticien"),
                                                     // (règle de l'Anneau monde : sa production est celle de l'amiral posé dessus)
                                                     lien.id === 45 && aScript(moi, "anneau-monde-amiral") &&
                                                         !(index.parZone.get(zonePlanete(k)) || []).some(c => c.ref?.type === "agent" &&
@@ -1799,8 +1810,8 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 obstacles={obstaclesMobilisation}
                                                 clonage={aScript(moi, "cuve-de-clonage") && {
                                                     obstacles: [
-                                                        !aLogisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
-                                                        !aScientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
+                                                        !aLogisticien && manque("logisticien"),
+                                                        !aScientifique && manque("scientifique"),
                                                     ],
                                                 }}
                                             />
@@ -1814,15 +1825,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                         style={{ minWidth: 200, alignSelf: "flex-start" }}
                                     />
 
-                                    {lienValide(planete?.nativeUnit) && (
-                                        <div>
-                                            <b>
-                                                Sur la planète
-                                                {planete.nativeUnit.type === "unit" && ` : ${planete.unitNum || 1} ×`}
-                                            </b>
-                                            <LoadAndDisplay link={planete.nativeUnit} />
-                                        </div>
-                                    )}
+                                    <Natives contenu={planete} titre="Sur la planète" />
                                 </div>
                             );
                         })}

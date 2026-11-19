@@ -401,6 +401,31 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Review du code : duplication, lots A à E (2026-11-19, `demandes-ti5/review-code.md`) —
+  refactoring pur, vérifié lot par lot dans une partie de test, sans changement de
+  comportement.
+  - **A, fonctions partagées** : `campDe`, `NEUTRE`, `aMot`, `MOTIF_LOGISTICIEN`,
+    `MOTIF_NEGOCIANT` (`miseEnPlace.js`) ; `tuileDe`, `esclavesDe`, `possesseurDe`,
+    `carteDePlanete`, `nomDuCamp`, `pastilleCamp`, `styleMini` (`Interaction.jsx`) ;
+    `lotsDeDes`, `desDeLaReponse` (`effets.js`) ; hook `useUnitesDeFaction` (`sync.js`).
+    `effets.js` et `scripts.js` importent maintenant `./miseEnPlace.js`.
+  - **B, interface** : `Modale` (6 fenêtres), `Pas` (sélecteur − / +), `CoquePion` (6 branches
+    de `Pion`) dans `Interaction.jsx` ; `Bandeau` et tables de l'aide de phase et des cartes
+    citées dans `Partie.jsx`.
+  - **C, scripts** : `rendrePromesse`, `uneFoisParTour`, `tirageDegat` / `unDegat`,
+    `choixDansListe` (9 scripts), `lesPremiers`, `lieuDuTour`, `dansUneNebuleuse`,
+    `donneurDe`, constante `DIPLOMATE`. Filet : `demandes-ti5/empreinte-scripts.mjs` compare
+    les 310 scripts à leur empreinte (identifiants, cartes, textes, champs).
+  - **D, combat** : table `JETS` et `rendreJets` (Médecine, Commerce d'esclave, Memoria D,
+    riposte du Khan), `sauver`, `bonusTerrestre`, `userPolitique`, `effacerMarques`.
+  - **E, fiche d'un système** : `manque(nom, verbe)`, `mesUnitesSur`, `Natives`,
+    `poseSurStation`, `ouvrirControle`, `casesDeVue`, `cadreCarte`, `caseOccupee`
+    (`Espace.jsx`).
+  - Laissé exprès, faute d'équivalence stricte : les tests de sorte de combat dispersés
+    (D2), les expressions régulières de zones et « unités dans le système n » (A3, A7), la
+    promesse en jeu et son donneur (A10), les carrés et icônes de `Pion` (B4), Pupille de
+    l'empire / Embuscade (C5). Reste aussi la règle des pistes écrite deux fois (`etat.js` et
+    `miseEnPlace.js`, côté serveur).
 - ☑ Rétrocompatibilité retirée du moteur (2026-11-19, demande de Loïc) : notation à étoiles
   (`capacite`), pillage et production sans parenthèses, `#rep` suivi d'un nombre nu, préfixe
   `!…!` des noms (14 endroits) et nombre d'exemplaires lu dans le nom, ancien booléen
