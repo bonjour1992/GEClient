@@ -11,13 +11,14 @@ import { Menu } from "./HeaderBar";
 let jeu
 
 // Outils d'un jeu dans l'en-tête du site : recherche, « Ajouter », éléments
-// supprimés. Ils sont rendus dans l'emplacement que leur réserve la barre
-// (HeaderBar.jsx, contexte `slotEntete` de son <Outlet>).
+// supprimés. Ils sont rendus dans les emplacements que leur réserve la barre
+// (HeaderBar.jsx, contexte de son <Outlet>) : la recherche au centre
+// (`slotRecherche`), les boutons à droite (`slotOutils`).
 export default function HeaderBar() {
 
     jeu = useParams().jeu
 
-    const { slotEntete } = useOutletContext() || {};
+    const { slotRecherche, slotOutils } = useOutletContext() || {};
 
     const updateRemp = useRemp((state) => state.update);
     const updateSearch = useSearch((state) => state.update);
@@ -28,10 +29,8 @@ export default function HeaderBar() {
 
 
     return (<>
-        {slotEntete && createPortal(<>
-            <Search search={search} />
-            <Add />
-        </>, slotEntete)}
+        {slotRecherche && createPortal(<Search search={search} />, slotRecherche)}
+        {slotOutils && createPortal(<Add />, slotOutils)}
         <Outlet />
     </>)
 }

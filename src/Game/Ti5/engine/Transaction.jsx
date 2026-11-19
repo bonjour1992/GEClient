@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { turnNumber } from "../ti5Const";
-import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE, confirmerRegle } from "./Interaction";
+import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE, confirmerRegle, Modale } from "./Interaction";
 import { MARQUEUR, DETTE, estUniteMercenaire } from "./miseEnPlace";
 import { useElements } from "./sync";
 import { ERREUR_CARTE_ABSENTE } from "./etat";
@@ -654,35 +654,8 @@ export function Transaction({ fermer }) {
     const mesDiplomates = diplomatesDe(index, search, moi).length;
 
     return (
-        <div
-            // Un clic à côté ne ferme pas une transaction déjà composée
-            onClick={() => { if (!lignes.length) { fermer(); } }}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9000,
-                backgroundColor: "#0008",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 50,
-            }}
-        >
-            <div
-                onClick={event => event.stopPropagation()}
-                style={{
-                    width: 640,
-                    maxWidth: "94vw",
-                    maxHeight: "85vh",
-                    overflow: "auto",
-                    padding: 12,
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    border: "4px solid #444",
-                    borderRadius: 12,
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
+        // Un clic à côté ne ferme pas une transaction déjà composée
+        <Modale fermer={() => { if (!lignes.length) { fermer(); } }} style={{ width: 640, maxWidth: "94vw" }}>
                 <div style={styleLigne}>
                     <b style={{ fontSize: 18 }}>Transaction</b>
                     {selecteur(f1, setF1)}
@@ -849,7 +822,6 @@ export function Transaction({ fermer }) {
                         </div>
                     </>
                 )}
-            </div>
-        </div>
+        </Modale>
     );
 }

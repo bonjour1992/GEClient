@@ -1052,6 +1052,24 @@ export function MiniToken({ contenu, cote = 22, bord }) {
     );
 }
 
+// Coque d'un pion sans cadre (cube, marqueur, jeton, token, unité) : les
+// attributs que lit le glisser-déposer (data-composant, data-groupe, data-nom)
+// et l'info-bulle, autour de sa figure. `style` ne dit que ce qui change.
+function CoquePion({ c, groupe, nom, titre, agentType, style, children }) {
+    return (
+        <span
+            data-composant={c.id}
+            data-groupe={groupe.map(x => x.id).join(",")}
+            data-nom={nom}
+            data-agent-type={agentType}
+            title={titre}
+            style={{ ...stylePion, padding: 0, border: "none", backgroundColor: "transparent", gap: 1, ...style }}
+        >
+            {children}
+        </span>
+    );
+}
+
 function Pion({ groupe, petit }) {
 
     const { search, jeu, couleurDe, nomDe, factionDe, index, jouer, joueur, ouvrirCachee, etat } = useEngine();
@@ -1136,26 +1154,28 @@ function Pion({ groupe, petit }) {
     const cube = couleurCube(c, agent);
     const dette = !c.ref && c.jeton === DETTE;
 
+    // Pastille du nombre d'éléments d'un groupe
+    const badge = {
+        padding: "0 3px",
+        borderRadius: 6,
+        backgroundColor: "#fff",
+        color: "#000",
+        fontSize: petit ? 9 : 11,
+    };
+
     // Agents et cubes du sac : un cube de couleur, le nom en info-bulle
     if (cube) {
 
         const cote = petit ? 12 : 18;
 
         return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={nom}
-                data-agent-type={typeRef === "agent" ? c.ref.id : undefined}
-                title={nom + (n > 1 ? ` ×${n}` : "")}
-                style={{
-                    ...stylePion,
-                    padding: 0,
-                    border: "none",
-                    backgroundColor: "transparent",
-                    gap: 1,
-                    opacity: c.marques?.use ? 0.5 : 1,
-                }}
+            <CoquePion
+                c={c}
+                groupe={groupe}
+                nom={nom}
+                agentType={typeRef === "agent" ? c.ref.id : undefined}
+                titre={nom + (n > 1 ? ` ×${n}` : "")}
+                style={{ opacity: c.marques?.use ? 0.5 : 1 }}
             >
                 <span
                     style={{
@@ -1169,30 +1189,10 @@ function Pion({ groupe, petit }) {
                         boxShadow: "0 0 0 1px #fff8",
                     }}
                 />
-                {n > 1 && (
-                    <b
-                        style={{
-                            padding: "0 3px",
-                            borderRadius: 6,
-                            backgroundColor: "#fff",
-                            color: "#000",
-                            fontSize: petit ? 9 : 11,
-                        }}
-                    >
-                        {n}
-                    </b>
-                )}
-            </span>
+                {n > 1 && <b style={badge}>{n}</b>}
+            </CoquePion>
         );
     }
-
-    const badge = {
-        padding: "0 3px",
-        borderRadius: 6,
-        backgroundColor: "#fff",
-        color: "#000",
-        fontSize: petit ? 9 : 11,
-    };
 
     // Marqueur de joueur : un carré de sa couleur avec le logo de sa faction
     if (marqueur) {
@@ -1204,19 +1204,7 @@ function Pion({ groupe, petit }) {
         const fond = neutre ? contenu?.color || "#9e9e9e" : couleurDe(c.proprio) || "#888";
 
         return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={titre}
-                title={titre + (n > 1 ? ` ×${n}` : "")}
-                style={{
-                    ...stylePion,
-                    padding: 0,
-                    border: "none",
-                    backgroundColor: "transparent",
-                    gap: 1,
-                }}
-            >
+            <CoquePion c={c} groupe={groupe} nom={titre} titre={titre + (n > 1 ? ` ×${n}` : "")}>
                 <span
                     style={{
                         display: "inline-flex",
@@ -1255,7 +1243,7 @@ function Pion({ groupe, petit }) {
                     )}
                 </span>
                 {n > 1 && <b style={badge}>{n}</b>}
-            </span>
+            </CoquePion>
         );
     }
 
@@ -1305,33 +1293,27 @@ function Pion({ groupe, petit }) {
         const titre = `${nom} : ${montant}` + (c.proprio ? ` (${nomDe(c.proprio)})` : "");
 
         return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={`${nom} ${montant}`}
-                title={titre + (n > 1 ? ` ×${n}` : "")}
-                style={{ ...stylePion, padding: 0, border: "none", backgroundColor: "transparent", gap: 1 }}
-            >
+            <CoquePion c={c} groupe={groupe} nom={`${nom} ${montant}`} titre={titre + (n > 1 ? ` ×${n}` : "")}>
                 <IconeRessource ressource={ressource} n={montant} cote={petit ? 18 : 24} />
                 {n > 1 && <b style={badge}>×{n}</b>}
-            </span>
+            </CoquePion>
         );
     }
 
     // Token (données du jeu) : sa forme en miniature, suivie du nom hors de la carte
     if (typeRef === "token") {
         return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={nom}
-                title={nom + (n > 1 ? ` ×${n}` : "") + (c.proprio ? ` — ${nomDe(c.proprio)}` : "")}
-                style={{ ...stylePion, padding: "0 3px", border: "none", backgroundColor: "transparent", gap: 4 }}
+            <CoquePion
+                c={c}
+                groupe={groupe}
+                nom={nom}
+                titre={nom + (n > 1 ? ` ×${n}` : "") + (c.proprio ? ` — ${nomDe(c.proprio)}` : "")}
+                style={{ padding: "0 3px", gap: 4 }}
             >
                 <MiniToken contenu={contenu} cote={petit ? 18 : 24} bord={couleurDe(c.proprio)} />
                 {!petit && <span style={{ fontSize: 11 }}>{nom}</span>}
                 {n > 1 && <b style={badge}>{n}</b>}
-            </span>
+            </CoquePion>
         );
     }
 
@@ -1347,18 +1329,12 @@ function Pion({ groupe, petit }) {
             : nom;
 
         return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={titre}
-                title={titre + (n > 1 ? ` ×${n}` : "")}
-                style={{
-                    ...stylePion,
-                    padding: activation ? 0 : "0 3px",
-                    border: "none",
-                    backgroundColor: "transparent",
-                    gap: activation ? 1 : 4,
-                }}
+            <CoquePion
+                c={c}
+                groupe={groupe}
+                nom={titre}
+                titre={titre + (n > 1 ? ` ×${n}` : "")}
+                style={activation ? undefined : { padding: "0 3px", gap: 4 }}
             >
                 {activation ? (
                     <span
@@ -1389,7 +1365,7 @@ function Pion({ groupe, petit }) {
                     />
                 )}
                 {n > 1 && <b style={badge}>{n}</b>}
-            </span>
+            </CoquePion>
         );
     }
 
@@ -1404,24 +1380,17 @@ function Pion({ groupe, petit }) {
         const icone = `url("${pub}/ti/${mini ? "unit_mini" : "unit_icon"}/${typeUnite}.png")`;
 
         return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={nom}
-                title={nom + (n > 1 ? ` ×${n}` : "") +
+            <CoquePion
+                c={c}
+                groupe={groupe}
+                nom={nom}
+                titre={nom + (n > 1 ? ` ×${n}` : "") +
                     // Le propriétaire est dit en toutes lettres, pas seulement par la couleur
                     (detenteur ? ` — ${nomDe(detenteur)}` : " — neutre") +
                     (degat ? ` — ${degat} dégât(s)` : "") +
                     (horsFiche ? " — hors fiche de faction" : "") +
                     (n > 1 ? " — Ctrl + glisser : tout le groupe" : "")}
-                style={{
-                    ...stylePion,
-                    padding: 0,
-                    border: "none",
-                    backgroundColor: "transparent",
-                    gap: 2,
-                    opacity: c.marques?.use ? 0.5 : 1,
-                }}
+                style={{ gap: 2, opacity: c.marques?.use ? 0.5 : 1 }}
             >
                 {/* L'infanterie est un simple petit rond : son icône (l'étendard)
                     sert de marqueur de possession des planètes. */}
@@ -1467,7 +1436,7 @@ function Pion({ groupe, petit }) {
                 {degat > 0 && <b style={{ ...badge, color: "#c00" }}>✹{degat}</b>}
                 {n > 1 && <b style={badge}>{n}</b>}
                 <Portes liste={portes} />
-            </span>
+            </CoquePion>
         );
     }
 
@@ -1829,6 +1798,62 @@ export function Cartes({ zone, zoom = 1, separes }) {
             {pions.map(g => (
                 <Pion key={g[0].id} groupe={g} />
             ))}
+        </>
+    );
+}
+
+// Fenêtre modale : un fond sombre fixe et, au milieu, un panneau blanc défilant.
+//   fermer : un clic sur le fond l'appelle (un clic dans le panneau ne remonte
+//            alors pas jusqu'au fond) ; sans lui, la fenêtre ne se ferme pas ainsi
+//   fond   : couleur du fond ; style : ce qui change du panneau (largeur…)
+//   role, titre : rôle et nom accessibles du panneau
+export function Modale({ fermer, fond = "#0008", style, role, titre, children }) {
+    return (
+        <div
+            onClick={fermer}
+            style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 9000,
+                backgroundColor: fond,
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                paddingTop: 50,
+            }}
+        >
+            <div
+                role={role}
+                aria-label={titre}
+                onClick={fermer ? event => event.stopPropagation() : undefined}
+                style={{
+                    maxWidth: "92vw",
+                    maxHeight: "85vh",
+                    overflow: "auto",
+                    padding: 12,
+                    backgroundColor: "#fff",
+                    color: "#000",
+                    border: "4px solid #444",
+                    borderRadius: 12,
+                    fontFamily: "Arial, sans-serif",
+                    ...style,
+                }}
+            >
+                {children}
+            </div>
+        </div>
+    );
+}
+
+// Sélecteur − / + : la valeur entre deux petits boutons.
+//   moins, plus : { onClick, disabled, title } de chaque bouton
+//   style : celui des deux boutons ; styleValeur : celui du nombre
+export function Pas({ valeur, moins, plus, style, styleValeur }) {
+    return (
+        <>
+            <button type="button" style={style} {...moins}>−</button>
+            <b style={styleValeur}>{valeur}</b>
+            <button type="button" style={style} {...plus}>+</button>
         </>
     );
 }

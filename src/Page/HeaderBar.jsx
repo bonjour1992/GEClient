@@ -10,12 +10,13 @@ import * as fAPI from "../lib/fetch.js";
 //
 // Une seule barre fixe de 40 px, en ligne (flex) :
 //
-//   [ fil d'Ariane ……………… ] [ outils du jeu ] [ compte ]
+//   [ fil d'Ariane ……… ] [ recherche ] [ ……… outils du jeu, compte ]
 //
-// Les outils du jeu (recherche, « Ajouter », éléments supprimés) sont
-// rendus par JeuBar.jsx dans l'emplacement `slotEntete`, que cette barre
-// lui passe par le contexte de son <Outlet> : ils n'existent que sur les
-// pages d'un jeu.
+// La recherche est au centre de la barre : le fil d'Ariane et le groupe de
+// droite se partagent le reste à parts égales. Les outils du jeu (recherche,
+// « Ajouter », éléments supprimés) sont rendus par JeuBar.jsx dans les
+// emplacements `slotRecherche` et `slotOutils`, que cette barre lui passe
+// par le contexte de son <Outlet> : ils n'existent que sur les pages d'un jeu.
 //
 // Petit écran (moins de 700 px) : la barre garde une seule ligne. Le fil
 // d'Ariane ne montre que la page courante, précédée d'un bouton « retour »
@@ -31,22 +32,27 @@ export const HAUTEUR_ENTETE = 40;
 export default function HeaderBar() {
     const loc = useLocation()
 
-    // Emplacement des outils du jeu (JeuBar.jsx y rend sa recherche et ses boutons)
-    const [slotEntete, setSlotEntete] = useState(null)
+    // Emplacements des outils du jeu (JeuBar.jsx y rend sa recherche, au centre, et ses
+    // boutons, à droite)
+    const [slotRecherche, setSlotRecherche] = useState(null)
+    const [slotOutils, setSlotOutils] = useState(null)
 
     return (
         <>
             <style>{STYLE_ENTETE}</style>
             <header className="no-print ge-entete">
                 <Location location={loc} />
-                <div ref={setSlotEntete} className="ge-entete-jeu" />
-                <User />
+                <div ref={setSlotRecherche} className="ge-entete-centre" />
+                <div className="ge-entete-droite">
+                    <div ref={setSlotOutils} className="ge-entete-jeu" />
+                    <User />
+                </div>
             </header>
             <div
                 className="no-print ge-bar-espace"
                 style={{ height: HAUTEUR_ENTETE }}
             ></div>
-            <Outlet context={{ slotEntete }} />
+            <Outlet context={{ slotRecherche, slotOutils }} />
         </>
     )
 }
@@ -71,9 +77,10 @@ const STYLE_ENTETE = `
 .ge-entete :focus-visible { outline: 2px solid var(--ge-lagune); outline-offset: 1px; }
 
 /* Fil d'Ariane */
-.ge-fil { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; }
+.ge-fil { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; }
 .ge-fil-lien {
-    flex: 0 1 auto; min-width: 2.5em; max-width: 170px;
+    /* (les pages parentes se raccourcissent bien avant la page courante) */
+    flex: 0 10 auto; min-width: 2.5em; max-width: 170px;
     padding: 5px 7px; border-radius: 6px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     font-weight: 600;
@@ -83,8 +90,12 @@ const STYLE_ENTETE = `
 .ge-fil-sep { flex: none; color: var(--ge-trait); display: inline-flex; }
 .ge-fil-retour { display: none !important; }
 
-/* Emplacement des outils du jeu */
-.ge-entete-jeu { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+/* Centre (recherche) et groupe de droite (outils du jeu, compte) : le fil d'Ariane et le
+   groupe de droite prennent la même part, la recherche reste donc au milieu de la barre */
+.ge-entete-centre { flex: 0 1 320px; min-width: 0; display: flex; align-items: center; }
+.ge-entete-centre:empty { display: none; }
+.ge-entete-droite { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.ge-entete-jeu { flex: none; display: flex; align-items: center; gap: 6px; }
 
 /* Boutons de la barre */
 .ge-bouton {
@@ -121,7 +132,7 @@ const STYLE_ENTETE = `
 .ge-compte-nom { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
 
 /* Recherche (JeuBar.jsx) */
-.ge-recherche { position: relative; flex: 0 1 280px; min-width: 150px; display: flex; align-items: center; }
+.ge-recherche { position: relative; flex: 1 1 auto; min-width: 150px; display: flex; align-items: center; }
 .ge-recherche-loupe { position: absolute; left: 9px; display: inline-flex; color: var(--ge-lagune); pointer-events: none; }
 .ge-recherche input {
     width: 100%; height: 30px; box-sizing: border-box; padding: 0 10px 0 30px;
@@ -140,6 +151,10 @@ const STYLE_ENTETE = `
 /* Petit écran : une seule ligne, libellés repliés */
 @media (max-width: 700px) {
     .ge-entete { gap: 4px; padding: 0 5px; }
+    /* (plus de centrage : la page courante prend la place, les icônes se rangent à droite) */
+    .ge-fil { flex: 1 1 auto; }
+    .ge-entete-centre, .ge-entete-droite { flex: none; gap: 4px; }
+    .ge-entete-jeu { gap: 4px; }
     .ge-fil-lien:not(.ge-fil-courant), .ge-fil-sep { display: none; }
     .ge-fil-retour { display: inline-flex !important; }
     .ge-fil-lien.ge-fil-courant { padding-left: 3px; }

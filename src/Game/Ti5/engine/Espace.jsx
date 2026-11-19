@@ -8,6 +8,7 @@ import { techType } from "../ti5Const";
 import {
     useEngine, Emplacements, Pions, Zone, Defilable, agentDisponible, aMotCle, tokenTreve,
     DECALAGE_SECONDAIRE, estSecondaire, nomCase, distanceCases, BoutonRegle, confirmerRegle, carteDePlanete,
+    Modale, Pas,
 } from "./Interaction";
 import {
     PIOCHE_TUILES,
@@ -880,23 +881,12 @@ function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
     return (
         <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
             Mobiliser
-            <button
-                type="button"
-                disabled={nombre <= 1}
-                title="Une infanterie de moins"
-                onClick={() => setN(nombre - 1)}
-            >
-                −
-            </button>
-            <b style={{ minWidth: 34, textAlign: "center" }}>{nombre} / {max}</b>
-            <button
-                type="button"
-                disabled={nombre >= max}
-                title="Une infanterie de plus"
-                onClick={() => setN(nombre + 1)}
-            >
-                +
-            </button>
+            <Pas
+                valeur={<>{nombre} / {max}</>}
+                styleValeur={{ minWidth: 34, textAlign: "center" }}
+                moins={{ disabled: nombre <= 1, title: "Une infanterie de moins", onClick: () => setN(nombre - 1) }}
+                plus={{ disabled: nombre >= max, title: "Une infanterie de plus", onClick: () => setN(nombre + 1) }}
+            />
             <BoutonRegle
                 nom={`Mobiliser ${nombre} infanterie${nombre > 1 ? "s" : ""}`}
                 obstacles={obstacles(nombre)}
@@ -1456,33 +1446,7 @@ function FicheSysteme({ numero, id, fermer }) {
     const tuileDuSysteme = (index.parZone.get("hex:" + numero) || []).find(estTuile) || null;
 
     return (
-        <div
-            onClick={fermer}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9000,
-                backgroundColor: "#000a",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 50,
-            }}
-        >
-            <div
-                onClick={event => event.stopPropagation()}
-                style={{
-                    maxWidth: "94vw",
-                    maxHeight: "86vh",
-                    overflow: "auto",
-                    padding: 12,
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    border: "4px solid #444",
-                    borderRadius: 12,
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
+        <Modale fermer={fermer} fond="#000a" style={{ maxWidth: "94vw", maxHeight: "86vh" }}>
                 <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
                     <b style={{ fontSize: 18 }}>
                         {systeme?.name || "Système"}
@@ -1864,7 +1828,6 @@ function FicheSysteme({ numero, id, fermer }) {
                         })}
                     </div>
                 </div>
-            </div>
-        </div>
+        </Modale>
     );
 }

@@ -47,6 +47,8 @@ import {
     reglerConnexion,
     payerConnexion,
     choisirRemplacants,
+    Modale,
+    Pas,
 } from "./Interaction";
 import { ReserveAgents } from "./Remplacants";
 import { Preparation } from "./Preparation";
@@ -1392,60 +1394,23 @@ export function Partie({ id }) {
                 {/* Fixe, au-dessus des fenêtres : visible même page défilée ou
                     fiche ouverte. S'efface à l'action suivante. */}
                 {p.erreur && (
-                    <div
-                        role="alert"
-                        style={{
-                            position: "fixed",
-                            top: 8,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            zIndex: 9500,
-                            maxWidth: "90vw",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            padding: "6px 12px",
-                            backgroundColor: "#fdd",
-                            color: "#600",
-                            border: "2px solid #c00",
-                            borderRadius: 8,
-                            boxShadow: "0 2px 8px #0006",
-                            fontWeight: "bold",
-                        }}
-                    >
+                    <Bandeau role="alert" couleurs={["#fdd", "#600", "#c00"]} fermer={() => p.setErreur("")}>
                         {p.erreur}
-                        <button type="button" title="Fermer ce message" onClick={() => p.setErreur("")}>×</button>
-                    </div>
+                    </Bandeau>
                 )}
 
                 {/* Un script de règles vient de modifier une action : en orange,
                     sous l'éventuel message d'erreur */}
                 {avis && (
-                    <div
+                    <Bandeau
                         role="status"
                         data-avis-script
-                        style={{
-                            position: "fixed",
-                            top: p.erreur ? 52 : 8,
-                            left: "50%",
-                            transform: "translateX(-50%)",
-                            zIndex: 9500,
-                            maxWidth: "90vw",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            padding: "6px 12px",
-                            backgroundColor: "#ffe0b2",
-                            color: "#5d3200",
-                            border: "2px solid #ef6c00",
-                            borderRadius: 8,
-                            boxShadow: "0 2px 8px #0006",
-                            fontWeight: "bold",
-                        }}
+                        couleurs={["#ffe0b2", "#5d3200", "#ef6c00"]}
+                        top={p.erreur ? 52 : 8}
+                        fermer={() => setAvis("")}
                     >
                         {avis}
-                        <button type="button" title="Fermer ce message" onClick={() => setAvis("")}>×</button>
-                    </div>
+                    </Bandeau>
                 )}
 
                 {/* ============================================
@@ -1509,9 +1474,10 @@ export function Partie({ id }) {
                             </div>
                         )}
 
-                        {/* Phase de science : les actions se font sur la carte */}
-                        {enScience && estJoueur && (
-                            <div style={{ marginTop: 4, fontSize: 13 }}>
+                        {/* Aide propre à la phase : ce qui se fait sur la carte, le plateau ou la réserve */}
+                        {estJoueur && [
+                            // Phase de science : les actions se font sur la carte
+                            [enScience, <>
                                 <b>Explorer :</b> Ctrl + clic sur un emplacement vide à côté d'un
                                 système pose la première tuile de la pioche (use un logisticien
                                 et un scientifique).{" "}
@@ -1519,33 +1485,27 @@ export function Partie({ id }) {
                                 les boutons sont à côté de chaque planète.
                                 {/* Script Archéologie : piocher un plan de relique */}
                                 <PiocherPlan />
-                            </div>
-                        )}
+                            </>],
 
-                        {/* Phase de recrutement : les achats se font au Ctrl + clic */}
-                        {enRecrutement && estJoueur && (
-                            <div style={{ marginTop: 4, fontSize: 13 }}>
+                            // Phase de recrutement : les achats se font au Ctrl + clic
+                            [enRecrutement, <>
                                 <b>Recruter :</b> onglet « Plateau général », Ctrl + clic sur un agent,
                                 un mercenaire ou un plan de relique d'une case de recrutement : il est
                                 acheté (le coût de la case est retiré de votre influence ; un mercenaire
                                 coûte 2 de plus{Number(deroule?.surCout?.[etat.tour - 1]) > 0
                                     ? `, et ${Number(deroule.surCout[etat.tour - 1])} de plus ce tour,`
                                     : ""} et va dans vos éléments actifs ; un plan va dans votre main).
-                            </div>
-                        )}
+                            </>],
 
-                        {/* Phase de déclaration de trêve */}
-                        {enTreve && estJoueur && (
-                            <div style={{ marginTop: 4, fontSize: 13 }}>
+                            // Phase de déclaration de trêve
+                            [enTreve, <>
                                 <b>Déclarer une trêve :</b> clic sur un système, puis « Déclarer une trêve » :
                                 votre marqueur de trêve y est posé et un de vos diplomates détruit. Les marqueurs de trêve
                                 précédents ont été retirés en arrivant à cette phase.
-                            </div>
-                        )}
+                            </>],
 
-                        {/* Phase de production */}
-                        {enProduction && estJoueur && (
-                            <div style={{ marginTop: 4, fontSize: 13 }}>
+                            // Phase de production
+                            [enProduction, <>
                                 <b>Produire :</b> Ctrl + clic sur une de vos unités à production (un dock…) —
                                 ou, pour une station ou une planète qui produit, « Produire ici » dans la
                                 fiche du système : un logisticien est utilisé. Glissez ensuite les unités
@@ -1553,18 +1513,18 @@ export function Partie({ id }) {
                                 vos ressources (ou cocher « Production » dans la réserve, pour produire librement).{" "}
                                 <b>Mobiliser :</b> cliquer sur un système, le bouton est à côté
                                 de chaque planète que vous possédez.
-                            </div>
-                        )}
+                            </>],
 
-                        {/* Phase de construction */}
-                        {enConstruction && estJoueur && (
-                            <div style={{ marginTop: 4, fontSize: 13 }}>
+                            // Phase de construction
+                            [enConstruction, <>
                                 <b>Construire :</b> cochez « Construction » dans votre réserve, puis glissez la
                                 structure vers la planète ou le système : son coût est retiré de vos ressources,
                                 la planète est activée et un logisticien est utilisé — dépensé si la planète
                                 porte déjà une structure. Pas deux fois la même structure au même endroit.
-                            </div>
-                        )}
+                            </>],
+                        ].filter(([enPhase]) => enPhase).map(([, texte], k) => (
+                            <div key={k} style={{ marginTop: 4, fontSize: 13 }}>{texte}</div>
+                        ))}
 
                         {/* Phase de proposition */}
                         {enProposition && estJoueur && (
@@ -1815,6 +1775,37 @@ export function Partie({ id }) {
     );
 }
 
+// Bandeau fixe en haut de l'écran, au-dessus des fenêtres : message d'erreur,
+// avis d'un script de règles. couleurs : [fond, texte, bord].
+function Bandeau({ couleurs: [fond, texte, bord], top = 8, fermer, children, ...attributs }) {
+    return (
+        <div
+            {...attributs}
+            style={{
+                position: "fixed",
+                top,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 9500,
+                maxWidth: "90vw",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "6px 12px",
+                backgroundColor: fond,
+                color: texte,
+                border: "2px solid " + bord,
+                borderRadius: 8,
+                boxShadow: "0 2px 8px #0006",
+                fontWeight: "bold",
+            }}
+        >
+            {children}
+            <button type="button" title="Fermer ce message" onClick={fermer}>×</button>
+        </div>
+    );
+}
+
 // ============================================================
 // PROPOSITIONS PIOCHÉES : en prendre une en main
 // ============================================================
@@ -1848,31 +1839,7 @@ function ChoixProposition({ cartes, choisir }) {
     }
 
     return (
-        <div
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9000,
-                backgroundColor: "#0008",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 50,
-            }}
-        >
-            <div
-                style={{
-                    maxWidth: "94vw",
-                    maxHeight: "85vh",
-                    overflow: "auto",
-                    padding: 12,
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    border: "4px solid #444",
-                    borderRadius: 12,
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
+        <Modale style={{ maxWidth: "94vw" }}>
                 <div style={styleBarre}>
                     <b style={{ fontSize: 18 }}>Propositions piochées</b>
                     <button
@@ -1904,8 +1871,7 @@ function ChoixProposition({ cartes, choisir }) {
                         </div>
                     ))}
                 </div>
-            </div>
-        </div>
+        </Modale>
     );
 }
 
@@ -1944,33 +1910,7 @@ function FicheCachee({ zone, fermer }) {
     }
 
     return (
-        <div
-            onClick={fermer}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9000,
-                backgroundColor: "#0008",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 50,
-            }}
-        >
-            <div
-                onClick={event => event.stopPropagation()}
-                style={{
-                    maxWidth: "92vw",
-                    maxHeight: "85vh",
-                    overflow: "auto",
-                    padding: 12,
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    border: "4px solid #444",
-                    borderRadius: 12,
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
+        <Modale fermer={fermer}>
                 <div style={styleBarre}>
                     <b style={{ fontSize: 18 }}>Carte face cachée</b>
                     <span style={{ color: "#666" }}>{nomZone(zone, nomDe)}</span>
@@ -2016,8 +1956,7 @@ function FicheCachee({ zone, fermer }) {
                         </div>
                     ))}
                 </div>
-            </div>
-        </div>
+        </Modale>
     );
 }
 
@@ -2367,33 +2306,7 @@ function Fiche({ id, fermer }) {
     }
 
     return (
-        <div
-            onClick={fermer}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9000,
-                backgroundColor: "#0008",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 50,
-            }}
-        >
-            <div
-                onClick={event => event.stopPropagation()}
-                style={{
-                    maxWidth: "92vw",
-                    maxHeight: "85vh",
-                    overflow: "auto",
-                    padding: 12,
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    border: "4px solid #444",
-                    borderRadius: 12,
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
+        <Modale fermer={fermer}>
                 <div style={styleBarre}>
                     <b style={{ fontSize: 18 }}>{nom}</b>
                     <span style={{ color: "#666" }}>
@@ -2427,9 +2340,12 @@ function Fiche({ id, fermer }) {
                         {c.ref?.type === "unit" && (<>
                         <span>
                             Dégâts{" "}
-                            <button type="button" disabled={!degat} onClick={() => marquer("degat", degat - 1)}>−</button>
-                            <b style={{ margin: "0 6px" }}>{degat}</b>
-                            <button type="button" onClick={() => marquer("degat", degat + 1)}>+</button>
+                            <Pas
+                                valeur={degat}
+                                styleValeur={{ margin: "0 6px" }}
+                                moins={{ disabled: !degat, onClick: () => marquer("degat", degat - 1) }}
+                                plus={{ onClick: () => marquer("degat", degat + 1) }}
+                            />
                         </span>
 
                         <label>
@@ -2485,20 +2401,15 @@ function Fiche({ id, fermer }) {
                         {!c.ref && (c.jeton === DETTE || ressourceDe(c)) && (
                             <span>
                                 Montant{" "}
-                                <button
-                                    type="button"
-                                    disabled={!(Number(c.marques?.montant) > 0)}
-                                    onClick={() => marquer("montant", (Number(c.marques?.montant) || 0) - 1)}
-                                >
-                                    −
-                                </button>
-                                <b style={{ margin: "0 6px" }}>{Number(c.marques?.montant) || 0}</b>
-                                <button
-                                    type="button"
-                                    onClick={() => marquer("montant", (Number(c.marques?.montant) || 0) + 1)}
-                                >
-                                    +
-                                </button>
+                                <Pas
+                                    valeur={Number(c.marques?.montant) || 0}
+                                    styleValeur={{ margin: "0 6px" }}
+                                    moins={{
+                                        disabled: !(Number(c.marques?.montant) > 0),
+                                        onClick: () => marquer("montant", (Number(c.marques?.montant) || 0) - 1),
+                                    }}
+                                    plus={{ onClick: () => marquer("montant", (Number(c.marques?.montant) || 0) + 1) }}
+                                />
                             </span>
                         )}
 
@@ -2605,39 +2516,27 @@ function Fiche({ id, fermer }) {
 
                                     {joueur && (
                                         <div style={{ ...styleBarre, marginTop: 4 }}>
-                                            <button
-                                                type="button"
-                                                onClick={() => jouer({
-                                                    type: "creer",
-                                                    ref: lien,
-                                                    zone: `joueur:${moi}:main`,
-                                                    proprio: moi,
-                                                })}
-                                            >
-                                                Prendre en main
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => jouer({
-                                                    type: "creer",
-                                                    ref: lien,
-                                                    zone: `joueur:${moi}:actif`,
-                                                    proprio: moi,
-                                                })}
-                                            >
-                                                Dans mes éléments actifs
-                                            </button>
-                                            <button
-                                                type="button"
-                                                title="Pose la carte sur la table du plateau général, sans propriétaire"
-                                                onClick={() => jouer({
-                                                    type: "creer",
-                                                    ref: lien,
-                                                    zone: "general:table",
-                                                })}
-                                            >
-                                                Mettre en jeu
-                                            </button>
+                                            {/* [libellé, zone, à moi ?, info-bulle] */}
+                                            {[
+                                                ["Prendre en main", `joueur:${moi}:main`, true],
+                                                ["Dans mes éléments actifs", `joueur:${moi}:actif`, true],
+                                                ["Mettre en jeu", "general:table", false,
+                                                    "Pose la carte sur la table du plateau général, sans propriétaire"],
+                                            ].map(([libelle, zone, aMoi, titre]) => (
+                                                <button
+                                                    key={zone}
+                                                    type="button"
+                                                    title={titre}
+                                                    onClick={() => jouer({
+                                                        type: "creer",
+                                                        ref: lien,
+                                                        zone,
+                                                        ...(aMoi ? { proprio: moi } : {}),
+                                                    })}
+                                                >
+                                                    {libelle}
+                                                </button>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
@@ -2645,7 +2544,6 @@ function Fiche({ id, fermer }) {
                         </div>
                     </div>
                 )}
-            </div>
-        </div>
+        </Modale>
     );
 }

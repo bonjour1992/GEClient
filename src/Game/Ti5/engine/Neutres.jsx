@@ -3,7 +3,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { LigneElement } from "../../../Component/NomElement";
 import { getFromType } from "../../../lib/store";
 import { pub } from "../../../lib/fetch";
-import { useEngine, Emplacements, Zone, Source, Defilable, nomElement, COULEUR_A_FAIRE } from "./Interaction";
+import { useEngine, Emplacements, Zone, Source, Defilable, nomElement, COULEUR_A_FAIRE, Modale } from "./Interaction";
 import { useElements } from "./sync";
 import { FAVEUR } from "./miseEnPlace";
 import { stylePions } from "./PlateauJoueur";
@@ -72,35 +72,7 @@ function Onglet({ ouvert, onClick, children }) {
 // un bandeau (titre, actions, Fermer) au-dessus du contenu
 export function Fenetre({ titre, actions, fermer, children }) {
     return (
-        <div
-            onClick={fermer}
-            style={{
-                position: "fixed",
-                inset: 0,
-                zIndex: 9000,
-                backgroundColor: "#0008",
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 50,
-            }}
-        >
-            <div
-                role="dialog"
-                aria-label={titre}
-                onClick={event => event.stopPropagation()}
-                style={{
-                    maxWidth: "92vw",
-                    maxHeight: "85vh",
-                    overflow: "auto",
-                    padding: 12,
-                    backgroundColor: "#fff",
-                    color: "#000",
-                    border: "4px solid #444",
-                    borderRadius: 12,
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
+        <Modale fermer={fermer} role="dialog" titre={titre}>
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 8 }}>
                     <b style={{ fontSize: 18 }}>{titre}</b>
                     <button type="button" onClick={fermer} style={{ marginLeft: "auto" }}>Fermer</button>
@@ -113,8 +85,7 @@ export function Fenetre({ titre, actions, fermer, children }) {
                 )}
 
                 {children}
-            </div>
-        </div>
+        </Modale>
     );
 }
 
