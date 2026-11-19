@@ -1327,7 +1327,8 @@ export const SCRIPTS = [
             libelle: "Yvin Korduul : une faveur (5 influence)",
         }),
 
-    action("sai-seravus", "mercenaire", 289, 1794335054893, "Sai Seravus", "carte",
+    // (ex-« Sai Seravus », astrophysicienne : l'identifiant du script est gardé)
+    action("sai-seravus", "mercenaire", 289, 1794335054893, "Oriane Tesh", "carte",
         "Science : son cube part dans les agents usés, 1 de recherche spatiale par système à anomalie où vous avez une unité.", {
             phase: "science",
             use: true,
@@ -1335,7 +1336,7 @@ export const SCRIPTS = [
             calcul: outils => (outils.anomalies() > 0
                 ? { recherche: [["spa", outils.anomalies()]] }
                 : { recherche: [], sans: "vous n'avez d'unité dans aucun système à anomalie" }),
-            libelle: "Sai Seravus : recherche spatiale (anomalies où vous avez une unité)",
+            libelle: "Oriane Tesh : recherche spatiale (anomalies où vous avez une unité)",
         }),
 
     regle("ahk-ravin", "mercenaire", 291, 1794390437899, "Ahk Ravin", "modifie",
