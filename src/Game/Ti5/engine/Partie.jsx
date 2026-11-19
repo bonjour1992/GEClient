@@ -15,7 +15,6 @@ import {
     MARQUEUR,
     DETTE,
     ACTIVATION,
-    TREVE,
     FRAGMENTS,
     RESSOURCES,
     LIMITES_UNITES,

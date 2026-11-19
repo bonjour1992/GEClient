@@ -128,10 +128,7 @@ par minute.
 
 Zones du plateau général utilisées par l'interface : `general:table` (cartes
 révélées), `general:promesses` (réserve commune), `general:boite:<n>` (cases
-du haut du déroulé). `general:lois`, `general:traites`, `general:regles` et
-`general:objectifs` ne sont plus proposées (ni affichées, ni destinations
-d'« Envoyer vers ») ; elles ne s'affichent que si une partie existante y a
-encore des éléments (`ZONES_RETIREES`, `PlateauGeneral.jsx`).
+du haut du déroulé).
 
 Une pile cachée (pioche) a sa carte du dessus marquée
 `dessus: true` par `filtrerEtat` : le client en montre le dos (une pile peut
@@ -738,7 +735,7 @@ elles valent pour tous les joueurs, avec ou sans script.
 - **Canons spatiaux** (`Combat.jsx`) : un canon ne tire que s'il a été choisi
   dans « Mes canons spatiaux à portée » (`canonsEnAttente`, marque `canon` ;
   un amiral est usé, un marqueur d'activation posé). `capacite` lit
-  `#can(6,2)` et la notation à étoiles « 6** ».
+  `#can(6,2)` (valeur, nombre de dés).
 - **Combat résolu** (`engine/CombatResolu.jsx`) : « Terminer le combat » met le
   compteur `combat:<lieu>` à 2 ; le combat reste dans l'onglet jusqu'à la fin
   de la phase (`changerPhase` le remet à 0). `combatsActifs` ne rend que les
@@ -800,7 +797,7 @@ Champ `exemplaires` (`Component/Exemplaires.jsx`) des systèmes, agendas,
 promesses, reliques, habilités, mercenaires, objectifs et événements :
 nombre de tuiles ou de cartes. Lu par `exemplaires(contenu)`
 (`miseEnPlace.js`), le tirage d'un plateau et « Sélectionner tous » de
-l'impression. L'ancien préfixe `!N!` du nom reste compris.
+l'impression.
 
 ### ranger une zone
 
@@ -881,8 +878,7 @@ nom). Icônes provisoires de claude dans `server/public/ti/neutre/`.
 
 Token « Trêve » des données du jeu (type `token`, reconnu à son nom :
 `tokenTreve`, `estTreve`, `Interaction.jsx` ; colombe au liseré du joueur qui
-l'a posé). L'ancien jeton `trêve` des parties en cours reste reconnu, et sert
-encore si le token n'existe pas. Le bouton « Déclarer
+l'a posé). Le bouton « Déclarer
 une trêve » de la fiche d'un système (`declarerTreve`, `Espace.jsx`) y pose le
 marqueur du joueur et détruit un de ses diplomates. Hors de la phase de trêve
 ou sans diplomate, il est rouge gris (`STYLE_INDISPONIBLE`) : il reste
@@ -1324,9 +1320,9 @@ En bas de l'onglet Espace : `pioche:system` (tuiles non spéciales qui ne sont
 pas sur la carte, mélangées), `general:tuiles` (tuiles piochées) et
 `general:systemes` (tuiles spéciales). Une tuile se glisse sur une case.
 
-Chaque système compte autant de tuiles que le multiplicateur `!N!` de son nom.
+Chaque système compte autant de tuiles que son champ `exemplaires`.
 Le système natal d'une faction n'est ni tiré au hasard ni mis dans la pioche,
-sauf s'il existe en plusieurs exemplaires (« !30!vide », natal de Winnu).
+sauf s'il existe en plusieurs exemplaires (« vide », natal de Winnu).
 
 ### faveurs
 
@@ -1471,12 +1467,11 @@ système non commun est exclu du tirage au hasard (`horsReserveCommune`,
 `engine/miseEnPlace.js`). Une planète garde `homePlanet` en plus du lien. Un élément qui n'est pas commun
 est écarté des pioches et
 de la réserve de promesses ; une feuille de technologie liée à une faction ne
-va qu'à cette faction. Sans ce champ, un élément est commun. Non affiché.
+va qu'à cette faction. Un type d'élément qui ne porte pas ce champ (objectif militaire, événement) est commun. Non affiché.
 
 Agents : un agent commun forme la réserve commune (`agentsBase` : sac d'agents,
 réserve infinie du plateau général) ; un agent lié à une faction n'y est pas.
-Sans type de lien, un agent cité par au moins deux factions est commun (ancienne
-règle). Les agents existants ont été migrés ainsi : cité par plusieurs factions
+Les agents existants ont été migrés ainsi : cité par plusieurs factions
 → commun (Amiral, Scientifique, Logisticien, Négociant, Diplomate, Politique),
 par une seule → lié à cette faction (versions signées `claude`).
 
@@ -1700,7 +1695,7 @@ recrutement » mélange le sac puis tire, pour chacune de ces cases, autant de
 jetons qu'il y a de joueurs (`piocher` de `pioche:sac` vers `general:boite:<n>`).
 Les jetons déjà en place y restent.
 
-Un nom d'élément qui commence par `!N!` donne N exemplaires (cartes, systèmes).
+Le champ `exemplaires` d'un élément donne son nombre d'exemplaires (cartes, systèmes).
 
 Dans les lignes événement, objectif militaire et agenda du déroulé, une carte
 qui déborde sur la colonne du tour suivant passe devant celle de ce tour

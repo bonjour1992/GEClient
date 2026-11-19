@@ -15,7 +15,6 @@ import {
     RESERVE_TUILES,
     MARQUEUR,
     ACTIVATION,
-    TREVE,
     SAC_FRAGMENTS,
     FRAGMENTS,
     typeUnite,
@@ -389,7 +388,7 @@ export function Espace() {
 
         // Unités natives d'un système ou d'une planète (nativeUnit × unitNum)
         const ajouterNatives = (contenu, ou) => {
-            if (lienValide(contenu?.nativeUnit) && (contenu.nativeUnit.type || "unit") === "unit") {
+            if (lienValide(contenu?.nativeUnit) && contenu.nativeUnit.type === "unit") {
                 for (let k = 0; k < (Number(contenu.unitNum) || 1); k++) {
                     natives.push({ type: "creer", ref: { type: "unit", id: contenu.nativeUnit.id }, zone: ou });
                 }
@@ -1114,7 +1113,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         // (rien à tirer d'un sac vide : là, l'action est impossible)
         if (!fragment && !(index.parZone.get(SAC_FRAGMENTS) || []).length) {
-            signaler("Le sac de fragments est vide (ou cette partie a été créée avant son ajout).");
+            signaler("Le sac de fragments est vide.");
             return;
         }
 
@@ -1430,11 +1429,9 @@ function FicheSysteme({ numero, id, fermer }) {
         envoyer([
             // (le diplomate est dépensé : Bio stimulant propose de l'user à la place)
             ...depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
-            // Le token « Trêve » des données du jeu ; à défaut, l'ancien jeton
-            tokenTreve(search)
-                ? { type: "creer", ref: { type: "token", id: tokenTreve(search).id }, zone: zoneEspace, proprio: moi }
-                : { type: "creer", jeton: TREVE, zone: zoneEspace, proprio: moi },
-        ], commentaire);
+            // Le token « Trêve » des données du jeu
+            tokenTreve(search) && { type: "creer", ref: { type: "token", id: tokenTreve(search).id }, zone: zoneEspace, proprio: moi },
+        ].filter(Boolean), commentaire);
 
         fermer();
     }
@@ -1445,7 +1442,7 @@ function FicheSysteme({ numero, id, fermer }) {
         !aScientifique && "vous n'avez pas de scientifique disponible (aucun ne sera usé)",
     ];
 
-    const nomPlanete = planete => (planete?.name || "la planète").replace(/^!([^!]*)!/, "") || "la planète";
+    const nomPlanete = planete => planete?.name || "la planète";
 
     // k : position de la planète dans le système (emplacement planete:<k>)
     const liensPlanetes =(systeme?.elems || [])
@@ -1489,7 +1486,7 @@ function FicheSysteme({ numero, id, fermer }) {
             >
                 <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
                     <b style={{ fontSize: 18 }}>
-                        {(systeme?.name || "Système").replace(/^!([^!]*)!/, "")}
+                        {systeme?.name || "Système"}
                     </b>
                     <span style={{ marginLeft: 8, color: "#666" }}>{nomCase(numero)}</span>
 
@@ -1831,7 +1828,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
                                         {/* (mobiliser : sur une planète, pas sur un satellite) */}
                                         {joueur && enProduction && aMoi && !activee && idInfanterie && prodInfanterie > 0 &&
-                                            (planete?.type || "pla") === "pla" && (
+                                            planete?.type === "pla" && (
                                             <Mobilisation
                                                 max={prodInfanterie}
                                                 cout={coutInfanterie}
@@ -1850,7 +1847,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                     {/* Ce qui est sur la planète */}
                                     <Zone
                                         zone={zonePlanete(k)}
-                                        titre={"Sur " + (planete?.name || "la planète").replace(/^!([^!]*)!/, "")}
+                                        titre={"Sur " + nomPlanete(planete)}
                                         style={{ minWidth: 200, alignSelf: "flex-start" }}
                                     />
 
@@ -1858,7 +1855,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                         <div>
                                             <b>
                                                 Sur la planète
-                                                {(planete.nativeUnit.type || "unit") === "unit" && ` : ${planete.unitNum || 1} ×`}
+                                                {planete.nativeUnit.type === "unit" && ` : ${planete.unitNum || 1} ×`}
                                             </b>
                                             <LoadAndDisplay link={planete.nativeUnit} />
                                         </div>

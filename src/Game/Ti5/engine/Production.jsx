@@ -47,7 +47,8 @@ const sansAccent = texte => String(texte || "").normalize("NFD").replace(/[̀-ͯ
 //   types    : ["vaisseau", "mech"] ou null (tout est productible)
 export function lireProduction(contenu) {
 
-    const m = /#prod(?:\(([^,)]*)(?:,([^)]*))?\))?/i.exec(contenu?.habilite || "");
+    // (toujours entre parenthèses : #prod(2,Vaisseau/Mech), #prod(#clog,Vaisseau/Mech))
+    const m = /#prod\(([^,)]*)(?:,([^)]*))?\)/i.exec(contenu?.habilite || "");
 
     if (!m) {
         return null;

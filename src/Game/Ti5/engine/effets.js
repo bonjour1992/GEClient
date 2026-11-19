@@ -7,18 +7,6 @@
 // n'importe rien : tout écran peut s'en servir.
 // ============================================================
 
-// Capacité d'un vaisseau. Capsule de transport : +1, +2 pour un transporteur.
-// ------------------------------------------------------------
-// PILLAGE (#pill)
-//
-// Qui détruit l'unité gagne ce que dit son texte : « #pill 2 » ou
-// « #pill(4) » — du commerce ; « #pill(#point(1)) », « #Pill(#Infa(1)
-// et #Point(1)) », « #pill #rerupt(3) » — des points, de l'infamie, de
-// la recherche. -> { commerce, points, infamie, recherche: [[type, n]…],
-// aLaMain } ou null si l'unité n'a pas de pillage.
-// (aLaMain : butin que l'outil ne sait pas compter, « #com ici ».)
-// ------------------------------------------------------------
-
 // ------------------------------------------------------------
 // DÉ À 10 FACES : NUMÉROTÉ DE 0 À 9
 //
@@ -33,6 +21,17 @@
 
 export const faceD10 = tirage => (Number(tirage) === 10 ? 0 : Number(tirage));
 
+// ------------------------------------------------------------
+// PILLAGE (#pill)
+//
+// Qui détruit l'unité gagne ce que dit son texte, toujours entre
+// parenthèses : « #pill(4) » — du commerce ; « #pill(#point(1)) »,
+// « #Pill(#Infa(1) et #Point(1)) », « #pill(#rerupt(3)) » — des points,
+// de l'infamie, de la recherche. -> { commerce, points, infamie,
+// recherche: [[type, n]…], aLaMain } ou null si l'unité n'a pas de pillage.
+// (aLaMain : butin que l'outil ne sait pas compter, « #com ici ».)
+// ------------------------------------------------------------
+
 export function lirePillage(contenu) {
 
     const texte = String(contenu?.habilite || "")
@@ -41,11 +40,11 @@ export function lirePillage(contenu) {
     const butin = { commerce: 0, points: 0, infamie: 0, recherche: [], aLaMain: false };
     let trouve = false;
 
-    for (const m of texte.matchAll(/#pill\s*(?:\(((?:[^()]|\([^()]*\))*)\)|(\d+)|((?:\s*#re[a-z]+(?:\(\d+\))?)+))?/gi)) {
+    for (const m of texte.matchAll(/#pill\(((?:[^()]|\([^()]*\))*)\)/gi)) {
 
         trouve = true;
 
-        const argument = (m[1] ?? m[2] ?? m[3] ?? "").trim();
+        const argument = m[1].trim();
 
         if (/^\d+$/.test(argument)) {
             butin.commerce += Number(argument);
@@ -90,6 +89,7 @@ export function auteurDesDegats(c) {
 export const placePrise = contenu =>
     Number(/n[ée]cessite\s+(\d+)\s+de\s+capacit/i.exec(String(contenu?.habilite || "").replace(/<[^>]+>/g, " "))?.[1]) || 1;
 
+// Capacité d'un vaisseau. Capsule de transport : +1, +2 pour un transporteur.
 export function capaciteDe(contenu, possesseur, aScript) {
 
     const base = Number(contenu?.capacite) || 0;

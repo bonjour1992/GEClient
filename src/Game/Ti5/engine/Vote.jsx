@@ -635,7 +635,7 @@ export function Vote({ vu }) {
     }
 
     if (!idVote) {
-        return <div>Cette partie n'a pas de plateau de vote (lancée avant son ajout).</div>;
+        return <div>Ce jeu n'a pas de plateau de vote.</div>;
     }
 
     // Lois du tour : les agendas de la case Agenda du tour dans le déroulé.

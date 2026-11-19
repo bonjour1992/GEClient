@@ -40,8 +40,6 @@ const styleBoite = {
 
 const styleListe = { display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6 };
 
-const sansPrefixe = nom => (nom || "").replace(/^!([^!]*)!/, "");
-
 // Éléments d'un type, rangés par nom, avec leur contenu
 function useListe(type) {
 
@@ -49,11 +47,11 @@ function useListe(type) {
 
     const elements = getFromType(search, [type])
         .slice()
-        .sort((a, b) => sansPrefixe(a.name).localeCompare(sansPrefixe(b.name)));
+        .sort((a, b) => (a.name || "").localeCompare((b.name || "")));
 
     const contenus = useElements(elements.map(e => e.id));
 
-    return elements.map(e => ({ id: e.id, nom: sansPrefixe(e.name), contenu: contenus[e.id] }));
+    return elements.map(e => ({ id: e.id, nom: (e.name || ""), contenu: contenus[e.id] }));
 }
 
 // Bouton d'une liste : le nom ; un clic ouvre sa fenêtre
@@ -303,7 +301,7 @@ function FeuilleSpeciale({ id, nom, contenu, fermer }) {
 
     const envoyerATous = () => envoyerA(
         destinataires.map(j => j.userId),
-        `Feuille ${sansPrefixe(contenu?.name)} envoyée à chaque joueur`
+        `Feuille ${(contenu?.name || "")} envoyée à chaque joueur`
     );
 
     // « Envoyer vers… » : vers l'onglet Technologie d'un joueur, comme
@@ -313,7 +311,7 @@ function FeuilleSpeciale({ id, nom, contenu, fermer }) {
         const tech = /^joueur:(\d+):tech$/.exec(zone);
 
         if (tech) {
-            envoyerA([Number(tech[1])], `Feuille ${sansPrefixe(contenu?.name)} envoyée`);
+            envoyerA([Number(tech[1])], `Feuille ${(contenu?.name || "")} envoyée`);
             return;
         }
 
@@ -416,8 +414,8 @@ export function RechercheCarte() {
     const trouves = cherche.length < 2
         ? []
         : search
-            .filter(e => simplifier(sansPrefixe(e.name)).includes(cherche))
-            .sort((a, b) => sansPrefixe(a.name).localeCompare(sansPrefixe(b.name)));
+            .filter(e => simplifier((e.name || "")).includes(cherche))
+            .sort((a, b) => (a.name || "").localeCompare((b.name || "")));
 
     const regardee = ouverte && search.find(e => e.id === ouverte);
 
@@ -465,7 +463,7 @@ function ElementTrouve({ element, fermer }) {
 
     return (
         <Fenetre
-            titre={sansPrefixe(element.name)}
+            titre={(element.name || "")}
             fermer={fermer}
             actions={<>
                 <EnvoyerVers lien={lien} apres={fermer} />

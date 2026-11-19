@@ -44,19 +44,16 @@ export function numeroPhase(contenu) {
         return 0;
     }
 
-    const m = /^\s*(\d+)\s*\./.exec(nomSansPrefixe(contenu?.name));
+    const m = /^\s*(\d+)\s*\./.exec(contenu?.name || "");
 
     return Number(contenu?.numero) || (m ? Number(m[1]) : 0);
 }
-
-// Le préfixe !...! d'un nom n'est pas affiché
-const nomSansPrefixe = nom => (nom || "").replace(/^!([^!]*)!/, "");
 
 // Phases d'un tour, dans l'ordre : [{ id, nom, numero }]
 // phases : [{ id, content }] (seuls name, numero et horsTour sont lus)
 export function phasesDuTour(phases) {
     return phases
-        .map(p => ({ id: p.id, nom: nomSansPrefixe(p.content?.name), numero: numeroPhase(p.content) }))
+        .map(p => ({ id: p.id, nom: p.content?.name || "", numero: numeroPhase(p.content) }))
         .filter(p => p.numero > 0)
         .sort((a, b) => a.numero - b.numero);
 }
@@ -79,18 +76,8 @@ export const LIMITES_UNITES = {
     mon: 1,       // monument
 };
 
-// Type d'une unité. Une « infanterie » qui est un vaisseau de commerce
-// (mots-clés ship et com) est une frégate marchande mal typée.
-export function typeUnite(contenu) {
-
-    const motsCles = contenu?.mot_cle || [];
-
-    if (contenu?.type === "inf" && motsCles.includes("ship") && motsCles.includes("com")) {
-        return "com";
-    }
-
-    return contenu?.type ?? null;
-}
+// Type d'une unité (champ « type » : inf, mech, dest, com…), ou null
+export const typeUnite = contenu => contenu?.type ?? null;
 
 // Sac d'agents : on y tire au hasard les jetons du recrutement
 export const SAC = "pioche:sac";
@@ -159,10 +146,6 @@ export function actionsPiste(etat, userId, piste, n) {
 // activée (ou sur une de ses ruines : marques.ruine = 1 ou 2)
 export const ACTIVATION = "activation";
 
-// Marqueur de trêve : posé sur un système à la phase de déclaration de trêve
-// (un diplomate est détruit). Tous sont retirés quand on revient à cette phase.
-export const TREVE = "trêve";
-
 // Fragments de relique, obtenus en fouillant une ruine. Une ruine d'un type
 // donné rapporte le fragment de ce type (réserve illimitée) ; une ruine
 // « normale » fait tirer un fragment dans le sac.
@@ -223,12 +206,8 @@ export function casesRecrutement(texte) {
 }
 
 // Nombre d'exemplaires d'un élément (tuile système, carte) : son champ
-// « exemplaires » (Component/Exemplaires.jsx). L'ancien préfixe !N! du nom
-// reste compris tant qu'un élément le porte. Sinon un seul.
-export function exemplaires(contenu) {
-    const m = /^!(\d+)!/.exec(contenu?.name || "");
-    return m ? Number(m[1]) : Math.max(1, Math.floor(Number(contenu?.exemplaires)) || 1);
-}
+// « exemplaires » (Component/Exemplaires.jsx). Sinon un seul.
+export const exemplaires = contenu => Math.max(1, Math.floor(Number(contenu?.exemplaires)) || 1);
 
 const lienValide = lien => lien && Number.isInteger(lien.id) && lien.id > 0;
 
@@ -263,7 +242,8 @@ export function lignesDepart(content) {
 
 // Type de lien (Component/TypeLien.jsx) : un élément qui n'est pas « commun »
 // (lié à une faction, une faction neutre ou un événement) est écarté des
-// réserves communes. Sans ce champ, un élément est commun.
+// réserves communes. Un type d'élément qui ne porte pas ce champ (objectif
+// militaire, événement) est commun.
 const estCommun = contenu => (contenu?.lienType ?? "commun") === "commun";
 
 // Unité mercenaire : type de lien « Lié à un mercenaire » et « Lié à » vide
@@ -274,10 +254,8 @@ export const estUniteMercenaire = contenu => contenu?.lienType === "mercenaire" 
     !(Number(contenu.lienElement?.id) > 0);
 
 // Système hors du tirage au hasard (mise en place, « Générer » de l'éditeur,
-// tirage d'un système du plateau) : type de lien autre que « commun ». Sans
-// type de lien, l'ancien champ « special » fait foi.
-export const horsReserveCommune = contenu =>
-    contenu?.lienType ? contenu.lienType !== "commun" : contenu?.special === true;
+// tirage d'un système du plateau) : type de lien autre que « commun ».
+export const horsReserveCommune = contenu => !estCommun(contenu);
 
 function melangerListe(liste, alea) {
 
@@ -291,8 +269,8 @@ function melangerListe(liste, alea) {
     return resultat;
 }
 
-// Lien vers une unité (un lien sans type est une unité)
-const lienUnite = lien => lienValide(lien) && (lien.type || "unit") === "unit";
+// Lien vers une unité
+const lienUnite = lien => lienValide(lien) && lien.type === "unit";
 
 // partie  : { plateau, joueurs: [{ userId, faction }] }
 // charger : async id   -> contenu d'un élément (ou null)
@@ -394,7 +372,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
     }
 
     // Cases "hasard" : un système tiré au sort, comme le bouton « Générer »
-    // de l'éditeur de plateau (systèmes spéciaux exclus, !N! exemplaires).
+    // de l'éditeur de plateau (systèmes spéciaux exclus, champ « exemplaires »).
     {
         const reserve = [];       // tuiles non spéciales
         const speciales = [];     // tuiles spéciales
@@ -406,7 +384,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
         for (const systeme of await lister("system")) {
 
-            // (sauf une tuile en plusieurs exemplaires, comme « !30!vide », le
+            // (sauf une tuile en plusieurs exemplaires, comme « vide », le
             // système natal de Winnu : elle reste dans la pioche)
             if (natauxDesFactions.has(systeme.id) && exemplaires(systeme.content) === 1) {
                 continue;
@@ -526,7 +504,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
             for (let k = 0; k < total; k++) {
                 ajouter(etat, {
-                    ref: { type: lien.type || "unit", id: lien.id },
+                    ref: { type: lien.type, id: lien.id },
                     zone: k < n ? actifs : reserve,
                     proprio: u,
                 });
@@ -539,7 +517,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
             for (let k = 0; lienValide(lien) && k < n; k++) {
                 ajouter(etat, {
-                    ref: { type: lien.type || "agent", id: lien.id },
+                    ref: { type: lien.type, id: lien.id },
                     zone: `joueur:${u}:agents`,
                     proprio: u,
                 });
@@ -576,7 +554,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
         for (const ligne of lignesDepart(faction)) {
 
             // Feuilles de technologie choisies à la main (destination « tech »)
-            if (ligne.zone === "tech" && (ligne.lien.type || "") === "techsheet") {
+            if (ligne.zone === "tech" && ligne.lien.type === "techsheet") {
                 await poserFeuille(ligne.lien.id);
                 feuillesChoisies++;
                 continue;
@@ -604,12 +582,9 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
         // Faction sans feuille choisie dans ses éléments de départ : pour
         // chaque type, celle de la faction, sinon la feuille commune. Une
-        // feuille est à une faction par son lien « faction » ou par son type
-        // de lien.
+        // feuille est à une faction par son type de lien.
         const factionDe = f =>
-            f.lienType === "faction" && lienValide(f.lienElement)
-                ? f.lienElement.id
-                : (lienValide(f.faction) ? f.faction.id : null);
+            (f.lienType === "faction" && lienValide(f.lienElement) ? f.lienElement.id : null);
 
         for (const type of feuillesChoisies ? [] : TYPES_FEUILLE) {
 
@@ -676,22 +651,9 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
     // plusieurs factions), 30 cubes noirs et 20 cubes blancs.
     // --------------------------------------------------------
 
-    const utilisations = new Map();
-
-    for (const faction of await lister("faction")) {
-        for (const lien of faction.content?.agents || []) {
-            if (lienValide(lien)) {
-                utilisations.set(lien.id, (utilisations.get(lien.id) || 0) + 1);
-            }
-        }
-    }
-
-    // Type de lien de l'agent (« commun » : réserve commune) ; sans ce champ,
-    // un agent est commun s'il est cité par au moins deux factions
+    // Type de lien de l'agent : « commun » le met dans la réserve commune
     const agentsBase = (await lister("agent"))
-        .filter(agent => agent.content?.lienType
-            ? estCommun(agent.content)
-            : utilisations.get(agent.id) >= 2)
+        .filter(agent => estCommun(agent.content))
         .map(agent => agent.id);
 
     // Sert aussi à la réserve infinie d'agents du plateau général
@@ -824,7 +786,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
         for (const agenda of await lister("Agenda")) {
 
-            const m = /^(?:!\d+!)?\s*vote au conseil\s*(\d+)/i.exec(agenda.content?.name || "");
+            const m = /^\s*vote au conseil\s*(\d+)/i.exec(agenda.content?.name || "");
 
             if (m) {
                 votesConseil.set(Number(m[1]), agenda.id);

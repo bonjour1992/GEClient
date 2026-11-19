@@ -11,8 +11,6 @@ import { couleurJoueur } from "./Interaction";
 // Le créateur lance la partie : le serveur fait la mise en place.
 // ============================================================
 
-const nomSansPrefixe = nom => nom.replace(/^!([^!]*)!/, "");
-
 // Nom affiché des couleurs de joueur (clés de PlayerColor)
 const NOMS_COULEUR = {
     black: "Noir",
@@ -51,7 +49,7 @@ export function Preparation({ p }) {
         : (Object.keys(PlayerColor).find(c => !couleursPrises.includes(c)) || "red");
 
     const factions = getFromType(search, ["faction"]);
-    const nomFaction = id => nomSansPrefixe(factions.find(f => f.id === id)?.name || "faction #" + id);
+    const nomFaction = id => (factions.find(f => f.id === id)?.name || "faction #" + id);
 
     const base = "partie/" + partie.id;
 
@@ -113,7 +111,7 @@ export function Preparation({ p }) {
                     <option value="">Faction…</option>
                     {factions.map(f => (
                         <option key={f.id} value={f.id} disabled={factionsPrises.includes(f.id)}>
-                            {nomSansPrefixe(f.name)}{factionsPrises.includes(f.id) ? " (prise)" : ""}
+                            {f.name}{factionsPrises.includes(f.id) ? " (prise)" : ""}
                         </option>
                     ))}
                 </select>

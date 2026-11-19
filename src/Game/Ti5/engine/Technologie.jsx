@@ -99,7 +99,7 @@ function RechercheDuTour({ base }) {
         return [Number(/^\s*(\d+)/.exec(nom)?.[1]) || 0, libellePhase(nom)];
     }));
 
-    const nom = l => (contenus[l.element]?.name || nomElement(search, { id: l.element }) || "…").replace(/^!([^!]*)!/, "");
+    const nom = l => contenus[l.element]?.name || nomElement(search, { id: l.element }) || "…";
     const macro = (type, n) => `#re${type}${n > 1 ? `(${n})` : ""}`;
 
     // Recherche générée par une source : typée si son script le dit (SR-42 : spatiale)

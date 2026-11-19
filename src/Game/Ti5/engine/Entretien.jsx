@@ -91,7 +91,7 @@ export function useEntretien(u, idFaction) {
 
     const contenuPlanetes = useElements(planetes.map(c => c.ref.id));
 
-    const nom = ref => nomElement(search, ref).replace(/^(![^!]*!)+/, "");
+    const nom = ref => nomElement(search, ref);
     const sansInfluence = aScript(u, "sans-influence");
 
     const valeur = (c, champ) => Number(contenuPlanetes[c.ref.id]?.[champ]) || 0;

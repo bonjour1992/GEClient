@@ -115,20 +115,12 @@ export function aDesUnites(index, lieu, userId) {
         .some(c => c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio) === userId));
 }
 
-// Capacité d'attaque à distance d'une unité : #bomb(5,2) -> [5, 2]
-// Notation à étoiles : « #can 6** » -> [6, 2] (une étoile par dé).
+// Capacité d'attaque à distance d'une unité : #bomb(5,2) -> [5, 2] (valeur, nombre de dés)
 function capacite(u, cle) {
 
-    const texte = u?.habilite || "";
-    const m = new RegExp(`#${cle}\\((\\d+)(?:,\\s*(\\d+))?\\)`, "i").exec(texte);
+    const m = new RegExp(`#${cle}\\((\\d+)(?:,\\s*(\\d+))?\\)`, "i").exec(u?.habilite || "");
 
-    if (m) {
-        return [Number(m[1]), Number(m[2]) || 1];
-    }
-
-    const etoiles = new RegExp(`#${cle}\\s*(\\d+)(\\*+)`, "i").exec(texte);
-
-    return etoiles ? [Number(etoiles[1]), etoiles[2].length] : null;
+    return m ? [Number(m[1]), Number(m[2]) || 1] : null;
 }
 
 // Camp des unités sans propriétaire
@@ -229,7 +221,7 @@ export function Combat() {
                 {combats.map((n, k) => {
                     const avecMoi = aDesUnites(index, n, moi);
                     const l = lireLieu(n);
-                    const nom = (systemes[tuiles[k]?.ref.id]?.name || "système").replace(/^!([^!]*)!/, "");
+                    const nom = systemes[tuiles[k]?.ref.id]?.name || "système";
 
                     return (
                         <button
@@ -2398,8 +2390,8 @@ function CombatSysteme({ lieu }) {
     // --------------------------------------------------------
 
     const titre = `${SORTES[sorte]} — ` +
-        (planete !== null ? `${(laPlanete?.name || "planète " + (planete + 1)).replace(/^!([^!]*)!/, "")}, ` : "") +
-        `${(systeme?.name || "système").replace(/^!([^!]*)!/, "")}, ${nomCase(numero)}`;
+        (planete !== null ? `${(laPlanete?.name || "planète " + (planete + 1))}, ` : "") +
+        `${(systeme?.name || "système")}, ${nomCase(numero)}`;
 
     if (Number(etat.compteurs[COMBAT]) === 2) {
         return <CombatResolu lieu={lieu} compteur={COMBAT} titre={titre} />;

@@ -914,12 +914,11 @@ export function appliquer(etat, action, ctx = {}) {
                 let n = 0;
 
                 // Faveurs choisies : celles du choix scellé encore en sa possession
-                // (et, pour une partie d'avant le choix scellé, sa zone secrète)
                 const choisies = (etat.secrets?.[u]?.faveurs || [])
                     .map(id => (Object.hasOwn(etat.composants, id) ? etat.composants[id] : null))
                     .filter(f => f && !f.sur && f.zone === `joueur:${u}:faveurs`);
 
-                for (const f of [...choisies, ...composantsDeZone(etat, `joueur:${u}:secret:faveurs`)]) {
+                for (const f of choisies) {
 
                     // Émetteur : le joueur, ou la faction neutre (marques.neutre)
                     // d'une faveur obtenue d'une faction neutre

@@ -13,8 +13,6 @@ import { useEngine } from "./Interaction";
 //     fonction de l'engine change.
 // ============================================================
 
-const sansPrefixe = nom => nom.replace(/^!([^!]*)!/, "");
-
 // Texte plus grand que sur la fiche imprimée
 const STYLE_AIDE = { fontSize: 14, width: 760 };
 
@@ -141,7 +139,7 @@ function ReglesGenerales() {
 
     const regles = getFromType(search, ["regle"])
         .slice()
-        .sort((a, b) => sansPrefixe(a.name).localeCompare(sansPrefixe(b.name), "fr"));
+        .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
     if (!regles.length) {
         return null;
@@ -153,7 +151,7 @@ function ReglesGenerales() {
 
             {regles.map(r => (
                 <details key={r.id} data-regle={r.id} style={{ marginTop: 6 }}>
-                    <summary style={{ cursor: "pointer", fontWeight: "bold" }}>{sansPrefixe(r.name)}</summary>
+                    <summary style={{ cursor: "pointer", fontWeight: "bold" }}>{r.name}</summary>
                     <LoadAndDisplay link={{ type: "regle", id: r.id }} style={STYLE_AIDE} />
                 </details>
             ))}
@@ -166,7 +164,7 @@ export function Aide() {
     const { etat, search } = useEngine();
 
     const phase = getFromType(search, ["phase"])
-        .find(e => sansPrefixe(e.name) === etat.phase);
+        .find(e => e.name === etat.phase);
 
     const idPhase = phase?.id ?? null;
 

@@ -21,16 +21,11 @@ const COMPTEURS = {
     proposition: "dernière proposition d'agenda (tour)",
     entretien: "entretien fait (tour)",
     piocheProposition: "propositions piochées (tour)",
-    faveurPrise: "faveur prise au ravitaillement (tour)",
 };
 
 function nomCompteur(id, nomDe) {
 
     const parties = id.split(":");
-
-    if (id === "combat:case") {
-        return "combat (case)";
-    }
 
     if (id === "general:recrutement") {
         return "recrutement mis en place (tour)";

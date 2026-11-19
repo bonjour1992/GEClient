@@ -401,6 +401,24 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Rétrocompatibilité retirée du moteur (2026-11-19, demande de Loïc) : notation à étoiles
+  (`capacite`), pillage et production sans parenthèses, `#rep` suivi d'un nombre nu, préfixe
+  `!…!` des noms (14 endroits) et nombre d'exemplaires lu dans le nom, ancien booléen
+  `special`, ancienne règle des agents cités par deux factions, ancien champ `faction` des
+  feuilles, frégate marchande typée « inf », liens sans type, ancien jeton `trêve` (et son
+  icône), zone secrète des faveurs, anciennes zones du plateau général, anciens compteurs
+  `rechTour` / `rechFait`, libellés morts du journal. Données normalisées avant
+  (`migrate-review-s14.mjs` : `#pill(#rerupt(3))`, `#Rep(2)`, macro `#rep` en `after` ;
+  `migrate-review-s15.mjs` : `lienType` « commun » écrit sur 165 éléments). `estCommun`
+  garde son défaut « commun » pour les types sans ce champ (objectif militaire, événement).
+  Non retiré : le mécanisme générique des zones secrètes (`etat.js` et `server/partie.js`),
+  plus utilisé mais partagé avec le serveur. Aucune partie supprimée. Review de la
+  duplication : `demandes-ti5/review-code.md`.
+- ☑ En-tête du site (2026-11-19) : une seule barre en flex, `HeaderBar.jsx` ; les outils du
+  jeu (`JeuBar.jsx` : recherche, « Ajouter », éléments supprimés) sont rendus par portail
+  dans l'emplacement `slotEntete` passé par le contexte de l'`<Outlet>` ; menus au clic
+  (`Menu`) ; sous 700 px, une seule ligne (page courante + retour, boutons en icônes,
+  recherche dépliable). Cadre « Connaissance » des feuilles arrondi (`techSheet.jsx`).
 - ☑ Dés à 10 faces numérotés de 0 à 9 (2026-11-19, précision de Loïc : le 0 vaut zéro, pas
   dix) : `faceD10` (`effets.js`) appliqué à toutes les lectures d'un D10 — combat, jets
   isolés, blocage, sauvetage, scripts, tirages de début de tour, journal, cadre « Dés » ; le

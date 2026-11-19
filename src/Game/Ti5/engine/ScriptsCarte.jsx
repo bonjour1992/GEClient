@@ -104,13 +104,13 @@ function ReparationImprovisee({ c, fermer }) {
 // ------------------------------------------------------------
 // RÉPARATION ILLIMITÉE (fiche d'une de mes unités endommagées)
 //
-// Une de mes unités du système porte #rep sans nombre (Dock ; « #Rep 2 »,
+// Une de mes unités du système porte #rep sans nombre (Dock ; « #Rep(2) »,
 // réparation limitée, ne compte pas) : l'unité est réparée, 1 ressource par
 // dégât, à la phase de production (rouge gris sinon). Pas d'agent. Une unité
 // biologique ne se répare pas.
 // ------------------------------------------------------------
 
-const REPARATION_ILLIMITEE = /#rep\b(?!\s*\(?\s*\d)/i;
+const REPARATION_ILLIMITEE = /#rep\b(?!\()/i;
 
 function ReparationIllimitee({ c, fermer }) {
 

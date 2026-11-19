@@ -26,8 +26,7 @@
 
 const RE_LIGNE = /^joueur:(\d+):rechlog:(\d+):(\d+):([a-z]):(\d+)$/;
 
-// (les anciens compteurs rechTour et rechFait sont effacés avec le journal)
-const RE_RECHERCHES = /^joueur:\d+:(rechTour|rechFait|rechlog):/;
+const RE_RECHERCHES = /^joueur:\d+:rechlog:/;
 
 // Numéro de la phase en cours, lu au début de son nom (0 : sans numéro)
 export const numeroPhase = etat => Number(/^\s*(\d+)/.exec(etat?.phase || "")?.[1]) || 0;

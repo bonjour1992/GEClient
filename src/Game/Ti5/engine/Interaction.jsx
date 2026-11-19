@@ -14,7 +14,6 @@ import {
     FAVEUR,
     DETTE,
     ACTIVATION,
-    TREVE,
     RESSOURCES,
     LIBRE,
     COULEUR_LIBRE,
@@ -233,30 +232,6 @@ export function Repli({ cle, titre, children, style }) {
 // OUTILS
 // ============================================================
 
-// Icône du marqueur de trêve : une colombe portant un rameau d'olivier
-function Colombe() {
-    return (
-        <svg viewBox="0 0 24 24" style={{ display: "block", width: "100%", height: "100%" }} aria-hidden="true">
-            {/* rameau d'olivier, tenu dans le bec */}
-            <path d="M3.2 10 C2.6 12.4 3 15 4.6 18" fill="none" stroke="#2e7d32" strokeWidth="1.1" strokeLinecap="round" />
-            <ellipse cx="1.9" cy="12.6" rx="1.7" ry="0.85" transform="rotate(-55 1.9 12.6)" fill="#2e7d32" />
-            <ellipse cx="4.9" cy="13.2" rx="1.7" ry="0.85" transform="rotate(35 4.9 13.2)" fill="#2e7d32" />
-            <ellipse cx="2.4" cy="16.2" rx="1.7" ry="0.85" transform="rotate(-50 2.4 16.2)" fill="#2e7d32" />
-            <ellipse cx="5.9" cy="16.6" rx="1.7" ry="0.85" transform="rotate(30 5.9 16.6)" fill="#2e7d32" />
-            {/* colombe : bec à gauche, aile levée, queue à droite */}
-            <path
-                d="M2.6 9.6 L5.2 8.3 C6.2 6.8 8.2 6.6 9.4 7.8 L11 9.4 C11.6 6 14.2 3.6 18.4 3 C17.6 5.2 17.4 7 17.8 9 C19.6 9.4 21.2 10.6 22.2 12.4 C19.8 12.2 18.2 12.8 16.8 14.2 C14.8 16.4 12 17 9.6 16 C7.2 15 5.8 12.8 5.6 10.6 Z"
-                fill="#fff"
-                stroke="#222"
-                strokeWidth="1"
-                strokeLinejoin="round"
-            />
-            <path d="M11 9.4 C12.4 11.2 14.6 12 17.8 9" fill="none" stroke="#222" strokeWidth="0.8" />
-            <circle cx="7.2" cy="8.9" r="0.55" fill="#222" />
-        </svg>
-    );
-}
-
 // Composants rangés par zone et par porteur
 export function indexer(etat) {
 
@@ -292,7 +267,7 @@ export const estMercenaire = c => c?.ref?.type === "mercenaire" ||
 export function nomElement(search, ref) {
     const element = search.find(e => e.id === ref.id);
 
-    return (element?.name || `${ref.type} #${ref.id}`).replace(/^!([^!]*)!/, "");
+    return element?.name || `${ref.type} #${ref.id}`;
 }
 
 export function nomType(jeu, type) {
@@ -362,7 +337,6 @@ export function nomZone(zone, nomDe) {
                 tech: "technologies",
                 fragments: "fragments",
                 choix: "cartes à choisir",
-                "secret:faveurs": "faveurs à encaisser",
             };
 
             if (parties[2] === "tour") {
@@ -399,10 +373,6 @@ export function nomZone(zone, nomDe) {
 
         case "general": {
             const noms = {
-                lois: "lois",
-                traites: "traités",
-                regles: "règles spéciales",
-                objectifs: "objectifs",
                 promesses: "promesses",
                 agents: "réserve d'agents",
                 tuiles: "tuiles piochées",
@@ -990,15 +960,14 @@ export function tailleMini(type, petit) {
 const CONTOUR_BLANC = "drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)";
 
 // Marqueur de trêve : le token « Trêve » des données du jeu (reconnu à son
-// nom, comme les agents), ou l'ancien jeton `trêve` des parties en cours
+// nom, comme les agents)
 const RE_TREVE = /^tr[eê]ve$/i;
 
 export const tokenTreve = search =>
-    search.find(e => e.type === "token" && RE_TREVE.test((e.name || "").replace(/^!([^!]*)!/, "").trim())) || null;
+    search.find(e => e.type === "token" && RE_TREVE.test((e.name || "").trim())) || null;
 
-export const estTreve = (c, search) => !!c && !c.cache && (c.ref
-    ? c.ref.type === "token" && c.ref.id === tokenTreve(search)?.id
-    : c.jeton === TREVE);
+export const estTreve = (c, search) => !!c && !c.cache &&
+    c.ref?.type === "token" && c.ref.id === tokenTreve(search)?.id;
 
 // Token (type « token » des données du jeu) en miniature : sa forme (rond
 // ou triangle), sa couleur de fond et son image, sur un côté de `cote` px.
@@ -1243,42 +1212,6 @@ function Pion({ groupe, petit }) {
                             }}
                         />
                     )}
-                </span>
-                {n > 1 && <b style={badge}>{n}</b>}
-            </span>
-        );
-    }
-
-    // Marqueur de trêve : un carré blanc marqué « T », au liseré de la couleur
-    // du joueur qui l'a posé.
-    if (!c.ref && c.jeton === TREVE) {
-
-        const cote = petit ? 18 : 24;
-        const titre = "Marqueur de trêve" + (c.proprio ? " de " + nomDe(c.proprio) : "");
-
-        return (
-            <span
-                data-composant={c.id}
-                data-groupe={groupe.map(x => x.id).join(",")}
-                data-nom={titre}
-                title={titre + (n > 1 ? ` ×${n}` : "")}
-                style={{ ...stylePion, padding: 0, border: "none", backgroundColor: "transparent", gap: 1 }}
-            >
-                <span
-                    style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: cote,
-                        height: cote,
-                        boxSizing: "border-box",
-                        backgroundColor: "#fff",
-                        border: "2px solid " + (couleurDe(c.proprio) || "#2e7d32"),
-                        outline: "1px solid #000",
-                        borderRadius: 3,
-                    }}
-                >
-                    <Colombe />
                 </span>
                 {n > 1 && <b style={badge}>{n}</b>}
             </span>

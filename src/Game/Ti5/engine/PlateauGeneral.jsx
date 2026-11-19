@@ -9,7 +9,6 @@ import {
     CUBES,
     SAC_FRAGMENTS,
     FRAGMENTS,
-    TREVE,
     MARQUEUR,
     ACTIVATION,
     PIOCHE_TUILES,
@@ -47,15 +46,6 @@ const visibleHorsJeu = c => c.ref || !CACHES_HORS_JEU.has(c.jeton);
 
 const ZONES_EN_COURS = [
     ["general:table", "Table (cartes révélées)"],
-];
-
-// Anciennes zones retirées du plateau : montrées seulement si une partie
-// existante y a encore des éléments (pour pouvoir les en sortir)
-const ZONES_RETIREES = [
-    ["general:lois", "Lois en cours"],
-    ["general:traites", "Traités"],
-    ["general:regles", "Règles spéciales"],
-    ["general:objectifs", "Objectifs"],
 ];
 
 // Les cases « événement », « objectif militaire » et « agenda » du déroulé
@@ -229,7 +219,7 @@ export function Des({ nu }) {
                     {designe
                         ? (
                             <b style={{ fontSize: 15 }}>
-                                {(systemes[designe.id]?.name || "système").replace(/^!([^!]*)!/, "")}, case {designe.numero + 1}
+                                {systemes[designe.id]?.name || "système"}, case {designe.numero + 1}
                             </b>
                         )
                         : <i>le plateau a changé depuis le tirage</i>}
@@ -843,10 +833,9 @@ export function PlateauGeneral() {
 
             <div style={styleGrille}>
                 {/* Les cartes y sont affichées en entier */}
-                {[...ZONES_EN_COURS, ...ZONES_RETIREES.filter(([zone]) => (index.parZone.get(zone) || []).length)]
-                    .map(([zone, titre]) => (
-                        <Zone key={zone} zone={zone} titre={titre} cartes={0.6} />
-                    ))}
+                {ZONES_EN_COURS.map(([zone, titre]) => (
+                    <Zone key={zone} zone={zone} titre={titre} cartes={0.6} />
+                ))}
             </div>
 
             {/* DÉROULÉ : les 3 pages côte à côte */}
