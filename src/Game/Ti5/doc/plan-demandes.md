@@ -401,6 +401,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Review des données, textes d'unité T1 à T11 (2026-11-19, `migrate-review-s10.mjs`, 11
+  écritures) : texte de carte en style abrégé, détail en phrases dans « explication ». À
+  faire : trois scripts ne suivent pas encore ces textes — Camp de travail (2 esclaves
+  dépensés au choix du destructeur, qui pose 2 de ses infanteries), Vaisseau pirate (seuls les
+  dés à 1 touchent les vaisseaux de commerce), Vaisseau relique (le fragment ancien reste
+  posé : +1 résistance, pas +1 ressource). Restent aussi T12 à T15 (agents, mercenaires).
 - ☑ Technologies isolées (2026-11-19) : cadre « Technologies isolées » de l'onglet Technologie
   (`TechnologiesIsolees`, `TechIsolee`), où une carte technologie hors feuille se recherche
   comme les autres (mêmes compteurs, case 0 de son composant ; `technologiesDe` la compte) ;
