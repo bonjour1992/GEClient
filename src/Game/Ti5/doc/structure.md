@@ -338,6 +338,20 @@ suivant, retour à la première phase). Le champ `enLigne` d'une phase dit quoi
 faire sur le moteur ; l'onglet Aide l'affiche (affichage `enLigne`), puis les
 règles de la phase.
 
+Les règles qui ne dépendent pas d'une phase sont des éléments de type `regle`
+(`regle.jsx` : champs `usage` et `special`) : Jet, Contrôle (l'ancienne phase
+« 00. Controle »), Ciblage, Application des dégâts. Les phases de canons, de
+combat spatial, de bombardement et de combat terrestre y renvoient par un lien
+`|id|`. L'onglet Aide les liste toutes sous « Règles générales », repliées
+(`ReglesGenerales`, `Aide.jsx`).
+
+Conventions d'écriture des textes (2026-11-19, `migrate-review-s2.mjs`) :
+en-tête de phase `#Pcom:` (majuscule, deux-points collés) ; valeurs entre
+parenthèses — `#bomb(5,2)`, `#can(6,2)`, `#raid(5,2)`, `#con(3)`, `#pill(2)`,
+`#livr(5)`, `#prod(2,Vaisseau/Mech)` ; quantités `#res(2)`, `#inf(1)`,
+`#com(3)`, `#point(1)`, `#infa(1)`. Les caractéristiques d'une unité ne sont
+écrites que sur l'élément `unit`.
+
 ### achats au recrutement
 
 Pendant la phase de recrutement, Ctrl + clic sur ce qui est dans une case de

@@ -132,6 +132,35 @@ function ModeEmploi() {
     );
 }
 
+// Règles générales (éléments « regle » : jet, contrôle, ciblage, application
+// des dégâts...), les mêmes à toutes les phases : les fiches de phase y
+// renvoient. Repliées ; une fiche n'est chargée qu'à son ouverture.
+function ReglesGenerales() {
+
+    const { search } = useEngine();
+
+    const regles = getFromType(search, ["regle"])
+        .slice()
+        .sort((a, b) => sansPrefixe(a.name).localeCompare(sansPrefixe(b.name), "fr"));
+
+    if (!regles.length) {
+        return null;
+    }
+
+    return (
+        <div data-regles-generales style={{ marginTop: 14 }}>
+            <b style={{ fontSize: 15 }}>Règles générales</b>
+
+            {regles.map(r => (
+                <details key={r.id} data-regle={r.id} style={{ marginTop: 6 }}>
+                    <summary style={{ cursor: "pointer", fontWeight: "bold" }}>{sansPrefixe(r.name)}</summary>
+                    <LoadAndDisplay link={{ type: "regle", id: r.id }} style={STYLE_AIDE} />
+                </details>
+            ))}
+        </div>
+    );
+}
+
 export function Aide() {
 
     const { etat, search } = useEngine();
@@ -170,6 +199,8 @@ export function Aide() {
                     <LoadAndDisplay link={lien} style={STYLE_AIDE} />
                 </>
             )}
+
+            <ReglesGenerales />
 
             <ModeEmploi />
         </div>

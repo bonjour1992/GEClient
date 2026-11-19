@@ -12,6 +12,7 @@ import mercenaireHandler from "./mercenaire"
 import reliqueHandler from "./relique"
 import evenementHandler from "./evenement"
 import phaseHandler from "./phase"
+import regleHandler from "./regle"
 import techSheetHandler from "./techSheet"
 import neutralFactionHandler from "./neutralFaction"
 import derouleHandler from "./deroule"
@@ -39,6 +40,7 @@ export const Handler = {
     "relique": reliqueHandler,
     "evenement": evenementHandler,
     "phase": phaseHandler,
+    "regle": regleHandler,
     "techsheet": techSheetHandler,
     "neutral": neutralFactionHandler,
     "deroule": derouleHandler,

@@ -397,6 +397,15 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   terrestre, capture et dette), Partage de technologie (marqueur sur la technologie), Tuteur des
   réfugiés, Passage de Creuss et Navigation delta, Chemin du vide, Conspirer ensemble (+1 voix dans
   le décompte des votes, `decompteVotes`, `Vote.jsx`).
+- ☑ Review des données, suites (2026-11-19, `migrate-review-s2.mjs`, 324 écritures) : mot-clé
+  `mil` sur six unités neutres ; promesses #228, #370 (Winnu) et #421 (Jol-Nar) liées à leur
+  faction ; « technologies de même nom » dans les règles de la phase de science ; en-têtes de
+  phase `#Pcom:` ; valeurs et quantités entre parenthèses (le moteur lit désormais `#con(3)` et
+  `#livr(5)` là où `#con 3` et `#livr 5` étaient ignorés) ; type `regle` (Jet, Contrôle, Ciblage,
+  Application des dégâts) et « Règles générales » dans l'onglet Aide ; données d'unité retirées
+  des planètes, agendas, reliques et mercenaires (copie : `sauvegarde-donnees-unite-hors-unite.json`) ;
+  `fullfaction` supprimé définitivement (copie : `sauvegarde-fullfaction.json`) ; système
+  « Rarron + beta » : trou de ver bêta.
 - ☑ Review des données, erreurs sûres (2026-11-19, `migrate-review-s1.mjs`, détail dans
   `demandes-ti5/review-donnees.md`) : Mentak — feuille sociale #858 au départ, Lune noire en
   vaisseau amiral ; Kabal — `departNum` ; Hacan — lien parasite ; tech#192 « PC » supprimée (doublon
