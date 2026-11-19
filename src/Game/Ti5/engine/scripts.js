@@ -1849,7 +1849,7 @@ export const SCRIPTS = [
 
     regle("vaisseau-pirate", "unit", 407, 1794049918205, "Vaisseau pirate", "auto",
         "Conflit, combat spatial",
-        "Ses touches vont d'abord aux vaisseaux de commerce du camp visé ; furtif dans un système à anomalie."),
+        "Ses dés qui font 0 touchent d'abord un vaisseau de commerce du camp visé ; furtif dans un système à anomalie."),
 
     regle("epineux-geant", "unit", 466, 1794335055036, "Épineux géant", "auto",
         "Conflit, bombardement",
@@ -1901,7 +1901,7 @@ export const SCRIPTS = [
 
     regle("camp-de-travail-destruction", "unit", 154, 1794049918192, "Camp de travail (destruction)", "auto",
         "Conflit : « Terminer le combat » (butin)",
-        "Détruit, il libère 2 esclaves de son propriétaire (ceux du destructeur d'abord) : posés sur sa planète, sous le contrôle de leur propriétaire."),
+        "Détruit : 2 esclaves de son propriétaire sont dépensés (au choix du destructeur — l'outil prend ceux des autres factions d'abord) et le destructeur pose 2 de ses infanteries sur la planète."),
 
     effet("strategie-d-evitement", 788, 1794343421174, "Stratégie d'évitement", "nouveau",
         "Conflit, combat spatial : « Stratégie d'évitement : vaisseaux cochés »",
@@ -1989,11 +1989,11 @@ export const SCRIPTS = [
         }),
 
     action("vaisseau-relique-reparer", "unit", 854, 1794335055091, "Vaisseau relique : réparer", "unite",
-        "Dépensez un fragment ancien : le vaisseau est réparé gratuitement et vous gagnez 1 ressource.", {
+        "Posez un fragment ancien sur le vaisseau : il est réparé gratuitement, et il a 1 de résistance en plus par fragment ancien posé dessus (compté au combat).", {
             fragments: { ancien: 1 },
+            fragmentsPoses: true,
             degat: -100,
-            gains: { res: 1 },
-            libelle: "Réparer gratuitement, +1 ressource (fragment ancien)",
+            libelle: "Poser un fragment ancien : réparé, +1 résistance",
         }),
 
     // ---- remplaçants d'agent (Interaction.jsx : choisirRemplacants) ----

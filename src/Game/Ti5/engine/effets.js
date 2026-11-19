@@ -19,6 +19,20 @@
 // (aLaMain : butin que l'outil ne sait pas compter, « #com ici ».)
 // ------------------------------------------------------------
 
+// ------------------------------------------------------------
+// DÉ À 10 FACES : NUMÉROTÉ DE 0 À 9
+//
+// Les dés du jeu sont des D10 classiques, numérotés de 0 à 9 : le 0 vaut
+// zéro, pas dix (règle « Jet »). Le serveur tire toujours de 1 à 10
+// (etat.js, action « des ») et la marque d'un dé garde ce tirage — 0 ou
+// absent y veut dire « pas encore lancé ». Tout ce qui LIT un D10 (seuil
+// d'un jet, affichage, journal) passe par faceD10 : le tirage 10 est la
+// face 0, les autres sont inchangés. Les dés d'un autre nombre de faces
+// (1D6, 1D3, tirage d'un système au hasard) ne sont pas concernés.
+// ------------------------------------------------------------
+
+export const faceD10 = tirage => (Number(tirage) === 10 ? 0 : Number(tirage));
+
 export function lirePillage(contenu) {
 
     const texte = String(contenu?.habilite || "")

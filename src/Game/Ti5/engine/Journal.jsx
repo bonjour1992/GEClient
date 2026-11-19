@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { fetchAPI } from "../../../lib/fetch";
 import { useEngine, nomElement, nomType, nomZone, nomCase, lireRegle } from "./Interaction";
+import { faceD10 } from "./effets";
 
 // ============================================================
 // JOURNAL : historique des coups
@@ -139,15 +140,21 @@ export function decrire(action, { search, jeu, nomDe }) {
                     `${r.points} point${r.points > 1 ? "s" : ""}`)
                 .join(" ; ");
 
-        case "des":
+        case "des": {
+            // D10 numérotés de 0 à 9 (faceD10, effets.js). (Le tirage d'un système au hasard
+            // parmi exactement 10 s'affiche donc 0 pour le dixième ; la désignation, elle,
+            // se lit dans le cadre « Dés ».)
+            const faces = (action.faces ?? 10) === 10 ? resultats.map(faceD10) : resultats;
+
             // Jet d'un composant (attaques d'un vaisseau au combat)
             if (noms) {
-                return `${noms} lance ${resultats.length}d${action.faces ?? 10} : ` +
-                    resultats.join(", ");
+                return `${noms} lance ${faces.length}d${action.faces ?? 10} : ` +
+                    faces.join(", ");
             }
 
-            return `lance ${resultats.length}d${action.faces ?? 10} : ${resultats.join(", ")}` +
-                ` (total ${resultats.reduce((s, v) => s + v, 0)})`;
+            return `lance ${faces.length}d${action.faces ?? 10} : ${faces.join(", ")}` +
+                ` (total ${faces.reduce((s, v) => s + v, 0)})`;
+        }
 
         case "compteur":
             // Compteurs d'un combat : combat:<case>, :etape, :pret:<joueur>

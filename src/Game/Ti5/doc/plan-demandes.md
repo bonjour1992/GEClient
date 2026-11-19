@@ -401,12 +401,19 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
-- ☑ Review des données, textes d'unité T1 à T11 (2026-11-19, `migrate-review-s10.mjs`, 11
-  écritures) : texte de carte en style abrégé, détail en phrases dans « explication ». À
-  faire : trois scripts ne suivent pas encore ces textes — Camp de travail (2 esclaves
-  dépensés au choix du destructeur, qui pose 2 de ses infanteries), Vaisseau pirate (seuls les
-  dés à 1 touchent les vaisseaux de commerce), Vaisseau relique (le fragment ancien reste
-  posé : +1 résistance, pas +1 ressource). Restent aussi T12 à T15 (agents, mercenaires).
+- ☑ Dés à 10 faces numérotés de 0 à 9 (2026-11-19, précision de Loïc : le 0 vaut zéro, pas
+  dix) : `faceD10` (`effets.js`) appliqué à toutes les lectures d'un D10 — combat, jets
+  isolés, blocage, sauvetage, scripts, tirages de début de tour, journal, cadre « Dés » ; le
+  serveur n'est pas modifié. Règle « Jet » et macro `#jet` mises à jour
+  (`migrate-review-s12.mjs`). Question ouverte : le trou de ver oméga (« de 1 à 3 bloqué,
+  de 4 à 8 passe, 9 ou plus touche ») — l'outil bloque sur 0 à 3 et touche sur 9.
+- ☑ Review des données, textes d'unité T1 à T15 (2026-11-19, `migrate-review-s10.mjs` et
+  `migrate-review-s11.mjs`, 15 écritures) : texte de carte en style abrégé, détail en phrases
+  dans « explication ». Scripts alignés : Camp de travail (2 esclaves dépensés — ceux des
+  autres factions d'abord, le choix revenant au destructeur — qui pose 2 de ses infanteries),
+  Vaisseau pirate (seuls ses dés à 0 touchent d'abord les vaisseaux de commerce), Vaisseau
+  relique (le fragment ancien reste posé sur le vaisseau : réparé, +1 de résistance par
+  fragment, `fragmentsPoses`).
 - ☑ Technologies isolées (2026-11-19) : cadre « Technologies isolées » de l'onglet Technologie
   (`TechnologiesIsolees`, `TechIsolee`), où une carte technologie hors feuille se recherche
   comme les autres (mêmes compteurs, case 0 de son composant ; `technologiesDe` la compte) ;

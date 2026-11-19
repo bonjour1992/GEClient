@@ -2,7 +2,7 @@ import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee
 import { contenuEnCache, useElement, useElements } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite } from "./miseEnPlace";
-import { depenserAgent } from "./effets";
+import { depenserAgent, faceD10 } from "./effets";
 import { actionsPossession } from "./Controle";
 import { noter } from "./recherche";
 import { lireQuestion } from "./Decisions";
@@ -436,7 +436,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             s.reparer && !aReparer.length && "aucune unité à réparer ici",
             s.soigne && !aSoigner.length && "aucune unité endommagée de ce type ici",
             s.retire && !aRetirer.length && `aucune unité « ${nomElement(search, { id: s.retire })} » ici`,
-            effet.degat < 0 && degat <= 0 && "cette unité n'a aucun dégât",
+            // (fragmentsPoses : poser le fragment sert aussi sans dégât — Vaisseau relique)
+            effet.degat < 0 && degat <= 0 && !s.fragmentsPoses && "cette unité n'a aucun dégât",
             fait && "déjà fait ce tour",
         ];
 
@@ -506,7 +507,10 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                             : { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` })]) : []),
                 ...(choisi.agentDepense ? depenserAgent({ aScript, moi, etat }, choisi.agentDepense, `l'agent (${s.nom})`) : []),
                 ...coutDe(choisi).map(([cle, n]) => ({ type: "compteur", id: `joueur:${moi}:${compteurDe(cle)}`, delta: -n })),
-                ...payes.map(f => ({ type: "supprimer", c: f.id })),
+                // (fragmentsPoses : les fragments restent posés sur la carte au lieu d'être dépensés)
+                ...payes.map(f => (s.fragmentsPoses && c
+                    ? { type: "deplacer", c: f.id, sur: c.id }
+                    : { type: "supprimer", c: f.id })),
                 ...depenses.flatMap(d => d.trouves.map(x => (d.use
                     ? { type: "marquer", c: x.id, marque: "use", valeur: true }
                     : { type: "supprimer", c: x.id }))),
@@ -551,7 +555,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                     const suites = tirages
                         .map((t, k) => ({ t, k, jet: reponse?.etat?.composants?.[t.c]?.marques?.["jetScript" + k] }))
                         .filter(x => x.jet !== undefined)
-                        .map(x => ({ c: x.t.c, marque: "jetScript" + x.k, ...x.t.suite(String(x.jet).split(",").map(Number)) }));
+                        .map(x => ({ c: x.t.c, marque: "jetScript" + x.k, ...x.t.suite(String(x.jet).split(",").map((x.t.faces || 10) === 10 ? faceD10 : Number)) }));
 
                     if (!suites.length) {
                         return;

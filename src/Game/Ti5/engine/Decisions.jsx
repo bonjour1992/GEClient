@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { MARQUEUR, actionsPiste, typeUnite } from "./miseEnPlace";
+import { faceD10 } from "./effets";
 
 // ============================================================
 // ONGLET « DÉCISION »
@@ -373,9 +374,10 @@ function Recomposition() {
         const lots = Array.from({ length: Math.ceil(voulu / 30) }, (_, i) => ({ type: "des", n: Math.min(30, voulu - 30 * i), faces: 10 }));
         const r = await envoyer(lots, commentaire || `Recomposition : ${voulu} dé(s)`);
 
+        // (D10 numérotés de 0 à 9 : faceD10, effets.js)
         const des = [...(r?.coups || [])]
             .sort((a, b) => b.n - a.n)
-            .find(x => x.auteur === moi)?.actions.filter(a => a.type === "des").flatMap(a => a.resultats || []);
+            .find(x => x.auteur === moi)?.actions.filter(a => a.type === "des").flatMap(a => a.resultats || []).map(faceD10);
 
         if (!Array.isArray(des) || des.length !== voulu) {
             aviser("Recomposition : les dés n'ont pas pu être lus, relancez.");

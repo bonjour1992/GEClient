@@ -166,6 +166,19 @@ technologies débloquées. On l'y met en glissant la carte sur le cadre, par
 
 `tech.jsx` affiche `context.progres` cases cochées quand il est fourni.
 
+**Dés à 10 faces : de 0 à 9.** Les dés du jeu sont des D10 classiques numérotés
+de 0 à 9, où le 0 vaut zéro (règle « Jet »). L'action `des` du serveur tire
+toujours de 1 à 10, et la marque d'un dé garde ce tirage (0 ou absente : pas
+encore lancé). Tout ce qui lit un D10 passe par `faceD10` (`effets.js`), qui
+rend la face 0 pour le tirage 10 : dés du combat (`lireDes`), jets isolés
+(Médecine, riposte du Khan, Memoria D, Commerce d'esclave, Duha Menaimon,
+Skarvald : `faceDe`, `null` tant que le dé n'est pas lancé), passage d'une
+rupture ou d'un trou de ver oméga (`Blocage.jsx`), Capsule de secours
+(`Sauvetage.jsx`), jets des scripts (`ActionsScript.jsx`), tirages du début de
+tour (`Partie.jsx`), Recomposition (`Decisions.jsx`), journal et cadre « Dés ».
+Les dés d'un autre nombre de faces et le tirage d'un système au hasard ne sont
+pas concernés.
+
 Marques utilisées par l'interface : `degat` (nombre), `use` (usé), `rotation`
 (tuile système, 0 à 5), `possession` (id du joueur qui contrôle le composant).
 

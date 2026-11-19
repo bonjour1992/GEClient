@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
-import { depenserAgent } from "./effets";
+import { depenserAgent, faceD10 } from "./effets";
 import { getHandler } from "../../games";
 import {
     TYPES_PIOCHE,
@@ -216,7 +216,10 @@ export function Des({ nu }) {
             {dernier && !tirage && (
                 <span>
                     Dernier lancer ({nomDe(dernier.coup.auteur)}, {dernier.action.resultats.length}d{dernier.action.faces}) :{" "}
-                    <b style={{ fontSize: 18 }}>{dernier.action.resultats.join("  ")}</b>
+                    {/* (D10 numérotés de 0 à 9 : faceD10, effets.js) */}
+                    <b style={{ fontSize: 18 }}>
+                        {(dernier.action.faces === 10 ? dernier.action.resultats.map(faceD10) : dernier.action.resultats).join("  ")}
+                    </b>
                 </span>
             )}
 

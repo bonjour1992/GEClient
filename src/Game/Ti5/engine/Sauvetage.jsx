@@ -1,5 +1,6 @@
 import { useEngine, nomCase, distanceCases, nomElement } from "./Interaction";
 import { useElements } from "./sync";
+import { faceD10 } from "./effets";
 
 // ============================================================
 // SAUVETAGE (script Capsule de secours, dans un combat du système)
@@ -75,14 +76,16 @@ export function Sauvetage({ numero, navires, planetes }) {
 
             {infanteries.map(c => {
 
-                const jet = Number(c.marques?.[JET]) || 0;
+                // (lance : le dé est lancé ; jet : sa face — D10 numéroté de 0 à 9, effets.js)
+                const lance = Number(c.marques?.[JET]) > 0;
+                const jet = faceD10(c.marques?.[JET]);
                 const aMoi = joueur && campDe(c) === moi;
 
                 return (
                     <div key={c.id} data-infanterie={c.id} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 3 }}>
                         <b>{nomElement(search, c.ref)}</b> de {nomDe(campDe(c))}
 
-                        {!jet && (aMoi
+                        {!lance && (aMoi
                             ? (
                                 <button
                                     type="button"
@@ -97,9 +100,9 @@ export function Sauvetage({ numero, navires, planetes }) {
                             )
                             : <i>jet à faire</i>)}
 
-                        {jet > SEUIL && <b style={{ color: "#b71c1c" }}>jet {jet} : perdue</b>}
+                        {lance && jet > SEUIL && <b style={{ color: "#b71c1c" }}>jet {jet} : perdue</b>}
 
-                        {jet > 0 && jet <= SEUIL && (
+                        {lance && jet <= SEUIL && (
                             <>
                                 <b style={{ color: "#1b5e20" }}>jet {jet} : sauvée.</b>
                                 {aMoi && arrivees.map(a => (
