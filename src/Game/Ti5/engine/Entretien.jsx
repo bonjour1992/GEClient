@@ -5,6 +5,9 @@ import { FAVEUR, actionsPoints } from "./miseEnPlace";
 import { useExploitationDuVide } from "./Controle";
 import { useRevenus } from "./Revenus";
 
+// Planète Haven : compte comme une planète natale pour la faction qui la possède
+const HAVEN = 1041;
+
 // ============================================================
 // RAVITAILLEMENT (ENTRETIEN) AUTOMATIQUE
 //
@@ -165,10 +168,14 @@ export function useEntretien(u, idFaction) {
     const idNatal = faction?.system?.id;
     const systemeNatal = useElement(idNatal);
 
+    // Règle de Haven (#1041) : la posséder compte comme posséder une planète natale
+    const haven = aScript(u, "haven") && planetes.some(c => c.ref.id === HAVEN);
+
     const natales = (systemeNatal?.elems || [])
         .filter(lien => lien?.id > 0)
         .map(lien => lien.id)
-        .filter(id => planetes.some(c => c.ref.id === id));
+        .filter(id => planetes.some(c => c.ref.id === id))
+        .concat(haven ? [HAVEN] : []);
 
     const possedeNatale = natales.length > 0;
 
@@ -202,8 +209,8 @@ export function useEntretien(u, idFaction) {
         cubesUses.length > 0 && `Mercenaires : ${cubesUses.length} cube(s) de retour sur leur carte`,
         techsUtilisees.length > 0 && `Technologies de nouveau disponibles : ${techsUtilisees.length}`,
         noblesUses.length > 0 && "Noble cryogénisé : de nouveau disponible",
-        possedeNatale && `Système natal : ${natales.map(id => nom({ type: "planet", id })).join(", ")} : 1 faveur`,
-        !possedeNatale && idNatal > 0 && "Système natal : aucune planète natale possédée, pas de faveur",
+        possedeNatale && `Planète natale : ${natales.map(id => nom({ type: "planet", id })).join(", ")} : 1 faveur`,
+        !possedeNatale && idNatal > 0 && "Planète natale : aucune possédée, pas de faveur",
         bioBlessees.length > 0 && `Sève de vie : ${bioBlessees.length} unité(s) soignée(s)${soin > 1 ? ` (Vie fructifiante : ${soin} de résistance)` : ""}`,
         legendaires > 0 && `Destin légendaire : +${legendaires} point(s)`,
         conclave && "Conclave secret : 1 objectif militaire pioché",

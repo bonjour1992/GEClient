@@ -22,11 +22,11 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
 | Habilités | 63 | 40 | 8 | 15 | 33 | 6 | 16 |
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
-| Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
+| Planètes | 30 | 25 | 2 | 3 | 15 | 8 | 12 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **367** | **267** | **74** | **26** | **148** | **61** | **120** |
+| **Total** | **368** | **268** | **74** | **26** | **148** | **61** | **121** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -357,6 +357,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 508 | Université polytechnique | non | — (passé) | — | Agent tiré au ravitaillement, achats par commerce ou livraison. (difficile) |
 | 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. | — |
 | 784 | Anneau Arcturus | **oui** | nouveau bouton + automatique | Ravitaillement automatique : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (use un scientifique). | — |
+| 1041 | Haven | **oui** | automatique | Ravitaillement automatique : posséder Haven compte comme posséder une planète natale, elle donne la faveur du ravitaillement. | Les autres effets liés aux planètes natales (Vassal, Spectre de l'empereur) : à la main. |
 
 ## Mercenaires
 

@@ -420,8 +420,8 @@ export const SCRIPTS = [
     //
     // poses : [{ type, id, vers, n }] — ce qui est mis en jeu
     //   vers   "table"            la table
-    //          "joueurs"          un exemplaire chez chaque joueur (feuille de technologie)
-    //          "mains"            un exemplaire dans la main de chaque joueur qui n'en a pas
+    //          "joueurs"          un exemplaire chez chaque joueur, dans son onglet Technologie
+    //                             (feuille de technologie, ou technologie isolée)
     //          "tuiles"           la réserve de tuiles spéciales (complétée jusqu'à n :
     //                             les tuiles déjà en jeu comptent)
     //          "promesses"        la réserve de promesses
@@ -458,10 +458,10 @@ export const SCRIPTS = [
     }),
 
     evenement("evenement-peste-lointaine", 1039, 1795069770290, "Peste lointaine", {
-        description: "« Vaccin » et « Arme bactériologique » dans la main de chaque joueur (à poser sur une case vide d'une feuille de technologie) ; « Aide humanitaire » au tour T, « Bilan de l'aide humanitaire » au tour T+3.",
+        description: "« Vaccin » et « Arme bactériologique » chez chaque joueur (onglet Technologie, technologies isolées) ; « Aide humanitaire » au tour T, « Bilan de l'aide humanitaire » au tour T+3.",
         poses: [
-            { type: "tech", id: 402, vers: "mains" },
-            { type: "tech", id: 403, vers: "mains" },
+            { type: "tech", id: 402, vers: "joueurs" },
+            { type: "tech", id: 403, vers: "joueurs" },
             { type: "habilite", id: 404, vers: { evenement: 0 }, n: 1 },
             { type: "habilite", id: 1038, vers: { evenement: 3 }, n: 1 },
         ],
@@ -474,9 +474,13 @@ export const SCRIPTS = [
     }),
 
     evenement("evenement-signal-capte", 485, 1794335055043, "Signal capté", {
-        description: "« Présence de cache » au tour T ; les 4 signaux (« Cache », « BDD technique », « vaisseau relique » et « Plan ancien ») mélangés, cachés et numérotés de 1 à 4 — un marqueur libre « Signal N » par signal sur la table, que prend la technologie SIG-N ; les 4 tuiles SIG mélangées aux 12 prochaines tuiles de la pioche.",
+        description: "« Présence de cache » au tour T ; les 4 signaux (« Cache », « BDD technique », « vaisseau relique » et « Plan ancien ») mélangés, cachés et numérotés de 1 à 4 — un marqueur libre « Signal N » par signal sur la table, que prend la technologie SIG-N ; les technologies SIG-1 à SIG-4 chez chaque joueur (onglet Technologie, technologies isolées) ; les 4 tuiles SIG mélangées aux 12 prochaines tuiles de la pioche.",
         poses: [
             { type: "habilite", id: 491, vers: { evenement: 0 } },
+            { type: "tech", id: 481, vers: "joueurs" },
+            { type: "tech", id: 482, vers: "joueurs" },
+            { type: "tech", id: 483, vers: "joueurs" },
+            { type: "tech", id: 484, vers: "joueurs" },
             { type: "system", id: 477, vers: { pioche: 12 } },
             { type: "system", id: 478, vers: { pioche: 12 } },
             { type: "system", id: 479, vers: { pioche: 12 } },
@@ -879,7 +883,7 @@ export const SCRIPTS = [
 
     regle("wanno", "planet", 46, 1794054013137, "Wanno", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
-        "Prendre le contrôle de Wanno rapporte 1 infamie."),
+        "Prendre possession de Wanno rapporte 1 infamie."),
 
     regle("perimeter", "planet", 60, 1794054013149, "Perimeter", "modifie",
         "Fiche d'une unité : « Livraison commerciale »",
@@ -1173,6 +1177,10 @@ export const SCRIPTS = [
     regle("mecatol-rex", "planet", 34, 1794383527582, "Mecatol Rex", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
         "Prendre possession de Mecatol Rex vous donne aussi la carte Mecatol Rex spéciale (#229)."),
+
+    regle("haven", "planet", 1041, 1795075000000, "Haven", "auto",
+        "Ravitaillement automatique (début de la phase)",
+        "Posséder Haven compte comme posséder une planète natale : elle donne la faveur du ravitaillement, même sans planète de votre système natal."),
 
     regle("arcturus", "planet", 783, 1794376304858, "Arcturus", "auto",
         "Glisser une unité sur Arcturus",
@@ -3572,6 +3580,27 @@ export async function technologiesDe(etat, userId, charger) {
         const type = contenu?.techType || "";
 
         connaissance[type] = Math.max(connaissance[type] || 0, Math.floor(points / (Number(contenu?.connaissanceReq) || 8)));
+    }
+
+    // Technologies isolées (Technologie.jsx) : une carte technologie posée seule dans la
+    // zone tech, hors de toute feuille. Mêmes compteurs qu'une case de feuille, avec
+    // l'identifiant de son composant à la place de celui de la feuille et la case 0.
+    // (Elle ne donne pas de connaissance : elle n'est sur aucune feuille.)
+    for (const c of Object.values(etat.composants)) {
+
+        if (c.zone !== `${base}:tech` || c.ref?.type !== "tech" || c.cache) {
+            continue;
+        }
+
+        const tech = await charger(c.ref.id);
+        const progres = Number(etat.compteurs[`${base}:tech:${c.id}:0`]) || 0;
+
+        if (progres >= (Number(tech?.cout) || 1)) {
+            debloquees.set(c.ref.id, {
+                utilisee: `${base}:techUse:${c.id}:0`,
+                zone: `${base}:tech:${c.id}:case:0`,
+            });
+        }
     }
 
     // Niveaux de connaissance par type de technologie : { gen: 2, spa: 0… }

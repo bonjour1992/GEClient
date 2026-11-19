@@ -148,6 +148,22 @@ de la zone `joueur:<u>:tech`) :
   le sont ;
 - `joueur:<u>:techUse:<composant>:<k>` : 1 = utilisée ce tour.
 
+**Technologie isolée** : une carte technologie (composant de type `tech`) posée
+seule dans la zone `joueur:<u>:tech`, hors de toute feuille — technologies
+d'événement distribuées à chaque faction (SIG-1 à SIG-4, Vaccin, Arme
+bactériologique). Elle s'affiche dans le cadre « Technologies isolées » de
+l'onglet Technologie (`TechnologiesIsolees`, `Technologie.jsx` ; attributs
+`data-technologies-isolees`, `data-tech-isolee="<composant>"`) et se recherche
+comme une technologie de feuille, avec les mêmes compteurs : l'identifiant de
+son composant à la place de celui de la feuille, et la case 0
+(`joueur:<u>:tech:<composant>:0`, `joueur:<u>:techUse:<composant>:0`, zone des
+éléments posés dessus `joueur:<u>:tech:<composant>:case:0`). Son prérequis se
+lit sur la connaissance du joueur dans son type de technologie ; elle ne donne
+pas de connaissance. `technologiesDe` (`scripts.js`) la compte parmi les
+technologies débloquées. On l'y met en glissant la carte sur le cadre, par
+« Envoyer vers… Mes technologies », ou par la mise en place d'un événement
+(`vers: "joueurs"`).
+
 `tech.jsx` affiche `context.progres` cases cochées quand il est fourni.
 
 Marques utilisées par l'interface : `degat` (nombre), `use` (usé), `rotation`
@@ -428,8 +444,8 @@ Quatre sortes :
 - `bouton` : un bouton de plus sur la fiche de la carte (`ScriptsCarte.jsx`).
   Aujourd'hui « Mettre en place » sur un événement, avec un script par
   événement : `poses` liste ce qui est mis en jeu et où (`vers` : la table,
-  chaque joueur, la main de chaque joueur — `"mains"`, pour une technologie à
-  poser sur une case vide —, la réserve de tuiles spéciales, la réserve de promesses, la
+  chaque joueur — `"joueurs"` : une feuille de technologie, ou une technologie
+  isolée, dans son onglet Technologie —, la réserve de tuiles spéciales, la réserve de promesses, la
   case Événement — `{ evenement: k }` — ou la case Agenda, lois à venir —
   `{ agenda: k }` — du tour T + k, T étant le tour de l'événement) ;
   `anomalies` pose des unités neutres sur les systèmes du plateau qui ont une

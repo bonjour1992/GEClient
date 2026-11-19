@@ -327,22 +327,13 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
 
             if (pose.vers === "joueurs") {
 
-                // Une feuille par joueur qui ne l'a pas encore
+                // Une feuille — ou une technologie isolée — par joueur qui ne l'a pas encore
+                // (une technologie déjà posée sur une case de feuille compte aussi)
                 const sans = partie.joueurs.filter(j =>
-                    !(index.parZone.get(`joueur:${j.userId}:tech`) || []).some(x => x.ref?.id === pose.id));
+                    !Object.values(etat.composants).some(x => x.ref?.type === pose.type && x.ref.id === pose.id &&
+                        String(x.zone || "").startsWith(`joueur:${j.userId}:tech`)));
 
                 actions.push(...sans.map(j => ({ type: "creer", ref, zone: `joueur:${j.userId}:tech`, proprio: j.userId })));
-                continue;
-            }
-
-            if (pose.vers === "mains") {
-
-                // Un exemplaire dans la main de chaque joueur qui n'en a nulle part chez lui
-                const sans = partie.joueurs.filter(j =>
-                    !Object.values(etat.composants).some(x =>
-                        x.ref?.type === pose.type && x.ref.id === pose.id && String(x.zone || "").startsWith(`joueur:${j.userId}:`)));
-
-                actions.push(...sans.map(j => ({ type: "creer", ref, zone: `joueur:${j.userId}:main`, proprio: j.userId })));
                 continue;
             }
 

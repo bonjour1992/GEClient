@@ -58,8 +58,9 @@ export function destinationsDe(c, { moi, partie }) {
         ]]);
     }
 
-    // Feuilles de technologie : l'onglet Technologie de chaque joueur
-    if (type === "techsheet") {
+    // Feuilles de technologie, et cartes technologie isolées (zone « Technologies
+    // isolées » de l'onglet) : l'onglet Technologie de chaque joueur
+    if (type === "techsheet" || type === "tech") {
         groupes.push(["Technologies", partie.joueurs.map(j => [
             `joueur:${j.userId}:tech`,
             j.userId === moi ? "Mes technologies" : "Technologies de " + j.nom,

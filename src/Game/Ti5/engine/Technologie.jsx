@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
-import { useEngine, Emplacements, nomElement, confirmerRegle } from "./Interaction";
+import { useEngine, Emplacements, Pions, nomElement, confirmerRegle } from "./Interaction";
 import { Text } from "../../../Component/Text";
+import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
 import { getFromType } from "../../../lib/store";
 import { lireJournal, noter, noterFinie } from "./recherche";
@@ -403,41 +404,8 @@ function Feuille({ composant, base }) {
     // -> { actions, messages }
     // --------------------------------------------------------
 
-    async function reactions(idTech, obtenue) {
-
-        const chercheur = Number(base.split(":")[1]);
-        const actions = [];
-        const messages = [];
-
-        for (const j of partie.joueurs) {
-
-            const cle = `brevet:${j.userId}:${chercheur}:${idTech}`;
-
-            if (j.userId !== chercheur && aScript(j.userId, "brevet") && aTechnologie(j.userId, idTech) &&
-                Number(etat.compteurs[cle]) !== etat.tour) {
-                actions.push({ type: "compteur", id: cle, valeur: etat.tour });
-                actions.push({ type: "compteur", id: `joueur:${j.userId}:commerce`, delta: 1 });
-                messages.push(`Brevet : ${nomDe(j.userId)} gagne 1 commerce (${nomDe(chercheur)} recherche une technologie qu'il possède).`);
-            }
-        }
-
-        const soleil = SCRIPTS.find(s => s.id === "soleil-de-guerre");
-
-        if (obtenue && idTech === soleil?.carte.id && !scriptsDesactives.includes(soleil.id)) {
-
-            const faction = await chargerContenu(factionDe(chercheur) ?? -1);
-            const ids = (faction?.units || []).map(lien => Number(lien?.id)).filter(id => id > 0);
-            const unites = await Promise.all(ids.map(chargerContenu));
-            const id = ids.find((x, i) => unites[i]?.type === "sun");
-
-            if (id) {
-                actions.push({ type: "creer", ref: { type: "unit", id }, zone: `${base}:actif`, proprio: chercheur });
-                messages.push("Soleil de guerre : technologie obtenue, un soleil de guerre arrive dans les éléments actifs.");
-            }
-        }
-
-        return { actions, messages };
-    }
+    const reactions = (idTech, obtenue) =>
+        reactionsRecherche({ partie, aScript, aTechnologie, etat, nomDe, scriptsDesactives, factionDe }, base, idTech, obtenue);
 
     return (
         <div ref={racine} onClick={onClick} style={{ width: "max-content" }}>
@@ -469,6 +437,223 @@ function Feuille({ composant, base }) {
             >
                 <Display content={affiche} />
             </Emplacements>
+        </div>
+    );
+}
+
+// (corps de l'ancienne fonction « reactions » de la feuille, partagé avec les
+// technologies isolées)
+async function reactionsRecherche({ partie, aScript, aTechnologie, etat, nomDe, scriptsDesactives, factionDe }, base, idTech, obtenue) {
+
+    const chercheur = Number(base.split(":")[1]);
+    const actions = [];
+    const messages = [];
+
+    for (const j of partie.joueurs) {
+
+        const cle = `brevet:${j.userId}:${chercheur}:${idTech}`;
+
+        if (j.userId !== chercheur && aScript(j.userId, "brevet") && aTechnologie(j.userId, idTech) &&
+            Number(etat.compteurs[cle]) !== etat.tour) {
+            actions.push({ type: "compteur", id: cle, valeur: etat.tour });
+            actions.push({ type: "compteur", id: `joueur:${j.userId}:commerce`, delta: 1 });
+            messages.push(`Brevet : ${nomDe(j.userId)} gagne 1 commerce (${nomDe(chercheur)} recherche une technologie qu'il possède).`);
+        }
+    }
+
+    const soleil = SCRIPTS.find(s => s.id === "soleil-de-guerre");
+
+    if (obtenue && idTech === soleil?.carte.id && !scriptsDesactives.includes(soleil.id)) {
+
+        const faction = await chargerContenu(factionDe(chercheur) ?? -1);
+        const ids = (faction?.units || []).map(lien => Number(lien?.id)).filter(id => id > 0);
+        const unites = await Promise.all(ids.map(chargerContenu));
+        const id = ids.find((x, i) => unites[i]?.type === "sun");
+
+        if (id) {
+            actions.push({ type: "creer", ref: { type: "unit", id }, zone: `${base}:actif`, proprio: chercheur });
+            messages.push("Soleil de guerre : technologie obtenue, un soleil de guerre arrive dans les éléments actifs.");
+        }
+    }
+
+    return { actions, messages };
+}
+
+// ------------------------------------------------------------
+// TECHNOLOGIES ISOLÉES
+//
+// Une carte technologie (composant de type « tech ») posée seule dans la
+// zone joueur:<u>:tech, hors de toute feuille : technologie d'événement
+// distribuée à chaque faction (SIG-1 à SIG-4, Vaccin, Arme
+// bactériologique). Elle se recherche comme une technologie de feuille,
+// avec les mêmes compteurs — l'identifiant de son composant à la place de
+// celui de la feuille, et la case 0 :
+//
+//   joueur:<u>:tech:<composant>:0      cases de recherche cochées
+//   joueur:<u>:techUse:<composant>:0   1 = utilisée ce tour
+//   joueur:<u>:tech:<composant>:case:0 zone des éléments posés dessus
+//
+// Prérequis : son rang moins un, en niveaux de connaissance de son type
+// de technologie (la meilleure feuille du joueur). Elle ne donne pas de
+// connaissance. La zone est une cible de dépôt : une carte technologie
+// qu'on y glisse (ou « Envoyer vers… Mes technologies ») devient isolée.
+// ------------------------------------------------------------
+
+const estIsolee = c => !c.cache && c.ref?.type === "tech";
+
+function TechIsolee({ composant, base }) {
+
+    const ctx = useEngine();
+    const { etat, jouer, envoyer, joueur, ouvrirFiche, aviser, connaissance, search } = ctx;
+
+    const tech = useElement(composant.ref.id);
+    const lienTech = useMemo(() => ({ type: "tech", id: composant.ref.id, __link: true }), [composant.ref.id]);
+
+    const chercheur = Number(base.split(":")[1]);
+    const idTech = Number(composant.ref.id);
+    const idProgres = `${base}:tech:${composant.id}:0`;
+    const idUtilisee = `${base}:techUse:${composant.id}:0`;
+
+    const cout = Number(tech?.cout) || 1;
+    const progres = Number(etat.compteurs[idProgres]) || 0;
+    const utilisee = !!etat.compteurs[idUtilisee];
+
+    function onClick(event) {
+
+        // Un clic sur un pion posé sur la technologie, ou sur le bouton de sa fiche
+        if (!joueur || event.target.closest("[data-composant]") || event.target.closest("button")) {
+            return;
+        }
+
+        if (event.shiftKey) {
+            jouer({ type: "compteur", id: idUtilisee, valeur: utilisee ? 0 : 1 });
+            return;
+        }
+
+        const valeur = Math.max(0, Math.min(cout, progres + (event.ctrlKey ? -1 : 1)));
+
+        if (valeur === progres) {
+            return;
+        }
+
+        const plus = valeur > progres;
+
+        // Prérequis : le rang de la technologie, moins un, en niveaux de connaissance de son type
+        const prerequis = Math.max(0, (Number(tech?.tier) || 1) - 1);
+        const niveau = connaissance(chercheur, tech?.techType);
+
+        const commentaire = plus && niveau < prerequis
+            ? confirmerRegle(`Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
+                `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
+            ])
+            : "";
+
+        if (commentaire === null) {
+            return;
+        }
+
+        const avance = [
+            { type: "compteur", id: idProgres, valeur },
+            noter(etat, chercheur, "t", idTech, plus ? 1 : -1),
+            noterFinie(etat, chercheur, idTech, valeur >= cout),
+        ].filter(Boolean);
+
+        if (!plus) {
+            jouer(avance);
+            return;
+        }
+
+        reactionsRecherche(ctx, base, idTech, valeur >= cout).then(({ actions, messages }) => {
+
+            if (!actions.length && !commentaire) {
+                jouer(avance);
+                return;
+            }
+
+            envoyer([...avance, ...actions], [commentaire, ...messages].filter(Boolean).join(" — "));
+
+            if (messages.length) {
+                aviser(messages.join(" "));
+            }
+        });
+    }
+
+    return (
+        <div
+            data-tech-isolee={composant.id}
+            data-tech-acquise-isolee={progres >= cout ? "" : undefined}
+            onClick={onClick}
+            title={utilisee ? "Utilisée ce tour" : ""}
+            style={{ width: 225, cursor: joueur ? "pointer" : "default" }}
+        >
+            {/* (data-emplacement "case:0" : zone joueur:<u>:tech:<composant>:case:0) */}
+            <Emplacements prefixe={`${base}:tech:${composant.id}`} stylePions={stylePions}>
+                <div data-emplacement="case:0" style={{ width: 225, height: 155, opacity: utilisee ? 0.4 : 1 }}>
+                    <LoadAndDisplay
+                        link={lienTech}
+                        context={{ unlocked: progres >= cout, progres }}
+                        style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }}
+                    />
+                </div>
+            </Emplacements>
+
+            {joueur && (
+                <button
+                    type="button"
+                    data-tech-isolee-fiche={composant.id}
+                    title="Ouvrir la fiche de cette carte (l'envoyer ailleurs, la retirer)"
+                    onClick={event => {
+                        event.stopPropagation();
+                        ouvrirFiche(composant.id);
+                    }}
+                    style={{ fontSize: 11, padding: "0 4px" }}
+                >
+                    ⚙ fiche
+                </button>
+            )}
+        </div>
+    );
+}
+
+function TechnologiesIsolees({ base }) {
+
+    const { index, joueur } = useEngine();
+
+    const zone = base + ":tech";
+    const isolees = (index.parZone.get(zone) || []).filter(estIsolee);
+
+    // Ce qui a été déposé ici sans être une technologie reste visible, en pion
+    const autres = c => !estFeuille(c) && !estIsolee(c);
+
+    return (
+        <div
+            data-zone={zone}
+            data-technologies-isolees
+            style={{
+                minHeight: 46,
+                padding: 6,
+                border: "1px solid #aaa",
+                borderRadius: 8,
+                backgroundColor: "#f5f5f5",
+                color: "#000",
+                boxSizing: "border-box",
+            }}
+        >
+            <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginBottom: 3, fontSize: 13 }}>
+                <b>Technologies isolées</b>
+                <span style={{ color: "#666" }}>{isolees.length}</span>
+                {isolees.length === 0 && joueur && (
+                    <i style={{ color: "#666" }}>glissez ici une carte technologie hors feuille (ou « Envoyer vers… Mes technologies »).</i>
+                )}
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {isolees.map(c => (
+                    <TechIsolee key={c.id} composant={c} base={base} />
+                ))}
+            </div>
+
+            <Pions zone={zone} filtre={autres} />
         </div>
     );
 }
@@ -505,6 +690,8 @@ export function Technologie({ vu }) {
             </div>
 
             <RechercheDuTour base={base} />
+
+            <TechnologiesIsolees base={base} />
 
             {feuilles.length === 0 && <div>Aucune feuille de technologie.</div>}
 

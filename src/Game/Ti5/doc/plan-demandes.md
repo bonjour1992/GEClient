@@ -401,6 +401,16 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Technologies isolées (2026-11-19) : cadre « Technologies isolées » de l'onglet Technologie
+  (`TechnologiesIsolees`, `TechIsolee`), où une carte technologie hors feuille se recherche
+  comme les autres (mêmes compteurs, case 0 de son composant ; `technologiesDe` la compte) ;
+  « Envoyer vers… Mes technologies » pour une carte technologie ; les événements « Signal
+  capté » (SIG-1 à SIG-4) et « Peste lointaine » (Vaccin, Arme bactériologique) les
+  distribuent à chaque joueur (`vers: "joueurs"`).
+- ☑ Review des données, suites (2026-11-19, `migrate-review-s9.mjs`, 19 écritures) : jets en
+  `#jet(n)` (J1 à J11) ; la faveur du ravitaillement va à qui a la possession d'une de ses
+  planètes natales (S21) ; planète #1041 et système #1042 « Haven » (légendaire, culturelle,
+  2 / 4), qui compte comme planète natale — règle `haven` dans `Entretien.jsx`.
 - ☑ Review des données, propositions validées (2026-11-19, `migrate-review-s8.mjs`, 85
   écritures) : Ashtroth et Université polytechnique en « commun » (systèmes et planètes) ;
   `unitNum` 1 sur quatre planètes à unité native ; macros `#poss` et `#dom` passées en noms
