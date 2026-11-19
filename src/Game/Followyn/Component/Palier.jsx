@@ -21,7 +21,7 @@ import { EditorInput, stripTags } from "../../../Input/EditorInput";
 export class PalierCarac {
     seuilCompetence = new Link("competence");   // le seuil est la puissance de cette compétence
     paliers = [];           // [texte] palier de la ligne
-    paliersCondition = [];  // [Link] condition subie à ce palier
+    paliersCondition = [];  // [Link] condition ou blessure subie à ce palier
     paliersTexte = [];      // [texte] effet sans condition, ou précision
     palierNum = 0;          // nombre de lignes
 }
@@ -32,7 +32,7 @@ export function PalierForm({ content, onChange }) {
     function palierLine(x) {
         return [
             (<TextInput onChange={onChange} name="paliers" value={content} index={x} label="Palier" />),
-            (<ModalPickerInput onChange={onChange} name="paliersCondition" value={content} index={x} type={["condition"]} label="Condition" />),
+            (<ModalPickerInput onChange={onChange} name="paliersCondition" value={content} index={x} type={["condition", "blessure"]} label="Condition" />),
             (<EditorInput onChange={onChange} name="paliersTexte" value={content} index={x} type="compact" />),
         ];
     }

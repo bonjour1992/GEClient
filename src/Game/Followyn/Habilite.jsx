@@ -12,10 +12,11 @@ import { TableResolution, TableResolutionCarac, TableResolutionForm } from "./Co
 import { pub } from "../../lib/fetch"
 import { XP, XPCarac, XPForm } from "./Component/xp"
 import { Effet, EffetCarac, EffetForm } from "./Component/effet"
+import { Prerequis, PrerequisCarac, PrerequisForm } from "./Component/Prerequis"
 
 const elementColor = "#ab4500"
 
-class Classe extends aggregation(ElementJDR, ObjectifCarac, TableResolutionCarac, XPCarac, EffetCarac) {
+class Classe extends aggregation(ElementJDR, ObjectifCarac, TableResolutionCarac, XPCarac, EffetCarac, PrerequisCarac) {
     puissanceMin = 0
     puissancePlus
 
@@ -32,6 +33,7 @@ function Display({ content, explication, style }) {
     return (
         <Card content={content} color={elementColor}>
             <XP content={content} />
+            <Prerequis content={content} />
             <Description content={content} explication={explication}/>
 
             <div
@@ -84,6 +86,7 @@ function Form({ content, onChange, onSubmit, style }) {
     return (
         <FormElementJDR content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
             <XPForm content={content} onChange={onChange} />
+            <PrerequisForm content={content} onChange={onChange} />
             <NumberInput value={content} name="puissanceMin" onChange={onChange} label="Puissance Min" />
             <BooleanInput value={content} name="puissancePlus" onChange={onChange} label="+?" />
             <ObjectifForm content={content} onChange={onChange} />
