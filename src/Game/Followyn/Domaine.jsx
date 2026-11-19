@@ -39,7 +39,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
     return (
         <FormElementJDR content={content} onChange={onChange} onSubmit={onSubmit} style={style}>
-            <ContenuForm content={content} onChange={onChange} types={[ "habilite"]} />
+            <ContenuForm content={content} onChange={onChange} types={["habilite", "action"]} />
         </FormElementJDR>
     )
 }
