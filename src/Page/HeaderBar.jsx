@@ -1,54 +1,233 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router";
+import { ChevronDown, ChevronLeft, ChevronRight, LogOut, Shield, User as IconeCompte } from "lucide-react";
 import { games } from "../Game/games";
 import { useSearch, useUser } from "../lib/store";
 import * as fAPI from "../lib/fetch.js";
 
+// ============================================================
+// EN-TÊTE DU SITE
+//
+// Une seule barre fixe de 40 px, en ligne (flex) :
+//
+//   [ fil d'Ariane ……………… ] [ outils du jeu ] [ compte ]
+//
+// Les outils du jeu (recherche, « Ajouter », éléments supprimés) sont
+// rendus par JeuBar.jsx dans l'emplacement `slotEntete`, que cette barre
+// lui passe par le contexte de son <Outlet> : ils n'existent que sur les
+// pages d'un jeu.
+//
+// Petit écran (moins de 700 px) : la barre garde une seule ligne. Le fil
+// d'Ariane ne montre que la page courante, précédée d'un bouton « retour »
+// vers son parent ; les boutons perdent leur libellé ; la recherche se
+// replie en icône et s'ouvre sur toute la barre.
+//
+// Les menus (« Ajouter », compte) s'ouvrent au clic, pas au survol : ils
+// fonctionnent au doigt.
+// ============================================================
+
+export const HAUTEUR_ENTETE = 40;
+
 export default function HeaderBar() {
     const loc = useLocation()
 
+    // Emplacement des outils du jeu (JeuBar.jsx y rend sa recherche et ses boutons)
+    const [slotEntete, setSlotEntete] = useState(null)
+
     return (
         <>
-            <style>{STYLE_PETIT_ECRAN}</style>
-            <Location location={loc} />
-            <User />
+            <style>{STYLE_ENTETE}</style>
+            <header className="no-print ge-entete">
+                <Location location={loc} />
+                <div ref={setSlotEntete} className="ge-entete-jeu" />
+                <User />
+            </header>
             <div
                 className="no-print ge-bar-espace"
-                style={{ height: 40 }}
+                style={{ height: HAUTEUR_ENTETE }}
             ></div>
-            <Outlet />
+            <Outlet context={{ slotEntete }} />
         </>
     )
 }
 
-// Petit écran : l'en-tête passe sur deux lignes. Le fil d'Ariane prend toute
-// la première (il défile de côté au lieu de passer à la ligne) ; recherche,
-// « Ajouter » et compte se partagent la seconde. (Les barres ont des styles
-// en ligne, d'où les !important.)
-const STYLE_PETIT_ECRAN = `
-@media (max-width: 800px) {
-    .ge-bar-fil { width: 100% !important; margin-right: 0 !important; display: flex !important; overflow-x: auto; overflow-y: hidden; box-sizing: border-box; }
-    .ge-bar-fil > div { flex: none; }
-    .ge-bar-search { top: 40px !important; margin-left: 0 !important; width: 45% !important; white-space: nowrap; overflow: hidden; }
-    .ge-bar-search > span { font-size: 18px !important; }
-    .ge-bar-search > input { font-size: 15px !important; width: calc(100% - 34px) !important; box-sizing: border-box; }
-    .ge-bar-add { top: 40px !important; margin-left: 45% !important; width: 25% !important; gap: 4px !important; }
-    .ge-bar-add button { font-size: 15px !important; }
-    .ge-bar-user { top: 40px !important; margin-left: 70% !important; width: 30% !important; box-sizing: border-box; font-size: 12px; gap: 4px; overflow: hidden; }
-    .ge-bar-user button { font-size: 12px; padding: 1px 4px; }
-    .ge-bar-espace { height: 80px !important; }
-    [data-resultats-recherche] { top: 80px !important; left: 0 !important; width: 100vw !important; box-sizing: border-box; }
+// Couleurs : l'encre et le bleu lagune des cartes du jeu, sur fond clair.
+const STYLE_ENTETE = `
+.ge-entete {
+    --ge-encre: #172045;
+    --ge-lagune: #1f6f80;
+    --ge-brume: #eef2f6;
+    --ge-trait: #c3cedb;
+    /* (largeur : celle de l'écran, même sur une page plus large que lui — une feuille A4
+       sur un téléphone — où 100 % vaudrait la largeur de la page) */
+    position: fixed; top: 0; left: 0; width: min(100%, 100vw); z-index: 50;
+    height: ${HAUTEUR_ENTETE}px; box-sizing: border-box;
+    display: flex; align-items: center; gap: 6px; padding: 0 8px;
+    background: #fff; color: var(--ge-encre);
+    border-bottom: 2px solid var(--ge-encre);
+    font: 14px/1.2 "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+}
+.ge-entete a { color: var(--ge-lagune); text-decoration: none; }
+.ge-entete :focus-visible { outline: 2px solid var(--ge-lagune); outline-offset: 1px; }
+
+/* Fil d'Ariane */
+.ge-fil { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; }
+.ge-fil-lien {
+    flex: 0 1 auto; min-width: 2.5em; max-width: 170px;
+    padding: 5px 7px; border-radius: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-weight: 600;
+}
+.ge-fil-lien:hover { background: var(--ge-brume); }
+.ge-fil-lien.ge-fil-courant { flex: 0 1 auto; max-width: none; color: var(--ge-encre) !important; font-weight: 800; }
+.ge-fil-sep { flex: none; color: var(--ge-trait); display: inline-flex; }
+.ge-fil-retour { display: none !important; }
+
+/* Emplacement des outils du jeu */
+.ge-entete-jeu { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+
+/* Boutons de la barre */
+.ge-bouton {
+    flex: none; height: 30px; box-sizing: border-box;
+    display: inline-flex; align-items: center; gap: 5px; padding: 0 9px;
+    border: 1px solid var(--ge-trait); border-radius: 8px;
+    background: #fff; color: var(--ge-encre);
+    font: inherit; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.ge-bouton:hover, .ge-bouton[aria-expanded="true"] { background: var(--ge-brume); border-color: var(--ge-encre); }
+.ge-bouton-principal { background: var(--ge-encre); border-color: var(--ge-encre); color: #fff; }
+.ge-bouton-principal:hover, .ge-bouton-principal[aria-expanded="true"] { background: var(--ge-lagune); border-color: var(--ge-lagune); }
+.ge-bouton-icone { width: 30px; padding: 0; justify-content: center; }
+
+/* Menus déroulants */
+.ge-menu { position: relative; flex: none; }
+.ge-menu-liste {
+    position: absolute; top: calc(100% + 7px); right: 0; z-index: 60;
+    min-width: 190px; max-height: 75vh; overflow-y: auto;
+    margin: 0; padding: 5px; list-style: none; box-sizing: border-box;
+    background: #fff; border: 2px solid var(--ge-encre); border-radius: 10px;
+    box-shadow: 0 6px 16px #17204533;
+}
+.ge-menu-liste.ge-menu-colonnes { display: grid; grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 0 4px; }
+.ge-menu-liste a, .ge-menu-liste button.ge-menu-ligne {
+    display: flex; align-items: center; gap: 7px; width: 100%; box-sizing: border-box;
+    padding: 7px 9px; border: none; border-radius: 6px; background: none;
+    color: var(--ge-encre); font: inherit; text-align: left; cursor: pointer; white-space: nowrap;
+}
+.ge-menu-liste a:hover, .ge-menu-liste button.ge-menu-ligne:hover { background: var(--ge-brume); }
+.ge-menu-titre { padding: 6px 9px 7px; font-weight: 800; border-bottom: 1px solid var(--ge-trait); margin-bottom: 4px; }
+
+/* Compte */
+.ge-compte-nom { max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Recherche (JeuBar.jsx) */
+.ge-recherche { position: relative; flex: 0 1 280px; min-width: 150px; display: flex; align-items: center; }
+.ge-recherche-loupe { position: absolute; left: 9px; display: inline-flex; color: var(--ge-lagune); pointer-events: none; }
+.ge-recherche input {
+    width: 100%; height: 30px; box-sizing: border-box; padding: 0 10px 0 30px;
+    border: 1px solid var(--ge-trait); border-radius: 15px; background: var(--ge-brume);
+    color: var(--ge-encre); font: inherit;
+}
+.ge-recherche input:focus { background: #fff; border-color: var(--ge-encre); outline: none; }
+.ge-recherche-ouvrir, .ge-recherche-fermer { display: none !important; }
+.ge-recherche [data-resultats-recherche] {
+    position: absolute; top: calc(100% + 7px); left: 0; z-index: 60;
+    width: min(420px, 92vw); max-height: 70vh; overflow-y: auto; box-sizing: border-box;
+    background: #fff; border: 2px solid var(--ge-encre); border-radius: 10px;
+    box-shadow: 0 6px 16px #17204533; font-size: 14px;
+}
+
+/* Petit écran : une seule ligne, libellés repliés */
+@media (max-width: 700px) {
+    .ge-entete { gap: 4px; padding: 0 5px; }
+    .ge-fil-lien:not(.ge-fil-courant), .ge-fil-sep { display: none; }
+    .ge-fil-retour { display: inline-flex !important; }
+    .ge-fil-lien.ge-fil-courant { padding-left: 3px; }
+    .ge-libelle { display: none; }
+    .ge-bouton { padding: 0; width: 32px; height: 32px; justify-content: center; }
+    .ge-menu-liste { position: fixed; top: ${HAUTEUR_ENTETE + 4}px; left: 5px; right: auto; width: calc(min(100%, 100vw) - 10px); max-height: calc(100vh - ${HAUTEUR_ENTETE + 14}px); }
+    .ge-menu-liste a, .ge-menu-liste button.ge-menu-ligne { padding: 10px 9px; }
+
+    .ge-recherche { flex: none; min-width: 0; }
+    .ge-recherche input, .ge-recherche-loupe { display: none; }
+    .ge-recherche-ouvrir { display: inline-flex !important; }
+    /* Recherche ouverte : elle recouvre la barre */
+    .ge-recherche.ge-recherche-ouverte {
+        position: absolute; inset: 0; z-index: 55; padding: 0 5px; gap: 4px; background: #fff;
+    }
+    .ge-recherche.ge-recherche-ouverte input { display: block; flex: 1 1 auto; height: 32px; font-size: 16px; }
+    .ge-recherche.ge-recherche-ouverte .ge-recherche-loupe { display: inline-flex; left: 14px; }
+    .ge-recherche.ge-recherche-ouverte .ge-recherche-ouvrir { display: none !important; }
+    .ge-recherche.ge-recherche-ouverte .ge-recherche-fermer { display: inline-flex !important; }
+    .ge-recherche [data-resultats-recherche] { position: fixed; top: ${HAUTEUR_ENTETE}px; left: 0; width: 100vw; border-radius: 0 0 10px 10px; border-top: none; }
 }
 `;
 
-const page = {
-    remp: "Remplacement",
-    edit: "Edition"
+// ============================================================
+// MENU DÉROULANT
+//
+// Un bouton et sa liste, ouverte au clic. Fermée par un clic ailleurs,
+// par Échap, ou par le choix d'une ligne.
+//   bouton   : contenu du bouton
+//   classe   : classes du bouton, en plus de « ge-bouton »
+//   titre    : info-bulle et nom accessible du bouton
+//   colonnes : la liste s'affiche sur deux colonnes
+// ============================================================
+
+export function Menu({ bouton, classe = "", titre, colonnes = false, children }) {
+
+    const [ouvert, setOuvert] = useState(false)
+    const racine = useRef(null)
+
+    useEffect(() => {
+
+        if (!ouvert) {
+            return undefined
+        }
+
+        const dehors = e => !racine.current?.contains(e.target) && setOuvert(false)
+        const echap = e => e.key === "Escape" && setOuvert(false)
+
+        document.addEventListener("pointerdown", dehors)
+        document.addEventListener("keydown", echap)
+
+        return () => {
+            document.removeEventListener("pointerdown", dehors)
+            document.removeEventListener("keydown", echap)
+        }
+    }, [ouvert])
+
+    return (
+        <div className="ge-menu" ref={racine}>
+            <button
+                type="button"
+                className={"ge-bouton " + classe}
+                title={titre}
+                aria-label={titre}
+                aria-haspopup="menu"
+                aria-expanded={ouvert}
+                onClick={() => setOuvert(o => !o)}
+            >
+                {bouton}
+            </button>
+
+            {ouvert && (
+                // (un clic sur une ligne ferme le menu)
+                <ul
+                    className={"ge-menu-liste" + (colonnes ? " ge-menu-colonnes" : "")}
+                    role="menu"
+                    onClick={e => e.target.closest("a, button") && setOuvert(false)}
+                >
+                    {children}
+                </ul>
+            )}
+        </div>
+    )
 }
 
 function Location({ location }) {
 
-    const fil = [["Acceuil", "/GE/"]];
+    const fil = [["Accueil", "/GE/"]];
     const search = useSearch((state) => state.search);
     const part = location.pathname.split("/");
 
@@ -168,8 +347,7 @@ function Location({ location }) {
             );
 
             fil.push([
-                // (sans l'ancien préfixe !...! des noms)
-                r ? String(r.name || "").replace(/^(![^!]*!)+/, "") : "erreur",
+                r ? String(r.name || "") : "erreur",
                 "/GE/" +
                 part[2] +
                 "/" +
@@ -186,7 +364,7 @@ function Location({ location }) {
         if (part[5] === "edit") {
 
             fil.push([
-                "Edit",
+                "Édition",
                 "/GE/" +
                 part[2] +
                 "/" +
@@ -203,85 +381,57 @@ function Location({ location }) {
         <LocationBar fil={fil} />
     );
 }
+
+// Fil d'Ariane : les pages parentes en liens, la page courante en gras.
+// Petit écran : seule la page courante reste, avec un bouton « retour »
+// vers son parent.
 function LocationBar({ fil }) {
 
+    // Parent de la page courante : le dernier maillon précédent qui a une adresse
+    const parent = fil.slice(0, -1).findLast(([, adresse]) => adresse);
+
     return (
-        <div
-            className="no-print ge-bar-fil"
-            style={{
-                zIndex: 50,
-                backgroundColor: "white",
-                position: "fixed",
-                top: 0,
-                marginRight: "60%",
-                width: "40%",
-                height: 40,
-                borderBottomWidth: 2,
-                borderBottomStyle: "solid"
-            }}
-        >
-            {fil.map((e, i) => {
+        <nav className="ge-fil" aria-label="Fil d'Ariane">
+
+            {parent && (
+                <NavLink
+                    className="ge-bouton ge-bouton-icone ge-fil-retour"
+                    to={parent[1]}
+                    end
+                    title={"Retour : " + parent[0]}
+                    aria-label={"Retour : " + parent[0]}
+                >
+                    <ChevronLeft size={20} />
+                </NavLink>
+            )}
+
+            {fil.map(([nom, adresse], i) => {
+
+                const courant = i === fil.length - 1;
 
                 return (
-                    <div
-                        key={i}
-                        className="no-print"
-                        style={{
-                            float: "left"
-                        }}
-                    >
+                    <span key={i} style={{ display: "contents" }}>
+
+                        {i > 0 && (
+                            <span className="ge-fil-sep" aria-hidden="true">
+                                <ChevronRight size={15} />
+                            </span>
+                        )}
 
                         <NavLink
-                            style={{
-                                float: "left",
-                                borderWidth: 2,
-                                borderStyle: "solid",
-                                height: 12,
-                                padding: "7px 2px",
-                                borderColor: "blue",
-                                borderBottomLeftRadius: 6,
-                                borderTopLeftRadius: 6,
-                                borderBottomRightRadius:
-                                    i < (fil.length - 1)
-                                        ? 0
-                                        : 6,
-                                borderTopRightRadius:
-                                    i < (fil.length - 1)
-                                        ? 0
-                                        : 6,
-                                fontSize: 12,
-                                fontWeight: 800,
-                                textDecoration: "none",
-                                maxWidth: 150,
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                textWrap: "nowrap"
-                            }}
-                            to={e[1]}
+                            className={"ge-fil-lien" + (courant ? " ge-fil-courant" : "")}
+                            to={adresse}
+                            end
+                            title={nom}
+                            aria-current={courant ? "page" : undefined}
                         >
-                            {e[0]}
+                            {nom}
                         </NavLink>
 
-                        {i < (fil.length - 1) &&
-                            <div
-                                style={{
-                                    width: 0,
-                                    height: 0,
-                                    borderTop:
-                                        "15px solid transparent",
-                                    borderBottom:
-                                        "15px solid transparent",
-                                    borderLeft:
-                                        "10px solid blue",
-                                    float: "left"
-                                }}
-                            />
-                        }
-
-                    </div>
+                    </span>
                 );
             })}
-        </div>
+        </nav>
     );
 }
 
@@ -293,7 +443,7 @@ function User() {
     const admin = useUser((state) => state.admin);
     const setAdmin = useUser((state) => state.setAdmin);
 
-    // Rafraîchit le statut admin (sessions ouvertes avant l'ajout du rôle)
+    // Rafraîchit le statut admin
     useEffect(() => {
         fAPI.getMe()
             .then(me => {
@@ -315,47 +465,36 @@ function User() {
         logoutStore();
     }
 
+    // (page de connexion : personne n'est connecté, pas de menu)
+    if (!login) {
+        return null;
+    }
+
     return (
-        <div
-            className="no-print ge-bar-user"
-            style={{
-                zIndex: 50,
-                backgroundColor: "white",
-                position: "fixed",
-                top: 0,
-                width: "20%",
-                marginLeft: "80%",
-                height: 40,
-                borderBottomWidth: 2,
-                borderBottomStyle: "solid",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "0 5px",
-            }}
+        <Menu
+            classe="ge-compte"
+            titre={"Compte : " + login}
+            bouton={<>
+                <IconeCompte size={17} />
+                <span className="ge-libelle ge-compte-nom">{login}</span>
+                <ChevronDown size={14} className="ge-libelle" />
+            </>}
         >
+            <li className="ge-menu-titre">{login}</li>
 
-
-                <span>
-                    {login}
-                </span>
-
-                {admin && (
-                    <NavLink
-                        to="/GE/admin"
-                    >
-                        Admin
+            {admin && (
+                <li>
+                    <NavLink to="/GE/admin" role="menuitem">
+                        <Shield size={16} /> Administration
                     </NavLink>
-                )}
+                </li>
+            )}
 
-                <button
-                    onClick={handleLogout}
-                >
-                    Déconnexion
+            <li>
+                <button type="button" className="ge-menu-ligne" role="menuitem" onClick={handleLogout}>
+                    <LogOut size={16} /> Déconnexion
                 </button>
-
-
-
-        </div>
+            </li>
+        </Menu>
     );
 }

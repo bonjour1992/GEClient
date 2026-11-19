@@ -1,16 +1,23 @@
-import { useEffect, useState } from "react";
-import { Outlet, useParams, useNavigate, Link } from "react-router";
-import { Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Outlet, useParams, useNavigate, useOutletContext, Link } from "react-router";
+import { Plus, Search as IconeLoupe, Trash2, X } from "lucide-react";
 import { useRemp, useSearch } from "../lib/store"
 import { games } from "../Game/games";
 import { nameAff } from "../Component/Text";
 import { LigneElement } from "../Component/NomElement";
+import { Menu } from "./HeaderBar";
 
 let jeu
 
+// Outils d'un jeu dans l'en-tête du site : recherche, « Ajouter », éléments
+// supprimés. Ils sont rendus dans l'emplacement que leur réserve la barre
+// (HeaderBar.jsx, contexte `slotEntete` de son <Outlet>).
 export default function HeaderBar() {
 
     jeu = useParams().jeu
+
+    const { slotEntete } = useOutletContext() || {};
 
     const updateRemp = useRemp((state) => state.update);
     const updateSearch = useSearch((state) => state.update);
@@ -21,8 +28,10 @@ export default function HeaderBar() {
 
 
     return (<>
-        <Search search={search} />
-        <Add />
+        {slotEntete && createPortal(<>
+            <Search search={search} />
+            <Add />
+        </>, slotEntete)}
         <Outlet />
     </>)
 }
@@ -50,6 +59,22 @@ function Search({ search }) {
     const [texte, setTexte] = useState("")
     const [ouvert, setOuvert] = useState(false)
     const [actif, setActif] = useState(0)
+
+    // Petit écran : la recherche est repliée en icône ; dépliée, elle recouvre la barre
+    const [deplie, setDeplie] = useState(false)
+    const champ = useRef(null)
+
+    useEffect(() => {
+        if (deplie) {
+            champ.current?.focus()
+        }
+    }, [deplie])
+
+    function replier() {
+        setDeplie(false)
+        setOuvert(false)
+        setTexte("")
+    }
 
     // Les résultats ne sont cherchés (et leurs contenus chargés) qu'une fois la frappe posée
     const [cherche, setCherche] = useState("")
@@ -79,6 +104,7 @@ function Search({ search }) {
 
         setTexte("")
         setOuvert(false)
+        setDeplie(false)
         navigate("/GE/" + jeu + "/" + element.type + "/" + element.id)
     }
 
@@ -94,31 +120,31 @@ function Search({ search }) {
             e.preventDefault()
             setActif(a => Math.max(a - 1, 0))
         } else if (e.key === "Escape") {
-            setOuvert(false)
+            replier()
         }
     }
 
     return (
-        <div
-            className="no-print ge-bar-search"
-            style={{
-                zIndex: 50,
-                backgroundColor: "white",
-                position: "fixed",
-                top: 0,
-                width: "20%",
-                marginLeft: "40%",
-                height: 40,
-                borderBottomWidth: 2,
-                borderBottomStyle: "solid"
-            }}
-        >
+        <div className={"ge-recherche" + (deplie ? " ge-recherche-ouverte" : "")} role="search">
 
-            <span style={{ fontSize: 24 }}>
-                &#128269;
+            {/* (petit écran seulement : ouvre le champ sur toute la barre) */}
+            <button
+                type="button"
+                className="ge-bouton ge-recherche-ouvrir"
+                title="Rechercher un élément"
+                aria-label="Rechercher un élément"
+                onClick={() => setDeplie(true)}
+            >
+                <IconeLoupe size={18} />
+            </button>
+
+            <span className="ge-recherche-loupe" aria-hidden="true">
+                <IconeLoupe size={16} />
             </span>
 
             <input
+                ref={champ}
+                aria-label="Rechercher un élément"
                 value={texte}
                 onChange={e => {
                     setTexte(e.target.value)
@@ -132,32 +158,23 @@ function Search({ search }) {
                 id="search"
                 type="search"
                 autoComplete="off"
-                placeholder="rechercher"
-                style={{
-                    fontSize: 20,
-                    width: "80%"
-                }}
+                placeholder="Rechercher un élément"
             />
 
+            <button
+                type="button"
+                className="ge-bouton ge-recherche-fermer"
+                title="Fermer la recherche"
+                aria-label="Fermer la recherche"
+                // (mousedown : avant que le champ ne perde le focus)
+                onMouseDown={e => e.preventDefault()}
+                onClick={replier}
+            >
+                <X size={18} />
+            </button>
+
             {ouvert && cherche.length >= 2 && (
-                <div
-                    data-resultats-recherche
-                    style={{
-                        position: "fixed",
-                        top: 40,
-                        left: "40%",
-                        width: "min(420px, 60vw)",
-                        maxHeight: "70vh",
-                        overflowY: "auto",
-                        backgroundColor: "white",
-                        border: "2px solid #1565c0",
-                        borderTop: "none",
-                        borderRadius: "0 0 8px 8px",
-                        boxShadow: "0 4px 10px #0004",
-                        fontFamily: "Arial, sans-serif",
-                        fontSize: 14,
-                    }}
-                >
+                <div data-resultats-recherche>
                     {affiches.length === 0 && (
                         <div style={{ padding: "6px 10px", color: "#666" }}>Aucun résultat.</div>
                     )}
@@ -195,135 +212,46 @@ function Search({ search }) {
 }
 
 
+// « Ajouter » : menu des types d'élément du jeu, ouvert au clic. À côté, les
+// éléments supprimés.
 function Add() {
 
     const navigate = useNavigate();
 
-
-    function show() {
-
-        document
-            .getElementById("listAdd")
-            .setAttribute(
-                "style",
-                "display:block;"
-            )
-
-    }
-
-
-    function hide() {
-
-        document
-            .getElementById("listAdd")
-            .setAttribute(
-                "style",
-                "display:none;"
-            )
-
-    }
-
-
-    function openDeleted() {
-
-        navigate(
-            "/GE/" + jeu + "/deleted"
-        );
-
-    }
-
+    // Types du jeu, par ordre alphabétique de leur nom
+    const types = Object.entries(games[jeu].handlers)
+        .map(([cle, handler]) => ({ cle, nom: handler.name }))
+        .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 
     return (
-        <div
-            className="no-print ge-bar-add"
-            style={{
-                zIndex: 50,
-                backgroundColor: "white",
-                position: "fixed",
-                top: 0,
-                width: "20%",
-                marginLeft: "60%",
-                height: 40,
-                borderBottomWidth: 2,
-                borderBottomStyle: "solid",
-                display: "flex",
-                alignItems: "flex-start",
-                gap: 8
-            }}
-        >
-
-            <div
-                style={{
-                    backgroundColor: "white"
-                }}
-                onMouseLeave={hide}
+        <>
+            <Menu
+                classe="ge-bouton-principal"
+                titre="Ajouter un élément"
+                colonnes={types.length > 8}
+                bouton={<>
+                    <Plus size={17} />
+                    <span className="ge-libelle">Ajouter</span>
+                </>}
             >
-
-                <button
-                    onMouseEnter={show}
-                    style={{
-                        fontSize: 20
-                    }}
-                >
-                    Ajouter
-                </button>
-
-                <ul
-                    id="listAdd"
-                    style={{
-                        display: "none"
-                    }}
-                >
-
-                    {Object.keys(
-                        games[jeu].handlers
-                    ).map((e, i) => {
-
-                        return (
-                            <li key={i}>
-
-                                <Link
-                                    to={
-                                        "/GE/" +
-                                        jeu +
-                                        "/" +
-                                        e +
-                                        "/new"
-                                    }
-                                >
-                                    {
-                                        games[jeu]
-                                            .handlers[e]
-                                            .name
-                                    }
-                                </Link>
-
-                            </li>
-                        )
-
-                    })}
-
-                </ul>
-
-            </div>
-
+                {types.map(type => (
+                    <li key={type.cle}>
+                        <Link to={"/GE/" + jeu + "/" + type.cle + "/new"} role="menuitem">
+                            {type.nom}
+                        </Link>
+                    </li>
+                ))}
+            </Menu>
 
             <button
-                onClick={openDeleted}
+                type="button"
+                className="ge-bouton ge-bouton-icone"
+                onClick={() => navigate("/GE/" + jeu + "/deleted")}
                 title="Éléments supprimés"
-                style={{
-                    height: 34,
-                    width: 38,
-                    padding: 5,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer"
-                }}
+                aria-label="Éléments supprimés"
             >
-                <Trash2 size={22} />
+                <Trash2 size={17} />
             </button>
-
-        </div>
+        </>
     )
 }

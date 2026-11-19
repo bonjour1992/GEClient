@@ -90,6 +90,9 @@ function Connaissance({ content, LineNumber, explication, style }) {
             ...backgroundColor,
             ...fullBorder,
             ...borderColor,
+            // Bords arrondis, comme les cartes de technologie (la grille du bas suit l'arrondi)
+            borderRadius: 16,
+            overflow: "hidden",
             ...style
         }}>
             <div style={{ ...bottomBorder(2), ...borderColor,marginLeft:2 }}>
