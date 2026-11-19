@@ -405,8 +405,9 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   dix) : `faceD10` (`effets.js`) appliqué à toutes les lectures d'un D10 — combat, jets
   isolés, blocage, sauvetage, scripts, tirages de début de tour, journal, cadre « Dés » ; le
   serveur n'est pas modifié. Règle « Jet » et macro `#jet` mises à jour
-  (`migrate-review-s12.mjs`). Question ouverte : le trou de ver oméga (« de 1 à 3 bloqué,
-  de 4 à 8 passe, 9 ou plus touche ») — l'outil bloque sur 0 à 3 et touche sur 9.
+  (`migrate-review-s12.mjs`). Trou de ver oméga, tranché par Loïc : bloqué sur 0 à 3, passe
+  sur 4 à 8, passe avec une touche sur 9 — règle de `#tvo` mise à jour
+  (`migrate-review-s13.mjs`), l'outil le faisait déjà.
 - ☑ Review des données, textes d'unité T1 à T15 (2026-11-19, `migrate-review-s10.mjs` et
   `migrate-review-s11.mjs`, 15 écritures) : texte de carte en style abrégé, détail en phrases
   dans « explication ». Scripts alignés : Camp de travail (2 esclaves dépensés — ceux des
