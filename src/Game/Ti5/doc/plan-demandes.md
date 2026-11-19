@@ -401,6 +401,13 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Review des données, propositions 1 à 7 (2026-11-19, `migrate-review-s5.mjs`, 32 écritures) :
+  système #241 « Ruines spatiales » ; « Frégate du Khan », « Palais du Khan », « Vaisseau
+  relique » ; agendas Ostracisme et Subvention en directive ; formule de vote des agendas
+  (« Élisez X. », « Élisez X ou votez contre. », « Votez pour ou contre. », « Votez pour … »
+  quand on compte les voix par faction ou par option) ; « Vos #diplo& coûtent #inf(1) de moins à
+  recruter. » pour les six technologies ; vocabulaire (mouvement, structure, destroyeur,
+  transporteur, vaisseau de commerce, résistance) ; macro `#pv` supprimée.
 - ☑ Review des données, règles des remplacements (2026-11-19, `migrate-review-s4.mjs`, 50
   écritures) : les 23 règles de macro recopiées par erreur, tronquées ou vides (`#con`, `#fpre`,
   `#raid`, `#comp`, `#fav`, `#infa`, `#prec`, `#res`, `#point`, `#def`, `#aggre`, types de planète,
