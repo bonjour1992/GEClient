@@ -20,7 +20,7 @@ const elementColor = {
     occupationProlonge: "#3e454b",
     reaction: "#843fa1",
     actionPA: "#B22",
-    actionTempsReel: "Action en temps réel"
+    actionTempsReel: "#1f6f5c"
 }
 
 
