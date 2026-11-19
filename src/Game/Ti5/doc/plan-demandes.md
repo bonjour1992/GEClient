@@ -401,6 +401,17 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Review des données, propositions validées (2026-11-19, `migrate-review-s8.mjs`, 85
+  écritures) : Ashtroth et Université polytechnique en « commun » (systèmes et planètes) ;
+  `unitNum` 1 sur quatre planètes à unité native ; macros `#poss` et `#dom` passées en noms
+  (« possession », « domination » : « en votre #poss », « la #dom du système », « sous votre
+  #con »), `#reforger` (Canon ancien, Portail de repli, Relique, Armageddon conquis) et `#tour`
+  (« #tour+3 » affiche « T+3 », dans les agendas et les événements) ; S1 à S24 sauf S21 ;
+  réécritures T16 à T49 (promesses, technologies, habilités, agendas, planètes, objectifs
+  militaires). Scripts alignés : le Vaccin donne une faveur neutre ; Destin légendaire rapporte
+  à la faction qui prend la planète légendaire du Winnu ; Domination parle de possession.
+  Restent : T1 à T15 (unités, agents, mercenaires), S21 (faveur du monde natal : contrôle ou
+  possession ?), J1 à J11 (jets en `#jet(n)`).
 - ☑ Review des données, points 8 à 15 (2026-11-19, `migrate-review-s6.mjs`, 16 écritures, et
   `migrate-review-s7.mjs`, 8 écritures) : images des stations renommées sur le disque
   (`SR042.png`, `SR124.png`, `StationDeCombat.png`, vignettes comprises) ; « Armageddon conquis »

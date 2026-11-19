@@ -79,13 +79,14 @@ export function actionsPossession({ etat, moi, aScript, nomDe }, zonePlanete, id
 
     const prendreAutre = idPlanete === 34 && aScript(moi, "mecatol-rex") && autreMecatol?.zone !== zone;
 
-    // Habilité Destin légendaire : prendre une planète légendaire rapporte 1 point et 1 infamie
-    const legendaire = ancien !== moi && !!contenuEnCache(idPlanete)?.legendary && aScript(moi, "destin-legendaire");
+    // Habilité Destin légendaire (de l'ancien possesseur) : qui lui prend une planète
+    // légendaire gagne 1 point et 1 infamie
+    const legendaire = !!ancien && ancien !== moi && !!contenuEnCache(idPlanete)?.legendary && aScript(ancien, "destin-legendaire");
 
     return {
         messages: [
-            wanno && "Wanno : en prendre le contrôle vous rapporte 1 infamie.",
-            legendaire && "Destin légendaire : planète légendaire, 1 point et 1 infamie.",
+            wanno && "Wanno : en prendre possession vous rapporte 1 infamie.",
+            legendaire && `Destin légendaire : planète légendaire prise à ${nomDe?.(ancien) ?? "son possesseur"}, 1 point et 1 infamie pour vous.`,
             prendreAutre && "Mecatol Rex : la carte Mecatol Rex spéciale arrive aussi dans vos éléments actifs.",
             assimilation && "Assimilation : planète neutre obtenue, une infanterie y est posée.",
             butin > 0 && `Pillage : ${butin} commerce volé(s) à ${nomDe?.(ancien) ?? "son ancien possesseur"}.`,

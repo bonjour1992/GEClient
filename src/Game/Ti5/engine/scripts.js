@@ -937,7 +937,7 @@ export const SCRIPTS = [
 
     regle("destin-legendaire", "habilite", 145, 1794335054818, "Destin légendaire", "modifie",
         "Ravitaillement automatique (début de la phase) ; fiche d'un système : prise de possession",
-        "L'entretien rapporte 1 point par planète légendaire possédée ; prendre une planète légendaire rapporte 1 point et 1 infamie."),
+        "L'entretien rapporte 1 point par planète légendaire possédée ; la faction qui vous prend une planète légendaire gagne 1 point et 1 infamie."),
 
     regle("conclave-secret", "habilite", 160, 1794335054825, "Conclave secret", "auto",
         "Ravitaillement automatique (début de la phase)",
@@ -1487,21 +1487,28 @@ export const SCRIPTS = [
     // ---- technologies : boutons ----
 
     action("vaccin", "tech", 402, 1794335055007, "Vaccin", "plateau",
-        "Une seule fois : +4 points, et une de vos faveurs si personne n'avait découvert le vaccin à un tour précédent.", {
+        "Une seule fois : +4 points, et une faveur neutre si personne n'avait le vaccin avant ce tour.", {
             gains: { points: 4 },
             visible: outils => !Number(outils.etat.compteurs[`joueur:${outils.moi}:vaccin`]),
             calcul: outils => {
                 const decouvert = Number(outils.etat.compteurs["general:vaccin"]) || 0;
                 const premier = !decouvert || decouvert === outils.etat.tour;
 
-                return { faveur: premier ? 1 : 0, libelle: `Vaccin : +4 points${premier ? " et une faveur" : ""}` };
+                return { libelle: `Vaccin : +4 points${premier ? " et une faveur neutre" : ""}` };
             },
-            special: atelier => ({
-                actions: [
-                    { type: "compteur", id: `joueur:${atelier.moi}:vaccin`, valeur: 1 },
-                    !Number(atelier.etat.compteurs["general:vaccin"]) && { type: "compteur", id: "general:vaccin", valeur: atelier.etat.tour },
-                ].filter(Boolean),
-            }),
+            special: atelier => {
+                const decouvert = Number(atelier.etat.compteurs["general:vaccin"]) || 0;
+                const premier = !decouvert || decouvert === atelier.etat.tour;
+
+                return {
+                    actions: [
+                        { type: "compteur", id: `joueur:${atelier.moi}:vaccin`, valeur: 1 },
+                        !decouvert && { type: "compteur", id: "general:vaccin", valeur: atelier.etat.tour },
+                        // (faveur neutre : jeton sans propriétaire — miseEnPlace.js, FAVEUR)
+                        premier && { type: "creer", jeton: "faveur", zone: `joueur:${atelier.moi}:faveurs` },
+                    ].filter(Boolean),
+                };
+            },
             libelle: "Vaccin : +4 points",
         }),
 
@@ -2232,7 +2239,7 @@ export const SCRIPTS = [
         }),
 
     action("domination-designer", "habilite", 254, 1794335054878, "Domination : désigner", "planete",
-        "Ravitaillement, à partir du tour 7 : désignez une planète légendaire ou militaire que vous ne contrôlez pas. Si vous la contrôlez à la fin du tour, « Domination : +2 points » (plateau joueur).", {
+        "Ravitaillement, à partir du tour 7 : désignez une planète légendaire ou militaire que vous ne possédez pas. Si vous la possédez à la fin du tour, « Domination : +2 points » (plateau joueur).", {
             surPlanete: true,
             phase: "ravitaill",
             nomPhase: "ravitaillement",
@@ -2246,13 +2253,13 @@ export const SCRIPTS = [
                 sans: Math.abs(Number(atelier.etat.compteurs[`joueur:${atelier.moi}:dominationTour`])) === atelier.etat.tour
                     ? "vous avez déjà désigné une planète ce tour (celle-ci la remplacera)"
                     : null,
-                avis: `Domination : ${atelier.contenu?.name || "planète"} désignée. Si vous la contrôlez à la fin du tour : « Domination : +2 points » (plateau joueur).`,
+                avis: `Domination : ${atelier.contenu?.name || "planète"} désignée. Si vous la possédez à la fin du tour : « Domination : +2 points » (plateau joueur).`,
             }),
             libelle: "Domination : désigner cette planète",
         }),
 
     action("domination-points", "habilite", 254, 1794335054878, "Domination : points", "plateau",
-        "Fin du tour : si vous contrôlez la planète désignée au ravitaillement, +2 points.", {
+        "Fin du tour : si vous possédez la planète désignée au ravitaillement, +2 points.", {
             visible: outils => Number(outils.etat.compteurs[`joueur:${outils.moi}:dominationTour`]) === outils.etat.tour,
             special: atelier => {
 
@@ -2266,11 +2273,11 @@ export const SCRIPTS = [
                     ],
                     sans: atelier.proprietaire(idPlanete) === atelier.moi
                         ? null
-                        : `vous ne contrôlez pas ${atelier.nom({ type: "planet", id: idPlanete })}`,
+                        : `vous ne possédez pas ${atelier.nom({ type: "planet", id: idPlanete })}`,
                     avis: "Domination : +2 points.",
                 };
             },
-            libelle: "Domination : +2 points (planète désignée contrôlée)",
+            libelle: "Domination : +2 points (planète désignée possédée)",
         }),
 
     action("distorsion-gravitationnelle", "habilite", 515, 1794335055047, "Distorsion gravitationnelle", "systeme",
