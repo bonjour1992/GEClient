@@ -428,7 +428,8 @@ Quatre sortes :
 - `bouton` : un bouton de plus sur la fiche de la carte (`ScriptsCarte.jsx`).
   Aujourd'hui « Mettre en place » sur un événement, avec un script par
   événement : `poses` liste ce qui est mis en jeu et où (`vers` : la table,
-  chaque joueur, la réserve de tuiles spéciales, la réserve de promesses, la
+  chaque joueur, la main de chaque joueur — `"mains"`, pour une technologie à
+  poser sur une case vide —, la réserve de tuiles spéciales, la réserve de promesses, la
   case Événement — `{ evenement: k }` — ou la case Agenda, lois à venir —
   `{ agenda: k }` — du tour T + k, T étant le tour de l'événement) ;
   `anomalies` pose des unités neutres sur les systèmes du plateau qui ont une

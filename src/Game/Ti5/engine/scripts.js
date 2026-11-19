@@ -421,6 +421,7 @@ export const SCRIPTS = [
     // poses : [{ type, id, vers, n }] — ce qui est mis en jeu
     //   vers   "table"            la table
     //          "joueurs"          un exemplaire chez chaque joueur (feuille de technologie)
+    //          "mains"            un exemplaire dans la main de chaque joueur qui n'en a pas
     //          "tuiles"           la réserve de tuiles spéciales (complétée jusqu'à n :
     //                             les tuiles déjà en jeu comptent)
     //          "promesses"        la réserve de promesses
@@ -453,6 +454,16 @@ export const SCRIPTS = [
             { type: "habilite", id: 452, vers: { evenement: 2 }, n: 1 },
             { type: "habilite", id: 453, vers: { evenement: 2 } },
             { type: "Promesse", id: 454, vers: "promesses" },
+        ],
+    }),
+
+    evenement("evenement-peste-lointaine", 1039, 1795069770290, "Peste lointaine", {
+        description: "« Vaccin » et « Arme bactériologique » dans la main de chaque joueur (à poser sur une case vide d'une feuille de technologie) ; « Aide humanitaire » au tour T, « Bilan de l'aide humanitaire » au tour T+3.",
+        poses: [
+            { type: "tech", id: 402, vers: "mains" },
+            { type: "tech", id: 403, vers: "mains" },
+            { type: "habilite", id: 404, vers: { evenement: 0 }, n: 1 },
+            { type: "habilite", id: 1038, vers: { evenement: 3 }, n: 1 },
         ],
     }),
 
@@ -1863,7 +1874,7 @@ export const SCRIPTS = [
 
     regle("armageddon-capture", "unit", 850, 1794339608774, "Armageddon (destruction)", "auto",
         "Conflit : « Terminer le combat » (butin)",
-        "Celui qui le détruit prend le contrôle d'un Armageddon (#490), avec 1 de résistance restante."),
+        "Celui qui le détruit prend le contrôle d'un Armageddon conquis (#490), avec 1 de résistance restante."),
 
     regle("lune-noire", "unit", 856, 1794335055092, "Lune noire", "auto",
         "Conflit : engagements",
@@ -1905,7 +1916,7 @@ export const SCRIPTS = [
             libelle: "Centre d'expansion : +1 au combat spatial ici ce tour",
         }),
 
-    action("armageddon-scientifique", "unit", 490, 1794052194776, "Armageddon : scientifique", "unite",
+    action("armageddon-scientifique", "unit", 490, 1794052194776, "Armageddon conquis : scientifique", "unite",
         "Dépensez 3 fragments militaires et posez un scientifique sur cette unité : la portée de son canon augmente de 1 et elle rapporte 2 points de plus au décompte (à compter à la main).", {
             fragments: { mil: 3 },
             agent: { motif: "scientifique", nom: "scientifique", pose: true, surCarte: true },
@@ -2785,8 +2796,9 @@ export const SCRIPTS = [
             libelle: "Aide humanitaire : livrer sur le trou de ver",
         }),
 
-    action("aide-humanitaire-decompte", "habilite", 404, 1794335055008, "Aide humanitaire : décompte", "carte",
-        "Trois tours après : chaque faction marque 1 point par 4 commerce livrés à l'aide humanitaire ; celle qui en a livré le plus (seule) gagne une faveur neutre.", {
+    // (carte « Bilan de l'aide humanitaire », posée trois tours après « Aide humanitaire »)
+    action("aide-humanitaire-decompte", "habilite", 1038, 1794335055008, "Bilan de l'aide humanitaire", "carte",
+        "Chaque faction marque 1 point par 4 commerce livrés à l'aide humanitaire ; celle qui en a livré le plus (seule) gagne une faveur neutre. Les cartes « Aide humanitaire » et « Bilan de l'aide humanitaire » sont retirées.", {
             special: atelier => {
 
                 if (atelier.etat.compteurs["aide:fait"]) {
@@ -2803,6 +2815,10 @@ export const SCRIPTS = [
                         // (faveur neutre : jeton sans propriétaire — miseEnPlace.js, FAVEUR)
                         ...(premiers.length === 1 ? [{ type: "creer", jeton: "faveur", zone: `joueur:${premiers[0].u}:faveurs` }] : []),
                         { type: "compteur", id: "aide:fait", valeur: 1 },
+                        // Les deux cartes de l'événement quittent le jeu
+                        ...Object.values(atelier.etat.composants)
+                            .filter(x => x.ref?.type === "habilite" && [404, 1038].includes(x.ref.id))
+                            .map(x => ({ type: "supprimer", c: x.id })),
                     ],
                     avis: "Aide humanitaire : " + livres.map(x => `${atelier.nomDe(x.u)} ${x.n} livré(s), +${Math.floor(x.n / 4)} point(s)`).join(" ; ") +
                         (premiers.length === 1 ? ` — faveur neutre pour ${atelier.nomDe(premiers[0].u)}.` : " — pas de faveur neutre (égalité ou aucune livraison)."),

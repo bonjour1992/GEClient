@@ -20,13 +20,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
-| Habilités | 62 | 39 | 8 | 15 | 32 | 6 | 16 |
+| Habilités | 63 | 40 | 8 | 15 | 33 | 6 | 16 |
 | Unités | 113 | 73 | 40 | 0 | 25 | 3 | 42 |
 | Planètes | 29 | 24 | 2 | 3 | 15 | 8 | 11 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **366** | **266** | **74** | **26** | **147** | **61** | **120** |
+| **Total** | **367** | **267** | **74** | **26** | **148** | **61** | **120** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -154,7 +154,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 167 | Fierté | **partiel** | bouton existant modifié | Conflit d'accord (revendication) : « Accepter » est grisé pour le camp qui possède la planète revendiquée. | Décompte des points : à la main. |
 | 168 | Seigneur | **partiel** | nouveau bouton | Plateau joueur : « Seigneur » transforme un de vos agents disponibles (amiral, politique ou diplomate, choix dans l'onglet Décision) en Seigneur. | Déclencheurs (destruction, vote de siège, vassal) : constatés à la main. |
 | 254 | Domination | **oui** | nouveau bouton | Fiche d'un système, ravitaillement à partir du tour 7, à côté d'une planète légendaire ou militaire que vous ne contrôlez pas : « Domination : désigner ». Plateau joueur : « Domination : +2 points » si vous la contrôlez. | — |
-| 404 | Aide humanitaire | **oui** | nouveau bouton | Fiche d'une de vos unités à livraison, dans un système à trou de ver alpha ou bêta : « Aide humanitaire : livrer » compte son commerce pour votre faction. Fiche de la carte : « faire le décompte » — 1 point par 4 commerce livrés, une faveur neutre à qui en a livré le plus (seul). | — |
+| 404 | Aide humanitaire (Peste lointaine) | **oui** | nouveau bouton | Fiche d'une de vos unités à livraison, dans un système à trou de ver alpha ou bêta : « Aide humanitaire : livrer » compte son commerce pour votre faction. Le décompte est sur la carte « Bilan de l'aide humanitaire » (#1038). | — |
 | 406 | Mouvement pirate | non | automatique (prévu) | — | Déplacement automatique des pirates avec recherche de chemin : déplacement non géré. (difficile) |
 | 427 | Sève de vie | **oui** | automatique | Ravitaillement automatique : chaque unité biologique du joueur posée sur la carte récupère 1 de résistance. | — |
 | 441 | Étude des tempêtes | **oui** | nouveau bouton | Fiche d'un système sans planète, phase de science : use un scientifique, active le système, +2 de recherche tempête (+4 dans une nébuleuse), notée au journal de recherche. | — |
@@ -202,6 +202,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 942 | Racket (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, ravitaillement, à côté d'une planète d'une autre faction dans un système où vous avez des unités militaires : « Racket » ouvre un test de domination (onglet Conflit) ; à sa clôture, si vous dominez, vous gagnez les ressources de la planète et son propriétaire les perd. Une fois par tour et par planète. | — |
 | 1022 | Physiologie gashlai (Braises de Muaat WIP) | **oui** | automatique | Déplacement assisté : une supernova sur le trajet n'est plus un obstacle. | — |
 | 1023 | Étude de la forge (Braises de Muaat WIP) | **oui** | nouveau bouton | Fiche d'une supernova, science : use un scientifique, active le système, 4 de recherche de forge d'arme notée au journal de recherche. | Recherche de forge sur une planète : comme les autres sciences, à la main. |
+| 1038 | Bilan de l'aide humanitaire (Peste lointaine) | **oui** | nouveau bouton | Fiche de la carte : « Aide humanitaire : faire le décompte » — 1 point par 4 commerce livrés, une faveur neutre à qui en a livré le plus (seul) ; les cartes « Aide humanitaire » et « Bilan de l'aide humanitaire » sont retirées. L'événement « Peste lointaine » (#1039) a son bouton « Mettre en place » : Vaccin et Arme bactériologique dans la main de chaque joueur, Aide humanitaire au tour T, le bilan au tour T+3. | — |
 
 ## Unités
 
@@ -257,7 +258,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 467 | Arbre mère (Omni-esprit d'Arborec) | **oui** | automatique | Ravitaillement automatique : autant de Letani que le niveau de connaissance génétique, posés sur la planète de l'arbre. | — |
 | 470 | Graine d'eden (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | **oui** | nouveau bouton + automatique | Conflit, combat spatial : autant d'attaques que votre niveau de connaissance génétique. Bombardement : « Duha Menaimon : jet » — au plus ce niveau, un Letani est posé sur la planète. | — |
-| 490 | Armageddon | **partiel** | nouveau bouton | Fiche de l'unité : 3 fragments militaires, un scientifique est posé sur l'unité. | Portée du canon +1 et 2 points de plus au décompte : à la main. |
+| 490 | Armageddon conquis | **partiel** | nouveau bouton | Fiche de l'unité : 3 fragments militaires, un scientifique est posé sur l'unité. | Portée du canon +1 et 2 points de plus au décompte : à la main. |
 | 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
 | 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |

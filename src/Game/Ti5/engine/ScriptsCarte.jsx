@@ -335,6 +335,17 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
                 continue;
             }
 
+            if (pose.vers === "mains") {
+
+                // Un exemplaire dans la main de chaque joueur qui n'en a nulle part chez lui
+                const sans = partie.joueurs.filter(j =>
+                    !Object.values(etat.composants).some(x =>
+                        x.ref?.type === pose.type && x.ref.id === pose.id && String(x.zone || "").startsWith(`joueur:${j.userId}:`)));
+
+                actions.push(...sans.map(j => ({ type: "creer", ref, zone: `joueur:${j.userId}:main`, proprio: j.userId })));
+                continue;
+            }
+
             const { zone, horsDeroule: t } = zoneDe(pose.vers);
 
             if (!zone) {

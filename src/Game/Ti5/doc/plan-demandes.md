@@ -401,6 +401,18 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   `migrate-promesses-depart.mjs`) : Volée — Vassal ×5, Embuscade ×3 ; Kabal — Commerce d'esclave
   ×2 ; Jol-Nar — Partage de technologie ×6 ; Winnu — Concession commerciale et Accès aux archives
   ajoutées. Le nombre suit le champ `exemplaires` de la carte.
+- ☑ Review des données, points 8 à 15 (2026-11-19, `migrate-review-s6.mjs`, 16 écritures, et
+  `migrate-review-s7.mjs`, 8 écritures) : images des stations renommées sur le disque
+  (`SR042.png`, `SR124.png`, `StationDeCombat.png`, vignettes comprises) ; « Armageddon conquis »
+  (#490) ; systèmes « Ashtroth » (#1036) et « Université polytechnique » (#1037), en `special` ;
+  événement « Peste lointaine » (#1039) : Vaccin et Arme bactériologique chez chaque faction, Aide
+  humanitaire à T, « Bilan de l'aide humanitaire » (#1038) à T+3 — script de mise en place
+  `evenement-peste-lointaine` (`vers: "mains"`), le décompte passe sur la carte #1038 et retire
+  les deux cartes ; « Signal capté » cite SIG-1 à SIG-4 ; macros `#jet(7)` et `#poss`, règles de
+  `#con` et `#dom` complétées ; la phase « Habilité spéciale » devient une règle qui liste les 16
+  mots-clés d'unité, et les règles de `#bomb`, `#can`, `#furtif`, `#deplfurtif`, `#prod`, `#indes`
+  sont relues. Propositions en attente de validation : `demandes-ti5/propositions-review.md`
+  (cartes + unité, contrôler / posséder / dominer, textes peu clairs, jets en `#jet(n)`).
 - ☑ Review des données, propositions 1 à 7 (2026-11-19, `migrate-review-s5.mjs`, 32 écritures) :
   système #241 « Ruines spatiales » ; « Frégate du Khan », « Palais du Khan », « Vaisseau
   relique » ; agendas Ostracisme et Subvention en directive ; formule de vote des agendas
