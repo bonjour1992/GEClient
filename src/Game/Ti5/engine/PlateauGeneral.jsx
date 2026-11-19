@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, agentDisponible } from "./Interaction";
-import { depenserAgent, faceD10 } from "./effets";
+import { depenserAgent } from "./effets";
 import { getHandler } from "../../games";
 import {
     TYPES_PIOCHE,
@@ -17,6 +17,7 @@ import {
     actionsPiste,
     horsReserveCommune,
 } from "./miseEnPlace";
+import { premiereFace } from "./etat";
 import { useElement, useElements } from "./sync";
 import { getFromType } from "../../../lib/store";
 import { ReserveNeutre, FactionsNeutres, FeuillesSpeciales, ReserveTokens, RechercheCarte, Fenetre } from "./Neutres";
@@ -157,7 +158,7 @@ export function Des({ nu }) {
     // Dernier tirage d'un système : lisible tant que le plateau n'a pas changé
     const tirage = dernier && (dernier.coup.commentaire || "").startsWith(TIRAGE_SYSTEME);
     const designe = tirage && dernier.action.faces === candidats.length
-        ? candidats[dernier.action.resultats[0] - 1]
+        ? candidats[dernier.action.resultats[0] - premiereFace(dernier.action.faces)]
         : null;
 
     return (
@@ -206,9 +207,9 @@ export function Des({ nu }) {
             {dernier && !tirage && (
                 <span>
                     Dernier lancer ({nomDe(dernier.coup.auteur)}, {dernier.action.resultats.length}d{dernier.action.faces}) :{" "}
-                    {/* (D10 numérotés de 0 à 9 : faceD10, effets.js) */}
+                    {/* (D10 numérotés de 0 à 9) */}
                     <b style={{ fontSize: 18 }}>
-                        {(dernier.action.faces === 10 ? dernier.action.resultats.map(faceD10) : dernier.action.resultats).join("  ")}
+                        {dernier.action.resultats.join("  ")}
                     </b>
                 </span>
             )}

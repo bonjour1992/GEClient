@@ -14,21 +14,21 @@ import { campDe } from "./miseEnPlace.js";
 // DÉ À 10 FACES : NUMÉROTÉ DE 0 À 9
 //
 // Les dés du jeu sont des D10 classiques, numérotés de 0 à 9 : le 0 vaut
-// zéro, pas dix (règle « Jet »). Le serveur tire toujours de 1 à 10
-// (etat.js, action « des ») et la marque d'un dé garde ce tirage — 0 ou
-// absent y veut dire « pas encore lancé ». Tout ce qui LIT un D10 (seuil
-// d'un jet, affichage, journal) passe par faceD10 : le tirage 10 est la
-// face 0, les autres sont inchangés. Les dés d'un autre nombre de faces
-// (1D6, 1D3, tirage d'un système au hasard) ne sont pas concernés.
+// zéro, pas dix (règle « Jet »). Le serveur les tire ainsi (etat.js,
+// action « des », premiereFace) et la marque d'un dé garde la face tirée :
+// « 0 » est donc un résultat, et un dé pas encore lancé se reconnaît à sa
+// marque ABSENTE, jamais à une valeur nulle. Les dés d'un autre nombre de
+// faces (1D6, 1D3) vont de 1 à leur nombre de faces.
 // ------------------------------------------------------------
 
-export const faceD10 = tirage => (Number(tirage) === 10 ? 0 : Number(tirage));
+// Face d'un jet isolé gardé dans une marque (« 7 », « 0 »), ou null tant que le
+// dé n'est pas lancé — une marque absente, ou qui ne porte pas un nombre.
+export const faceDe = marque => (/^\d+$/.test(String(marque ?? "")) ? Number(marque) : null);
 
 // Dés lancés par le serveur et lus dans sa réponse. Un coup lance 30 dés au
 // plus : lotsDeDes découpe un jet en actions « des ». desDeLaReponse rend,
-// dans l'ordre, les tirages bruts des dés du dernier coup de `moi` dans la
-// réponse d'envoyer() — undefined si elle est illisible. (Les D10 se lisent
-// ensuite par faceD10.)
+// dans l'ordre, les faces des dés du dernier coup de `moi` dans la
+// réponse d'envoyer() — undefined si elle est illisible.
 export const lotsDeDes = (n, faces) => Array.from({ length: Math.ceil(n / 30) },
     (_, i) => ({ type: "des", n: Math.min(30, n - 30 * i), faces }));
 

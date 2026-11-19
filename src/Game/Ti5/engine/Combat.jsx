@@ -4,7 +4,7 @@ import {
     tuileDe, esclavesDe, nomDuCamp,
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceD10 } from "./effets";
+import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceDe } from "./effets";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
@@ -342,12 +342,9 @@ function CombatSysteme({ lieu }) {
     // Noms des marques de ce combat, et leur lecture
     const M = marquesDe(sorte);
     const lireEngagement = c => liste(c.marques?.[M.engage]);
-    // (D10 numérotés de 0 à 9 : faceD10, effets.js)
-    const lireDes = c => liste(c.marques?.[M.des]).map(faceD10);
-
-    // Face d'un jet isolé gardé dans une marque (Médecine, riposte du khan…), ou null s'il
-    // n'est pas encore lancé
-    const faceDe = marque => (Number(marque) > 0 ? faceD10(marque) : null);
+    // (D10 numérotés de 0 à 9 ; un jet isolé — Médecine, riposte du khan… — se lit par
+    // faceDe, effets.js)
+    const lireDes = c => liste(c.marques?.[M.des]).map(Number);
 
     // Mes unités cochées, pour leur ajouter un engagement
     const [selection, setSelection] = useState([]);
@@ -1787,7 +1784,7 @@ function CombatSysteme({ lieu }) {
             .then(reponse => {
 
                 const jets = String(reponse?.etat?.composants?.[carte.id]?.marques?.jetSkarvald ?? "")
-                    .split(",").filter(Boolean).map(faceD10);
+                    .split(",").filter(Boolean).map(Number);
 
                 if (!jets.length) {
                     return;

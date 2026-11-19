@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { fetchAPI } from "../../../lib/fetch";
 import { useEngine, nomElement, nomType, nomZone, nomCase, lireRegle } from "./Interaction";
-import { faceD10 } from "./effets";
 
 // ============================================================
 // JOURNAL : historique des coups
@@ -136,10 +135,9 @@ export function decrire(action, { search, jeu, nomDe }) {
                 .join(" ; ");
 
         case "des": {
-            // D10 numérotés de 0 à 9 (faceD10, effets.js). (Le tirage d'un système au hasard
-            // parmi exactement 10 s'affiche donc 0 pour le dixième ; la désignation, elle,
-            // se lit dans le cadre « Dés ».)
-            const faces = (action.faces ?? 10) === 10 ? resultats.map(faceD10) : resultats;
+            // D10 numérotés de 0 à 9. (Le tirage d'un système au hasard parmi exactement
+            // 10 va donc de 0 à 9 ; la désignation, elle, se lit dans le cadre « Dés ».)
+            const faces = resultats;
 
             // Jet d'un composant (attaques d'un vaisseau au combat)
             if (noms) {

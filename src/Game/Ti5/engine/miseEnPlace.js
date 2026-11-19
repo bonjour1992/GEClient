@@ -6,7 +6,11 @@
 // ============================================================
 
 import { normaliserPlateau } from "../hexSpirale.js";
-import { nouvelEtat, ajouter, composantsDeZone, appliquer } from "./etat.js";
+import { nouvelEtat, ajouter, composantsDeZone, appliquer, MARQUEUR, PISTES, MAX_POINTS, actionsPiste } from "./etat.js";
+
+// Marqueur d'un joueur, pistes du déroulé et règle d'avancée sur une piste :
+// définis dans etat.js (le serveur s'en sert aussi), repris ici pour les écrans
+export { MARQUEUR, PISTES, MAX_POINTS, actionsPiste };
 
 // Une pioche par type de carte
 export const TYPES_PIOCHE = ["Agenda", "militaire", "relique", "evenement", "mercenaire"];
@@ -14,12 +18,9 @@ export const TYPES_PIOCHE = ["Agenda", "militaire", "relique", "evenement", "mer
 // Une feuille de technologie par type : celle de la faction, sinon la commune
 export const TYPES_FEUILLE = ["gen", "mil", "soc", "spa"];
 
-// Marqueur d'un joueur : un carré de sa couleur avec le logo de sa faction.
+// (Marqueur d'un joueur : un carré de sa couleur avec le logo de sa faction.
 // Un sur la case 0 des points, de l'infamie et des sièges, un sur sa case
-// d'initiative.
-export const MARQUEUR = "marqueur";
-
-export const PISTES = ["points", "infamie", "sieges"];
+// d'initiative.)
 
 // Faveur d'une faction : un jeton triangulaire à sa couleur, avec son logo
 export const FAVEUR = "faveur";
@@ -105,56 +106,10 @@ export const CUBES = [
     ["□ plan de relique", 20],
 ];
 
-// Dernière case de la piste des points du déroulé
-export const MAX_POINTS = 25;
-
 // Actions qui font gagner n points à un joueur : son marqueur avance sur la
-// piste des points. Au-delà de la dernière case, un de ses marqueurs reste
-// sur cette case (un tour de piste) et le score repart de 0. S'il a plusieurs
-// marqueurs sur la piste, ceux de la dernière case sont des tours de piste.
+// piste des points (règle des pistes : actionsPiste, etat.js).
 export function actionsPoints(etat, userId, n) {
     return actionsPiste(etat, userId, "points", n);
-}
-
-// Même chose pour une piste du déroulé (« points », « infamie », « sieges »).
-// Les points et les sièges rebouclent au bout de la piste ; l'infamie
-// s'arrête à la dernière case.
-export function actionsPiste(etat, userId, piste, n) {
-
-    if (!(n > 0) || !PISTES.includes(piste)) {
-        return [];
-    }
-
-    const boucle = piste !== "infamie";
-    const zone = k => `general:${piste}:${k}`;
-
-    const miens = Object.values(etat.composants).filter(m =>
-        !m.ref && m.jeton === MARQUEUR && m.proprio === userId &&
-        m.zone.startsWith(`general:${piste}:`));
-
-    const caseDe = m => Number(m.zone.split(":")[2]);
-    const marqueur = miens.find(m => caseDe(m) < MAX_POINTS) || miens[0];
-
-    if (!marqueur) {
-        return [{ type: "creer", jeton: MARQUEUR, zone: zone(Math.min(n, MAX_POINTS)), proprio: userId }];
-    }
-
-    const total = caseDe(marqueur) + n;
-
-    if (total <= MAX_POINTS) {
-        return [{ type: "deplacer", c: marqueur.id, vers: zone(total) }];
-    }
-
-    if (!boucle) {
-        return caseDe(marqueur) < MAX_POINTS
-            ? [{ type: "deplacer", c: marqueur.id, vers: zone(MAX_POINTS) }]
-            : [];
-    }
-
-    return [
-        { type: "creer", jeton: MARQUEUR, zone: zone(MAX_POINTS), proprio: userId },
-        { type: "deplacer", c: marqueur.id, vers: zone(total - MAX_POINTS) },
-    ];
 }
 
 // Marqueur d'activation : un marqueur neutre noir, posé sur une planète

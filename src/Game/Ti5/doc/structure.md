@@ -164,17 +164,14 @@ technologies débloquées. On l'y met en glissant la carte sur le cadre, par
 `tech.jsx` affiche `context.progres` cases cochées quand il est fourni.
 
 **Dés à 10 faces : de 0 à 9.** Les dés du jeu sont des D10 classiques numérotés
-de 0 à 9, où le 0 vaut zéro (règle « Jet »). L'action `des` du serveur tire
-toujours de 1 à 10, et la marque d'un dé garde ce tirage (0 ou absente : pas
-encore lancé). Tout ce qui lit un D10 passe par `faceD10` (`effets.js`), qui
-rend la face 0 pour le tirage 10 : dés du combat (`lireDes`), jets isolés
-(Médecine, riposte du Khan, Memoria D, Commerce d'esclave, Duha Menaimon,
-Skarvald : `faceDe`, `null` tant que le dé n'est pas lancé), passage d'une
-rupture ou d'un trou de ver oméga (`Blocage.jsx`), Capsule de secours
-(`Sauvetage.jsx`), jets des scripts (`ActionsScript.jsx`), tirages du début de
-tour (`Partie.jsx`), Recomposition (`Decisions.jsx`), journal et cadre « Dés ».
-Les dés d'un autre nombre de faces et le tirage d'un système au hasard ne sont
-pas concernés.
+de 0 à 9, où le 0 vaut zéro (règle « Jet »). L'action `des` du serveur les tire
+ainsi (`premiereFace`, `etat.js` : 0 pour un dé à 10 faces, 1 pour les autres),
+et la marque d'un dé garde la face tirée. « 0 » est donc un résultat : un dé pas
+encore lancé se reconnaît à sa marque absente, jamais à une valeur nulle. Les
+jets isolés (Médecine, riposte du Khan, Memoria D, Commerce d'esclave, Duha
+Menaimon, Capsule de secours) se lisent par `faceDe` (`effets.js`), `null` tant
+que le dé n'est pas lancé. Le tirage d'un système au hasard lit le rang désigné
+avec `premiereFace` (`PlateauGeneral.jsx`).
 
 Marques utilisées par l'interface : `degat` (nombre), `use` (usé), `rotation`
 (tuile système, 0 à 5), `possession` (id du joueur qui contrôle le composant).
@@ -401,7 +398,9 @@ posés dans l'espace d'un système (zone `hex:<i>`).
 ### piste des points
 
 `actionsPoints(etat, joueur, n)` (`miseEnPlace.js`) fait avancer le marqueur
-du joueur de n cases. Au-delà de la dernière case (25), un de ses marqueurs
+du joueur de n cases. La règle d'avancée n'existe qu'une fois : `actionsPiste`
+(`etat.js`), que le serveur applique aussi quand il encaisse les faveurs
+(`avancerPoints`). Au-delà de la dernière case (25), un de ses marqueurs
 reste sur 25 et le score repart de 0. Le « + » de l'en-tête « Points » du
 déroulé (`data-action="point"`) ajoute 1 point au joueur ; construire une
 relique lui ajoute ses points.
@@ -816,13 +815,13 @@ tous les éléments du jeu (2 lettres au moins, 40 résultats affichés). Un cli
 ouvre la fenêtre de l'élément, avec « Envoyer vers… » (il est créé dans la
 zone choisie) et « Montrer à… ».
 
-### zones secrètes
+### zone invisible
 
-`joueur:<u>:secret:<nom>` : comme un plateau de vote caché, les autres joueurs
-n'en reçoivent rien, ni dans l'état ni dans le journal (`zoneInvisible` dans
-`etat.js`). Une action qui amène un composant dans une zone invisible n'est
-montrée qu'à son propriétaire ; une action qui l'en sort vers une zone publique
-est montrée sans son origine.
+Le plateau de vote caché d'un joueur est la seule zone invisible : les autres
+joueurs n'en reçoivent rien, ni dans l'état ni dans le journal (`zoneInvisible`
+dans `etat.js`). Une action qui y amène un composant n'est montrée qu'à son
+propriétaire ; une action qui l'en sort vers une zone publique est montrée sans
+son origine.
 
 ### passage à la phase suivante
 

@@ -19,6 +19,11 @@ const estPile = zone => estPioche(zone) || zone === ZONE_PILE_LIBRE;
 
 export const FACES = ["recto", "verso", "cache"];
 
+// Dés (action « des ») : un dé à 10 faces est un D10 classique, numéroté de
+// 0 à 9 — le 0 vaut zéro, pas dix (règle « Jet »). Tout autre dé est numéroté
+// de 1 à son nombre de faces. Un jet X est réussi si le dé fait X ou moins.
+export const premiereFace = faces => (faces === 10 ? 0 : 1);
+
 // Refus de « donnerCarte » : celui qui doit donner la carte ne l'a ni en
 // main ni en jeu (la transaction est alors annulée, Transaction.jsx)
 // Dos d'un composant caché : la marque « dos » s'il en a une (unité
@@ -161,23 +166,10 @@ export function joueurDeVote(zone) {
     return m ? Number(m[1]) : null;
 }
 
-// Joueur propriétaire d'une zone secrète (joueur:<u>:secret:<nom>), ou null.
-// Comme un plateau de vote caché : les autres n'en reçoivent rien du tout.
-export function joueurDeSecret(zone) {
-    const m = /^joueur:(\d+):secret:/.exec(zone);
-    return m ? Number(m[1]) : null;
-}
-
-// Propriétaire d'une zone dont les autres joueurs ne reçoivent rien — zone
-// secrète, ou plateau de vote que son joueur n'a pas révélé (compteur
+// Propriétaire d'une zone dont les autres joueurs ne reçoivent rien — un
+// plateau de vote que son joueur n'a pas révélé (compteur
 // joueur:<u>:voteRevele) — ou null si la zone n'est pas de cette sorte.
 export function zoneInvisible(zone, etat) {
-
-    const secret = joueurDeSecret(zone || "");
-
-    if (secret !== null) {
-        return secret;
-    }
 
     const votant = joueurDeVote(zone || "");
 
@@ -199,7 +191,7 @@ export function quiVoit(c, etat) {
         return joueur;
     }
 
-    // Plateau de vote non révélé, zone secrète : visible de son joueur seul
+    // Plateau de vote non révélé : visible de son joueur seul
     const invisible = zoneInvisible(c.zone, etat);
 
     if (invisible !== null) {
@@ -234,11 +226,11 @@ export function filtrerEtat(etat, userId, versoDe) {
     for (const c of Object.values(etat.composants)) {
         if (voit(c, userId, etat)) {
             composants[c.id] = { ...c };
-        } else if (joueurDeVote(c.zone) === null && joueurDeSecret(c.zone) === null) {
+        } else if (joueurDeVote(c.zone) === null) {
             caches.push(c);
         }
 
-        // Plateau de vote caché, zone secrète : les autres n'en reçoivent
+        // Plateau de vote caché : les autres n'en reçoivent
         // rien du tout, pas même le nombre d'éléments posés.
     }
 
@@ -359,35 +351,75 @@ function melanger(etat, liste, alea) {
     }
 }
 
-// Avance le marqueur d'un joueur sur la piste des points (même règle que
-// actionsPiste de miseEnPlace.js : au-delà de la dernière case, un marqueur
-// y reste et le score repart de 0).
-const DERNIERE_CASE = 25;
+// ============================================================
+// PISTES DU DÉROULÉ (points, infamie, sièges)
+//
+// La règle d'avancée n'existe qu'ici : le client s'en sert pour
+// construire ses actions (actionsPiste, reprise par miseEnPlace.js),
+// le serveur pour marquer les points des faveurs encaissées.
+// ============================================================
 
-function avancerPoints(etat, userId, n) {
+// Marqueur d'un joueur (un pion à sa couleur)
+export const MARQUEUR = "marqueur";
 
-    if (!(n > 0)) {
-        return;
+// Pistes du déroulé, et leur dernière case
+export const PISTES = ["points", "infamie", "sieges"];
+export const MAX_POINTS = 25;
+
+// Actions qui font avancer de n cases le marqueur d'un joueur sur une piste.
+// Au-delà de la dernière case, un de ses marqueurs reste sur cette case (un
+// tour de piste) et le compte repart de 0 ; s'il a plusieurs marqueurs sur
+// la piste, ceux de la dernière case sont des tours de piste. Les points et
+// les sièges rebouclent ainsi ; l'infamie s'arrête à la dernière case.
+export function actionsPiste(etat, userId, piste, n) {
+
+    if (!(n > 0) || !PISTES.includes(piste)) {
+        return [];
     }
 
+    const boucle = piste !== "infamie";
+    const zone = k => `general:${piste}:${k}`;
+
     const miens = Object.values(etat.composants).filter(m =>
-        !m.ref && m.jeton === "marqueur" && m.proprio === userId && /^general:points:\d+$/.test(m.zone));
+        !m.ref && m.jeton === MARQUEUR && m.proprio === userId &&
+        m.zone.startsWith(`general:${piste}:`));
 
     const caseDe = m => Number(m.zone.split(":")[2]);
-    const marqueur = miens.find(m => caseDe(m) < DERNIERE_CASE) || miens[0];
+    const marqueur = miens.find(m => caseDe(m) < MAX_POINTS) || miens[0];
 
     if (!marqueur) {
-        ajouter(etat, { jeton: "marqueur", zone: `general:points:${Math.min(n, DERNIERE_CASE)}`, proprio: userId });
-        return;
+        return [{ type: "creer", jeton: MARQUEUR, zone: zone(Math.min(n, MAX_POINTS)), proprio: userId }];
     }
 
     const total = caseDe(marqueur) + n;
 
-    if (total > DERNIERE_CASE) {
-        ajouter(etat, { jeton: "marqueur", zone: `general:points:${DERNIERE_CASE}`, proprio: userId });
+    if (total <= MAX_POINTS) {
+        return [{ type: "deplacer", c: marqueur.id, vers: zone(total) }];
     }
 
-    poser(etat, marqueur, `general:points:${total > DERNIERE_CASE ? total - DERNIERE_CASE : total}`, null);
+    if (!boucle) {
+        return caseDe(marqueur) < MAX_POINTS
+            ? [{ type: "deplacer", c: marqueur.id, vers: zone(MAX_POINTS) }]
+            : [];
+    }
+
+    return [
+        { type: "creer", jeton: MARQUEUR, zone: zone(MAX_POINTS), proprio: userId },
+        { type: "deplacer", c: marqueur.id, vers: zone(total - MAX_POINTS) },
+    ];
+}
+
+// Fait gagner n points à un joueur, directement dans l'état (faveurs encaissées)
+function avancerPoints(etat, userId, n) {
+
+    for (const action of actionsPiste(etat, userId, "points", n)) {
+
+        if (action.type === "creer") {
+            ajouter(etat, { jeton: action.jeton, zone: action.zone, proprio: action.proprio });
+        } else {
+            poser(etat, etat.composants[action.c], action.vers, null);
+        }
+    }
 }
 
 export function appliquer(etat, action, ctx = {}) {
@@ -665,8 +697,9 @@ export function appliquer(etat, action, ctx = {}) {
                 }
             }
 
+            // (un dé à 10 faces va de 0 à 9, les autres de 1 à leur nombre de faces)
             for (let i = 0; i < n; i++) {
-                resultats.push(1 + Math.floor(ctx.alea() * faces));
+                resultats.push(premiereFace(faces) + Math.floor(ctx.alea() * faces));
             }
 
             if (lanceur) {

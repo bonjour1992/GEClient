@@ -1,6 +1,6 @@
 import { useEngine, nomCase, distanceCases, nomElement } from "./Interaction";
 import { useElements } from "./sync";
-import { faceD10 } from "./effets";
+import { faceDe } from "./effets";
 import { campDe } from "./miseEnPlace";
 
 // ============================================================
@@ -75,9 +75,9 @@ export function Sauvetage({ numero, navires, planetes }) {
 
             {infanteries.map(c => {
 
-                // (lance : le dé est lancé ; jet : sa face — D10 numéroté de 0 à 9, effets.js)
-                const lance = Number(c.marques?.[JET]) > 0;
-                const jet = faceD10(c.marques?.[JET]);
+                // (jet : la face du dé, D10 numéroté de 0 à 9 — null tant qu'il n'est pas lancé)
+                const jet = faceDe(c.marques?.[JET]);
+                const lance = jet !== null;
                 const aMoi = joueur && campDe(c) === moi;
 
                 return (

@@ -6,7 +6,7 @@ import { Text } from "../../../Component/Text";
 import { getHandler } from "../../games";
 import { usePartie, useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
 import { SCRIPTS, SCRIPTS_DESACTIVES, scriptsDeRecrutement, technologiesDe, unDegat } from "./scripts";
-import { depenserAgent, faceD10 } from "./effets";
+import { depenserAgent } from "./effets";
 import { MiseEnPlaceJoueur } from "./MiseEnPlaceJoueur";
 import { ScriptsCarte } from "./ScriptsCarte";
 import {
@@ -868,8 +868,7 @@ export function Partie({ id }) {
             const suites = tirages
                 .map((t, k) => ({ t, k, jet: reponse?.etat?.composants?.[t.c]?.marques?.["jetTour" + k] }))
                 .filter(x => x.jet !== undefined)
-                // (D10 numéroté de 0 à 9 : faceD10, effets.js)
-                .map(x => ({ c: x.t.c, marque: "jetTour" + x.k, ...x.t.suite(x.t.faces === 10 ? faceD10(x.jet) : Number(x.jet)) }));
+                .map(x => ({ c: x.t.c, marque: "jetTour" + x.k, ...x.t.suite(Number(x.jet)) }));
 
             if (suites.length) {
 

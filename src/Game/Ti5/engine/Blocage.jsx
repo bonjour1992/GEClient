@@ -3,7 +3,7 @@ import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDispon
 import { useElements } from "./sync";
 import { MARQUEUR, NEUTRE, campDe } from "./miseEnPlace";
 import { estHyperlane, hyperlaneRelie } from "./hyperlane";
-import { controleDe, estDeplacementFurtif, faceD10 } from "./effets";
+import { controleDe, estDeplacementFurtif } from "./effets";
 import { contenuEnCache } from "./sync";
 
 // ============================================================
@@ -341,8 +341,8 @@ export function Passage({ passage }) {
     // JETS (rupture gravitationnelle, trou de ver oméga)
     // --------------------------------------------------------
 
-    // (D10 numéroté de 0 à 9 : faceD10, effets.js — le jet n'est lu qu'au stade « jets », tous lancés)
-    const de = v => faceD10(Number(v.marques?.[JET]) || 0);
+    // (D10 numéroté de 0 à 9 — le jet n'est lu qu'au stade « jets », tous lancés)
+    const de = v => Number(v.marques?.[JET]) || 0;
     const bloqueParJet = v => stade === "jets" && de(v) <= 3;
     // (technologie Stabilisateur de rupture : les vaisseaux ignorent les touches des trous de ver oméga)
     const touche = v => stade === "jets" && jet === "omega" && de(v) >= 9 && !aScript(mover, "stabilisateur-de-rupture");

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase, tuileDe } from "./Interaction";
 import { useUnitesDeFaction } from "./sync";
 import { MARQUEUR, actionsPiste, typeUnite, MOTIF_LOGISTICIEN, aMot } from "./miseEnPlace";
-import { faceD10, lotsDeDes, desDeLaReponse } from "./effets";
+import { lotsDeDes, desDeLaReponse } from "./effets";
 
 // ============================================================
 // ONGLET « DÉCISION »
@@ -371,8 +371,8 @@ function Recomposition() {
 
         const r = await envoyer(lotsDeDes(voulu, 10), commentaire || `Recomposition : ${voulu} dé(s)`);
 
-        // (D10 numérotés de 0 à 9 : faceD10, effets.js)
-        const des = desDeLaReponse(r, moi)?.map(faceD10);
+        // (D10 numérotés de 0 à 9)
+        const des = desDeLaReponse(r, moi);
 
         if (!Array.isArray(des) || des.length !== voulu) {
             aviser("Recomposition : les dés n'ont pas pu être lus, relancez.");

@@ -444,6 +444,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   dans l'emplacement `slotEntete` passé par le contexte de l'`<Outlet>` ; menus au clic
   (`Menu`) ; sous 700 px, une seule ligne (page courante + retour, boutons en icônes,
   recherche dépliable). Cadre « Connaissance » des feuilles arrondi (`techSheet.jsx`).
+- ☑ Lot côté serveur de la review du code (2026-11-19, demande un redémarrage de
+  `geserver`) : le serveur tire les D10 de 0 à 9 (`premiereFace`, `etat.js`) et `faceD10`
+  disparaît — un dé pas encore lancé se reconnaît à sa marque absente (`faceDe`,
+  `effets.js`) ; le mécanisme des zones secrètes `joueur:<u>:secret:<nom>`, que rien
+  n'utilisait, est retiré (`etat.js`, `server/partie.js`) ; la règle d'avancée sur une piste
+  n'existe plus qu'une fois (`actionsPiste`, dans `etat.js`, que `miseEnPlace.js` réexporte).
 - ☑ Dés à 10 faces numérotés de 0 à 9 (2026-11-19, précision de Loïc : le 0 vaut zéro, pas
   dix) : `faceD10` (`effets.js`) appliqué à toutes les lectures d'un D10 — combat, jets
   isolés, blocage, sauvetage, scripts, tirages de début de tour, journal, cadre « Dés » ; le

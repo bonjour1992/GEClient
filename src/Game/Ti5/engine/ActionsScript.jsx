@@ -2,7 +2,7 @@ import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee
 import { contenuEnCache, useElements, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
-import { depenserAgent, faceD10 } from "./effets";
+import { depenserAgent } from "./effets";
 import { actionsPossession } from "./Controle";
 import { noter } from "./recherche";
 import { lireQuestion } from "./Decisions";
@@ -547,7 +547,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                     const suites = tirages
                         .map((t, k) => ({ t, k, jet: reponse?.etat?.composants?.[t.c]?.marques?.["jetScript" + k] }))
                         .filter(x => x.jet !== undefined)
-                        .map(x => ({ c: x.t.c, marque: "jetScript" + x.k, ...x.t.suite(String(x.jet).split(",").map((x.t.faces || 10) === 10 ? faceD10 : Number)) }));
+                        .map(x => ({ c: x.t.c, marque: "jetScript" + x.k, ...x.t.suite(String(x.jet).split(",").map(Number)) }));
 
                     if (!suites.length) {
                         return;
