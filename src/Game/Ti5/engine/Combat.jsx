@@ -1128,6 +1128,14 @@ function CombatSysteme({ lieu }) {
 
     const jetEsclave = v => faceDe(v.c.marques?.esclaveJet);
 
+    // Actions d'un sauvetage : l'unité détruite est remise en état (dégâts à zéro, marque
+    // de son jet effacée) et part ailleurs — destination : { vers: zone } ou { sur: composant }
+    const sauver = (v, marque, destination) => [
+        { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+        { type: "marquer", c: v.id, marque, valeur: null },
+        { type: "deplacer", c: v.id, ...destination },
+    ];
+
     const captureEsclave = v => {
 
         const commerce = commerceEsclave(v);
@@ -1141,9 +1149,7 @@ function CombatSysteme({ lieu }) {
         const idDette = "t77" + v.id.replace(/\D/g, "");
 
         return [
-            { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
-            { type: "marquer", c: v.id, marque: "esclaveJet", valeur: null },
-            { type: "deplacer", c: v.id, vers: `joueur:${commerce.kabal}:actif` },
+            ...sauver(v, "esclaveJet", { vers: `joueur:${commerce.kabal}:actif` }),
             ...(echeance <= turnNumber ? [
                 { type: "creer", idLocal: idDette, jeton: DETTE, zone: `joueur:${commerce.kabal}:tour:${echeance}`, marques: { montant: 1 } },
                 { type: "creer", jeton: MARQUEUR, sur: idDette, proprio: commerce.tueur },
@@ -1155,18 +1161,149 @@ function CombatSysteme({ lieu }) {
     // mes éléments actifs ; Commerce d'esclave : capturée par la Kabal) -> actions, ou null.
     // « Terminer le combat » les applique si le bouton de l'unité n'a pas été cliqué.
     const sauvetage = v => captureEsclave(v) || (sauveeMemoria(v)
-        ? [
-            { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
-            { type: "marquer", c: v.id, marque: "memoria", valeur: null },
-            { type: "deplacer", c: v.id, sur: memoriaD.id },
-        ]
+        ? sauver(v, "memoria", { sur: memoriaD.id })
         : (medecine(v) && jetMedecine(v) !== null && jetMedecine(v) <= 5
-            ? [
-                { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
-                { type: "marquer", c: v.id, marque: "medecine", valeur: null },
-                { type: "deplacer", c: v.id, vers: `joueur:${moi}:actif` },
-            ]
+            ? sauver(v, "medecine", { vers: `joueur:${moi}:actif` })
             : null));
+
+    // --------------------------------------------------------
+    // JETS D'UNE UNITÉ DÉTRUITE (Médecine, Commerce d'esclave, Memoria D, riposte du khan)
+    //
+    // Même déroulé pour les quatre, sur la ligne de l'unité : un bouton lance un dé (gardé
+    // dans une marque de l'unité), le résultat s'affiche en vert ou en rouge, puis un bouton
+    // applique la suite quand il y en a une. (D10 numérotés de 0 à 9 : jet(v) est la face du
+    // dé, ou null tant qu'il n'est pas lancé.)
+    //   lance(v, indes)   le jet est à faire sur cette unité (indes : unité indestructible)
+    //   lanceur(v)        c'est à moi de le lancer — sinon(v) s'affiche à la place du bouton
+    //   montre(v, indes)  le résultat est affiché ; reussi(v) ; inverse : réussi = rouge
+    //   donnee            attribut data-* qui porte la face du dé
+    //   suite             { si(v, indes), action, actions(v), commentaire(v), libelle }
+    // --------------------------------------------------------
+
+    const JETS = [
+        {
+            // Une de mes unités biologiques détruite peut être capturée (sauvée) sur un jet
+            // de 5 ou moins — elle va alors dans mes éléments actifs
+            cle: "medecine",
+            marque: "medecine",
+            jet: jetMedecine,
+            lance: (v, indes) => joueur && !indes && medecine(v),
+            action: "medecine-jet",
+            commentaire: () => "Médecine : jet de capture",
+            libelle: () => "Médecine : jet (5 ou moins)",
+            montre: (v, indes) => joueur && !indes && medecine(v),
+            reussi: v => jetMedecine(v) <= 5,
+            resultat: v => `Médecine : ${jetMedecine(v)}`,
+            suite: {
+                si: (v, indes) => joueur && !indes && medecine(v) && jetMedecine(v) !== null && jetMedecine(v) <= 5,
+                action: "medecine-capturer",
+                actions: v => sauver(v, "medecine", { vers: `joueur:${moi}:actif` }),
+                commentaire: v => `Médecine : ${v.nom} capturée (éléments actifs)`,
+                libelle: "Capturer",
+            },
+        },
+        {
+            // L'infanterie que j'ai détruite, capturée par la Kabal sur un jet de 2 ou moins
+            // (appliqué à « Terminer le combat »)
+            cle: "esclave",
+            marque: "esclaveJet",
+            jet: jetEsclave,
+            lance: v => joueur && commerceEsclave(v)?.tueur === moi,
+            action: "commerce-d-esclave-jet",
+            commentaire: () => "Commerce d'esclave : jet de capture",
+            libelle: () => "Commerce d'esclave : jet (2 ou moins)",
+            montre: v => !!commerceEsclave(v),
+            reussi: v => jetEsclave(v) <= 2,
+            donnee: "data-commerce-d-esclave",
+            resultat: v => `Commerce d'esclave : ${jetEsclave(v)}` + (jetEsclave(v) <= 2
+                ? ` — capturée par ${nomDe(commerceEsclave(v).kabal)} à la fin du combat (dette de 1)`
+                : " (raté)"),
+        },
+        {
+            // Une de mes infanteries détruites, sauvée sur un jet de 6 ou moins
+            cle: "memoria",
+            marque: "memoria",
+            jet: jetMemoria,
+            lance: v => joueur && sauvableMemoria(v),
+            action: "memoria-jet",
+            commentaire: () => "Memoria D : jet de sauvetage",
+            libelle: () => "Memoria D : jet (6 ou moins)",
+            montre: v => joueur && sauvableMemoria(v),
+            reussi: v => sauveeMemoria(v),
+            resultat: v => `Memoria D : ${jetMemoria(v)}`,
+            suite: {
+                si: v => joueur && sauveeMemoria(v),
+                action: "memoria-sauver",
+                actions: v => sauver(v, "memoria", { sur: memoriaD.id }),
+                commentaire: v => `Memoria D : ${v.nom} sauvée, posée à bord`,
+                libelle: "Poser sur Memoria D",
+            },
+        },
+        {
+            // Frégate du khan détruite : son destructeur lance la riposte (réussie, elle lui
+            // inflige un dégât : affichée en rouge)
+            cle: "khan",
+            marque: "khan",
+            jet: jetKhan,
+            lance: v => khanEnAttente(v),
+            lanceur: v => joueur && auteurDesDegats(v.c) === moi,
+            sinon: v => <i key="khan-attente" style={{ fontSize: 12 }}>riposte du khan à lancer par {nomCamp(auteurDesDegats(v.c))}</i>,
+            action: "riposte-khan-jet",
+            commentaire: () => `Frégate du khan : riposte contre ${nomDe(moi)}`,
+            libelle: v => `Riposte du khan : jet (${seuilKhan(v)} ou moins)`,
+            montre: v => estFregateKhan(v),
+            reussi: v => jetKhan(v) <= seuilKhan(v),
+            inverse: true,
+            donnee: "data-riposte-khan",
+            resultat: v => `Riposte du khan : ${jetKhan(v)}` + (jetKhan(v) <= seuilKhan(v)
+                ? (v.c.marques?.khanPris ? " (encaissée)" : ` — 1 dégât pour ${nomCamp(auteurDesDegats(v.c))}`)
+                : " (manquée)"),
+        },
+    ];
+
+    // Boutons et résultats de ces jets, sur la ligne d'une unité détruite
+    const rendreJets = (v, indes) => JETS.flatMap(j => {
+
+        const lance = j.jet(v) !== null;
+
+        return [
+            !lance && j.lance(v, indes) && (!j.lanceur || j.lanceur(v)
+                ? (
+                    <button
+                        key={j.cle + "-jet"}
+                        type="button"
+                        data-action={j.action}
+                        style={styleBouton}
+                        onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: j.marque }], j.commentaire(v))}
+                    >
+                        {j.libelle(v)}
+                    </button>
+                )
+                : j.sinon(v)),
+
+            lance && j.montre(v, indes) && (
+                <b
+                    key={j.cle + "-resultat"}
+                    {...(j.donnee ? { [j.donnee]: j.jet(v) } : {})}
+                    style={{ color: !!j.reussi(v) !== !!j.inverse ? "#1b5e20" : "#b71c1c" }}
+                >
+                    {j.resultat(v)}
+                </b>
+            ),
+
+            j.suite?.si(v, indes) && (
+                <button
+                    key={j.cle + "-suite"}
+                    type="button"
+                    data-action={j.suite.action}
+                    style={styleBouton}
+                    onClick={() => envoyer(j.suite.actions(v), j.suite.commentaire(v))}
+                >
+                    {j.suite.libelle}
+                </button>
+            ),
+        ];
+    });
 
     // Unités détruites que « Terminer le combat » retire du jeu (pas les indestructibles,
     // seulement désactivées, ni celles qu'un jet a sauvées)
@@ -1516,6 +1653,11 @@ function CombatSysteme({ lieu }) {
     const effacer = marques => avecMarques.flatMap(v =>
         marques.filter(m => v.c.marques?.[m] !== undefined).map(m => marquer(v.id, m, [])));
 
+    // Actions qui effacent ces marques sur toutes les unités du lieu qui les portent (choix et
+    // jets d'un combat : fin du combat)
+    const effacerMarques = noms => unites.flatMap(c =>
+        noms.filter(m => c.marques?.[m] !== undefined).map(m => ({ type: "marquer", c: c.id, marque: m, valeur: null })));
+
     // Remet le combat à l'étape des engagements : plus personne n'est prêt
     const remiseEtape = [
         ...partie.joueurs
@@ -1585,15 +1727,13 @@ function CombatSysteme({ lieu }) {
                 { type: "marquer", c: c.id, marque: "embuscade", valeur: null },
                 c.marques?.possession !== undefined && { type: "marquer", c: c.id, marque: "possession", valeur: null },
             ].filter(Boolean)),
-            ...unites.flatMap(c => ["dubois", "evitement", "khan", "khanPris", "memoria", "duha", "esclaveJet"]
-                .filter(m => c.marques?.[m] !== undefined)
-                .map(m => ({ type: "marquer", c: c.id, marque: m, valeur: null }))),
+            ...effacerMarques(["dubois", "evitement", "khan", "khanPris", "memoria", "duha", "esclaveJet"]),
             // Bombardement fini : la marque « bombarde » de ce combat devient « fini:<lieu>:<tour> »,
             // l'unité ne tire donc plus si ce bombardement est rouvert au même tour (issue #3)
             ...unites.filter(c => c.marques?.bombarde === CE_COMBAT)
                 .map(c => ({ type: "marquer", c: c.id, marque: "bombarde", valeur: "fini:" + CE_COMBAT })),
             // Unités épargnées à la main : la marque ne vaut que pour ce combat
-            ...unites.filter(c => c.marques?.epargne !== undefined).map(c => ({ type: "marquer", c: c.id, marque: "epargne", valeur: null })),
+            ...effacerMarques(["epargne"]),
             // Destruction : les unités indiquées détruites quittent le jeu (après les
             // effacements de marques ci-dessus : une unité retirée ne se marque plus)
             ...cumulRecomposition(aRetirer),
@@ -1699,25 +1839,28 @@ function CombatSysteme({ lieu }) {
         ].filter(Boolean), `${commentaire} — ${nomElement(search, v.c.ref)} (${nomCamp(v.camp)}) capturé`);
     }
 
+    // Mercenaire qui donne +1 à mes unités pour ce combat terrestre (Claire Gibson, Jace X) :
+    // son cube part dans les agents usés, le compteur du combat est posé
+    const bonusTerrestre = (id, script, textes) => jeCombats && sorte === "terrestre" && aScript(moi, script) && {
+        cle: String(id),
+        ...textes,
+        obstacles: [dejaUse(id), enVigueur(id)],
+        faire: commentaire => envoyer([...userMerc(id), { type: "compteur", id: MERC(id) + moi, valeur: 1 }], commentaire),
+    };
+
     const boutonsMercenaires = !joueur ? [] : [
 
-        jeCombats && sorte === "terrestre" && aScript(moi, "claire-gibson") && {
-            cle: "281",
+        bonusTerrestre(281, "claire-gibson", {
             nom: "Claire Gibson : +1 au combat pour vos infanteries, ce combat",
             libelle: "Claire Gibson : +1 à vos infanteries",
             titre: "Combat terrestre : son cube part dans les agents usés, vos infanteries ont +1 pour ce combat",
-            obstacles: [dejaUse(281), enVigueur(281)],
-            faire: commentaire => envoyer([...userMerc(281), { type: "compteur", id: MERC(281) + moi, valeur: 1 }], commentaire),
-        },
+        }),
 
-        jeCombats && sorte === "terrestre" && aScript(moi, "jace-x") && {
-            cle: "357",
+        bonusTerrestre(357, "jace-x", {
             nom: "Jace X : +1 au combat pour vos unités terrestres, ce combat",
             libelle: "Jace X : +1 à vos unités terrestres",
             titre: "Combat terrestre : son cube part dans les agents usés, vos unités ont +1 pour ce combat",
-            obstacles: [dejaUse(357), enVigueur(357)],
-            faire: commentaire => envoyer([...userMerc(357), { type: "compteur", id: MERC(357) + moi, valeur: 1 }], commentaire),
-        },
+        }),
 
         // Sharsiss : un bouton par autre faction du combat
         ...(jeCombats && sorte === "spatial" && aScript(moi, "sharsiss") ? campsJoueurs.filter(u => u !== moi).map(u => ({
@@ -1810,6 +1953,22 @@ function CombatSysteme({ lieu }) {
     const jetDuha = duha ? faceDe(duha.marques?.duha) : null;
     const niveauGen = connaissance(moi, "gen");
 
+    // Promesse Protecteur de l'empire (détenteur ou Winnu) : un de mes politiques est usé pour
+    // ce combat, une seule fois — `compteur` est le compteur du combat qui le retient
+    const obstaclesPolitique = compteur => [
+        etat.compteurs[compteur] && "vous avez déjà usé un politique pour ce combat",
+        !agentDisponible({ index, moi, search }, "politique") && "vous n'avez pas de politique disponible (aucun ne sera usé)",
+    ];
+
+    const userPolitique = compteur => commentaire => {
+        const politique = agentDisponible({ index, moi, search }, "politique");
+
+        envoyer([
+            politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
+            { type: "compteur", id: compteur, valeur: 1 },
+        ].filter(Boolean), commentaire);
+    };
+
     const boutonsUnites = !joueur ? [] : [
 
         jeCombats && sorte === "terrestre" && aScript(moi, "olivier-dubois") && dansLeSysteme(moi).some(c => c.ref?.id === 745) && {
@@ -1843,18 +2002,8 @@ function CombatSysteme({ lieu }) {
             nom: "Protecteur de l'empire : +1 au combat (use un politique)",
             libelle: "Protecteur de l'empire : +1 (use un politique)",
             titre: "Contre une faction qui a plus d'infamie que vous : un politique est usé, vos unités ont +1 pour ce combat. Le Winnu peut en user un aussi pour vous : les deux se cumulent.",
-            obstacles: [
-                etat.compteurs[PROTECTEUR + moi] && "vous avez déjà usé un politique pour ce combat",
-                !agentDisponible({ index, moi, search }, "politique") && "vous n'avez pas de politique disponible (aucun ne sera usé)",
-            ],
-            faire: commentaire => {
-                const politique = agentDisponible({ index, moi, search }, "politique");
-
-                envoyer([
-                    politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
-                    { type: "compteur", id: PROTECTEUR + moi, valeur: 1 },
-                ].filter(Boolean), commentaire);
-            },
+            obstacles: obstaclesPolitique(PROTECTEUR + moi),
+            faire: userPolitique(PROTECTEUR + moi),
         },
 
         // … et le Winnu (celui qui a fait la promesse) pour chaque détenteur présent dans le combat
@@ -1864,18 +2013,8 @@ function CombatSysteme({ lieu }) {
                 nom: `Protecteur de l'empire : +1 au combat pour ${nomDe(u)} (use un politique)`,
                 libelle: `Protecteur de l'empire : +1 pour ${nomDe(u)} (use un politique)`,
                 titre: `Vous avez donné ce mandat à ${nomDe(u)} : un de vos politiques est usé, ses unités ont +1 pour ce combat (en plus du sien).`,
-                obstacles: [
-                    etat.compteurs[PROTECTEUR_W + u] && "vous avez déjà usé un politique pour ce combat",
-                    !agentDisponible({ index, moi, search }, "politique") && "vous n'avez pas de politique disponible (aucun ne sera usé)",
-                ],
-                faire: commentaire => {
-                    const politique = agentDisponible({ index, moi, search }, "politique");
-
-                    envoyer([
-                        politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
-                        { type: "compteur", id: PROTECTEUR_W + u, valeur: 1 },
-                    ].filter(Boolean), commentaire);
-                },
+                obstacles: obstaclesPolitique(PROTECTEUR_W + u),
+                faire: userPolitique(PROTECTEUR_W + u),
             }))
             : []),
 
@@ -2081,111 +2220,9 @@ function CombatSysteme({ lieu }) {
                         </label>
                     )}
 
-                    {/* Script Médecine : une de mes unités biologiques détruite peut être capturée
-                        (sauvée) sur un jet de 5 ou moins — elle va alors dans mes éléments actifs */}
-                    {joueur && detruit && !indestructible && medecine(v) && jetMedecine(v) === null && (
-                        <button
-                            type="button"
-                            data-action="medecine-jet"
-                            style={styleBouton}
-                            onClick={() => envoyer([{ type: "des", n: 1, faces: 10, c: v.id, marque: "medecine" }], "Médecine : jet de capture")}
-                        >
-                            Médecine : jet (5 ou moins)
-                        </button>
-                    )}
-
-                    {joueur && detruit && !indestructible && medecine(v) && jetMedecine(v) !== null && (
-                        <b style={{ color: jetMedecine(v) <= 5 ? "#1b5e20" : "#b71c1c" }}>Médecine : {jetMedecine(v)}</b>
-                    )}
-
-                    {joueur && detruit && !indestructible && medecine(v) && jetMedecine(v) !== null && jetMedecine(v) <= 5 && (
-                        <button
-                            type="button"
-                            data-action="medecine-capturer"
-                            style={styleBouton}
-                            onClick={() => envoyer([
-                                { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
-                                { type: "marquer", c: v.id, marque: "medecine", valeur: null },
-                                { type: "deplacer", c: v.id, vers: `joueur:${moi}:actif` },
-                            ], `Médecine : ${v.nom} capturée (éléments actifs)`)}
-                        >
-                            Capturer
-                        </button>
-                    )}
-
-                    {/* Promesse Commerce d'esclave : l'infanterie que j'ai détruite, capturée par la
-                        Kabal sur un jet de 2 ou moins (appliqué à « Terminer le combat ») */}
-                    {joueur && detruit && commerceEsclave(v)?.tueur === moi && jetEsclave(v) === null && (
-                        <button
-                            type="button"
-                            data-action="commerce-d-esclave-jet"
-                            style={styleBouton}
-                            onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: "esclaveJet" }], "Commerce d'esclave : jet de capture")}
-                        >
-                            Commerce d'esclave : jet (2 ou moins)
-                        </button>
-                    )}
-
-                    {detruit && commerceEsclave(v) && jetEsclave(v) !== null && (
-                        <b data-commerce-d-esclave={jetEsclave(v)} style={{ color: jetEsclave(v) <= 2 ? "#1b5e20" : "#b71c1c" }}>
-                            Commerce d'esclave : {jetEsclave(v)}
-                            {jetEsclave(v) <= 2 ? ` — capturée par ${nomDe(commerceEsclave(v).kabal)} à la fin du combat (dette de 1)` : " (raté)"}
-                        </b>
-                    )}
-
-                    {/* Memoria D : une de mes infanteries détruites, sauvée sur un jet de 6 ou moins */}
-                    {joueur && detruit && sauvableMemoria(v) && jetMemoria(v) === null && (
-                        <button
-                            type="button"
-                            data-action="memoria-jet"
-                            style={styleBouton}
-                            onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: "memoria" }], "Memoria D : jet de sauvetage")}
-                        >
-                            Memoria D : jet (6 ou moins)
-                        </button>
-                    )}
-
-                    {joueur && detruit && sauvableMemoria(v) && jetMemoria(v) !== null && (
-                        <b style={{ color: sauveeMemoria(v) ? "#1b5e20" : "#b71c1c" }}>Memoria D : {jetMemoria(v)}</b>
-                    )}
-
-                    {joueur && detruit && sauveeMemoria(v) && (
-                        <button
-                            type="button"
-                            data-action="memoria-sauver"
-                            style={styleBouton}
-                            onClick={() => envoyer([
-                                { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
-                                { type: "marquer", c: v.id, marque: "memoria", valeur: null },
-                                { type: "deplacer", c: v.id, sur: memoriaD.id },
-                            ], `Memoria D : ${v.nom} sauvée, posée à bord`)}
-                        >
-                            Poser sur Memoria D
-                        </button>
-                    )}
-
-                    {/* Frégate du khan détruite : son destructeur lance la riposte */}
-                    {detruit && khanEnAttente(v) && jetKhan(v) === null && (joueur && auteurDesDegats(v.c) === moi
-                        ? (
-                            <button
-                                type="button"
-                                data-action="riposte-khan-jet"
-                                style={styleBouton}
-                                onClick={() => envoyer([{ type: "des", n: 1, faces: FACES, c: v.id, marque: "khan" }],
-                                    `Frégate du khan : riposte contre ${nomDe(moi)}`)}
-                            >
-                                Riposte du khan : jet ({seuilKhan(v)} ou moins)
-                            </button>
-                        )
-                        : <i style={{ fontSize: 12 }}>riposte du khan à lancer par {nomCamp(auteurDesDegats(v.c))}</i>)}
-
-                    {estFregateKhan(v) && detruit && jetKhan(v) !== null && (
-                        <b data-riposte-khan={jetKhan(v)} style={{ color: jetKhan(v) <= seuilKhan(v) ? "#b71c1c" : "#1b5e20" }}>
-                            Riposte du khan : {jetKhan(v)}{jetKhan(v) <= seuilKhan(v)
-                                ? (v.c.marques?.khanPris ? " (encaissée)" : ` — 1 dégât pour ${nomCamp(auteurDesDegats(v.c))}`)
-                                : " (manquée)"}
-                        </b>
-                    )}
+                    {/* Jets d'une unité détruite : Médecine, Commerce d'esclave, Memoria D, riposte du khan
+                        (table JETS) */}
+                    {detruit && rendreJets(v, indestructible)}
 
                     {joueur && aMoi && v.cible && !detruit && ripostesKhan(moi).length > 0 && (
                         <button
@@ -2501,22 +2538,10 @@ function CombatSysteme({ lieu }) {
                             </span>
                         )}
 
-                        {/* Mercenaires de combat : un bouton par mercenaire dont j'ai la carte */}
-                        {boutonsMercenaires.map(b => (
-                            <BoutonRegle
-                                key={b.cle}
-                                data-action={"mercenaire-" + b.cle}
-                                nom={b.nom}
-                                obstacles={b.obstacles}
-                                faire={b.faire}
-                                title={b.titre}
-                            >
-                                {b.libelle}
-                            </BoutonRegle>
-                        ))}
-
-                        {/* Unités et technologies : Olivier Dubois, Stratégie d'évitement, raid, Duha Menaimon */}
-                        {boutonsUnites.map(b => (
+                        {/* Mercenaires de combat : un bouton par mercenaire dont j'ai la carte
+                            (data-action « mercenaire-<n° de la carte> »), puis unités et technologies :
+                            Olivier Dubois, Stratégie d'évitement, raid, Duha Menaimon */}
+                        {[...boutonsMercenaires.map(b => ({ ...b, action: "mercenaire-" + b.cle })), ...boutonsUnites].map(b => (
                             <BoutonRegle
                                 key={b.action}
                                 data-action={b.action}
