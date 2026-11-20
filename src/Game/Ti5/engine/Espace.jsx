@@ -35,7 +35,7 @@ import { BoutonsScripts } from "./ActionsScript";
 import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
-    cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle,
+    cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
 } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
@@ -1341,10 +1341,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         // Règle générale (evaluerControle, Controle.jsx) : pas de conflit si aucune autre faction ne
         // peut participer, ou s'il n'y a que des neutres que mon contrôle dépasse
-        const { conflit } = evaluerControle({
-            unites: (index.parZone.get(zonePlanete(k)) || []).filter(c => !c.cache && c.ref?.type === "unit"),
-            moi, possesseur, aScript,
-        });
+        const { conflit } = evaluerControle({ unites: unitesDuControle(index, numero, k), moi, possesseur, aScript });
 
         if (!conflit) {
             prendre(idPlanete, k, commentaire);
@@ -1396,10 +1393,14 @@ function FicheSysteme({ numero, id, fermer }) {
     function demanderStation(idPlanete, k, planete, commentaire) {
 
         // (règle générale : evaluerControle — contrôle spatial, les unités de l'espace du système)
-        const { conflit } = evaluerControle({
-            unites: (index.parZone.get(zoneEspace) || []).filter(c => !c.cache && !c.sur && c.ref?.type === "unit"),
-            moi, aScript,
-        });
+        const { conflit, mien } = evaluerControle({ unites: unitesDuControle(index, numero, ESPACE_CONTROLE), moi, aScript, toutes: true });
+
+        // (« Vous devez contrôler le système » : sans opposition possible, le contrôle doit encore être positif)
+        if (!conflit && mien === 0 && confirmerRegle("Prendre possession de la station", [
+            "vous ne contrôlez pas ce système : aucune de vos unités n'est dans son espace",
+        ]) === null) {
+            return;
+        }
 
         if (!conflit) {
             prendre(idPlanete, k, commentaire, poseSurStation(k, planete, idPlanete).actions, true, true);

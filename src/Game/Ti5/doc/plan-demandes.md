@@ -606,5 +606,22 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   (`controleAcquis:<case>p<k>:<joueur>`), en glissant de nouveau la structure. Reste à faire : les
   cartes qui demandent le contrôle sans le vérifier (Complexe de guerre, Exploitation des tempêtes,
   Mandat… : `demandes-ti5/scripts-controle.mjs`).
+- ☑ Revue du système de contrôle et de domination (2026-11-20, demande de Loïc) :
+  - un seul calcul, `engine/regleControle.js` (`campsDeControle`, `evaluerControle`) : test préalable
+    d'une action, affichage d'un conflit de contrôle et d'un conflit de domination passent par lui ;
+  - toute action qui exige le contrôle passe par `demanderControle` (`Controle.jsx`) : si un conflit
+    doit trancher, il s'ouvre en disant pour quelle action (prise de possession, construction de X,
+    « nom du script »), l'action part quand le demandeur conclut « Contrôle acquis », et n'a pas lieu
+    (rien n'est dépensé) s'il renonce. Page rechargée entre-temps : le contrôle reste acquis ici pour la
+    phase (`controleAcquis:…`), il suffit de refaire l'action ;
+  - construction (`payerProduction`) et boutons de carte (`ActionsScript.jsx`, champ `controle` :
+    "systeme" ou "planete") utilisent ce chemin ; la prise de possession garde son bouton dans le conflit ;
+  - conflit de domination : la carte qui l'a demandé est dite (`domination:<case>:motif`), sinon
+    « Racket » ou « à la main » ;
+  - `unitesDuLieu` : les systèmes de défense (« le #con affecte aussi l'espace ») comptent dans
+    l'espace ; Rapport de force (+2) dans les conflits de contrôle et de domination ; contrôle demandé
+    par Arme bactériologique, Tempête électromagnétique, Exploitation des tempêtes, Skarvald, Grappin
+    de capture ; station : confirmation sans unité dans l'espace ;
+  - revue complète (cartes, actions de phase, 21 questions de règles) : `doc/revue-controle.md`.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

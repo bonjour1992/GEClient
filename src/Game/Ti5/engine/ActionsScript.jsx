@@ -3,7 +3,7 @@ import { contenuEnCache, useElements, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
 import { depenserAgent } from "./effets";
-import { actionsPossession } from "./Controle";
+import { actionsPossession, possesseurActuel, evaluerControle, controleAcquis, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
 import { noter } from "./recherche";
 import { lireQuestion } from "./Decisions";
 import { decompteVotes } from "./Vote";
@@ -61,6 +61,9 @@ import { decompteVotes } from "./Vote";
 //   activer   un marqueur d'activation est posé sur le lieu (refusé s'il y en a un)
 //   prendre   la carte de la planète va dans mes éléments actifs
 //   pioche    { de, vers, n } — cartes piochées (vers "main")
+//   controle  "systeme" ou "planete" : l'action exige le contrôle du lieu (règle « Contrôle »).
+//             Si d'autres peuvent s'y opposer, un conflit de contrôle s'ouvre en disant pour quel
+//             effet ; l'action part quand il est gagné et n'a pas lieu sinon (Controle.jsx)
 //   parTour   une seule fois par tour
 //   visible   (outils) -> faux pour ne pas montrer le bouton ici
 //   calcul    (outils, X) -> champs qui remplacent ceux du script (ou { sans: raison }) ;
@@ -84,7 +87,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
     const {
         etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives, partie,
-        factionDe, techDuScript, aTechnologie, decider,
+        factionDe, techDuScript, aTechnologie, decider, allerA,
     } = useEngine();
 
     // Mes promesses (éléments actifs, promesses à durée) : leur contenu dit lesquelles sont des alliances
@@ -404,7 +407,27 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
         const aRetirer = s.retire ? ici.filter(x => x.ref?.type === "unit" && x.ref.id === s.retire) : [];
 
+        // Contrôle exigé par la carte (controle : "systeme" ou "planete") : le calcul unique de
+        // regleControle.js. Réglé d'office s'il n'y a personne pour s'y opposer ; sinon un conflit
+        // de contrôle « pour <ce script> » tranche avant que l'action ne parte (demanderControle).
+        const caseControle = s.controle ? (numero ?? (Number(/^hex:(\d+)/.exec(c?.zone || zone || "")?.[1]) || null)) : null;
+        const planeteControle = s.controle === "planete" ? Number(/:planete:(\d+)$/.exec(zone || c?.zone || "")?.[1] ?? -1) : -1;
+
+        const lieuControle = caseControle === null || (s.controle === "planete" && planeteControle < 0) ? null : {
+            numero: caseControle,
+            k: s.controle === "planete" ? planeteControle : ESPACE_CONTROLE,
+            unites: unitesDuControle(index, caseControle, s.controle === "planete" ? planeteControle : ESPACE_CONTROLE),
+            possesseur: s.controle === "planete" && idElement ? possesseurActuel(etat, idElement) : null,
+            toutes: true,
+        };
+
+        const controleDejaAcquis = !!lieuControle && controleAcquis(etat, lieuControle.numero, lieuControle.k, moi);
+        const testControle = lieuControle && !controleDejaAcquis ? evaluerControle({ ...lieuControle, moi, aScript }) : null;
+
         const obstacles = [
+            s.controle && !lieuControle && "le lieu du contrôle n'est pas connu ici : contrôle à vérifier à la main",
+            testControle && !testControle.conflit && testControle.mien === 0 &&
+                `vous ne contrôlez pas ${s.controle === "planete" ? "cette planète" : "ce système"} (aucune de vos unités n'y compte)`,
             s.phase && !new RegExp(s.phase, "i").test(etat.phase || "") &&
                 `ce n'est pas la phase ${/^[aeiouyéè]/i.test(s.nomPhase || s.phase) ? "d'" : "de "}${s.nomPhase || s.phase}`,
             s.possede && !possede && "vous ne possédez pas cette planète",
@@ -477,6 +500,18 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             if (choisi.sans) {
                 aviser(`${s.nom} : ${choisi.sans}.`);
                 return;
+            }
+
+            // Contrôle disputé : le conflit de contrôle s'ouvre en disant pour quel effet, et
+            // l'action attend sa conclusion. Sans le contrôle, elle n'a pas lieu : rien n'est dépensé.
+            if (testControle?.conflit) {
+
+                apres?.();
+
+                if (!await demanderControle({ etat, moi, envoyer, aviser, allerA, aScript },
+                    { ...lieuControle, motif: { script: s.id }, libelle: s.nom })) {
+                    return;
+                }
             }
 
             const idChoisi = choisi.cree ? (choisi.cree.unite === "inf" ? idInfanterie : choisi.cree.unite) : null;

@@ -13,7 +13,7 @@ import { turnNumber } from "../ti5Const";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
-import { Controles } from "./Controle";
+import { Controles, demanderControleSysteme } from "./Controle";
 
 // ============================================================
 // ONGLET CONFLIT : les combats, et les blocages de déplacement
@@ -259,7 +259,7 @@ function CombatSysteme({ lieu }) {
 
     const {
         etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser, decider,
-        connaissance, capaciteLogistique, factionDe,
+        connaissance, capaciteLogistique, factionDe, allerA,
     } = useEngine();
 
     // zone : celle des cibles (espace du système, ou planète)
@@ -1780,9 +1780,15 @@ function CombatSysteme({ lieu }) {
     const capturables = aRetirer.filter(v => v.camp !== moi && estVaisseau(v) && !["fs", "sun"].includes(v.u.type));
 
     // Skarvald : 3 dés lancés par le serveur (marque de sa carte), puis le vol dans un second coup
-    function skarvald(commentaire) {
+    async function skarvald(commentaire) {
 
         const carte = carteMerc(350);
+
+        // « dans un système que vous contrôlez » : conflit de contrôle si d'autres peuvent s'y
+        // opposer ; sans le contrôle, le mercenaire n'est pas utilisé
+        if (!await demanderControleSysteme({ etat, index, moi, envoyer, aviser, allerA, aScript }, numero, "skarvald", "Skarvald")) {
+            return;
+        }
 
         envoyer([...userMerc(350), { type: "des", n: 3, faces: 10, c: carte.id, marque: "jetSkarvald" }], commentaire)
             .then(reponse => {

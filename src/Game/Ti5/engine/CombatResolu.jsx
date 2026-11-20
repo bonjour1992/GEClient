@@ -1,4 +1,5 @@
 import { useEngine, BoutonRegle, agentDisponible, nomElement } from "./Interaction";
+import { demanderControleSysteme } from "./Controle";
 import { useElements } from "./sync";
 import { campDe, MOTIF_LOGISTICIEN } from "./miseEnPlace";
 
@@ -19,7 +20,10 @@ import { campDe, MOTIF_LOGISTICIEN } from "./miseEnPlace";
 
 export function CombatResolu({ lieu, compteur, titre }) {
 
-    const { etat, index, envoyer, moi, joueur, search, nomDe, aScript } = useEngine();
+    const { etat, index, envoyer, moi, joueur, search, nomDe, aScript, aviser, allerA } = useEngine();
+
+    // Case du combat (« 12 », « 12c », « 12p0 »…) : le système dont le grappin demande le contrôle
+    const numero = Number(/^(\d+)/.exec(String(lieu))?.[1]);
 
     const detruites = Object.values(etat.composants).filter(c =>
         c.ref?.type === "unit" && c.marques?.detruitA === `${lieu}:${etat.tour}` &&
@@ -74,13 +78,18 @@ export function CombatResolu({ lieu, compteur, titre }) {
                             data-action="grappin-de-capture"
                             nom={`Grappin de capture : ${nomElement(search, c.ref)} de ${campDe(c) ? nomDe(campDe(c)) : "neutres"}`}
                             obstacles={[!logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)"]}
-                            faire={commentaire => envoyer([
-                                logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
-                                { type: "marquer", c: c.id, marque: "degat", valeur: 0 },
-                                { type: "marquer", c: c.id, marque: "detruitA", valeur: null },
-                                { type: "deplacer", c: c.id, vers: `joueur:${moi}:actif` },
-                            ], commentaire)}
-                            title="Si vous contrôlez le système à la fin du combat : use un logisticien, le vaisseau détruit arrive capturé dans vos éléments actifs"
+                            // « si vous avez le contrôle du système à la fin du combat » : conflit de
+                            // contrôle si d'autres peuvent s'y opposer ; sans le contrôle, rien ne se passe
+                            faire={async commentaire => (Number.isFinite(numero) && !await demanderControleSysteme(
+                                { etat, index, moi, envoyer, aviser, allerA, aScript }, numero, "grappin-de-capture", "Grappin de capture")
+                                ? null
+                                : envoyer([
+                                    logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
+                                    { type: "marquer", c: c.id, marque: "degat", valeur: 0 },
+                                    { type: "marquer", c: c.id, marque: "detruitA", valeur: null },
+                                    { type: "deplacer", c: c.id, vers: `joueur:${moi}:actif` },
+                                ], commentaire))}
+                            title="Si vous contrôlez le système à la fin du combat (conflit de contrôle si d'autres peuvent s'y opposer) : use un logisticien, le vaisseau détruit arrive capturé dans vos éléments actifs"
                         >
                             Capturer {nomElement(search, c.ref)} ({campDe(c) ? nomDe(campDe(c)) : "neutre"})
                         </BoutonRegle>

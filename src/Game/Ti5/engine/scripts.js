@@ -745,8 +745,8 @@ export const SCRIPTS = [
         "Vous avez +1 au combat spatial si le système contient un de vos docks ou votre vaisseau amiral."),
 
     effet("rapport-de-force", 205, 1795076851635, "Rapport de force", "nouveau",
-        "Conflit : cadre de blocage d'un déplacement",
-        "Use un diplomate : +2 à votre valeur de contrôle pour ce blocage."),
+        "Conflit : cadre de blocage d'un déplacement, conflit de contrôle, conflit de domination",
+        "Use un diplomate : +2 à votre valeur de contrôle pour ce blocage ou ce conflit."),
 
     effet("reparation", 206, 1795076851637, "Réparation", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
@@ -999,7 +999,7 @@ export const SCRIPTS = [
 
     regle("avar", "planet", 61, 1795072921250, "Avar", "modifie",
         "Fiche d'un système : « Revendiquer »",
-        "Avar ne peut pas être contrôlée sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris.", [783]),
+        "Avar ne peut pas être en votre possession sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris.", [783]),
 
     regle("cormund", "planet", 49, 1795073444389, "Cormund", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",
@@ -1651,8 +1651,9 @@ export const SCRIPTS = [
         }),
 
     action("exploitation-des-tempetes-nebuleuse", "tech", 448, 1795046343840, "Exploitation des tempêtes : nébuleuse", "systeme",
-        "Science : use un scientifique et active une nébuleuse (que vous contrôlez : non vérifié) — +4 ressources.", {
+        "Science : use un scientifique et active une nébuleuse que vous contrôlez (conflit de contrôle si d'autres peuvent s'y opposer) — +4 ressources.", {
             phase: "science",
+            controle: "systeme",
             agent: SCIENTIFIQUE,
             activer: true,
             gains: { res: 4 },
@@ -2226,8 +2227,9 @@ export const SCRIPTS = [
         "Le malus de 1 au mouvement de la Tempête spatiale est ignoré."),
 
     action("tempete-electromagnetique", "tech", 446, 1795046343839, "Tempête électromagnétique", "systeme",
-        "Canons spatiaux, dans une nébuleuse : use un scientifique et active la nébuleuse, 4 dés de canon à 4. Les touches se répartissent à la main dans un système à portée 1.", {
+        "Canons spatiaux, dans une nébuleuse que vous contrôlez (conflit de contrôle si d'autres peuvent s'y opposer) : use un scientifique et active la nébuleuse, 4 dés de canon à 4. Les touches se répartissent à la main dans un système à portée 1.", {
             phase: "canon",
+            controle: "systeme",
             nomPhase: "canons spatiaux",
             agent: SCIENTIFIQUE,
             activer: true,
@@ -2479,8 +2481,9 @@ export const SCRIPTS = [
         }),
 
     action("arme-bacteriologique", "tech", 403, 1795073444377, "Arme bactériologique", "systeme",
-        "Bombardement, dans un système où d'autres camps ont des infanteries : use un scientifique, un dé par infanterie adverse des planètes du système — détruite sur 5 ou moins (1 si son propriétaire a le Vaccin).", {
+        "Bombardement, dans un système que vous contrôlez (conflit de contrôle si d'autres peuvent s'y opposer) et où d'autres camps ont des infanteries : use un scientifique, un dé par infanterie adverse des planètes du système — détruite sur 5 ou moins (1 si son propriétaire a le Vaccin).", {
             phase: "bombardement",
+            controle: "systeme",
             agent: SCIENTIFIQUE,
             visible: outils => outils.numero !== null && dansLeSysteme(outils.index, outils.numero).some(x =>
                 x.ref?.type === "unit" && /:planete:/.test(x.zone || "") && campDe(x) !== outils.moi),
@@ -3277,7 +3280,7 @@ export const SCRIPTS = [
 
     regle("mandat", "habilite", 146, 1795072921249, "Mandat", "modifie",
         "Onglet Transactions : donner un mandat (promesse de type mandat)",
-        "Un mandat ne se donne que si vous contrôlez Mecatol Rex, dans une transaction que vous proposez (vos diplomates), à une faction qui n'en a pas déjà un : sinon la transaction l'indique et demande une confirmation à l'application."),
+        "Un mandat ne se donne que si vous avez la possession de Mecatol Rex, dans une transaction que vous proposez (vos diplomates), à une faction qui n'en a pas déjà un : sinon la transaction l'indique et demande une confirmation à l'application."),
 
     action("mandat-revoquer", "habilite", 146, 1795072921249, "Mandat : révoquer", "plateau",
         "Diplomatie : use un diplomate, le mandat choisi (onglet Décision) quitte la faction qui le détient et revient dans votre main ; ses marqueurs sont retirés.", {
@@ -3302,7 +3305,7 @@ export const SCRIPTS = [
         }),
 
     action("mandat-epuiser", "habilite", 146, 1795072921249, "Mandat : Mecatol Rex", "plateau",
-        "Si vous perdez le contrôle de Mecatol Rex, vos mandats sont épuisés (cartes usées chez leurs détenteurs) ; ils le restent tant que vous ne le reprenez pas. Le bouton les épuise ou les rétablit selon que vous contrôlez Mecatol Rex.", {
+        "Si vous perdez la possession de Mecatol Rex, vos mandats sont épuisés (cartes usées chez leurs détenteurs) ; ils le restent tant que vous ne la reprenez pas. Le bouton les épuise ou les rétablit selon que vous possédez Mecatol Rex.", {
             visible: outils => mandatsDonnes(outils).some(x => !!x.marques?.use === outils.aCarte("planet", 34)),
             special: atelier => {
 

@@ -274,7 +274,11 @@ export function PlateauJoueur({ vu }) {
                         title="Exploitation du vide : d'autres factions ont des unités dans ces systèmes vides ; un conflit de domination s'ouvre pour chacun (onglet Conflit)"
                         onClick={() => envoyer(
                             vide.aResoudre.filter(n => !etat.compteurs[`domination:${n}`])
-                                .map(n => ({ type: "compteur", id: `domination:${n}`, valeur: moi })),
+                                // (motif : la carte qui demande la domination — Exploitation du vide, #232)
+                                .flatMap(n => [
+                                    { type: "compteur", id: `domination:${n}:motif`, valeur: 232 },
+                                    { type: "compteur", id: `domination:${n}`, valeur: moi },
+                                ]),
                             "Exploitation du vide : conflits de domination ouverts"
                         )}
                     >

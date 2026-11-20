@@ -30,7 +30,7 @@ export function ActionsTechnologies() {
                 nom="Réparation"
                 phase={/revendic/i}
                 nomPhase="la phase de revendication"
-                titre="Quand cette faction a pris le contrôle d'une de vos planètes : use un diplomate, elle vous doit 3 dans 3 tours"
+                titre="Quand cette faction a pris possession d'une de vos planètes : use un diplomate, elle vous doit 3 dans 3 tours"
             />
         ),
         aScript(moi, "extorsion") && (

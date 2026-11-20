@@ -5,9 +5,9 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor, turnNumber } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { capaciteDe, victimesBombe, depenserAgent, placePrise, controleDe } from "./effets";
+import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
 import { demander } from "./demande";
-import { cleControle, controlesEnCours, controleAcquis, possesseurActuel, evaluerControle, ESPACE_CONTROLE } from "./Controle";
+import { controleAcquis, possesseurActuel, evaluerControle, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -2289,6 +2289,9 @@ export function Plan({ children, style }) {
         // Ce qui s'ajoute au paiement une fois la pose confirmée (logisticien, activation)
         let apres = () => [];
 
+        // Construction là où d'autres peuvent s'opposer : () => promesse du contrôle (vrai : acquis)
+        let controleRequis = null;
+
         // Production ouverte avec une unité ou une station (Production.jsx) : ce
         // qu'elle ne peut pas produire, une unité de trop ou posée hors de son
         // système demande une confirmation ; la quantité produite est comptée,
@@ -2366,11 +2369,10 @@ export function Plan({ children, style }) {
             // système celle d'une de ses planètes ou stations (mon drapeau dans le système).
             // L'opposition se déclare (conflit de contrôle) : l'outil ne la connaît pas, il compare
             // donc à toutes les unités militaires des autres camps.
-            const lieu = surPlanete ? "cette planète" : "ce système";
-            const unitesIci = ici.filter(c => !c.cache && c.ref?.type === "unit");
-            const controle = liste => liste.reduce((total, c) => total + controleDe(contenuEnCache(c.ref.id), campDe(c), aScript), 0);
-
             const [, caseDuLieu, rangPlanete] = /^hex:(\d+)(?::planete:(\d+))?/.exec(zone);
+
+            // (unités qui comptent pour le contrôle du lieu : regleControle.js)
+            const unitesIci = unitesDuControle(index, Number(caseDuLieu), surPlanete ? Number(rangPlanete) : ESPACE_CONTROLE);
             const elemsDuSysteme = contenuEnCache(tuileDe(index, Number(caseDuLieu))?.ref?.id)?.elems || [];
             const mesCartes = new Set((index.parZone.get(`joueur:${moi}:actif`) || [])
                 .filter(c => !c.cache && c.ref?.type === "planet").map(c => c.ref.id));
@@ -2378,43 +2380,30 @@ export function Plan({ children, style }) {
             const possede = surPlanete
                 ? mesCartes.has(Number(elemsDuSysteme[Number(rangPlanete)]?.id))
                 : elemsDuSysteme.some(lien => mesCartes.has(Number(lien?.id)));
-            // (les 2 de contrôle de la possession valent sur la planète, pas dans l'espace du système)
-            const possession = surPlanete && possede ? 2 : 0;
+            const present = unitesIci.some(c => campDe(c) === moi) || possede;
 
-            const mesUnitesIci = unitesIci.filter(c => campDe(c) === moi);
-            const present = mesUnitesIci.length > 0 || possede;
-            const monControle = controle(mesUnitesIci) + possession;
-
-            // D'autres peuvent s'opposer à mon contrôle (unités militaires d'une autre faction, autre
-            // faction qui possède la planète, ou neutres que mon contrôle ne dépasse pas) : c'est un
-            // conflit de contrôle (onglet Conflit) qui tranche, pas un calcul d'office — règle
-            // générale, evaluerControle (Controle.jsx). Une fois le contrôle acquis, il vaut pour ce
-            // lieu jusqu'à la fin de la phase.
+            // Le contrôle lui-même : un seul calcul pour tout le jeu (regleControle.js). Toutes mes
+            // unités comptent (« le contrôle de vos unités »), plus 2 pour la possession de la planète.
+            // Si d'autres peuvent s'opposer, c'est un conflit de contrôle « pour la construction de… »
+            // qui tranche (demanderControle, Controle.jsx) : la construction part quand le contrôle
+            // est acquis, et n'a pas lieu s'il ne l'est pas. Acquis, il vaut ici jusqu'à la fin de
+            // la phase.
             const numeroDuLieu = Number(caseDuLieu);
             const rangDuLieu = surPlanete ? Number(rangPlanete) : ESPACE_CONTROLE;
             const possesseur = surPlanete ? possesseurActuel(etat, Number(elemsDuSysteme[Number(rangPlanete)]?.id)) : null;
-            const conteste = evaluerControle({ unites: unitesIci, moi, possesseur, aScript, toutes: true }).conflit;
+            const test = evaluerControle({ unites: unitesIci, moi, possesseur, aScript, toutes: true });
             const acquis = controleAcquis(etat, numeroDuLieu, rangDuLieu, moi);
 
-            if (construites.length > 0 && present && conteste && !acquis) {
-
-                const cle = cleControle(numeroDuLieu, rangDuLieu);
-
-                if (!controlesEnCours(etat).some(c => c.cle === cle)) {
-                    envoyer([
-                        // (les choix d'un conflit précédent au même endroit sont oubliés)
-                        ...Object.keys(etat.compteurs).filter(id => id.startsWith(cle + ":") && etat.compteurs[id])
-                            .map(id => ({ type: "compteur", id, valeur: 0 })),
-                        { type: "compteur", id: cle + ":motif", valeur: construites[0].id },
-                        { type: "compteur", id: cle, valeur: moi },
-                    ], `Construction de ${noms(construites)} (${nomCase(numeroDuLieu)}) — conflit de contrôle ouvert`);
-                }
-
-                aviser?.(`D'autres camps peuvent s'opposer à votre contrôle de ${lieu} : un conflit de contrôle est ouvert (onglet Conflit). ` +
-                    "Une fois le contrôle acquis, glissez de nouveau la structure.");
-                allerA?.("combat");
-
-                return null;
+            if (construites.length > 0 && present && !acquis && test.conflit) {
+                controleRequis = () => demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, {
+                    numero: numeroDuLieu,
+                    k: rangDuLieu,
+                    unites: unitesIci,
+                    possesseur,
+                    toutes: true,
+                    motif: { construction: construites[0].id },
+                    libelle: `Construction de ${noms(construites)}`,
+                });
             }
 
             obstacles.push(
@@ -2423,7 +2412,7 @@ export function Plan({ children, style }) {
                         ? "vous n'avez ni unité sur cette planète ni sa possession : vous ne la contrôlez pas"
                         : "vous n'avez ni unité dans ce système ni la possession d'une de ses planètes : vous ne le contrôlez pas"),
                 // (le contrôle est exigé dans tous les cas : sans opposition possible, il doit encore être positif)
-                construites.length > 0 && present && !acquis && monControle === 0 &&
+                construites.length > 0 && present && !acquis && !test.conflit && test.mien === 0 &&
                     "votre contrôle sur ce système est nul : la possession d'une planète ne compte pas dans l'espace, il y faut un vaisseau ou une structure spatiale",
                 construites.length < unites.length &&
                     `ce n'est pas une structure : ${noms(unites.filter(ref => !estStructure(ref.id)))}`,
@@ -2470,6 +2459,12 @@ export function Plan({ children, style }) {
         // (une production qui échoue faute de ressources ne compte pas dans la quantité produite)
         if (cout && dispo < cout) {
             signaler?.(`Ressources insuffisantes : cette ${construction ? "construction" : "production"} coûte ${cout}, vous avez ${dispo}.`);
+            return null;
+        }
+
+        // Conflit de contrôle, s'il en faut un : la construction attend sa conclusion ; sans le
+        // contrôle (conflit perdu ou abandonné), elle n'a pas lieu et rien n'est dépensé
+        if (controleRequis && !(await controleRequis())) {
             return null;
         }
 
