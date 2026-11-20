@@ -1164,6 +1164,8 @@ export const SCRIPTS = [
             possede: true,
             agent: { motif: "scientifique", nom: "scientifique", depense: true },
             fragments: { mil: 2 },
+            // (une seule fois : tant que le canon ancien est là — restauré, il est devenu une autre unité)
+            visible: outils => outils.ici(513) > 0,
             remplace: [[513, 514]],
             donneCarte: 30,
             gains: { points: 2 },
@@ -1205,6 +1207,8 @@ export const SCRIPTS = [
             // (Reforger : un scientifique est dépensé, en plus des fragments de la carte)
             agent: { motif: "scientifique", nom: "scientifique", depense: true },
             fragments: { ancien: 1, autres: 3 },
+            // (une seule fois : la carte de la Relique reforgée n'existe en jeu qu'une fois forgée)
+            visible: outils => !Object.values(outils.etat.composants).some(x => x.ref?.type === "planet" && x.ref.id === 131),
             donneCarte: 131,
             libelle: "Forger la relique (dépense un scientifique, 3 fragments et 1 fragment ancien)",
         }),
