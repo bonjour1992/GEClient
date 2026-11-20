@@ -572,5 +572,15 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   sont à la phase de science. Libre échange suit le texte (vaisseau de commerce non militaire).
   Tous les `ecritLe` sont à la version actuelle (`demandes-ti5/scripts-pas-a-jour.mjs --marquer`,
   `scripts-tri.mjs` pour trier les changements de texte).
+- ☑ Agendas du tour (2026-11-20, `engine/Agendas.jsx`) : le texte de la loi est lu sur la carte. « Révélez
+  3 objectifs militaires / un mercenaire / une relique » (en tête du texte) : les cartes sont piochées
+  à l'arrivée en phase de mandat (`changerPhase`) et posées à côté de la loi dans l'onglet Vote (zone
+  `general:revele:<id de la loi>`), avec un bouton de rattrapage. « Élisez une planète / un système » :
+  une décision durable par faction, de la phase de mandat à la fin du vote
+  (`agenda:<tour>:<ligne>:designe:<joueur>`) ; pastilles à la couleur de la faction à côté de la loi.
+  Le vote et l'application de la loi restent à la main.
+- ☑ Portail de repli (2026-11-20) : bouton « Reforger le portail » sur la fiche de l'unité posée, à la
+  phase de construction (un scientifique et 2 fragments spatiaux dépensés, +1 point). Règle à clarifier
+  avec Loïc (Reforger au lieu de Construire).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

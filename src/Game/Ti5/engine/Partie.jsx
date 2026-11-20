@@ -67,6 +67,7 @@ import { Decisions, OuvrirDecisions, decisionsDurables, styleCarte } from "./Dec
 import { reglerDemande, confirmer } from "./demande";
 import { InfosPartie } from "./InfosPartie";
 import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
+import { actionsRevelation } from "./Agendas";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
@@ -746,6 +747,8 @@ export function Partie({ id }) {
                         .filter(id => /^joueur:\d+:mirik$/.test(id) && etat.compteurs[id])
                         .map(id => ({ type: "compteur", id, valeur: 0 }))
                     : []),
+                // … et les cartes que les lois du tour demandent de révéler le sont, à côté de la loi (Agendas.jsx)
+                ...(pas > 0 && /mandat/i.test(phase.nom) ? actionsRevelation({ etat, index }) : []),
                 ...remiseDesPasses,
                 // Nouvelle phase : l'ordre des marqueurs d'initiative prend effet
                 ...(pas > 0 ? figerOrdre : []),

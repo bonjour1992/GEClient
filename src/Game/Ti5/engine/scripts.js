@@ -1341,6 +1341,21 @@ export const SCRIPTS = [
                 : {}),
         }),
 
+    // Portail de repli : structure spatiale qui se construit à la phase de construction, mais par
+    // l'action Reforger au lieu de Construire — un scientifique dépensé (pas de logisticien utilisé)
+    // et 2 fragments spatiaux (pas de ressources) — et qui rapporte alors son point. Il se pose à la
+    // main ; ce bouton en paie le prix, une seule fois par portail (marque « reforge » sur l'unité).
+    action("portail-de-repli-reforger", "unit", 155, 1795072921261, "Portail de repli : reforger", "unite",
+        "Construction (Reforger au lieu de Construire), sur la fiche du portail posé : dépensez un scientifique et 2 fragments spatiaux, vous gagnez 1 point. Une seule fois par portail.", {
+            phase: "construction",
+            agent: { motif: "scientifique", nom: "scientifique", depense: true },
+            fragments: { spa: 2 },
+            gains: { points: 1 },
+            visible: outils => !!outils.c && !outils.c.marques?.reforge,
+            special: atelier => ({ actions: atelier.c ? [{ type: "marquer", c: atelier.c.id, marque: "reforge", valeur: 1 }] : [] }),
+            libelle: "Reforger le portail (dépense un scientifique et 2 fragments spatiaux) : +1 point",
+        }),
+
     regle("fierte", "habilite", 167, 1794335054829, "Fierté", "modifie",
         "Conflit : conflit d'accord (revendication)",
         "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez."),

@@ -4,6 +4,7 @@ import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDispo
 import { MARQUEUR, CUBES } from "./miseEnPlace";
 import { demander, confirmer } from "./demande";
 import { PlayerColor } from "../ti5Const";
+import { AnnexesDeLoi } from "./Agendas";
 
 // ============================================================
 // ONGLET VOTE
@@ -741,6 +742,9 @@ export function Vote({ vu }) {
                                         </div>
                                     </div>
                                 )}
+
+                            {/* Cartes révélées pour la loi et désignations des factions (Agendas.jsx) */}
+                            <AnnexesDeLoi carte={c} ligne={k + 1} />
                         </div>
                     ))}
                 </div>

@@ -4,6 +4,7 @@ import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase, tuileDe }
 import { useUnitesDeFaction } from "./sync";
 import { MARQUEUR, actionsPiste, typeUnite, MOTIF_LOGISTICIEN, aMot } from "./miseEnPlace";
 import { lotsDeDes, desDeLaReponse } from "./effets";
+import { DesignationsAgenda, designationsEnAttente, useLoisDuTour } from "./Agendas";
 
 // ============================================================
 // ONGLET « DÉCISION »
@@ -225,6 +226,8 @@ export function decisionsDurables(ctx) {
         (ctx.etat.compteurs[`embuscade:${ctx.moi}`] ? 1 : 0) +
         (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0) +
         (ctx.propositions?.cartes.length ? 1 : 0) +
+        // (lois du tour qui demandent de désigner une planète ou un système : Agendas.jsx)
+        designationsEnAttente(ctx).length +
         // (carte face cachée sur laquelle j'ai cliqué : la révéler ou la consulter)
         (ctx.cadreCachee ? 1 : 0);
 }
@@ -235,6 +238,10 @@ export function decisionsDurables(ctx) {
 export function OuvrirDecisions() {
 
     const ctx = useEngine();
+
+    // (charge le texte des lois du tour : les désignations qu'elles demandent sont comptées)
+    useLoisDuTour();
+
     const attendues = decisionsDurables(ctx);
     const precedent = useRef(attendues);
     const allerA = ctx.allerA;
@@ -555,6 +562,7 @@ export function Decisions() {
 
             {ctx.cadreCachee}
             {joueur && <Propositions />}
+            {joueur && <DesignationsAgenda style={styleCarte} />}
             {joueur && <Recomposition />}
             {joueur && <Embuscade />}
             {joueur && <Pupille />}
