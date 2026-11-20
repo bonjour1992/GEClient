@@ -74,7 +74,7 @@ function sections(tuiles) {
         ["Planètes", [
             compter("planete", "Planètes", estPlanete),
             compter("planete:mil", "dont militaires", p => estPlanete(p) && p.planetType === "mil"),
-            compter("planete:civ", "dont culturelles (civiles)", p => estPlanete(p) && p.planetType === "civ"),
+            compter("planete:civ", "dont civiles", p => estPlanete(p) && p.planetType === "civ"),
             compter("planete:sauv", "dont sauvages", p => estPlanete(p) && p.planetType === "sauv"),
             compter("planete:sans", "dont sans type", p => estPlanete(p) && !planetType[p.planetType]),
             compter("legendaire", "Légendaires (planètes et stations)", p => p.legendary === true),
