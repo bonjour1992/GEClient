@@ -589,9 +589,13 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Construction et contrôle (2026-11-20) : construire demande le contrôle du lieu (phase de construction,
   règle « Contrôle » #1033). `payerProduction` demande une confirmation si je n'ai rien sur place, ou si
   mon contrôle ne dépasse pas celui des unités militaires des autres camps (l'opposition se déclare :
-  l'outil ne la connaît pas). Planète : les unités qui s'y trouvent, plus 2 pour sa possession (indiqué
-  par Loïc ; ajouté à la règle #1033 et au mot-clé #con, `migrate-possession-controle.mjs`). Système :
-  vaisseaux et structures spatiales. Les conflits de contrôle (`Controle.jsx`) ne comptent pas encore
-  ces 2 de possession.
+  l'outil ne la connaît pas). Règle précisée par Loïc : le contrôle est exigé dans tous les cas, plus
+  une unité ou la possession. Planète : les unités qui s'y trouvent, plus 2 pour sa possession (ajouté
+  à la règle #1033 et aux mots-clés #con et #cons : `migrate-possession-controle.mjs`,
+  `migrate-cons-controle.mjs`). Système : vaisseaux et structures spatiales ; la possession d'une de
+  ses planètes compte comme présence, pas comme contrôle.
+- ☑ Conflits de contrôle et possession (2026-11-20, `Controle.jsx`, `Espace.jsx`) : la faction qui
+  possède la planète entre dans le conflit avec 2 de contrôle, même sans unité (pas pour une station :
+  contrôle spatial) ; « Prendre possession » ouvre le conflit dès qu'une autre faction possède la planète.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

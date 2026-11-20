@@ -2360,31 +2360,41 @@ export function Plan({ children, style }) {
             // On construit sur une planète ou dans un système que l'on contrôle (phase de construction,
             // règle « Contrôle ») : sur une planète, les unités qui s'y trouvent comptent ; dans un
             // système, les vaisseaux et les structures spatiales. Mon contrôle doit dépasser celui des
-            // unités militaires qui s'y opposent ; sans rien, je ne contrôle rien. La possession de la
-            // planète (sa carte dans mes éléments actifs) vaut 2 de contrôle. L'opposition se déclare
-            // (conflit de contrôle) : l'outil ne la connaît pas, il compare donc à toutes les unités
-            // militaires des autres camps.
+            // unités militaires qui s'y opposent. Il faut y avoir une unité ou la possession : celle
+            // de la planète (sa carte dans mes éléments actifs), qui y vaut 2 de contrôle, ou pour un
+            // système celle d'une de ses planètes ou stations (mon drapeau dans le système).
+            // L'opposition se déclare (conflit de contrôle) : l'outil ne la connaît pas, il compare
+            // donc à toutes les unités militaires des autres camps.
             const lieu = surPlanete ? "cette planète" : "ce système";
             const unitesIci = ici.filter(c => !c.cache && c.ref?.type === "unit");
             const controle = liste => liste.reduce((total, c) => total + controleDe(contenuEnCache(c.ref.id), campDe(c), aScript), 0);
 
             const [, caseDuLieu, rangPlanete] = /^hex:(\d+)(?::planete:(\d+))?/.exec(zone);
-            const idPlanete = surPlanete
-                ? Number(contenuEnCache(tuileDe(index, Number(caseDuLieu))?.ref?.id)?.elems?.[Number(rangPlanete)]?.id) || 0
-                : 0;
-            const possession = idPlanete > 0 && (index.parZone.get(`joueur:${moi}:actif`) || [])
-                .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete) ? 2 : 0;
+            const elemsDuSysteme = contenuEnCache(tuileDe(index, Number(caseDuLieu))?.ref?.id)?.elems || [];
+            const mesCartes = new Set((index.parZone.get(`joueur:${moi}:actif`) || [])
+                .filter(c => !c.cache && c.ref?.type === "planet").map(c => c.ref.id));
 
-            const monControle = controle(unitesIci.filter(c => campDe(c) === moi)) + possession;
+            const possede = surPlanete
+                ? mesCartes.has(Number(elemsDuSysteme[Number(rangPlanete)]?.id))
+                : elemsDuSysteme.some(lien => mesCartes.has(Number(lien?.id)));
+            // (les 2 de contrôle de la possession valent sur la planète, pas dans l'espace du système)
+            const possession = surPlanete && possede ? 2 : 0;
+
+            const mesUnitesIci = unitesIci.filter(c => campDe(c) === moi);
+            const present = mesUnitesIci.length > 0 || possede;
+            const monControle = controle(mesUnitesIci) + possession;
             const controleAdverse = controle(unitesIci.filter(c => campDe(c) !== moi && aMot(contenuEnCache(c.ref.id), "mil")));
             const detail = possession ? `${monControle}, dont 2 pour la possession` : String(monControle);
 
             obstacles.push(
-                construites.length > 0 && monControle === 0 &&
+                construites.length > 0 && !present &&
                     (surPlanete
-                        ? "vous n'avez ni unité ni possession sur cette planète : vous ne la contrôlez pas"
-                        : "vous n'avez aucune unité dans ce système : sans unité, vous ne le contrôlez pas"),
-                construites.length > 0 && monControle > 0 && controleAdverse > 0 && monControle <= controleAdverse &&
+                        ? "vous n'avez ni unité sur cette planète ni sa possession : vous ne la contrôlez pas"
+                        : "vous n'avez ni unité dans ce système ni la possession d'une de ses planètes : vous ne le contrôlez pas"),
+                // (le contrôle est exigé dans tous les cas : il doit dépasser l'opposition, même nulle)
+                construites.length > 0 && present && controleAdverse === 0 && monControle === 0 &&
+                    "votre contrôle sur ce système est nul : la possession d'une planète ne compte pas dans l'espace, il y faut un vaisseau ou une structure spatiale",
+                construites.length > 0 && present && controleAdverse > 0 && monControle <= controleAdverse &&
                     `votre contrôle (${detail}) ne dépasse pas celui des unités militaires des autres camps (${controleAdverse}) : ` +
                     `vous ne contrôlez ${lieu} que si elles ne s'y opposent pas`,
                 construites.length < unites.length &&

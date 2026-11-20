@@ -35,7 +35,7 @@ import { BoutonsScripts } from "./ActionsScript";
 import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
-    cleAccord, accordsEnCours, campsAConsulter,
+    cleAccord, accordsEnCours, campsAConsulter, possesseurActuel,
 } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
@@ -1335,7 +1335,12 @@ function FicheSysteme({ numero, id, fermer }) {
 
         const opposants = (index.parZone.get(zonePlanete(k)) || []).some(estMilitaireAdverse);
 
-        if (!opposants) {
+        // Une autre faction possède la planète : sa possession vaut 2 de contrôle, qu'elle peut
+        // opposer même sans unité (règle « Contrôle »)
+        const possesseur = possesseurActuel(etat, idPlanete);
+        const possedee = !!possesseur && possesseur !== moi;
+
+        if (!opposants && !possedee) {
             prendre(idPlanete, k, commentaire);
             return;
         }
@@ -1344,7 +1349,10 @@ function FicheSysteme({ numero, id, fermer }) {
             k,
             commentaire + " — conflit de contrôle ouvert",
             () => [],
-            "D'autres unités militaires sont sur la planète : un conflit de contrôle est ouvert (onglet Conflit)."
+            (opposants
+                ? "D'autres unités militaires sont sur la planète"
+                : `${nomDe(possesseur)} possède la planète (sa possession vaut 2 de contrôle)`) +
+                " : un conflit de contrôle est ouvert (onglet Conflit)."
         );
     }
 

@@ -31,6 +31,14 @@ const nomChoix = valeur => CHOIX.find(c => c[0] === valeur)?.[2];
 
 export const cleControle = (numero, k) => `controle:${numero}p${k}`;
 
+// Possession d'une planète : elle vaut 2 de contrôle sur cette planète pour la faction
+// qui l'a, même si elle n'y a aucune unité (règle « Contrôle »)
+export const CONTROLE_POSSESSION = 2;
+
+// Joueur qui possède la planète (sa carte est dans ses éléments actifs), ou null
+export const possesseurActuel = (etat, idPlanete) =>
+    Number(/^joueur:(\d+):actif$/.exec(carteDePlanete(etat, idPlanete)?.zone || "")?.[1]) || null;
+
 // Conflits de contrôle en cours : [{ cle, numero, k, demandeur }]
 export function controlesEnCours(etat) {
     return Object.keys(etat.compteurs)
@@ -208,13 +216,19 @@ function Controle({ conflit }) {
         parCamp.set(campDe(c), [...(parCamp.get(campDe(c)) || []), c]);
     }
 
-    // (le demandeur est toujours de la partie, même sans unité militaire)
-    const camps = [...new Set([demandeur, ...parCamp.keys()])]
+    // Possession de la planète : 2 de contrôle pour la faction qui l'a, même sans unité
+    // (règle « Contrôle »). Pas pour une station : son contrôle est celui de l'espace du système.
+    const possesseur = spatial ? null : possesseurActuel(etat, idPlanete);
+
+    // (le demandeur est toujours de la partie, même sans unité militaire ; le possesseur aussi)
+    const camps = [...new Set([demandeur, ...(possesseur ? [possesseur] : []), ...parCamp.keys()])]
         .map(camp => ({
             camp,
             unites: parCamp.get(camp) || [],
+            possession: camp === possesseur ? CONTROLE_POSSESSION : 0,
             // (contrôle de chaque unité : effets.js — #con, Rayon tracteur)
-            controle: (parCamp.get(camp) || []).reduce((s, c) => s + controleDe(contenus[c.ref.id], camp, aScript), 0),
+            controle: (parCamp.get(camp) || []).reduce((s, c) => s + controleDe(contenus[c.ref.id], camp, aScript), 0) +
+                (camp === possesseur ? CONTROLE_POSSESSION : 0),
         }));
 
     const cleChoix = camp => `${cle}:${camp}`;
@@ -289,7 +303,12 @@ function Controle({ conflit }) {
                         <span>
                             {pastille(c.camp)}
                             <b>{nomCamp(c.camp)}</b> : contrôle {c.controle}{" "}
-                            <span style={{ color: "#555" }}>({c.unites.map(u => nomElement(search, u.ref)).join(", ") || "aucune unité militaire"})</span>
+                            <span style={{ color: "#555" }}>
+                                ({[
+                                    c.unites.map(u => nomElement(search, u.ref)).join(", ") || "aucune unité militaire",
+                                    c.possession > 0 && `possession de la planète : ${c.possession}`,
+                                ].filter(Boolean).join(" ; ")})
+                            </span>
                         </span>
 
                         {repond
