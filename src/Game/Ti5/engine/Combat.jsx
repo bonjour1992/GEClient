@@ -18,7 +18,7 @@ import { estBloquee, lieuDe, MARQUE_AGI } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
 import {
     Controles, demanderControleSysteme, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
-    actionsOuvrirDomination, resultatDomination, cleRecuperation,
+    actionsOuvrirDomination, resultatDomination, cleRecuperation, actionsPossessionPerdue,
 } from "./Controle";
 
 // ============================================================
@@ -1805,6 +1805,8 @@ function CombatSysteme({ lieu }) {
             ...cumulRecomposition(aRetirer),
             ...aSauver.flatMap(sauvetage),
             ...aRetirer.flatMap(retrait),
+            // (Avar, Arcturus : la possession tombe si la dernière unité du possesseur est détruite)
+            ...actionsPossessionPerdue({ etat, index, zone, partis: new Set(aRetirer.map(v => v.id)), aScript }).actions,
             // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
             { type: "compteur", id: COMBAT, valeur: 2 },
         ], [

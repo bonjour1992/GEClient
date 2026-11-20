@@ -23,13 +23,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
 | Habilités | 63 | 41 | 7 | 15 | 33 | 6 | 16 |
-| Unités | 113 | 75 | 38 | 0 | 25 | 4 | 42 |
+| Unités | 113 | 76 | 37 | 0 | 25 | 4 | 42 |
 | Planètes | 30 | 25 | 2 | 3 | 15 | 8 | 12 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **378** | **281** | **71** | **26** | **158** | **62** | **121** |
+| **Total** | **378** | **282** | **70** | **26** | **158** | **62** | **121** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -265,7 +265,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
 | 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
-| 512 | Station de combat | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
+| 512 | Station de combat | **oui** | automatique | Caractéristiques de l'unité déjà utilisées ; militaire (mot-clé ajouté) : sa valeur de contrôle `#Con(3)` compte dans les conflits de contrôle, de domination et les blocages. | — |
 | 513 | Canon ancien | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 514 | Canon restauré | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 516 | Mech géant | **oui** | automatique | Compte pour 3 dans la capacité d'un vaisseau (avertissement à l'embarquement, déplacement assisté) ; valeur de contrôle lue par `#con`. | — |
@@ -345,7 +345,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 56 | Station de combat | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche militaire. Fiche du système, production : « Réparer » (use un logisticien, 1 ressource par dégât). | — |
 | 59 | Jeollr | **oui** | automatique | Conflit : les bombardements contre Jeollr ont −2. | — |
 | 60 | Perimeter | **oui** | bouton existant modifié | « Livraison commerciale » : +1 commerce si le joueur possède Perimeter. | — |
-| 61 | Avar | **oui** | bouton existant modifié | « Revendiquer » : rouge gris sans unité du joueur sur la planète. | Perte de la possession quand la dernière unité part : à la main (« Abandonner »). |
+| 61 | Avar | **oui** | bouton existant modifié | « Revendiquer » : rouge gris sans unité du joueur sur la planète. La possession tombe d'elle-même quand la dernière unité du possesseur quitte la planète (glisser) ou y est détruite (« Terminer le combat »). | Dernière unité retirée autrement (suppression à la main) : « Abandonner ». |
 | 62 | Loki | **oui** | automatique | Conflit, combats sur la planète : −1 aux attaques contre la faction qui la possède. | — |
 | 69 | Relique | **oui** | nouveau bouton | Fiche du système, science : « Forger la relique » (Reforger : dépense un scientifique, 3 fragments et 1 fragment ancien) — la carte de la Relique reforgée arrive dans les éléments actifs. | — |
 | 71 | Starpoint | **oui** | nouveau bouton | Fiche du système, diplomatie : use un diplomate, 3 influence, une faveur neutre (jeton sans propriétaire). | — |
@@ -358,7 +358,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 469 | New eden | **oui** | automatique | Ravitaillement automatique : 2 Letani posés sur la planète. | — |
 | 473 | SIG-1 à SIG-4 | **oui** | nouveau bouton | Fiche du système, phase de science : « Obtenir » use un scientifique, la carte va dans les éléments actifs. | — |
 | 508 | Université polytechnique | non | — (passé) | — | Agent tiré au ravitaillement, achats par commerce ou livraison. (difficile) |
-| 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. | — |
+| 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. Possession perdue sans unité dessus, comme Avar. | — |
 | 784 | Anneau Arcturus | **oui** | nouveau bouton + automatique | Ravitaillement automatique : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (use un scientifique). | — |
 | 1041 | Haven | **oui** | automatique | Ravitaillement automatique : posséder Haven compte comme posséder une planète natale, elle donne la faveur du ravitaillement. | Les autres effets liés aux planètes natales (Vassal, Spectre de l'empereur) : à la main. |
 

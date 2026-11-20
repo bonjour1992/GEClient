@@ -1037,7 +1037,7 @@ export const SCRIPTS = [
 
     regle("avar", "planet", 61, 1795072921250, "Avar", "modifie",
         "Fiche d'un système : « Revendiquer »",
-        "Avar ne peut pas être en votre possession sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris.", [783]),
+        "Avar ne peut pas être en votre possession sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris, et la possession tombe d'elle-même quand votre dernière unité la quitte (glisser) ou y est détruite (« Terminer le combat »). Vaut aussi pour Arcturus.", [783]),
 
     regle("cormund", "planet", 49, 1795073444389, "Cormund", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",

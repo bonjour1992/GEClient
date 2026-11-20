@@ -36,7 +36,7 @@ import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
-    demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION, cleDomination,
+    demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION, cleDomination, possesseurAuControle,
 } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
 import { peutEtreBloque, blocageSubi, estBloquee } from "./regleBlocage";
@@ -1116,7 +1116,7 @@ function FicheSysteme({ numero, id, fermer }) {
     // pas lieu. Tant qu'un conflit est en cours sur la planète, personne d'autre n'y tente d'action.
     async function controlePlanete(k, idPlanete, action, libelle) {
 
-        const lieu = { numero, k, unites: unitesDuControle(index, numero, k), possesseur: possesseurActuel(etat, idPlanete) };
+        const lieu = { numero, k, unites: unitesDuControle(index, numero, k), possesseur: possesseurAuControle(etat, index, zonePlanete(k), idPlanete) };
 
         if (evaluerControle({ ...lieu, moi, aScript }).conflit) {
             fermer();
@@ -1347,7 +1347,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         // D'autres camps ont des unités militaires dans le système (espace, planète) :
         // leur accord est demandé, dans l'onglet Conflit (Controle.jsx)
-        if (campsAConsulter(index, contenuEnCache, numero, k, moi).length) {
+        if (campsAConsulter(index, contenuEnCache, numero, k, moi, possesseurAuControle(etat, index, zonePlanete(k), idPlanete)).length) {
 
             const cle = cleAccord(numero, k);
 
@@ -1399,7 +1399,8 @@ function FicheSysteme({ numero, id, fermer }) {
 
         // Une autre faction possède la planète : sa possession vaut 2 de contrôle, qu'elle peut
         // opposer même sans unité (règle « Contrôle »)
-        const possesseur = possesseurActuel(etat, idPlanete);
+        // (ou les neutres : une planète donnée aux Réfugiés)
+        const possesseur = possesseurAuControle(etat, index, zonePlanete(k), idPlanete);
 
         // Règle générale (evaluerControle, Controle.jsx) : pas de conflit si aucune autre faction ne
         // peut participer, ou s'il n'y a que des neutres que mon contrôle dépasse
@@ -1416,7 +1417,7 @@ function FicheSysteme({ numero, id, fermer }) {
             () => [],
             (opposants
                 ? "D'autres unités militaires sont sur la planète"
-                : `${nomDe(possesseur)} possède la planète (sa possession vaut 2 de contrôle)`) +
+                : `${possesseur ? nomDe(possesseur) : "Les Réfugiés (neutres)"} possède la planète (sa possession vaut 2 de contrôle)`) +
                 " : un conflit de contrôle est ouvert (onglet Conflit)."
         );
     }

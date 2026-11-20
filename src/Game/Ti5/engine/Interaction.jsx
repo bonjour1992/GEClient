@@ -7,7 +7,7 @@ import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
 import { demander } from "./demande";
-import { possesseurActuel, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
+import { possesseurAuControle, actionsPossessionPerdue, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
 import { MARQUE_AGI } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
@@ -2396,9 +2396,9 @@ export function Plan({ children, style }) {
             const mesCartes = new Set((index.parZone.get(`joueur:${moi}:actif`) || [])
                 .filter(c => !c.cache && c.ref?.type === "planet").map(c => c.ref.id));
 
-            const possede = surPlanete
-                ? mesCartes.has(Number(elemsDuSysteme[Number(rangPlanete)]?.id))
-                : elemsDuSysteme.some(lien => mesCartes.has(Number(lien?.id)));
+            // (la possession d'une planète ne donne rien dans l'espace, et un système ne se possède
+            //  pas : pour une structure spatiale il faut une unité qui compte dans l'espace)
+            const possede = surPlanete && mesCartes.has(Number(elemsDuSysteme[Number(rangPlanete)]?.id));
             const present = unitesIci.some(c => campDe(c) === moi) || possede;
 
             // Le contrôle lui-même : un seul calcul pour tout le jeu (regleControle.js). Mes unités
@@ -2408,7 +2408,7 @@ export function Plan({ children, style }) {
             // construction part quand le contrôle est acquis, et n'a pas lieu s'il ne l'est pas.
             const numeroDuLieu = Number(caseDuLieu);
             const rangDuLieu = surPlanete ? Number(rangPlanete) : ESPACE_CONTROLE;
-            const possesseur = surPlanete ? possesseurActuel(etat, Number(elemsDuSysteme[Number(rangPlanete)]?.id)) : null;
+            const possesseur = surPlanete ? possesseurAuControle(etat, index, zone, Number(elemsDuSysteme[Number(rangPlanete)]?.id)) : null;
             if (construites.length > 0 && present) {
                 controleRequis = () => demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, {
                     numero: numeroDuLieu,
@@ -2424,7 +2424,7 @@ export function Plan({ children, style }) {
                 construites.length > 0 && !present &&
                     (surPlanete
                         ? "vous n'avez ni unité sur cette planète ni sa possession : vous ne la contrôlez pas"
-                        : "vous n'avez ni unité dans ce système ni la possession d'une de ses planètes : vous ne le contrôlez pas"),
+                        : "vous n'avez aucune unité dans l'espace de ce système (la possession d'une planète n'y compte pas) : vous ne le contrôlez pas"),
                 construites.length < unites.length &&
                     `ce n'est pas une structure : ${noms(unites.filter(ref => !estStructure(ref.id)))}`,
                 doubles.length > 0 && `cette structure est déjà construite ici : ${noms(doubles)}`,
@@ -3001,9 +3001,21 @@ export function Plan({ children, style }) {
                 .map(id => ({ type: "marquer", c: id, marque: MARQUE_AGI, valeur: rangDePhase(etat) }));
         }
 
+        // Possessions qui tombent d'elles-mêmes (Controle.jsx) : une station dont l'agent est repris,
+        // Avar ou Arcturus que quitte la dernière unité du possesseur
+        const zonesQuittees = [...new Set(aDeplacer.map(id => etat.composants[id]?.zone)
+            .filter(z => /^hex:\d+:planete:\d+$/.test(z || "") && z !== zone))];
+
+        const perdues = zonesQuittees.map(z => actionsPossessionPerdue({ etat, index, zone: z, partis: new Set(aDeplacer), aScript }));
+
+        if (perdues.some(p => p.textes.length)) {
+            aviser?.(perdues.flatMap(p => p.textes).join(" ; ") + ".");
+        }
+
         jouer([
             ...paiement,
             ...marquesDebarquement,
+            ...perdues.flatMap(p => p.actions),
             ...aDeplacer.map(c => ({
                 type: "deplacer",
                 c,

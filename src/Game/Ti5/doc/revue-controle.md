@@ -238,3 +238,21 @@ Questions de la section 5 tranchées : 1, 2, 5, 6 (possession 2 sur une planète
 ouvertes : 3, 4 (en partie : le SDP compte partout, en plus de sa planète), 9, 10, 11, 12, 14, 16, 17, 18, 19, 21.
 Tranché ensuite : un vaisseau qui s'est déplacé est engagé pour la phase — il ne bloque plus, n'aide plus et
 n'égalise plus (marque `blocAgi` posée au départ, `Deplacement.jsx`).
+
+## 9. Réponses de Loïc aux questions restantes (20 novembre, fin de soirée)
+
+| Question | Réponse | Dans l'outil |
+|---|---|---|
+| 3. Possession et espace | non : la possession d'une planète ne donne rien dans l'espace, un système ne se possède pas | construction d'une structure spatiale : il faut une unité qui compte dans l'espace (`Interaction.jsx`) |
+| 4. « Affecte aussi l'espace » | en plus de la planète | déjà ainsi (`unitesDuLieu`) |
+| 9. Revendication | le possesseur sans unité peut refuser ; une station se revendique ; un drapeau compte comme une unité | `campsAConsulter` consulte aussi le possesseur ; le reste existait |
+| 10. Stations | reprendre son agent fait perdre la station ; la Station de combat devient militaire | `actionsPossessionPerdue` (glisser de l'agent) ; mot-clé `mil` ajouté à l'unité #512 |
+| 11. Participation | pas de partage ; le possesseur sans unité peut soutenir | déjà ainsi (choix par camp, possesseur listé avec ses 2) |
+| 14. Construction | logisticien dépensé pour la deuxième structure ; les structures des autres comptent ; pas deux fois la même, dans l'espace aussi | déjà ainsi ; mot-clé #cons corrigé |
+| 17. Structures quand la possession change | rien ne se passe | rien à faire |
+| 18. Neutres | les défensifs s'opposent ; une possession neutre vaut 2 — seuls les Réfugiés possèdent, quand une planète leur est donnée | `possesseurAuControle` : une planète qui porte un Entrepôt d'aide (#836) est possédée par les neutres |
+| 19. Avar, Arcturus | la possession tombe dès que la dernière unité part | `actionsPossessionPerdue` : au glisser, et à « Terminer le combat » |
+| 21. Abandonner une possession | permis à tout moment | bouton existant |
+
+Restent ouvertes : 12 (retenter après un échec, diplomate de Rapport de force rendu ?) et 16 (au blocage
+l'égalité suffit, le contrôle exige de dépasser).

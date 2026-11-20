@@ -54,6 +54,53 @@ const unitesDuSysteme = (index, numero) => [...index.parZone]
 export const possesseurActuel = (etat, idPlanete) =>
     Number(/^joueur:(\d+):actif$/.exec(carteDePlanete(etat, idPlanete)?.zone || "")?.[1]) || null;
 
+// Possesseur d'une planète pour un test de contrôle ou de domination : le joueur qui a sa carte,
+// sinon les neutres si elle a été donnée aux Réfugiés (un Entrepôt d'aide #836 y est posé — ce
+// sont les seuls neutres qui possèdent), sinon null. La possession y vaut 2 de contrôle.
+const ENTREPOT_AIDE = 836;
+
+export const possesseurAuControle = (etat, index, zonePlanete, idPlanete) => possesseurActuel(etat, idPlanete) ??
+    ((index.parZone.get(zonePlanete) || []).some(c => !c.cache && c.ref?.type === "unit" && c.ref.id === ENTREPOT_AIDE) ? NEUTRE : null);
+
+// Possession qui tombe d'elle-même quand ce qui la tient s'en va :
+//   - station : l'agent posé dessus est repris (plus aucun agent sur la station) ;
+//   - Avar (#61), Arcturus (#783) : « ne peut pas être en votre possession sans unité dessus ».
+//   zone : la planète ; partis : identifiants des composants qui la quittent (ou sont détruits)
+//   -> { actions (la carte quitte les éléments actifs), textes }
+const SANS_UNITE = [61, 783];
+
+export function actionsPossessionPerdue({ etat, index, zone, partis, aScript }) {
+
+    const m = /^hex:(\d+):planete:(\d+)$/.exec(zone || "");
+    const idPlanete = m ? Number(contenuEnCache(tuileDe(index, Number(m[1]))?.ref.id)?.elems?.[Number(m[2])]?.id) || -1 : -1;
+    const carte = idPlanete > 0 ? carteDePlanete(etat, idPlanete) : null;
+    const possesseur = Number(/^joueur:(\d+):actif$/.exec(carte?.zone || "")?.[1]) || null;
+
+    if (!possesseur) {
+        return { actions: [], textes: [] };
+    }
+
+    const ici = index.parZone.get(zone) || [];
+    const part = c => partis.has(c.id);
+    const reste = filtre => ici.some(c => !c.cache && !part(c) && filtre(c));
+    const nom = contenuEnCache(idPlanete)?.name || "la planète";
+
+    const estAgent = c => c.ref?.type === "agent" && !c.sur;
+    const sonUnite = c => c.ref?.type === "unit" && campDe(c) === possesseur;
+
+    const stationSansAgent = contenuEnCache(idPlanete)?.type === "sat" && ici.some(c => part(c) && estAgent(c)) && !reste(estAgent);
+    const sansUnite = SANS_UNITE.includes(idPlanete) && aScript?.(possesseur, "avar") && ici.some(c => part(c) && sonUnite(c)) && !reste(sonUnite);
+
+    return stationSansAgent || sansUnite
+        ? {
+            actions: [{ type: "supprimer", c: carte.id }],
+            textes: [stationSansAgent
+                ? `${nom} : l'agent est repris, la station n'est plus possédée`
+                : `${nom} : plus aucune unité dessus, la possession est perdue`],
+        }
+        : { actions: [], textes: [] };
+}
+
 // Conflits de contrôle en cours : [{ cle, numero, k, demandeur }]
 export function controlesEnCours(etat) {
     return Object.keys(etat.compteurs)
@@ -384,7 +431,7 @@ function Controle({ conflit }) {
 
     // Possession de la planète : 2 de contrôle pour la faction qui l'a, même sans unité
     // (règle « Contrôle »). Pas pour une station : son contrôle est celui de l'espace du système.
-    const possesseur = spatial ? null : possesseurActuel(etat, idPlanete);
+    const possesseur = spatial ? null : possesseurAuControle(etat, index, zonePlanete, idPlanete);
 
     // Camps et contrôle de chacun : le calcul unique de regleControle.js. Seuls participent les
     // camps qui ont une unité militaire sur place ou la possession ; le demandeur est toujours
@@ -644,12 +691,14 @@ export function accordsEnCours(etat) {
 // Camps (autres que le demandeur) qui ont des unités militaires dans l'espace
 // du système ou sur la planète : ce sont eux qui peuvent refuser.
 // (Une unité dont le contenu n'est pas encore connu est comptée comme militaire.)
-export function campsAConsulter(index, contenuDe, numero, k, demandeur) {
+//   possesseur : celui de la planète (joueur, NEUTRE, ou null) — il peut refuser, même sans unité
+export function campsAConsulter(index, contenuDe, numero, k, demandeur, possesseur = null) {
 
     const unites = [...(index.parZone.get("hex:" + numero) || []), ...(index.parZone.get(`hex:${numero}:planete:${k}`) || [])]
         .filter(c => !c.cache && c.ref?.type === "unit" && contenuDe(c.ref.id)?.mot_cle?.includes("mil") !== false);
 
-    return [...new Set(unites.map(campDe))].filter(camp => camp !== demandeur);
+    return [...new Set([...unites.map(campDe), ...(possesseur !== null && possesseur !== undefined ? [possesseur] : [])])]
+        .filter(camp => camp !== demandeur);
 }
 
 function Accord({ conflit }) {
@@ -669,7 +718,8 @@ function Accord({ conflit }) {
 
     const contenus = useElements([...new Set(unites.map(c => c.ref.id))]);
 
-    const camps = campsAConsulter(index, id => contenus[id], numero, k, demandeur);
+    // (le possesseur de la planète est consulté lui aussi : il peut refuser, même sans unité)
+    const camps = campsAConsulter(index, id => contenus[id], numero, k, demandeur, possesseurAuControle(etat, index, zonePlanete, idPlanete));
 
     const cleChoix = camp => `${cle}:${camp}`;
 
@@ -757,7 +807,7 @@ function Accord({ conflit }) {
             <div>
                 {pastille(demandeur)}
                 <b>{nomCamp(demandeur)}</b> veut revendiquer <b>{nomPlanete}</b> ({nomCase(numero)}) : accord des camps
-                qui ont des unités militaires dans le système.
+                qui ont des unités militaires dans le système, et de celui qui possède la planète.
             </div>
 
             {camps.map(camp => {
@@ -970,7 +1020,7 @@ function Domination({ conflit }) {
     const liensPlanetes = (systeme?.elems || []).map(lien => Number(lien?.id) || 0);
     const planetes = useElements(liensPlanetes.filter(id => id > 0));
 
-    const possesseur = surPlanete ? possesseurActuel(etat, liensPlanetes[k] || -1) : null;
+    const possesseur = surPlanete ? possesseurAuControle(etat, index, `hex:${numero}:planete:${k}`, liensPlanetes[k] || -1) : null;
     const nomLieu = surPlanete ? `de ${planetes[liensPlanetes[k]]?.name || "la planète"} (${nomCase(numero)})` : `du système ${nomCase(numero)}`;
 
     const presents = campsDeControle({ unites, contenuDe: id => contenus[id], aScript, possesseur })

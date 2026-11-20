@@ -4,8 +4,8 @@ import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
 import { depenserAgent } from "./effets";
 import {
-    actionsPossession, possesseurActuel, evaluerControle, controleAcquis, demanderControle, unitesDuControle, ESPACE_CONTROLE,
-    etatDuControle, actionsOuvrirControleEtat,
+    actionsPossession, evaluerControle, controleAcquis, demanderControle, unitesDuControle, ESPACE_CONTROLE,
+    etatDuControle, actionsOuvrirControleEtat, possesseurAuControle,
 } from "./Controle";
 import { noter } from "./recherche";
 import { lireQuestion } from "./Decisions";
@@ -431,7 +431,9 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             numero: caseControle,
             k: s.controle === "planete" ? planeteControle : ESPACE_CONTROLE,
             unites: unitesDuControle(index, caseControle, s.controle === "planete" ? planeteControle : ESPACE_CONTROLE),
-            possesseur: s.controle === "planete" && idElement ? possesseurActuel(etat, idElement) : null,
+            possesseur: s.controle === "planete" && idElement
+                ? possesseurAuControle(etat, index, `hex:${caseControle}:planete:${planeteControle}`, idElement)
+                : null,
         };
 
         const controleDejaAcquis = !!lieuControle && controleAcquis(etat, lieuControle.numero, lieuControle.k, moi);

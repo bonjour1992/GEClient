@@ -83,7 +83,8 @@ const controleEcrit = (contenuDe, c) => /#con\(\d+\)/i.test(contenuDe(c.ref.id)?
 // Camps d'un test de contrôle : [{ camp, unites, possession, participe, controle }]
 //   unites      unités du lieu (planète : celles de la planète ; espace : celles de l'espace, non embarquées)
 //   contenuDe   id d'élément -> contenu (cache des éléments)
-//   possesseur  joueur qui possède la planète, ou null (espace, station)
+//   possesseur  joueur qui possède la planète — ou NEUTRE (0) : planète donnée aux Réfugiés, les
+//               seuls neutres qui possèdent ; null : personne (espace, station)
 //   acteur      faction qui agit : toujours listée, même si elle ne peut pas participer (contrôle 0)
 // Seuls participent les camps qui ont une unité militaire sur place ou la possession ; leurs
 // unités non militaires ne comptent que si leur texte leur donne une valeur de contrôle.
@@ -100,14 +101,17 @@ export function campsDeControle({ unites, contenuDe, aScript, possesseur = null,
         }
     }
 
+    // (possesseur : un joueur, ou NEUTRE — une planète donnée aux Réfugiés ; null : personne)
+    const possede = possesseur !== null && possesseur !== undefined;
+
     const camps = [...new Set([
         ...(acteur !== null ? [acteur] : []),
-        ...(possesseur ? [possesseur] : []),
+        ...(possede ? [possesseur] : []),
         ...militaires.keys(),
     ])];
 
     return camps.map(camp => {
-        const possession = possesseur && camp === possesseur ? CONTROLE_POSSESSION : 0;
+        const possession = possede && camp === possesseur ? CONTROLE_POSSESSION : 0;
         const participe = militaires.has(camp) || possession > 0;
         const liste = participe ? [...(militaires.get(camp) || []), ...(autres.get(camp) || [])] : [];
 
