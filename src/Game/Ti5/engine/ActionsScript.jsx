@@ -3,7 +3,10 @@ import { contenuEnCache, useElements, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { ACTIVATION, FAVEUR, FRAGMENTS, MARQUEUR, actionsPoints, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
 import { depenserAgent } from "./effets";
-import { actionsPossession, possesseurActuel, evaluerControle, controleAcquis, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
+import {
+    actionsPossession, possesseurActuel, evaluerControle, controleAcquis, demanderControle, unitesDuControle, ESPACE_CONTROLE,
+    etatDuControle, actionsOuvrirControleEtat,
+} from "./Controle";
 import { noter } from "./recherche";
 import { lireQuestion } from "./Decisions";
 import { decompteVotes } from "./Vote";
@@ -179,6 +182,17 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         idElement,
         // Joueur qui possède cette planète (sa carte est dans ses éléments actifs), ou null
         proprietaire: idPlanete => possesseurDe(index, partie.joueurs, idPlanete),
+        // Le contrôle comme état (Controle.jsx) : état de mon contrôle de l'espace d'un système —
+        // "oui", "non", "enCours", "dispute" ; actions qui ouvrent les conflits de ces systèmes
+        controleDuSysteme: n => etatDuControle({ etat, index, aScript }, moi, n),
+        ouvrirControles: (numeros, idScript) => numeros.flatMap(n => actionsOuvrirControleEtat(etat, n, ESPACE_CONTROLE, moi, idScript)),
+        // Cases de la carte : [{ numero, tuile, systeme }] ; faction d'un joueur
+        casesDeLaCarte: () => [...index.parZone].flatMap(([z, contenu]) => {
+            const m = /^hex:(\d+)$/.exec(z);
+            const tuile = m && contenu.find(x => x.ref?.type === "system");
+            return tuile ? [{ numero: Number(m[1]), tuile, systeme: contenuEnCache(tuile.ref.id) }] : [];
+        }),
+        factionDe,
         // Nom d'un joueur ; script en service pour moi ; joueurs de la partie
         nomDe,
         aScript: id => aScript(moi, id),

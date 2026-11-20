@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, nomElement, Pions, styleMini } from "./Interaction";
 import { useElements, contenuEnCache } from "./sync";
 import { MARQUEUR, campDe, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace";
+import { etatDuControle, actionsOuvrirControleEtat, ESPACE_CONTROLE } from "./Controle";
 import { centreCase, centreCaseBande } from "../plateauVue";
 import { COLONNES_BANDE } from "../hexSpirale";
 import { capaciteDe, depenserAgent, estDeplacementFurtif, placePrise, estSoleilDeGuerre } from "./effets";
@@ -290,20 +291,32 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 275);
 
     // Promesse Chemin du vide (#964, Empyréens) : les anomalies que contrôle la faction qui me
-    // l'a donnée (elle seule, avec moi au plus, a des unités dans leur espace) ne gênent pas
-    // mes déplacements
+    // l'a donnée ne gênent pas mes déplacements. Le contrôle comme état (Controle.jsx) : un test
+    // dans chaque anomalie où elle a une unité — personne d'autre que moi ne peut s'y opposer,
+    // ou elle y a gagné son conflit de contrôle à cette phase ; disputée, le conflit reste à
+    // ouvrir (bouton ci-dessous) et l'anomalie gêne tant qu'il n'est pas conclu.
     const empyreens = !aScript(moi, "chemin-du-vide") ? [] : Object.values(etat.composants)
         .filter(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === 964 &&
             new RegExp(`^joueur:${moi}:(actif|tour:\\d+)$`).test(c.zone || ""))
         .flatMap(carte => Object.values(etat.composants).filter(m => m.sur === carte.id && !m.ref && m.proprio > 0).map(m => m.proprio));
 
-    const cheminDuVide = i => empyreens.length > 0 && (() => {
-        const camps = new Set((index.parZone.get("hex:" + i) || [])
-            .filter(c => !c.cache && c.ref?.type === "unit" && !c.sur)
-            .map(campDe));
+    // -> { u (la faction), e ("oui", "non", "enCours", "dispute") } pour la case i, ou null
+    const etatChemin = i => {
 
-        return empyreens.some(u => camps.has(u)) && [...camps].every(u => u === moi || empyreens.includes(u));
-    })();
+        const ici = (index.parZone.get("hex:" + i) || []).filter(c => !c.cache && c.ref?.type === "unit" && !c.sur);
+
+        const etats = empyreens.filter(u => ici.some(c => campDe(c) === u))
+            .map(u => ({ u, e: etatDuControle({ etat, index, aScript }, u, i, ESPACE_CONTROLE, null, moi) }));
+
+        return etats.find(x => x.e === "oui") || etats.find(x => x.e === "dispute") || etats[0] || null;
+    };
+
+    const cheminDuVide = i => empyreens.length > 0 && etatChemin(i)?.e === "oui";
+
+    // Anomalies du trajet dont le contrôle par les Empyréens reste à trancher
+    const cheminsDisputes = !empyreens.length ? [] : trajet
+        .filter(i => ["sup", "ast", "neb"].includes(anomalie(i)) && etatChemin(i)?.e === "dispute")
+        .map(i => ({ i, u: etatChemin(i).u }));
 
     // (habilité Émanation du vide des Empyréens : aucune nébuleuse ne gêne mes déplacements)
     const sharIci = i => aScript(moi, "emanation-du-vide") || cheminDuVide(i) || (possedeShar &&
@@ -735,6 +748,25 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                             <span style={{ marginLeft: 8, color: "#b71c1c" }}>{obstacles.filter(Boolean).join(" ; ")}</span>
                         )}
                     </div>
+
+                    {/* Chemin du vide : anomalies du trajet dont le contrôle par les Empyréens est disputé */}
+                    {cheminsDisputes.length > 0 && (
+                        <div data-chemin-du-vide style={{ marginTop: 4 }}>
+                            Chemin du vide : {cheminsDisputes.map(x => nomCase(x.i)).join(", ")} — le contrôle de {nomDe(cheminsDisputes[0].u)} y est
+                            disputé, l'anomalie gêne tant que son conflit de contrôle n'est pas conclu.{" "}
+                            <button
+                                type="button"
+                                data-action="ouvrir-controles-chemin-du-vide"
+                                style={styleMini}
+                                onClick={() => envoyer(
+                                    cheminsDisputes.flatMap(x => actionsOuvrirControleEtat(etat, x.i, ESPACE_CONTROLE, x.u, "chemin-du-vide")),
+                                    "Chemin du vide : conflits de contrôle ouverts"
+                                )}
+                            >
+                                Ouvrir le conflit de contrôle
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

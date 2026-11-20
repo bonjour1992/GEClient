@@ -36,7 +36,7 @@ import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
-    demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION,
+    demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION, cleDomination,
 } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
 import { peutEtreBloque, blocageSubi, estBloquee } from "./regleBlocage";
@@ -1072,8 +1072,9 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const estInfanterie = c => typeUnite(contenuEnCache(c.ref.id)) === "inf";
 
-    // Ai-je une infanterie sur la planète k ? Prendre possession le demande.
-    const monInfanterieSur = k => mesUnitesSur(k, estInfanterie).length > 0;
+    // Ai-je une unité militaire sur la planète k ? Prendre possession le demande, avec le contrôle
+    // (une unité dont le contenu n'est pas encore connu est comptée comme militaire).
+    const monMilitaireSur = k => mesUnitesSur(k, c => contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false).length > 0;
 
     // Marqueurs d'activation d'une planète : sur la planète elle-même, ou
     // sur une de ses ruines (marques.ruine = 1 ou 2)
@@ -1636,7 +1637,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 title="L'effet pour lequel la domination est demandée"
                                             >
                                                 <option value={0}>à la main</option>
-                                                {[821, 452, 486].map(id => <option key={id} value={id}>pour « {SUJETS_DOMINATION[id]} »</option>)}
+                                                {[821, 452, 486, 315].map(id => <option key={id} value={id}>pour « {SUJETS_DOMINATION[id]} »</option>)}
                                             </select>
                                         </>
                                     )
@@ -1786,10 +1787,10 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
                                                     obstacles={[
                                                         horsRevendication,
-                                                        !monInfanterieSur(k) && "il faut une de vos infanteries sur la planète",
+                                                        !monMilitaireSur(k) && "il faut une de vos unités militaires sur la planète",
                                                     ]}
                                                     faire={commentaire => demanderPossession(lien.id, k, commentaire)}
-                                                    title="Vous avez une infanterie sur la planète : sa carte va dans vos éléments actifs. Si un autre camp y a des unités militaires, un conflit de contrôle s'ouvre d'abord (onglet Conflit)"
+                                                    title="Vous avez une unité militaire sur la planète et vous la contrôlez : sa carte va dans vos éléments actifs. Si d'autres peuvent s'opposer (unités militaires, possession), un conflit de contrôle s'ouvre d'abord (onglet Conflit)"
                                                 >
                                                     Prendre possession
                                                 </BoutonRegle>
@@ -1827,6 +1828,37 @@ function FicheSysteme({ numero, id, fermer }) {
                                                         /#raid\b/i.test(contenuEnCache(c.ref.id)?.habilite || "")))) &&
                                                     boutonCombat(`${numero}p${k}r`, "Raid",
                                                         "Après les bombardements : les unités à raid de l'espace du système tirent sur les infanteries de cette planète, et capturent celles qu'elles touchent", [pasUnePlanete(planete)])}
+
+                                                {/* Test de domination de la planète (Controle.jsx) : ses unités militaires, et sa
+                                                    possession qui vaut 2 — Guerre totale, objectifs militaires. Proposé quand
+                                                    plusieurs camps y sont (unités, ou possession). */}
+                                                {new Set([
+                                                    ...(index.parZone.get(zonePlanete(k)) || []).filter(c => !c.cache && c.ref?.type === "unit").map(campDe),
+                                                    ...(possesseurActuel(etat, lien.id) ? [possesseurActuel(etat, lien.id)] : []),
+                                                ]).size > 1 && (
+                                                    etat.compteurs[cleDomination(numero, k)]
+                                                        ? <button type="button" onClick={() => allerA("combat")} style={{ fontWeight: "bold" }}>Voir : domination de la planète</button>
+                                                        : (
+                                                            <BoutonRegle
+                                                                data-action="test-de-domination-planete"
+                                                                nom={`Test de domination de ${nomPlanete(planete)} (${nomCase(numero)})` +
+                                                                    (SUJETS_DOMINATION[sujetDomination] ? ` pour « ${SUJETS_DOMINATION[sujetDomination]} »` : "")}
+                                                                obstacles={[
+                                                                    resultatDomination(etat, numero, sujetDomination, k) !== null &&
+                                                                        "le test de domination de ce sujet a déjà été clos ce tour sur cette planète : il ne se rouvre pas",
+                                                                ]}
+                                                                faire={commentaire => {
+                                                                    envoyer(actionsOuvrirDomination(etat, numero, moi, sujetDomination, k),
+                                                                        commentaire || "Test de domination de la planète ouvert");
+                                                                    fermer();
+                                                                    allerA("combat");
+                                                                }}
+                                                                title="Ouvre un test de domination de cette planète (onglet Conflit) pour l'effet choisi à côté de « Test de domination » : ses unités militaires comptent, et sa possession vaut 2"
+                                                            >
+                                                                Domination de la planète
+                                                            </BoutonRegle>
+                                                        )
+                                                )}
                                             </span>
                                         )}
 

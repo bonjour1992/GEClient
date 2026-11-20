@@ -249,6 +249,8 @@ export function useEntretien(u, idFaction) {
             // (scripts de revenu qui attendent : Extraction de la faille sur une Faille disputée)
             ...revenus.attentes,
         ].filter(Boolean),
+        // (conflits de contrôle « comme état » à ouvrir pour ces revenus : actions)
+        controles: revenus.controles,
         vide,
         lignes,
         resume: `Ravitaillement : +${ressources} res, +${influence} inf, ${agentsRendus.length} agent(s)` +
@@ -376,6 +378,17 @@ export function EntretienAuto({ auto = false, plateau = false }) {
                 <div style={{ ...styleRapport, borderColor: "#f9a825", backgroundColor: "#fffde7" }}>
                     <b>Ravitaillement automatique…</b>
                     {entretien.attente.map(texte => <div key={texte}>En attente — {texte}</div>)}
+                    {/* Revenu qui dépend du contrôle d'un système disputé (Complexe de guerre) : le
+                        conflit de contrôle s'ouvre d'ici ; le ravitaillement part quand il est conclu */}
+                    {entretien.controles.length > 0 && (
+                        <button
+                            type="button"
+                            data-action="ouvrir-controles-ravitaillement"
+                            onClick={() => envoyer(entretien.controles, "Ravitaillement : conflits de contrôle ouverts")}
+                        >
+                            Ouvrir le conflit de contrôle (onglet Conflit)
+                        </button>
+                    )}
                     {!entretien.pret && <div>Chargement des planètes et des unités…</div>}
                 </div>
             )}

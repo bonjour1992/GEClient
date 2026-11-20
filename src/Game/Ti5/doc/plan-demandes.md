@@ -640,3 +640,8 @@ livraisons commerciales ; le test se fait là où est l'unité qui agit (espace 
 Effets déclenchés par un blocage qui porte (`effetsBlocage.js`) : Redevance de protection dépensée
 d'office, Frontière ouverte et fin des dettes proposées au joueur bloqué (onglet Décision).
 Restent à faire sur demande : la coalition ; mitose et fusion ; une planète ou une station qui produit.
+
+Fin de soirée du 2026-11-20 (détail : `doc/revue-controle.md`, section 8) : SDP et Rapport de force comptés
+dans tous les conflits ; prise de possession avec une unité militaire ; le contrôle comme état (Complexe de
+guerre, Vassalisation forcée, Chemin du vide) ; blocage d'un déplacement aligné sur celui d'une action ;
+domination d'une planète (possession 2) ; Nef de la rupture limitée aux trous de ver oméga.

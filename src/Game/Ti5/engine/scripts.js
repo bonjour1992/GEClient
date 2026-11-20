@@ -163,6 +163,25 @@ const planetesEnRebellion = index => [...index.parZone]
 // Les autres joueurs de la partie
 const autresJoueurs = outils => outils.joueurs.filter(j => j.userId !== outils.moi);
 
+// Vassalisation forcée (#166) : « le contrôle de 5 systèmes avec des planètes d'une faction »,
+// son système natal comptant pour 3. Le contrôle comme état : un test dans chaque système où
+// la faction possède une planète (outils.controleDuSysteme : "oui", "non", "enCours", "dispute").
+//   -> { systemes: [{ numero, poids, controle }], total (contrôlés), aTrancher (disputés ou en cours) }
+const systemesAVassaliser = (outils, cible) => {
+
+    const natal = Number(outils.contenuDe(outils.factionDe(cible.userId))?.system?.id) || 0;
+
+    const systemes = outils.casesDeLaCarte()
+        .filter(x => (x.systeme?.elems || []).some(lien => lien?.id > 0 && outils.proprietaire(Number(lien.id)) === cible.userId))
+        .map(x => ({ numero: x.numero, poids: x.tuile.ref.id === natal ? 3 : 1, controle: outils.controleDuSysteme(x.numero) }));
+
+    return {
+        systemes,
+        total: systemes.filter(x => x.controle === "oui").reduce((s, x) => s + x.poids, 0),
+        aTrancher: systemes.filter(x => x.controle === "dispute" || x.controle === "enCours"),
+    };
+};
+
 // Faction qui a donné la promesse de la fiche, lue dans le calcul d'un script (avant
 // l'action) : le propriétaire du jeton posé sur la carte, ou null
 const donneurDe = outils =>
@@ -958,8 +977,22 @@ export const SCRIPTS = [
         "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
 
     revenu("complexe-de-guerre", "unit", 164, 1795074271173, "Complexe de guerre", "ravit",
-        "Pose un de vos destroyeurs dans son système (si vous le contrôlez : non vérifié).",
-        { cree: { unite: "dest", n: 1, ou: "espace" }, note: "si vous contrôlez le système" }),
+        "Pose un de vos destroyeurs dans son système si vous le contrôlez. Personne ne peut s'y opposer : posé d'office. " +
+        "Sinon le ravitaillement attend un conflit de contrôle « Complexe de guerre », ouvert depuis le bandeau du ravitaillement : " +
+        "gagné, le destroyeur est posé ; perdu, rien.", {
+            calcul: (source, outils) => {
+
+                // (le contrôle comme état : un test dans le système du complexe)
+                const controle = outils.controleDuSysteme(source.numero);
+
+                return controle === "oui" ? { cree: { unite: "dest", n: 1, ou: "espace" }, note: "vous contrôlez le système" }
+                    : (controle === "non" ? { sans: "vous n'avez pas obtenu le contrôle du système" }
+                        : {
+                            attente: "contrôle du système disputé, conflit de contrôle à " + (controle === "enCours" ? "conclure (onglet Conflit)" : "ouvrir"),
+                            controle: controle === "dispute" ? { numero: source.numero } : null,
+                        });
+            },
+        }),
 
     revenu("relique-reforgee", "planet", 131, 1795190407273, "Relique reforgée", "ravit",
         "Rapporte 1 point à qui la possède.", { gains: { points: 1 } }),
@@ -1929,6 +1962,10 @@ export const SCRIPTS = [
         "Conflit, combat spatial",
         "+1 au combat par vaisseau adverse que visent ses engagements."),
 
+    regle("nef-de-la-rupture", "unit", 810, 1795205230657, "Nef de la rupture", "auto",
+        "Conflit : cadre de blocage (passage par un trou de ver oméga)",
+        "Vos Nefs de la rupture ignorent le blocage et les touches des trous de ver oméga : leur jet ne les arrête pas et ne les touche pas. Un blocage par des unités ou une rupture gravitationnelle les arrêtent comme les autres."),
+
     regle("complexe-de-guerre-destroyers", "unit", 164, 1795074271173, "Complexe de guerre : destroyers", "auto",
         "Conflit, combat spatial",
         "Vos destroyers ont +1 (non cumulable) dans le système d'un de vos complexes de guerre et dans les systèmes adjacents."),
@@ -2188,8 +2225,8 @@ export const SCRIPTS = [
         "Plateau joueur : « Esclaves » ; fiche du Camp de travail",
         "Un esclave dépensé rapporte 2 ressources au lieu d'une ; le Camp de travail rapporte 2 ressources de plus (6)."),
 
-    action("enrolement", "tech", 274, 1794343420992, "Enrôlement", "planete",
-        "Débarquement, sur une planète où vous avez une structure : use un logisticien et la structure, 2 de vos esclaves sont posés sur la planète, sous votre contrôle. S'ils sont en vie à la fin du combat terrestre, recapturez-les à la main (glissez-les dans vos éléments actifs).", {
+    action("enrolement", "tech", 274, 1795205230651, "Enrôlement", "planete",
+        "Débarquement, sur une planète où vous avez une structure : use un logisticien et la structure, 2 de vos esclaves sont posés sur la planète, sous vos ordres (aucun contrôle de la planète n'est demandé). S'ils sont en vie à la fin du combat terrestre, recapturez-les à la main (glissez-les dans vos éléments actifs).", {
             surPlanete: true,
             phase: "d[ée]barquement",
             nomPhase: "débarquement",
@@ -2752,7 +2789,9 @@ export const SCRIPTS = [
         }),
 
     action("vassalisation-forcee", "habilite", 166, 1795072921253, "Vassalisation forcée", "plateau",
-        "Diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs, avec son marqueur. La condition (5 systèmes où elle a des planètes, son système natal comptant pour 3) se vérifie à la main.", {
+        "Diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs, avec son marqueur. " +
+        "La condition est comptée : les systèmes où elle possède une planète et dont vous contrôlez l'espace (son système natal compte pour 3), 5 au moins. " +
+        "Un système disputé demande d'abord son conflit de contrôle : « Vassalisation forcée : contrôles » les ouvre. Total insuffisant : l'outil le signale et laisse faire.", {
             phase: "diplomatie",
             agent: { motif: "diplomate", nom: "diplomate", depense: true },
             ...choixDansListe({
@@ -2762,6 +2801,17 @@ export const SCRIPTS = [
                 vide: "aucune autre faction dans la partie",
                 appliquer: (outils, cible) => {
 
+                    // Le contrôle comme état : un test dans chaque système où la faction possède une planète
+                    const bilan = systemesAVassaliser(outils, cible);
+
+                    if (bilan.aTrancher.length) {
+                        return {
+                            actions: [],
+                            sans: `${bilan.aTrancher.length} système(s) disputé(s) (${bilan.aTrancher.map(x => outils.nomCase(x.numero)).join(", ")}) : ` +
+                                "ouvrez et concluez d'abord leurs conflits de contrôle (« Vassalisation forcée : contrôles »)",
+                        };
+                    }
+
                     const local = "t" + Date.now();
 
                     return {
@@ -2770,11 +2820,35 @@ export const SCRIPTS = [
                             // (marqueur de faction : miseEnPlace.js, MARQUEUR)
                             { type: "creer", jeton: "marqueur", sur: local, proprio: cible.userId },
                         ],
-                        avis: `Vassalisation forcée : ${cible.nom} devient votre vassal (promesse Vassal dans vos éléments actifs). Pensez à « Seigneur » pour un diplomate.`,
+                        avis: `Vassalisation forcée : ${cible.nom} devient votre vassal (promesse Vassal dans vos éléments actifs). Pensez à « Seigneur » pour un diplomate.` +
+                            (bilan.total >= 5 ? "" : ` Attention : d'après l'outil vous ne contrôlez que ${bilan.total} sur 5 (système natal : 3) — à vérifier.`),
                     };
                 },
             }),
             libelle: "Vassalisation forcée : faire un vassal (dépense un diplomate)",
+        }),
+
+    action("vassalisation-forcee-controles", "habilite", 166, 1795072921253, "Vassalisation forcée : contrôles", "plateau",
+        "Diplomatie : ouvre un conflit de contrôle « Vassalisation forcée » dans chaque système disputé où la faction choisie possède une planète. Une fois conclus, « Vassalisation forcée » compte les systèmes que vous contrôlez.", {
+            phase: "diplomatie",
+            ...choixDansListe({
+                titre: "Vassalisation forcée : les systèmes de quelle faction faut-il contrôler ?",
+                options: autresJoueurs,
+                libelle: (outils, j) => j.nom,
+                vide: "aucune autre faction dans la partie",
+                appliquer: (outils, cible) => {
+
+                    const bilan = systemesAVassaliser(outils, cible);
+                    const disputes = bilan.systemes.filter(x => x.controle === "dispute");
+
+                    return {
+                        actions: outils.ouvrirControles(disputes.map(x => x.numero), "vassalisation-forcee"),
+                        sans: disputes.length ? null : `aucun système de ${cible.nom} n'est à trancher (vous en contrôlez ${bilan.total} sur 5)`,
+                        avis: `Vassalisation forcée : ${disputes.length} conflit(s) de contrôle ouvert(s) (onglet Conflit). Vous contrôlez déjà ${bilan.total} sur 5.`,
+                    };
+                },
+            }),
+            libelle: "Vassalisation forcée : ouvrir les conflits de contrôle",
         }),
 
     // ----- Kabal de l'ombre -----
@@ -3258,7 +3332,7 @@ export const SCRIPTS = [
 
     regle("chemin-du-vide", "Promesse", 964, 1795072921254, "Chemin du vide", "auto",
         "Espace : déplacement assisté",
-        "Les anomalies que contrôlent les Empyréens (eux seuls, avec vous au plus, ont des unités dans leur espace) ne gênent pas vos déplacements : supernova, champ d'astéroïdes, nébuleuse."),
+        "Les anomalies que contrôlent les Empyréens ne gênent pas vos déplacements : supernova, champ d'astéroïdes, nébuleuse. Ils y ont une unité et personne d'autre que vous ne peut s'y opposer, ou ils y ont gagné leur conflit de contrôle à cette phase ; une anomalie disputée gêne tant que ce conflit (bouton « Ouvrir le conflit de contrôle » du déplacement assisté) n'est pas conclu."),
 
     // ----- Braises de Muaat (WIP) : habilité et forge d'arme -----
 

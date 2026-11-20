@@ -185,37 +185,6 @@ function BlocageAction({ test }) {
             : `Blocage résolu : ${miennesEngagees.length} de vos unités sont bloquées ; les autres peuvent agir ici, sans nouveau test à cette phase.`);
     }
 
-    // Une unité, avec ses boutons si je réponds pour elle
-    function ligneUnite(c) {
-
-        const choix = choixDe(c, acteur);
-        const repond = !!joueur && (campDe(c) === moi || campDe(c) === NEUTRE);
-        const peutBloquer = bilan.militaire(c);
-
-        return (
-            <span key={c.id} data-unite-blocage={c.id} data-choix={choix || ""} style={{ display: "inline-flex", alignItems: "center", gap: 3, marginRight: 8 }}>
-                {nom(c)} ({bilan.controle(c)})
-                {repond
-                    ? SENS.filter(([sens]) => sens !== "b" || peutBloquer).map(([sens, libelle, texte]) => (
-                        <button
-                            key={sens}
-                            type="button"
-                            data-sens={sens}
-                            onClick={() => choisir(c, sens === "n" && campDe(c) !== NEUTRE ? null : sens, texte)}
-                            style={{
-                                ...styleMini,
-                                fontWeight: (choix || "n") === sens ? "bold" : "normal",
-                                backgroundColor: (choix || "n") === sens ? "#ffcc80" : undefined,
-                            }}
-                        >
-                            {libelle}
-                        </button>
-                    ))
-                    : <b>{SENS.find(s => s[0] === (choix || "n"))?.[2]}</b>}
-            </span>
-        );
-    }
-
     return (
         <div
             data-blocage-action={cle}
@@ -237,16 +206,7 @@ function BlocageAction({ test }) {
                 égalise le surplus avec ses propres unités, qui sont alors bloquées. Toute unité qui sert est engagée pour la phase.
             </div>
 
-            {campsAutres.map(camp => (
-                <div key={camp} data-camp={camp} style={{ marginTop: 3 }}>
-                    {pastille(camp)}<b>{nomCamp(camp)}</b> :{" "}
-                    {autres.filter(c => campDe(c) === camp).map(ligneUnite)}
-                    {camp === moi && <RapportDeForce clePlus={clePlus(camp)} numero={numero} />}
-                    {plus(camp) > 0 && <i> Rapport de force : +{plus(camp)}</i>}
-                </div>
-            ))}
-
-            {campsAutres.length === 0 && <div style={{ marginTop: 3 }}><i>Aucune autre unité libre ici.</i></div>}
+            <ChoixDesCamps bilan={bilan} acteur={acteur} numero={numero} clePlus={clePlus} plus={plus} />
 
             <div data-camp={acteur} style={{ marginTop: 3 }}>
                 {pastille(acteur)}<b>{nomCamp(acteur)}</b> égalise avec :{" "}
@@ -313,5 +273,73 @@ function BlocageAction({ test }) {
                 </div>
             )}
         </div>
+    );
+}
+
+// ------------------------------------------------------------
+// Les unités des autres camps, avec les boutons de chacun : bloquer (unités militaires),
+// aider, ne rien faire. Chacun répond pour ses unités ; tout joueur répond pour les neutres,
+// qui bloquent d'office. Partagé avec le blocage d'un déplacement (Blocage.jsx).
+//   bilan    bilanBlocage (regleBlocage.js) ; acteur : la faction qui agit
+//   clePlus  camp -> compteur du Rapport de force ; plus : camp -> son bonus
+// ------------------------------------------------------------
+
+export function ChoixDesCamps({ bilan, acteur, numero, clePlus, plus }) {
+
+    const { envoyer, moi, joueur, search, nomDe, couleurDe } = useEngine();
+
+    const nomCamp = camp => nomDuCamp(nomDe, camp);
+    const nom = c => nomElement(search, c.ref);
+    const camps = [...new Set(bilan.autres.map(campDe))];
+
+    const choisir = (c, sens, texte) => envoyer(
+        [{ type: "marquer", c: c.id, marque: MARQUE_CHOIX, valeur: sens ? sens + acteur : null }],
+        `Blocage ${nomCase(numero)} (${nomCamp(acteur)}) : ${nom(c)} de ${nomCamp(campDe(c))} ${texte}`
+    );
+
+    // Une unité, avec ses boutons si je réponds pour elle
+    function ligneUnite(c) {
+
+        const choix = choixDe(c, acteur);
+        const repond = !!joueur && (campDe(c) === moi || campDe(c) === NEUTRE);
+        const peutBloquer = bilan.militaire(c);
+
+        return (
+            <span key={c.id} data-unite-blocage={c.id} data-choix={choix || ""} style={{ display: "inline-flex", alignItems: "center", gap: 3, marginRight: 8 }}>
+                {nom(c)} ({bilan.controle(c)})
+                {repond
+                    ? SENS.filter(([sens]) => sens !== "b" || peutBloquer).map(([sens, libelle, texte]) => (
+                        <button
+                            key={sens}
+                            type="button"
+                            data-sens={sens}
+                            onClick={() => choisir(c, sens === "n" && campDe(c) !== NEUTRE ? null : sens, texte)}
+                            style={{
+                                ...styleMini,
+                                fontWeight: (choix || "n") === sens ? "bold" : "normal",
+                                backgroundColor: (choix || "n") === sens ? "#ffcc80" : undefined,
+                            }}
+                        >
+                            {libelle}
+                        </button>
+                    ))
+                    : <b>{SENS.find(s => s[0] === (choix || "n"))?.[2]}</b>}
+            </span>
+        );
+    }
+
+    return (
+        <>
+            {camps.map(camp => (
+                <div key={camp} data-camp={camp} style={{ marginTop: 3 }}>
+                    {pastilleCamp(couleurDe, camp)}<b>{nomCamp(camp)}</b> :{" "}
+                    {bilan.autres.filter(c => campDe(c) === camp).map(ligneUnite)}
+                    {camp === moi && <RapportDeForce clePlus={clePlus(camp)} numero={numero} />}
+                    {plus(camp) > 0 && <i> Rapport de force : +{plus(camp)}</i>}
+                </div>
+            ))}
+
+            {camps.length === 0 && <div style={{ marginTop: 3 }}><i>Aucune autre unité libre ici.</i></div>}
+        </>
     );
 }

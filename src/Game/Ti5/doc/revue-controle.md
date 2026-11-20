@@ -200,7 +200,7 @@ ou sa planète (unités de la planète) — confirmé par Loïc le 20 novembre e
 
 | Où le blocage est évoqué | Texte | État |
 |---|---|---|
-| phase 03 Déplacement | blocage case par case | **fait** (`Blocage.jsx`) |
+| phase 03 Déplacement | blocage case par case | **fait** (`Blocage.jsx`), aligné sur le test d'une action : unité par unité, unités engagées pour la phase, une fois par case et par phase ; les SDP comptent dans l'espace |
 | phase 07 Bombardement | « activer une unité avec #bomb non bloquée » | **fait** : test au premier « Prêt au combat » (raid compris) |
 | phase 08 Débarquement, 1.1 / 1.2.1 | « évaluer le blocage », « unité non bloquée qui transporte » | **fait** : test au premier glisser d'un vaisseau vers une planète (sauf planète où l'on a un dock) |
 | phase 08, 1.2.2 et mot-clé #livr | livraison commerciale avec une unité non bloquée | **fait** : test au bouton « Livraison commerciale » |
@@ -212,7 +212,7 @@ ou sa planète (unités de la planète) — confirmé par Loïc le 20 novembre e
 | #deplfurtif, Camouflage | non bloqué par des vaisseaux en se déplaçant | **fait** |
 | rupture gravitationnelle, trou de ver oméga, hab#814 | blocage sur un jet | **fait** |
 | tech#820 Stabilisateur de rupture | ignore les touches des trous de ver oméga | **fait** |
-| unit#810 Nef de la rupture | « ignore le blocage et les touches des #tvo » | à faire (sens à préciser : blocage du trou de ver seulement ?) |
+| unit#810 Nef de la rupture | « ignore le blocage des #tvo et leurs touches » | **fait** : le jet d'un trou de ver oméga ne l'arrête pas et ne la touche pas — ce blocage-là seulement (Loïc) |
 | mercenaire#295 Viscount Unlenn | déplacement « en ignorant les règles de blocage » | à la main |
 | hab#1022 Physiologie gashlai | les supernovas ne bloquent pas vos déplacements | à vérifier dans le déplacement assisté |
 | Promesse#384 Frontière ouverte | « si la faction bloque un de vos mouvements : #spend, elle gagne #infa(1) » | **fait** : question au joueur bloqué (onglet Décision) quand le blocage arrête un de ses vaisseaux |
@@ -221,3 +221,19 @@ ou sa planète (unités de la planète) — confirmé par Loïc le 20 novembre e
 | règle #1033, « coalition » | plusieurs factions font un seul test puis leurs actions à la suite | non géré : chaque faction passe son test |
 | règle #1033 (spécial) | les neutres bloquent | **fait** : d'office, un joueur peut en décider autrement |
 | hab#529 Déplacement du Khan | blocage du Khan | non géré |
+
+## 8. Décisions de Loïc (20 novembre, fin de soirée) et ce qui en a été fait
+
+| Décision | Dans l'outil |
+|---|---|
+| Le SDP (« le #con affecte aussi l'espace ») et Rapport de force comptent dans tous les cas de contrôle, de domination et de blocage | `unitesDuLieu` est la seule source des unités d'un lieu : contrôle, domination, test de blocage d'une action et, désormais, blocage d'un déplacement (`useCarte`, `Blocage.jsx`). Rapport de force : bouton et bonus dans les quatre. Vérifié à l'écran (SDP 3, Rapport de force +2) |
+| Prendre possession : une unité militaire et le contrôle suffisent | `Espace.jsx` : `monMilitaireSur` remplace l'infanterie exigée |
+| Le contrôle comme état : un test dans chaque système concerné | `etatDuControle`, `actionsOuvrirControleEtat` (`regleControle.js`, `Controle.jsx`) : le conflit s'ouvre « comme état », son résultat (`controleAcquis`, `controlePerdu`) vaut pour la phase. Complexe de guerre (le ravitaillement attend), Vassalisation forcée (compte des systèmes, bouton « contrôles »), Chemin du vide (déplacement assisté) |
+| Aligner le blocage d'un déplacement | `Blocage.jsx` : même calcul (`bilanBlocage`), choix unité par unité (`ChoixDesCamps`), unités engagées, test subi une fois par case et par phase ; le joueur égalise avec ses vaisseaux en route (ils s'arrêtent) ou ses unités restées sur place — militaires, puis transports, puis les autres |
+| Domination d'une planète : la possession vaut 2 | `domination:<case>p<k>` : même composant que pour un système ; bouton « Domination de la planète » dans la fiche du système |
+| Enrôlement : pas de contrôle | rien à vérifier ; le texte du script et l'explication de la carte le disent |
+| Nef de la rupture : seulement le blocage des trous de ver oméga | `Blocage.jsx` : script `nef-de-la-rupture` |
+
+Questions de la section 5 tranchées : 1, 2, 5, 6 (possession 2 sur une planète), 7, 8, 13, 15, 20. Restent
+ouvertes : 3, 4 (en partie : le SDP compte partout, en plus de sa planète), 9, 10, 11, 12, 14, 16, 17, 18, 19, 21.
+Non tranché : une unité qui s'est déplacée est-elle « engagée » pour la phase (elle ne l'est pas dans l'outil) ?

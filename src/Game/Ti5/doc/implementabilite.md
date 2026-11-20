@@ -22,14 +22,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
-| Habilités | 63 | 40 | 8 | 15 | 33 | 6 | 16 |
-| Unités | 113 | 73 | 40 | 0 | 25 | 4 | 42 |
+| Habilités | 63 | 41 | 7 | 15 | 33 | 6 | 16 |
+| Unités | 113 | 75 | 38 | 0 | 25 | 4 | 42 |
 | Planètes | 30 | 25 | 2 | 3 | 15 | 8 | 12 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **378** | **278** | **74** | **26** | **158** | **62** | **121** |
+| **Total** | **378** | **281** | **71** | **26** | **158** | **62** | **121** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -96,7 +96,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 269 | Commerce profitable | **oui** | automatique | Livraison commerciale : +1 à vos livraisons, +1 commerce quand vous en recevez une. | — |
 | 270 | Connexion | **oui** | bouton existant modifié | Tout bouton qui utilise un agent : sans l'agent demandé, une fenêtre propose un négociant à sa place pour 2 commerce. | Pas pour les agents du déplacement assisté. |
 | 273 | Exploitation de masse | **oui** | bouton existant modifié | Plateau joueur, « Esclaves » : un esclave dépensé rapporte 2 ressources ; fiche du Camp de travail : 6 ressources au lieu de 4. | — |
-| 274 | Enrôlement | **partiel** | nouveau bouton | Fiche d'un système, à côté d'une planète où vous avez une structure, débarquement : use un logisticien et la structure, 2 de vos esclaves sont posés sur la planète sous votre contrôle. | Recapture à la fin du combat terrestre : à la main. |
+| 274 | Enrôlement | **partiel** | nouveau bouton | Fiche d'un système, à côté d'une planète où vous avez une structure, débarquement : use un logisticien et la structure, 2 de vos esclaves sont posés sur la planète, sous vos ordres (aucun contrôle de la planète n'est demandé). | Recapture à la fin du combat terrestre : à la main. |
 | 399 | Adaptation des réacteurs | **oui** | automatique | Déplacement assisté : le −1 au mouvement de la Tempête spatiale est ignoré. | — |
 | 400 | Adaptation de la visée | **oui** | automatique | Conflit : le −1 de la Tempête spatiale ne s'applique pas à vos unités ; la tempête finie, le Générateur de tempête ne vous touche plus. | — |
 | 402 | Vaccin | **oui** | nouveau bouton | Plateau joueur, une seule fois : « Vaccin » +4 points, et une faveur neutre si personne ne l'avait avant ce tour. | — |
@@ -153,7 +153,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 158 | Exécuter les otages | **partiel** | nouveau bouton | Plateau joueur, prévote : « Exécuter les otages » dépense un de vos esclaves de la faction choisie (onglet Décision) ; un message rappelle ce qu'elle doit faire. | Vote forcé ou infamie de la faction visée : à la main. |
 | 159 | Restituer les otages | **oui** | nouveau bouton | Fiche de votre unité qui livre : « Restituer les otages » rend jusqu'à 2 de vos esclaves à la faction à comptoir du système, posés avec son comptoir (planète ou bord). | — |
 | 160 | Conclave secret | **partiel** | automatique | Ravitaillement automatique aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire est pioché dans la main. | Marquer l'objectif précédent : à la main. |
-| 166 | Vassalisation forcée | **partiel** | nouveau bouton | Plateau joueur, diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs avec son marqueur. | Condition (5 systèmes, natal pour 3) : à vérifier à la main. |
+| 166 | Vassalisation forcée | **oui** | nouveau bouton | Plateau joueur, diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs avec son marqueur. La condition est comptée — systèmes où elle possède une planète et dont vous contrôlez l'espace, natal pour 3 ; un système disputé demande son conflit de contrôle (« Vassalisation forcée : contrôles » les ouvre) ; total insuffisant : signalé, sans bloquer. | — |
 | 167 | Fierté | **partiel** | bouton existant modifié | Conflit d'accord (revendication) : « Accepter » est grisé pour le camp qui possède la planète revendiquée. | Décompte des points : à la main. |
 | 168 | Seigneur | **partiel** | nouveau bouton | Plateau joueur : « Seigneur » transforme un de vos agents disponibles (amiral, politique ou diplomate, choix dans l'onglet Décision) en Seigneur. | Déclencheurs (destruction, vote de siège, vassal) : constatés à la main. |
 | 254 | Domination | **oui** | nouveau bouton | Fiche d'un système, ravitaillement à partir du tour 7, à côté d'une planète légendaire ou militaire que vous ne possédez pas : « Domination : désigner ». Plateau joueur : « Domination : +2 points » si vous la possédez. | — |
@@ -235,7 +235,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 155 | Portail de repli (Kabal de l’ombre) | **partiel** | bouton existant modifié | Phase de construction, case « Construction » : glisser le portail vers un système le reforge au lieu de le construire — aucun logisticien utilisé, un scientifique et 2 fragments spatiaux dépensés, +1 point. | Ravitaillement automatique : replace ici les « Raideur » détruits au tour précédent. (moyenne) |
 | 162 | Quetzalcoalt (Volée argentée) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Point de fin de combat avec trois vaisseaux militaires engagés. |
 | 163 | Destroyeur (Volée argentée) | **oui** | nouveau bouton | Fiche de l'unité, combat spatial : « Deux attaques (1 influence) » — l'écran de combat lui donne deux fois plus de dés ce tour. | — |
-| 164 | Complexe de guerre (Volée argentée) | **partiel** | automatique | Ravitaillement automatique : un destroyeur de la faction est posé dans le système du complexe. Conflit, combat spatial : vos destroyers ont +1 (non cumulable) dans son système et les systèmes adjacents. | Contrôle du système non vérifié. |
+| 164 | Complexe de guerre (Volée argentée) | **oui** | automatique | Ravitaillement automatique : un destroyeur de la faction est posé dans le système du complexe si vous le contrôlez — d'office si personne ne peut s'y opposer ; sinon le ravitaillement attend un conflit de contrôle « Complexe de guerre », ouvert depuis son bandeau. Conflit, combat spatial : vos destroyers ont +1 (non cumulable) dans son système et les systèmes adjacents. | — |
 | 165 | Centre d'expansion (Volée argentée) | **oui** | nouveau bouton + automatique | Fiche d'un système où vous n'avez pas d'unité, ravitaillement (une fois par tour, avec un Centre d'expansion sur la carte) : +1 au combat spatial dans ce système pour le tour. | — |
 | 171 | Mech Aérien (Volée argentée) | **partiel** | automatique | Conflit, combat spatial : depuis une planète du système, il tire (il n'est pas une cible). | Réparation 2 non suivie. |
 | 172 | J.N.S. Hylarim (Université de Jol-Nar) | **oui** | nouveau bouton | Conflit, combat spatial : « Annuler 1 (1 ressource) » sur une autre de vos unités qui doit encaisser — le dégât est annulé. | — |
@@ -303,7 +303,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 769 | Memoria D (Le Nomade) | **partiel** | nouveau bouton | Conflit : une de vos infanteries détruites — « Memoria D : jet (6 ou moins) », puis « Poser sur Memoria D » (à bord). | Dépense d'un signal (recherche de signal) : à la main. |
 | 770 | Memoria C (Le Nomade) | **partiel** | automatique | Ravitaillement automatique : une frégate marchande est créée dans le système. | Dépense d'un signal ; revendication. |
 | 786 | Centre de contrebande (Le Nomade) | **oui** | automatique | Ravitaillement automatique : 3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins. | — |
-| 810 | Nef de la rupture (Rupture de l'espace-temps) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Ignore blocage et trous de ver oméga. |
+| 810 | Nef de la rupture (Rupture de l'espace-temps) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Déplacement, trou de ver oméga : son jet ne l'arrête pas et ne la touche pas (elle n'ignore que ce blocage-là). | — |
 | 835 | Milice (Réfugiés) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 836 | Entrepôt d'aide (Réfugiés) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Commerce posé sur l'entrepôt : à prendre à la main. |
 | 845 | Croiseur (Pirate Mentak) | oui | — | Caractéristiques et précision déjà utilisées par l'outil. | — |
@@ -433,7 +433,7 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 | 458 | Pacte pirate | **partiel** | nouveau bouton | Obtenu par « Diplomatie pirate ». Fiche de la carte, ravitaillement : « payer 2 ressources » (une fois par tour). | Les pirates vous ignorent : à la main. |
 | 870 | Passage de Creuss | **oui** | automatique | Déplacement assisté : une étape par un trou de ver delta n'est plus signalée (sans cette promesse ni Navigation delta, elle demande une confirmation). | — |
 | 963 | Conspirer ensemble (Les Empyréens WIP) | **oui** | automatique | Onglet Vote, décompte : pour chaque loi, si le vote majoritaire du détenteur (la colonne où il a, seule, le plus de voix) est le même que celui des Empyréens, il a 1 voix de plus dans cette colonne, une fois les deux plateaux révélés. | — |
-| 964 | Chemin du vide (Les Empyréens WIP) | **oui** | automatique | Déplacement assisté : une supernova, un champ d'astéroïdes ou une nébuleuse que contrôlent les Empyréens (eux seuls, avec vous au plus, y ont des unités) ne gêne pas votre trajet. | — |
+| 964 | Chemin du vide (Les Empyréens WIP) | **oui** | automatique | Déplacement assisté : une supernova, un champ d'astéroïdes ou une nébuleuse que contrôlent les Empyréens ne gêne pas votre trajet : ils y ont une unité et personne d'autre que vous ne peut s'y opposer, ou ils y ont gagné leur conflit de contrôle à cette phase (ouvert depuis le déplacement assisté quand l'anomalie est disputée). | — |
 
 ## Agents et reliques
 

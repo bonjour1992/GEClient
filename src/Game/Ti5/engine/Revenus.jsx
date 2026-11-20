@@ -3,6 +3,7 @@ import { useElements, contenuEnCache, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
 import { actionsPoints, typeUnite, campDe } from "./miseEnPlace";
 import { noter, numeroPhase } from "./recherche";
+import { etatDuControle, actionsOuvrirControleEtat, ESPACE_CONTROLE } from "./Controle";
 
 // ============================================================
 // REVENUS DE PHASE (scripts de sorte « revenu », scripts.js)
@@ -110,6 +111,9 @@ export function useRevenus(userId, phase) {
         },
         // Script en service pour ce joueur
         aScript: id => aScript(userId, id),
+        // Contrôle « comme état » de l'espace d'un système par ce joueur (Controle.jsx) :
+        // "oui", "non", "enCours" (conflit ouvert), "dispute" (un conflit doit trancher)
+        controleDuSysteme: numero => etatDuControle({ etat, index, aScript }, userId, numero),
         // Stations (planètes de type « sat ») que je possède
         stations: () => idsPossedees.filter(id => contenusPossedees[id]?.type === "sat").length,
         // Mes unités de la carte qui portent ce mot-clé
@@ -147,6 +151,8 @@ export function useRevenus(userId, phase) {
     const lignes = [];
     const actions = [];
     const attentes = [];
+    // Conflits de contrôle « comme état » à ouvrir pour que le revenu soit tranché : actions
+    const controles = [];
     let res = 0;
     let inf = 0;
 
@@ -176,6 +182,11 @@ export function useRevenus(userId, phase) {
             // (attente : le ravitaillement automatique attend que ce soit réglé — test de domination…)
             if (effet?.attente) {
                 attentes.push(`${nom} : ${effet.attente}`);
+            }
+
+            // (controle : { numero } — système disputé dont le conflit de contrôle reste à ouvrir)
+            if (effet?.controle) {
+                controles.push(...actionsOuvrirControleEtat(etat, effet.controle.numero, ESPACE_CONTROLE, userId, script.id));
             }
 
             if (!effet || effet.sans) {
@@ -256,6 +267,7 @@ export function useRevenus(userId, phase) {
     return {
         pret,
         attentes,
+        controles,
         lignes,
         res,
         inf,

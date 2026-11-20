@@ -147,18 +147,24 @@ export function evaluerControle({ unites, contenuDe, moi, possesseur = null, aSc
 //   dominant:<case>:s<sujet>:tour   tour de ce résultat
 // ------------------------------------------------------------
 
-export const cleDominant = (numero, sujet) => `dominant:${numero}:s${Number(sujet) || 0}`;
+// Lieu d'un test de domination : l'espace d'un système (« 12 »), ou une de ses planètes
+// (« 12p0 ») — sur une planète, la possession vaut 2 de contrôle, comme pour un test de contrôle
+export const lieuDomination = (numero, k = ESPACE_CONTROLE) => (k === ESPACE_CONTROLE ? String(numero) : `${numero}p${k}`);
+export const cleDomination = (numero, k = ESPACE_CONTROLE) => "domination:" + lieuDomination(numero, k);
+
+export const cleDominant = (numero, sujet, k = ESPACE_CONTROLE) => `dominant:${lieuDomination(numero, k)}:s${Number(sujet) || 0}`;
 
 // Camp qui domine d'après le test clos ce tour pour ce sujet ; null : pas de test clos
-export const resultatDomination = (etat, numero, sujet) =>
-    (Number(etat.compteurs[cleDominant(numero, sujet) + ":tour"]) === etat.tour
-        ? Number(etat.compteurs[cleDominant(numero, sujet)]) || 0
+export const resultatDomination = (etat, numero, sujet, k = ESPACE_CONTROLE) =>
+    (Number(etat.compteurs[cleDominant(numero, sujet, k) + ":tour"]) === etat.tour
+        ? Number(etat.compteurs[cleDominant(numero, sujet, k)]) || 0
         : null);
 
 // Sujets des tests de domination (identifiant de la carte)
 export const SUJETS_DOMINATION = {
     185: "Récupération",
     232: "Exploitation du vide",
+    315: "Guerre totale",
     452: "Péage aux frontières",
     486: "Cache",
     821: "Extraction de la faille",
@@ -166,10 +172,59 @@ export const SUJETS_DOMINATION = {
 };
 
 // Actions qui ouvrent un test de domination pour ce sujet (les choix d'un test précédent sont oubliés)
-export const actionsOuvrirDomination = (etat, numero, moi, sujet = 0) => [
+export const actionsOuvrirDomination = (etat, numero, moi, sujet = 0, k = ESPACE_CONTROLE) => [
     ...Object.keys(etat.compteurs)
-        .filter(id => id.startsWith(`domination:${numero}:`) && etat.compteurs[id])
+        .filter(id => id.startsWith(cleDomination(numero, k) + ":") && etat.compteurs[id])
         .map(id => ({ type: "compteur", id, valeur: 0 })),
-    sujet > 0 && { type: "compteur", id: `domination:${numero}:motif`, valeur: sujet },
-    { type: "compteur", id: `domination:${numero}`, valeur: moi },
+    sujet > 0 && { type: "compteur", id: cleDomination(numero, k) + ":motif", valeur: sujet },
+    { type: "compteur", id: cleDomination(numero, k), valeur: moi },
+].filter(Boolean);
+
+// ------------------------------------------------------------
+// LE CONTRÔLE COMME ÉTAT
+//
+// Certaines cartes ne demandent pas le contrôle pour une action : elles lisent qui contrôle un
+// système à un moment donné (« un système sous votre contrôle », « si vous avez le contrôle
+// de… »). Un test se fait alors dans chaque système concerné : s'il est disputé, un conflit de
+// contrôle s'ouvre « comme état » (controle:<lieu>:etat = 1) — aucune action n'attend, son
+// résultat est noté pour la phase :
+//   controleAcquis:<lieu>:<joueur>   le contrôle est établi
+//   controlePerdu:<lieu>:<joueur>    il n'est pas obtenu
+// ------------------------------------------------------------
+
+export const clePerdu = (numero, k, joueur) => `controlePerdu:${numero}p${k}:${joueur}`;
+export const controlePerdu = (etat, numero, k, joueur) =>
+    rangDePhase(etat) > 0 && Number(etat.compteurs[clePerdu(numero, k, joueur)]) === rangDePhase(etat);
+
+// État du contrôle d'un lieu par un joueur :
+//   "oui"      personne ne peut s'y opposer (ou seulement des neutres dépassés), ou conflit gagné ;
+//   "non"      conflit perdu ou abandonné à cette phase ;
+//   "enCours"  son conflit de contrôle est ouvert ;
+//   "dispute"  d'autres peuvent s'y opposer : un conflit de contrôle doit trancher.
+export function etatDuControle({ etat, unites, contenuDe, joueur, numero, k = ESPACE_CONTROLE, possesseur = null, aScript }) {
+
+    if (controleAcquis(etat, numero, k, joueur)) {
+        return "oui";
+    }
+
+    if (controlePerdu(etat, numero, k, joueur)) {
+        return "non";
+    }
+
+    if (Number(etat.compteurs[cleControle(numero, k)]) === joueur) {
+        return "enCours";
+    }
+
+    return evaluerControle({ unites, contenuDe, moi: joueur, possesseur, aScript }).conflit ? "dispute" : "oui";
+}
+
+// Actions qui ouvrent un conflit de contrôle « comme état » pour ce joueur (rangScript : rang + 1
+// du script dans SCRIPTS, pour dire quelle carte le demande)
+export const actionsOuvrirControleEtat = (etat, numero, k, joueur, rangScript = 0) => [
+    ...Object.keys(etat.compteurs)
+        .filter(id => id.startsWith(cleControle(numero, k) + ":") && etat.compteurs[id])
+        .map(id => ({ type: "compteur", id, valeur: 0 })),
+    rangScript > 0 && { type: "compteur", id: cleControle(numero, k) + ":script", valeur: rangScript },
+    { type: "compteur", id: cleControle(numero, k) + ":etat", valeur: 1 },
+    { type: "compteur", id: cleControle(numero, k), valeur: joueur },
 ].filter(Boolean);

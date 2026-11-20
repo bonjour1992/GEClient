@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useEngine, BoutonRegle, nomCase, distanceCases, nomElement, agentDisponible, nomDuCamp, pastilleCamp, styleMini } from "./Interaction";
 import { useElements } from "./sync";
-import { MARQUEUR, NEUTRE, campDe } from "./miseEnPlace";
+import { MARQUEUR, campDe } from "./miseEnPlace";
 import { estHyperlane, hyperlaneRelie } from "./hyperlane";
 import { controleDe, estDeplacementFurtif } from "./effets";
 import { contenuEnCache } from "./sync";
 import { redevancesRompues, frontieresOuvertes, dettesAnnulables, estCommerceNonMilitaire } from "./effetsBlocage";
 import { demander } from "./demande";
+import { unitesDuLieu, rangDePhase, ESPACE_CONTROLE } from "./regleControle";
+import { MARQUE_BLOQUEE, MARQUE_CHOIX, cleSubi, estEngagee, blocageSubi, bilanBlocage, choixDe as choixBlocage } from "./regleBlocage";
+import { ChoixDesCamps } from "./BlocageAction";
 
 // ============================================================
 // BLOCAGE D'UN DÉPLACEMENT, CASE PAR CASE (onglet Conflit)
@@ -18,13 +21,16 @@ import { demander } from "./demande";
 //
 // Avant de quitter une case, deux risques de blocage :
 //
-//   unités   des unités militaires spatiales d'un autre camp sont
-//            dans l'espace de la case. Chaque camp qui en a choisit :
-//            s'abstenir, aider à passer ou bloquer. Son contrôle
-//            vaut 1 par unité militaire spatiale. Surplus de blocage
-//            = contrôle de ceux qui bloquent − contrôle de ceux qui
-//            aident : autant de vaisseaux sont arrêtés, les
-//            militaires d'abord, puis les autres ;
+//   unités   des unités militaires d'un autre camp, encore libres à
+//            cette phase, sont dans l'espace de la case (un système de
+//            défense posé sur une planète y compte aussi). Même test
+//            que pour une action (regleBlocage.js), unité par unité :
+//            chaque camp engage ses unités pour bloquer ou pour aider ;
+//            le joueur qui se déplace égalise le surplus avec ses
+//            propres unités — militaires d'abord, puis transports, puis
+//            les autres : un vaisseau en route engagé s'arrête ici.
+//            Toute unité qui a servi est engagée pour la phase ; le
+//            test n'est subi qu'une fois par case et par phase ;
 //   jets     rupture gravitationnelle quittée par un bord, ou trou
 //            de ver oméga : un dé de 10 par vaisseau, 3 ou moins le
 //            bloque (oméga : 9 ou plus, il passe avec une touche).
@@ -45,8 +51,6 @@ const PASSE = "passe";              // « c13 » : le blocage par unités de cet
 const JET = "jetDepl";              // son jet (rupture, trou de ver oméga) sur cette case
 const DRAIN = "drainOk";            // « c13 » : le Drain spatial de la case suivante est réglé
 
-const CHOIX = [[1, "S'abstenir", "s'abstient"], [2, "Aider à passer", "aide à passer"], [3, "Bloquer", "bloque"]];
-const nomChoix = valeur => CHOIX.find(c => c[0] === valeur)?.[2];
 
 // Catégorie d'un trou de ver, d'après son image (/ti/icon/wormhole/alpha.png)
 const typeTrou = image => /wormhole\/(\w+)\./.exec(image || "")?.[1] || null;
@@ -91,7 +95,7 @@ export function passagesEnCours(etat) {
 //   mover : le joueur qui se déplace (script Stargate : ses systèmes à dock ont un trou de ver alpha)
 export function useCarte(cases, mover) {
 
-    const { index, aScript } = useEngine();
+    const { etat, index, aScript } = useEngine();
 
     // Un dock du joueur dans le système (espace ou planètes) ?
     const aUnDock = i => [...index.parZone].some(([zone, contenu]) =>
@@ -105,8 +109,13 @@ export function useCarte(cases, mover) {
     const tuile = i => dans(i).find(c => c.ref?.type === "system");
     const tokens = i => dans(i).filter(c => !c.cache && c.ref?.type === "token");
 
-    // Unités de l'espace de la case (celles qu'un vaisseau porte ne comptent pas)
+    // Unités de l'espace de la case (celles qu'un vaisseau porte ne comptent pas), et celles de
+    // ses planètes : un système de défense y compte aussi dans l'espace (regleControle.js)
     const unites = i => dans(i).filter(c => !c.cache && c.ref?.type === "unit" && !c.sur);
+
+    const surPlanetes = i => [...index.parZone]
+        .filter(([zone]) => zone.startsWith(`hex:${i}:planete:`))
+        .flatMap(([, contenu]) => contenu.filter(c => !c.cache && c.ref?.type === "unit"));
 
     const idsSystemes = ids(uniques.map(i => tuile(i)?.ref.id));
     const systemes = useElements(idsSystemes);
@@ -117,8 +126,12 @@ export function useCarte(cases, mover) {
     const idsTokens = ids(uniques.flatMap(i => tokens(i).map(c => c.ref.id)));
     const contenusTokens = useElements(idsTokens);
 
-    const idsUnites = ids(uniques.flatMap(i => unites(i).map(c => c.ref.id)));
+    const idsUnites = ids(uniques.flatMap(i => [...unites(i), ...surPlanetes(i)].map(c => c.ref.id)));
     const contenus = useElements(idsUnites);
+
+    // Unités qui comptent dans l'espace de la case — le seul endroit qui le dit : unitesDuLieu
+    const duLieu = i => unitesDuLieu({ index, contenuDe: id => contenus[id], numero: i, k: ESPACE_CONTROLE });
+    const militaires = i => duLieu(i).filter(c => contenus[c.ref.id]?.mot_cle?.includes("mil"));
 
     const charge = (liste, table) => liste.every(id => id in table);
 
@@ -147,8 +160,13 @@ export function useCarte(cases, mover) {
             .filter(camp => camp > 0 && camp !== mover && aScript(camp, "drain-spatial")))],
         // Contrôle d'une unité (effets.js : #con, Rayon tracteur)
         controle: c => controleDe(contenus[c.ref.id], campDe(c), aScript),
-        // Unités militaires spatiales de la case
-        militaires: i => unites(i).filter(c => contenus[c.ref.id]?.mot_cle?.includes("mil")),
+        // Unités qui comptent dans l'espace de la case ; ses unités militaires ; celles qui sont
+        // encore libres à cette phase (non engagées, regleBlocage.js)
+        unites: duLieu,
+        militaires,
+        libres: i => militaires(i).filter(c => !estEngagee(etat, c)),
+        // Ce joueur a déjà subi le test de blocage sur cette case à cette phase
+        subi: (i, joueur) => blocageSubi(etat, i, joueur),
     };
 }
 
@@ -176,13 +194,14 @@ export function sorteJet(carte, de, a) {
     return sorte === "bord" && carte.anomalie(de) === "rift" ? "rift" : (sorte === "trou:omega" ? "omega" : null);
 }
 
-// Camps qui ont des unités militaires spatiales sur la case, hors celui qui se déplace
+// Camps qui peuvent bloquer sur la case : ceux qui y ont des unités militaires encore libres à
+// cette phase, hors celui qui se déplace — aucun s'il y a déjà subi le test à cette phase
 //   [{ camp, unites, controle }] — contrôle : celui de chaque unité (1 par défaut)
 export function campsAdverses(carte, numero, mover) {
 
     const parCamp = new Map();
 
-    for (const c of carte.militaires(numero)) {
+    for (const c of (carte.subi(numero, mover) ? [] : carte.libres(numero))) {
 
         const camp = campDe(c);
 
@@ -292,17 +311,17 @@ export function Passage({ passage }) {
     // --------------------------------------------------------
     // BLOCAGE PAR DES UNITÉS
     //
-    // Choix de chaque camp : compteur blocage:<case>:<joueur qui se
-    // déplace>:<camp> (1 s'abstient, 2 aide, 3 bloque). Les neutres
-    // bloquent, sauf si un joueur en décide autrement.
+    // Même test que pour une action (regleBlocage.js, BlocageAction.jsx), unité par unité :
+    // chaque autre camp engage ses unités militaires de la case pour bloquer, ou des unités
+    // pour aider (marque « blocChoix » ; les neutres bloquent d'office). Le joueur qui se
+    // déplace égalise le surplus avec ses propres unités — les militaires d'abord, puis les
+    // transports, puis les autres : un vaisseau en route qu'il engage s'arrête ici ; une unité
+    // restée sur la case (cochée) est seulement engagée. Toute unité qui a servi est engagée
+    // pour la phase, et le joueur ne subit le test qu'une fois par case et par phase.
     // --------------------------------------------------------
 
+    // (anciens compteurs de choix par camp : seulement effacés)
     const cleChoix = camp => `blocage:${numero}:${mover}:${camp}`;
-    const choixDe = camp => Number(etat.compteurs[cleChoix(camp)]) || (camp === NEUTRE ? 3 : 0);
-
-    // Mes propres unités militaires restées sur la case aident d'office
-    const allies = carte.militaires(numero).filter(c => campDe(c) === mover && !c.marques?.[TRAJET])
-        .reduce((s, c) => s + carte.controle(c), 0);
 
     // Script Rapport de force : un diplomate usé ajoute 2 au contrôle d'un camp
     // pour ce blocage (compteur blocage:<case>:<joueur>:<camp>:plus)
@@ -329,15 +348,22 @@ export function Passage({ passage }) {
         </BoutonRegle>
     );
 
-    const controle = valeur => adverses.filter(a => choixDe(a.camp) === valeur)
-        .reduce((s, a) => s + a.controle + plus(a.camp), 0);
+    // Bilan du test (regleBlocage.js) : unités des autres camps qui bloquent ou aident, surplus à égaliser
+    const bilan = bilanBlocage({
+        etat, unites: carte.unites(numero), contenuDe: id => carte.contenus[id], aScript, acteur: mover, plus,
+    });
 
-    const surplus = controle(3) - controle(2) - allies - plus(mover);
-    const aBloquer = stade === "unites" ? Math.max(0, Math.min(surplus, exposes.length)) : 0;
+    const surplus = bilan.blocage - bilan.aide;
+    const aBloquer = stade === "unites" ? bilan.net : 0;
 
-    const militaires = exposes.filter(estMilitaire);
-    const milRequis = Math.min(aBloquer, militaires.length);
-    const autresRequis = aBloquer - milRequis;
+    // Mes unités restées sur la case : elles égalisent si je les engage (marque « p »)
+    const surPlace = bilan.miennes.filter(c => !c.marques?.[TRAJET]);
+    const engageesSurPlace = surPlace.filter(c => choixBlocage(c, mover) === "p");
+
+    // Ordre d'engagement de mes unités : 0 militaire, 1 transport, 2 autre
+    const estTransport = v => !estMilitaire(v) && Number(carte.contenus[v.ref.id]?.capacite) > 0;
+    const rangEngagement = v => (estMilitaire(v) ? 0 : (estTransport(v) ? 1 : 2));
+    const controleDes = liste => liste.reduce((s, c) => s + bilan.controle(c), 0);
 
     // --------------------------------------------------------
     // JETS (rupture gravitationnelle, trou de ver oméga)
@@ -345,9 +371,12 @@ export function Passage({ passage }) {
 
     // (D10 numéroté de 0 à 9 — le jet n'est lu qu'au stade « jets », tous lancés)
     const de = v => Number(v.marques?.[JET]) || 0;
-    const bloqueParJet = v => stade === "jets" && de(v) <= 3;
+    // Nef de la rupture (#810) : elle ignore le blocage et les touches des trous de ver oméga — de
+    // ceux-là seulement (un blocage par des unités, une rupture gravitationnelle l'arrêtent)
+    const nefOmega = v => jet === "omega" && v.ref.id === 810 && aScript(mover, "nef-de-la-rupture");
+    const bloqueParJet = v => stade === "jets" && de(v) <= 3 && !nefOmega(v);
     // (technologie Stabilisateur de rupture : les vaisseaux ignorent les touches des trous de ver oméga)
-    const touche = v => stade === "jets" && jet === "omega" && de(v) >= 9 && !aScript(mover, "stabilisateur-de-rupture");
+    const touche = v => stade === "jets" && jet === "omega" && de(v) >= 9 && !aScript(mover, "stabilisateur-de-rupture") && !nefOmega(v);
 
     // --------------------------------------------------------
     // QUI S'ARRÊTE, QUI CONTINUE
@@ -355,6 +384,16 @@ export function Passage({ passage }) {
 
     const arretes = vaisseaux.filter(v => stoppes.includes(v.id) || bloqueParJet(v));
     const continuent = vaisseaux.filter(v => !arretes.includes(v));
+
+    // Blocage par des unités : j'égalise avec les vaisseaux que j'arrête et les unités restées
+    // sur la case que j'engage ; si je ne peux pas égaliser, tout s'arrête
+    const idsArretes = new Set(arretes.map(v => v.id));
+    const utilisees = [...engageesSurPlace, ...arretes];
+    const egalise = controleDes(utilisees);
+    const disponible = controleDes([...surPlace, ...vaisseaux]);
+    const impossible = aBloquer > 0 && disponible < aBloquer;
+    const libres = [...surPlace.filter(c => !engageesSurPlace.includes(c)), ...exposes.filter(v => !idsArretes.has(v.id))];
+    const horsOrdre = aBloquer > 0 && utilisees.some(u => libres.some(l => rangEngagement(l) < rangEngagement(u)));
 
     // Drain spatial : 1 ressource par vaisseau qui continue, pour chaque joueur qui l'exige
     const coutDrain = stade === "drain"
@@ -367,11 +406,11 @@ export function Passage({ passage }) {
         ...draineurs.filter(camp => !choixDrain(camp)).map(camp => `${nomCamp(camp)} n'a pas encore dit s'il exige le Drain spatial (compté comme un passage libre)`),
         coutDrain > mesRessources && `Drain spatial : ${coutDrain} ressource(s) à payer, ${nomCamp(mover)} en a ${mesRessources}`,
     ] : stade === "unites" ? [
-        ...adverses.filter(a => !choixDe(a.camp)).map(a => `${nomCamp(a.camp)} n'a pas encore choisi (compté comme une abstention)`),
-        arretes.filter(estMilitaire).length < milRequis &&
-            `le surplus de blocage est de ${aBloquer} : il faut arrêter ${milRequis} vaisseau(x) militaire(s) d'abord`,
-        arretes.filter(v => !estMilitaire(v)).length < autresRequis &&
-            `il faut arrêter encore ${autresRequis} vaisseau(x) non militaire(s)`,
+        !impossible && egalise < aBloquer &&
+            `le surplus de blocage est de ${aBloquer}, vous engagez ${egalise} : arrêtez des vaisseaux ou engagez des unités restées sur place`,
+        impossible && exposes.some(v => !idsArretes.has(v.id)) &&
+            `vous ne pouvez pas égaliser le blocage (${aBloquer}, vous disposez de ${disponible}) : tous vos vaisseaux s'arrêtent ici`,
+        horsOrdre && "vos unités militaires s'engagent d'abord, puis vos transports, puis les autres",
     ] : [];
 
     // Retire les marques de déplacement d'un vaisseau
@@ -422,7 +461,7 @@ export function Passage({ passage }) {
             return { actions: [], textes: [] };
         }
 
-        const bloqueurs = adverses.filter(a => choixDe(a.camp) === 3).map(a => a.camp);
+        const bloqueurs = [...new Set(bilan.bloquent.map(campDe))];
         const actions = [];
         const textes = [];
 
@@ -478,9 +517,23 @@ export function Passage({ passage }) {
         envoyer([
             ...arretes.flatMap(liberer),
             ...activation(),
-            ...[...adverses.map(a => a.camp), mover].flatMap(camp => [cleChoix(camp), clePlus(camp)])
+            ...[...new Set([...bilan.autres.map(campDe), ...adverses.map(a => a.camp), mover])].flatMap(camp => [cleChoix(camp), clePlus(camp)])
                 .filter(id => etat.compteurs[id])
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
+            // Blocage par des unités conclu : les unités qui ont bloqué, aidé ou égalisé sont engagées
+            // pour la phase (un vaisseau arrêté pour égaliser aussi), les choix sont effacés et le
+            // test est noté subi sur cette case
+            ...(stade !== "unites" ? [] : [
+                ...[
+                    ...bilan.bloquent, ...bilan.aident,
+                    ...(impossible ? surPlace : engageesSurPlace),
+                    ...(aBloquer > 0 ? arretes : []),
+                ].map(c => ({ type: "marquer", c: c.id, marque: MARQUE_BLOQUEE, valeur: rangDePhase(etat) })),
+                ...carte.unites(numero)
+                    .filter(c => new RegExp(`^[bapn]${mover}$`).test(String(c.marques?.[MARQUE_CHOIX] || "")))
+                    .map(c => ({ type: "marquer", c: c.id, marque: MARQUE_CHOIX, valeur: null })),
+                { type: "compteur", id: cleSubi(numero, mover), valeur: rangDePhase(etat) },
+            ]),
             ...continuent.filter(touche).map(v => ({
                 type: "marquer",
                 c: v.id,
@@ -513,18 +566,25 @@ export function Passage({ passage }) {
         );
     }
 
-    function choisir(camp, valeur) {
-        envoyer(
-            [{ type: "compteur", id: cleChoix(camp), valeur }],
-            `Blocage ${nomCase(numero)} : ${nomCamp(camp)} ${nomChoix(valeur)}`
-        );
-    }
+    // Coche d'office ce qu'il faut arrêter : les militaires d'abord, puis les transports, puis
+    // les autres, jusqu'à égaliser (tout, si c'est impossible)
+    function proposer() {
 
-    // Coche d'office ce qu'il faut arrêter : les militaires d'abord
-    const proposer = () => setStoppes([
-        ...militaires.slice(0, milRequis),
-        ...exposes.filter(v => !estMilitaire(v)).slice(0, autresRequis),
-    ].map(v => v.id));
+        const choisis = [];
+        let reste = aBloquer - controleDes(engageesSurPlace);
+
+        for (const v of [...exposes].sort((a, b) => rangEngagement(a) - rangEngagement(b))) {
+
+            if (reste <= 0 && !impossible) {
+                break;
+            }
+
+            choisis.push(v.id);
+            reste -= bilan.controle(v);
+        }
+
+        setStoppes(choisis);
+    }
 
     // --------------------------------------------------------
     // AFFICHAGE
@@ -563,51 +623,29 @@ export function Passage({ passage }) {
                 {arrivee !== suivante ? "" : " (arrivée)"} : <b>{titreStade}</b>
             </div>
 
-            {/* BLOCAGE PAR DES UNITÉS : le choix de chaque camp */}
+            {/* BLOCAGE PAR DES UNITÉS : chaque camp choisit unité par unité (ChoixDesCamps, BlocageAction.jsx) */}
             {stade === "unites" && (
                 <div data-blocage-unites style={{ marginTop: 4 }}>
-                    {adverses.map(a => {
+                    <ChoixDesCamps bilan={bilan} acteur={mover} numero={numero} clePlus={clePlus} plus={plus} />
 
-                        const choix = choixDe(a.camp);
-
-                        // Chacun répond pour son camp ; tout joueur peut répondre pour les neutres
-                        const repond = !!joueur && (a.camp === moi || a.camp === NEUTRE);
-
-                        return (
-                            <div key={a.camp} data-camp={a.camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
-                                <span>
-                                    {pastille(a.camp)}
-                                    <b>{nomCamp(a.camp)}</b> : contrôle {a.controle}
-                                    {plus(a.camp) > 0 && <b style={{ color: "#1b5e20" }}> + {plus(a.camp)} (Rapport de force)</b>}{" "}
-                                    <span style={{ color: "#555" }}>({a.unites.map(nom).join(", ")})</span>
-                                </span>
-
-                                {repond
-                                    ? CHOIX.map(([valeur, libelle]) => (
-                                        <button
-                                            key={valeur}
-                                            type="button"
-                                            data-choix={valeur}
-                                            onClick={() => choisir(a.camp, valeur)}
-                                            style={{
-                                                ...styleMini,
-                                                fontWeight: choix === valeur ? "bold" : "normal",
-                                                backgroundColor: choix === valeur ? "#ffb74d" : undefined,
-                                            }}
-                                        >
-                                            {libelle}
-                                        </button>
-                                    ))
-                                    : <b style={{ color: choix ? "#000" : "#b71c1c" }}>{nomChoix(choix) || "n'a pas encore choisi"}</b>}
-
-                                {rapportDeForce(a.camp)}
-                            </div>
-                        );
-                    })}
-
-                    {allies > 0 && (
-                        <div style={{ marginTop: 2 }}>
-                            {pastille(mover)}{nomCamp(mover)} : {allies} unité(s) militaire(s) déjà sur place, qui aident à passer.
+                    {/* Mes unités restées sur la case : je peux les engager pour égaliser */}
+                    {surPlace.length > 0 && (
+                        <div data-sur-place style={{ marginTop: 2 }}>
+                            {pastille(mover)}{nomCamp(mover)}, unités restées sur place — les engager égalise le blocage :{" "}
+                            {surPlace.map(c => (
+                                <label key={c.id} data-unite-blocage={c.id} style={{ marginRight: 8 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={choixBlocage(c, mover) === "p"}
+                                        disabled={!estMover}
+                                        onChange={() => envoyer(
+                                            [{ type: "marquer", c: c.id, marque: MARQUE_CHOIX, valeur: choixBlocage(c, mover) === "p" ? null : "p" + mover }],
+                                            `Blocage ${nomCase(numero)} : ${nom(c)} de ${nomCamp(mover)} ${choixBlocage(c, mover) === "p" ? "n'égalise plus" : "égalise"}`
+                                        )}
+                                    />{" "}
+                                    {nom(c)} ({bilan.controle(c)}{estMilitaire(c) ? "" : ", non militaire"})
+                                </label>
+                            ))}
                         </div>
                     )}
 
@@ -620,18 +658,20 @@ export function Passage({ passage }) {
                     )}
 
                     <div data-surplus style={{ marginTop: 4 }}>
-                        Surplus de blocage : {controle(3)} (bloquent) − {controle(2) + allies + plus(mover)} (aident) = <b>{surplus}</b>.{" "}
+                        Surplus de blocage : {bilan.blocage} (bloquent) − {bilan.aide} (aident) = <b>{surplus}</b>.{" "}
                         {aBloquer > 0
                             ? <b style={{ color: "#b71c1c" }}>
-                                {aBloquer} vaisseau{aBloquer > 1 ? "x" : ""} à arrêter : {milRequis} militaire{milRequis > 1 ? "s" : ""}
-                                {autresRequis > 0 ? `, puis ${autresRequis} non militaire${autresRequis > 1 ? "s" : ""}` : ""}.
+                                {impossible
+                                    ? `${nomCamp(mover)} ne peut pas égaliser (${disponible} disponible) : tous ses vaisseaux s'arrêtent.`
+                                    : `${aBloquer} de contrôle à égaliser, ${egalise} engagé : les militaires d'abord, puis les transports, puis les autres.`}
                             </b>
                             : <b style={{ color: "#1b5e20" }}>Personne n'est arrêté.</b>}
+                        {" "}Les unités qui bloquent, aident ou égalisent sont engagées pour la phase.
                     </div>
                 </div>
             )}
 
-            {/* DRAIN SPATIAL : chaque joueur qui l'a dit s'il l'exige */}
+{/* DRAIN SPATIAL : chaque joueur qui l'a dit s'il l'exige */}
             {stade === "drain" && (
                 <div data-drain-spatial style={{ marginTop: 4 }}>
                     {draineurs.map(camp => (
@@ -695,7 +735,7 @@ export function Passage({ passage }) {
 
                     {stade === "unites" && aBloquer > 0 && (
                         <button type="button" data-action="proposer-blocage" style={styleMini} onClick={proposer}>
-                            Cocher les {aBloquer} à arrêter
+                            Cocher les vaisseaux à arrêter
                         </button>
                     )}
 
