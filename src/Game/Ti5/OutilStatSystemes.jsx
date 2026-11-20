@@ -27,6 +27,8 @@ import { exemplaires, horsReserveCommune } from "./engine/miseEnPlace";
 //   station       type « sat »
 //   trou de ver   type « spe » dont l'image est dans /wormhole/
 //                 (même lecture que engine/Blocage.jsx)
+//   unités        spatiales : l'unité native du système ;
+//                 terrestres : celle d'une planète ou d'une station
 // ============================================================
 
 // Nombre de tuiles tirées de la réserve commune dans une partie à 6 joueurs
@@ -41,6 +43,14 @@ const estRuineSeule = p => p.type === "pla" && p.ruine &&
 const estPlanete = p => p.type === "pla" && !estRuineSeule(p);
 const estStation = p => p.type === "sat";
 const trouDeVer = p => (p.type === "spe" && /wormhole\/(\w+)\./.exec(p.img || "")?.[1]) || null;
+
+// Unités natives (champs nativeUnit et unitNum) : celles du système sont dans
+// l'espace, celles d'une planète ou d'une station sont au sol. Une habilité
+// choisie à la place d'une unité (Avar) n'en est pas une. Seule la présence
+// compte, pas le nombre d'unités.
+const aDesUnites = x => x?.nativeUnit?.type === "unit" && Number(x.nativeUnit.id) > 0 && nombre(x.unitNum ?? 1) > 0;
+const unitesSpatiales = t => aDesUnites(t.systeme);
+const unitesTerrestres = t => t.elements.some(aDesUnites);
 
 // Types de ruine d'un élément (il peut en porter deux)
 const ruinesDe = p => [p.ruine && (p.ruineType || "normal"), p.ruine2 && (p.ruineType2 || "normal")].filter(Boolean);
@@ -86,6 +96,11 @@ function sections(tuiles) {
         ["Systèmes vides", [
             ["vide", "Systèmes vides (aucun élément)", t => (t.elements.length ? 0 : 1)],
             ["vide:sans-anomalie", "dont sans anomalie", t => (t.elements.length || t.systeme.anomaly ? 0 : 1)],
+        ]],
+        ["Unités natives (systèmes qui en ont, quel que soit leur nombre)", [
+            ["unite:spatiale", "Systèmes avec des unités spatiales", t => (unitesSpatiales(t) ? 1 : 0)],
+            ["unite:terrestre", "Systèmes avec des unités terrestres", t => (unitesTerrestres(t) ? 1 : 0)],
+            ["unite", "Systèmes avec des unités (spatiales ou terrestres)", t => (unitesSpatiales(t) || unitesTerrestres(t) ? 1 : 0)],
         ]],
         ["Anomalies", [
             ["anomalie", "Systèmes avec une anomalie", t => (t.systeme.anomaly ? 1 : 0)],
