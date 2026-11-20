@@ -16,6 +16,7 @@ import { exemplaires, horsReserveCommune } from "./engine/miseEnPlace";
 // Pour chaque ligne :
 //   total       somme sur toutes les tuiles
 //   moyenne     total / nombre de tuiles
+//   6 joueurs   moyenne × 84 (tuiles d'une partie à 6 joueurs)
 //   tuiles      nombre de tuiles où la valeur n'est pas nulle
 //
 // Lecture des éléments d'un système (ses « elems », des éléments
@@ -27,6 +28,10 @@ import { exemplaires, horsReserveCommune } from "./engine/miseEnPlace";
 //   trou de ver   type « spe » dont l'image est dans /wormhole/
 //                 (même lecture que engine/Blocage.jsx)
 // ============================================================
+
+// Nombre de tuiles tirées de la réserve commune dans une partie à 6 joueurs
+// (en dur) : la colonne « Partie à 6 joueurs » vaut moyenne par tuile × 84.
+const TUILES_6_JOUEURS = 84;
 
 const nombre = v => Number(v) || 0;
 
@@ -163,13 +168,14 @@ export default function OutilStatSystemes() {
                         <th style={cellule}></th>
                         <th style={chiffre}>Total</th>
                         <th style={chiffre}>Moyenne par tuile</th>
+                        <th style={chiffre}>Partie à 6 joueurs ({TUILES_6_JOUEURS} tuiles)</th>
                         <th style={chiffre}>Tuiles concernées</th>
                     </tr>
                 </thead>
                 <tbody>
                     {sections(tuiles).map(([titre, lignes]) => [
                         <tr key={titre}>
-                            <th colSpan={4} style={{ ...cellule, background: "#e3e7f1" }}>{titre}</th>
+                            <th colSpan={5} style={{ ...cellule, background: "#e3e7f1" }}>{titre}</th>
                         </tr>,
                         ...lignes.map(([cle, libelle, valeur]) => {
                             const somme = tuiles.reduce((s, t) => s + t.n * valeur(t), 0);
@@ -180,6 +186,7 @@ export default function OutilStatSystemes() {
                                     <td style={{ ...cellule, paddingLeft: detail ? 26 : 10 }}>{libelle}</td>
                                     <td style={chiffre}>{somme}</td>
                                     <td style={chiffre}>{total ? decimal(somme / total) : "—"}</td>
+                                    <td style={chiffre} data-six-joueurs>{total ? decimal(somme / total * TUILES_6_JOUEURS) : "—"}</td>
                                     <td style={chiffre}>
                                         {concernees}{total ? ` (${Math.round(100 * concernees / total)} %)` : ""}
                                     </td>
