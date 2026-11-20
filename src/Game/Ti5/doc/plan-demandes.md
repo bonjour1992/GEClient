@@ -564,5 +564,13 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   déduit les systèmes explorés (`systemesExplores`) : plus de marque `explore`. Le grand Khan
   arrive dans un système non spécial (texte de la carte modifié, `migrate-khan-non-special.mjs`).
   Une partie lancée avant n'a pas ces paramètres.
+- ☑ Revue des scripts « à revoir » (2026-11-20) : 250 scripts sur 209 cartes changées depuis leur
+  écriture (réécriture aux conventions, type de lien, caractéristiques d'unité sorties des planètes
+  et des mercenaires, images renommées). Seul changement de règle : le mot-clé « Reforger » (à la
+  phase de science, un scientifique dépensé et les fragments de la carte) — « Forger la relique »
+  dépense maintenant un scientifique, « Restaurer le canon » et le scientifique d'Armageddon conquis
+  sont à la phase de science. Libre échange suit le texte (vaisseau de commerce non militaire).
+  Tous les `ecritLe` sont à la version actuelle (`demandes-ti5/scripts-pas-a-jour.mjs --marquer`,
+  `scripts-tri.mjs` pour trier les changements de texte).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

@@ -362,12 +362,12 @@ export const SCRIPTS = [
     // débloquée, ou habilité de sa faction.
     // --------------------------------------------------------
 
-    reductionAgent("ecoles-militaires", 190, 1794335054842, "Écoles militaires", /amiral/i, "amiraux"),
-    reductionAgent("science-integree", 216, 1794335054856, "Science intégrée", /scientifique/i, "scientifiques"),
-    reductionAgent("culture-courtisane", 140, 1794335054814, "Culture courtisane", /diplomate/i, "diplomates"),
-    reductionAgent("logistique-amelioree", 191, 1794335054843, "Logistique améliorée", /logisticien/i, "logisticiens"),
-    reductionAgent("art-du-commerce", 200, 1794335054847, "Art du commerce", /n[ée]gociant/i, "négociants"),
-    reductionAgent("ecole-politique", 201, 1794335054848, "École politique", /politi/i, "politiciens"),
+    reductionAgent("ecoles-militaires", 190, 1795076851625, "Écoles militaires", /amiral/i, "amiraux"),
+    reductionAgent("science-integree", 216, 1795076851645, "Science intégrée", /scientifique/i, "scientifiques"),
+    reductionAgent("culture-courtisane", 140, 1795076851610, "Culture courtisane", /diplomate/i, "diplomates"),
+    reductionAgent("logistique-amelioree", 191, 1795076851625, "Logistique améliorée", /logisticien/i, "logisticiens"),
+    reductionAgent("art-du-commerce", 200, 1795076851631, "Art du commerce", /n[ée]gociant/i, "négociants"),
+    reductionAgent("ecole-politique", 201, 1795076851632, "École politique", /politi/i, "politiciens"),
 
     {
         id: "confrerie-de-mercenaire",
@@ -375,7 +375,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "Recrutement (Ctrl + clic sur un mercenaire)",
         carte: { type: "habilite", id: 764 },
-        ecritLe: 1794335055080,
+        ecritLe: 1795046343871,
         nom: "Confrérie de mercenaire",
         description: "Phase de recrutement : le surcoût du tour ne s'applique pas à vos mercenaires.",
         recrutement: achat => (achat.type === "mercenaire" && achat.surcout > 0
@@ -403,7 +403,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 143 },
-        ecritLe: 1794340035080,
+        ecritLe: 1795046895370,
         nom: "Mise en place de Winnu",
         description: "6 influence et 6 ressources ; les unités terrestres embarquent dans les vaisseaux.",
         placer: (unite, plan) => (unite.terrestre && !unite.vaisseau && plan.vaisseaux.length
@@ -421,7 +421,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 19 },
-        ecritLe: 1794340035078,
+        ecritLe: 1795045652032,
         nom: "Mise en place de Hacan",
         description: "Un mercenaire de la pioche est posé sur « Vente au Bazaar ».",
         actions: plan => (plan.habilite(36)
@@ -435,7 +435,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 179 },
-        ecritLe: 1794340035086,
+        ecritLe: 1795046895373,
         nom: "Mise en place de Jol-Nar",
         description: "Le dock sur Jol, le système de défense sur Nar.",
         placer: (unite, plan) => {
@@ -452,7 +452,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 763 },
-        ecritLe: 1794372978756,
+        ecritLe: 1795028318753,
         nom: "Mise en place du Nomade",
         description: "4 mercenaires piochés en main (en garder deux) ; les infanteries embarquent dans Memoria ; un négociant est posé sur l'Anneau Arcturus (la station est à vous, pas la planète Arcturus).",
         placer: (unite, plan) => {
@@ -483,7 +483,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 862 },
-        ecritLe: 1794340035097,
+        ecritLe: 1795028318806,
         nom: "Mise en place de Creuss",
         description: "La Porte de Creuss sur la case natale ; le système natal et les unités à part, dans les systèmes secondaires.",
         porte: 865,
@@ -655,134 +655,134 @@ export const SCRIPTS = [
     //         "auto"     aucun bouton : calcul ou réaction automatique
     // --------------------------------------------------------
 
-    effet("assimilation", 139, 1790269329027, "Assimilation", "modifie",
+    effet("assimilation", 139, 1795076851608, "Assimilation", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer », « Mobiliser »",
         "Prendre possession d'une planète sans propriétaire, ou la revendiquer, y pose une infanterie ; " +
         "mobiliser sur une planète sauvage pose une infanterie gratuite de plus."),
 
-    effet("culture-courtisane-alliances", 140, 1794335054814, "Culture courtisane", "auto",
+    effet("culture-courtisane-alliances", 140, 1795076851610, "Culture courtisane", "auto",
         "Ravitaillement automatique (début de la phase)",
         "L'entretien rapporte 1 influence de plus par alliance en jeu chez vous (éléments actifs et cases de tour du plateau)."),
 
-    effet("diversite", 141, 1790228044157, "Diversité", "auto",
+    effet("diversite", 141, 1795076851611, "Diversité", "auto",
         "Ravitaillement automatique (début de la phase)",
         "L'entretien rapporte 1 influence de plus par planète possédée."),
 
-    effet("batiment-resistant", 180, 1794335054834, "Bâtiment résistant", "auto",
+    effet("batiment-resistant", 180, 1795076851612, "Bâtiment résistant", "auto",
         "Conflit : bombardement",
         "Les bombardements ont −1 sur une planète que vous possédez, et −1 de plus si vous y avez une structure."),
 
-    effet("troupe-d-elite", 181, 1789938478258, "Troupe d'élite", "auto",
+    effet("troupe-d-elite", 181, 1795076851614, "Troupe d'élite", "auto",
         "Conflit : combat terrestre",
         "Vos infanteries ont +1 au combat terrestre."),
 
-    effet("bio-stimulant", 183, 1794335054837, "Bio stimulant", "modifie",
+    effet("bio-stimulant", 183, 1795076851616, "Bio stimulant", "modifie",
         "Tout bouton qui dépense un agent (trêve, déplacement depuis un système activé, relique, Ctrl + clic sur un agent)",
         "Quand un de vos agents (hors mercenaire) doit être détruit, une fenêtre propose de l'utiliser et de payer 2 ressources à la place."),
 
-    effet("manipulation-mentale", 184, 1794335054838, "Manipulation mentale", "nouveau",
+    effet("manipulation-mentale", 184, 1795076851618, "Manipulation mentale", "nouveau",
         "Fiche d'un système, à côté de chaque planète : « Manipulation mentale »",
         "Phase de production : use un diplomate et pose une de vos infanteries sur la planète (une de vos unités doit être dans le système ou un système voisin)."),
 
-    effet("recuperation", 185, 1794335054839, "Récupération", "modifie",
+    effet("recuperation", 185, 1795076851619, "Récupération", "modifie",
         "Conflit : « Terminer le combat » (case « Récupération », cochée d'office)",
         "À la fin d'un combat spatial, +1 ressource par vaisseau détruit pendant ce combat. La case est cochée d'office ; " +
         "si deux factions l'ont cochée, « Terminer le combat » devient rouge gris."),
 
-    effet("bouclier-deflecteur", 186, 1790227683182, "Bouclier déflecteur", "auto",
+    effet("bouclier-deflecteur", 186, 1795076851620, "Bouclier déflecteur", "auto",
         "Conflit : canons spatiaux ; déplacement assisté",
         "Les canons qui visent vos vaisseaux ont −1 ; vos vaisseaux peuvent traverser les champs d'astéroïdes (interdits aux autres)."),
 
-    effet("apprentissage", 187, 1794335054840, "Apprentissage", "nouveau",
+    effet("apprentissage", 187, 1795076851621, "Apprentissage", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Phase de recrutement : remplace un de vos agents par un autre agent de base (celui de votre faction s'il le réimplémente)."),
 
-    effet("capsule-de-transport", 188, 1794335054841, "Capsule de transport", "auto",
+    effet("capsule-de-transport", 188, 1795076851622, "Capsule de transport", "auto",
         "Capacité des vaisseaux (embarquement, déplacement assisté)",
         "Vos vaisseaux qui ont une capacité l'augmentent de 1, vos transporteurs de 2."),
 
-    effet("capsule-de-secours", 189, 1794335054842, "Capsule de secours", "nouveau",
+    effet("capsule-de-secours", 189, 1795076851624, "Capsule de secours", "nouveau",
         "Conflit : cadre « Sauvetage » d'un combat",
         "Quand un de vos vaisseaux détruit porte des infanteries : un jet par infanterie (6 ou moins sur un dé de 10), puis les " +
         "arrivées possibles — planètes du système, planètes voisines qui ont un dock (l'accord du propriétaire n'est pas géré)."),
 
-    effet("ecoles-militaires-combat", 190, 1794335054842, "Écoles militaires", "modifie",
+    effet("ecoles-militaires-combat", 190, 1795076851625, "Écoles militaires", "modifie",
         "Fiche d'un système : « Combat spatial »",
         "Le premier combat spatial que vous ouvrez dans le tour vous donne +1 à ce combat."),
 
-    effet("arme-amplifiee", 194, 1794335054844, "Arme amplifiée", "nouveau",
+    effet("arme-amplifiee", 194, 1795076851627, "Arme amplifiée", "nouveau",
         "Plateau joueur : « Actions de mes technologies » ; Conflit : combat spatial",
         "Phase de science : détruit un scientifique et marque un type de vaisseau ; vos vaisseaux de ce type ont +2 au combat spatial."),
 
-    effet("reparation-improvisee", 195, 1794335054845, "Réparation improvisée", "nouveau",
+    effet("reparation-improvisee", 195, 1795076851628, "Réparation improvisée", "nouveau",
         "Fiche d'un de vos vaisseaux endommagés : « Réparation improvisée »",
         "Phase de production : use un logisticien et répare le vaisseau (1 ressource par dégât).",
         // (la version de Hacan de la même technologie)
         [419]),
 
-    effet("systeme-de-visee", 196, 1794335054845, "Système de visée", "auto",
+    effet("systeme-de-visee", 196, 1795076851629, "Système de visée", "auto",
         "Conflit : canons spatiaux, bombardement",
         "Vos canons spatiaux et vos bombardements ont +1."),
 
-    effet("blindage-en-duranium", 197, 1794342448757, "Blindage en duranium", "auto",
+    effet("blindage-en-duranium", 197, 1795076851630, "Blindage en duranium", "auto",
         "Résistance des unités (Conflit, où la valeur modifiée est en vert)",
         "Vos vaisseaux amiraux, soleils de guerre, cuirassés et transporteurs ont 1 de résistance de plus (selon le type d'unité, pas son nom)."),
 
-    effet("soleil-de-guerre", 198, 1779785436296, "Soleil de guerre", "auto",
+    effet("soleil-de-guerre", 198, 1795076851630, "Soleil de guerre", "auto",
         "Onglet Technologie : dernière case de recherche de la technologie",
         "Quand la technologie est obtenue, un soleil de guerre de votre faction arrive dans vos éléments actifs."),
 
-    effet("art-du-commerce-livraison", 200, 1794335054847, "Art du commerce", "nouveau",
+    effet("art-du-commerce-livraison", 200, 1795076851631, "Art du commerce", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Phase de diplomatie : la technologie est utilisée, la faction choisie gagne 2 commerce (livraison ; les dettes se réduisent à la main)."),
 
-    effet("ecole-politique-lois", 201, 1794335054848, "École politique", "modifie",
+    effet("ecole-politique-lois", 201, 1795076851632, "École politique", "modifie",
         "Bandeau de la phase de proposition : « Piocher »",
         "Vous piochez 2 propositions de plus, même en dépensant 0 influence."),
 
-    effet("centre-de-coordination", 202, 1790227718519, "Centre de coordination", "auto",
+    effet("centre-de-coordination", 202, 1795076851633, "Centre de coordination", "auto",
         "Conflit : combat spatial",
         "Vous avez +1 au combat spatial si le système contient un de vos docks ou votre vaisseau amiral."),
 
-    effet("rapport-de-force", 205, 1794335054850, "Rapport de force", "nouveau",
+    effet("rapport-de-force", 205, 1795076851635, "Rapport de force", "nouveau",
         "Conflit : cadre de blocage d'un déplacement",
         "Use un diplomate : +2 à votre valeur de contrôle pour ce blocage."),
 
-    effet("reparation", 206, 1794335054851, "Réparation", "nouveau",
+    effet("reparation", 206, 1795076851637, "Réparation", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Phase de revendication : use un diplomate ; la faction choisie reçoit une dette de 3 envers vous, à payer dans 3 tours."),
 
-    effet("brevet", 207, 1789973687408, "Brevet", "auto",
+    effet("brevet", 207, 1795076851637, "Brevet", "auto",
         "Onglet Technologie : une case de recherche cochée par un autre joueur",
         "Quand une autre faction recherche une technologie que vous possédez, vous gagnez 1 commerce (une fois par tour, par faction et par technologie)."),
 
-    effet("trading", 208, 1794335054851, "Trading", "auto",
+    effet("trading", 208, 1795076851638, "Trading", "auto",
         "« Phase suivante », à la fin de la phase de vote",
         "Un de vos négociants posé sur votre plateau de vote est votre prédiction : si cette case est première de sa loi à la fin de la phase, +2 commerce."),
 
     // ---- chantier « toutes les technologies », lot A ----
 
-    effet("logistique-amelioree-capacite", 191, 1794335054843, "Logistique améliorée", "auto",
+    effet("logistique-amelioree-capacite", 191, 1795076851625, "Logistique améliorée", "auto",
         "Capacité logistique : taille d'une flotte (déplacement assisté), production d'un dock",
         "Chaque logisticien posé sur la technologie (onglet Technologie : le glisser sur sa carte) augmente votre capacité logistique de 1 (3 par défaut)."),
 
-    effet("universite", 210, 1790237003321, "Université", "nouveau",
+    effet("universite", 210, 1795076851640, "Université", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Phase de recrutement : la technologie et l'agent choisi sont utilisés ; un agent du même type vous attend sur votre case du tour suivant."),
 
-    effet("pillage", 211, 1794335054852, "Pillage", "modifie",
+    effet("pillage", 211, 1795076851641, "Pillage", "modifie",
         "Fiche d'un système : « Prendre possession » (et le conflit de contrôle)",
         "Prendre possession d'une planète qu'une autre faction possédait lui vole 2 commerce."),
 
-    effet("reseau-de-commerce", 213, 1780480244313, "Réseau de commerce", "nouveau",
+    effet("reseau-de-commerce", 213, 1795076851642, "Réseau de commerce", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Deux boutons de conversion, un pour un : influence en ressources, ressources en influence."),
 
-    effet("extorsion", 214, 1794335054854, "Extorsion", "nouveau",
+    effet("extorsion", 214, 1795076851643, "Extorsion", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Phase de diplomatie : use un diplomate ; la faction choisie reçoit une dette de 3 envers vous, à payer dans 3 tours."),
 
-    effet("rayon-tracteur", 217, 1794335054857, "Rayon tracteur", "auto",
+    effet("rayon-tracteur", 217, 1795076851646, "Rayon tracteur", "auto",
         "Conflit : blocage d'un déplacement, conflits de contrôle",
         "Vos vaisseaux qui ont plus de 1 de résistance comptent 1 de contrôle de plus."),
 
@@ -790,31 +790,31 @@ export const SCRIPTS = [
         "Onglet Espace, phase de science : Ctrl + clic sur un emplacement vide",
         "Tout joueur explore en usant un scientifique et un logisticien. Avec cette technologie, un seul des deux : s'il a les deux, l'onglet Décision fait choisir lequel."),
 
-    effet("cartographie-de-l-espace", 231, 1794335054865, "Cartographie de l'espace", "auto",
+    effet("cartographie-de-l-espace", 231, 1795076851651, "Cartographie de l'espace", "auto",
         "Conflit : combat spatial, canons spatiaux",
         "Dans un système qui a une anomalie, les attaques contre vos vaisseaux ont −1."),
 
-    effet("moteur-a-gravite", 233, 1794335054865, "Moteur à gravité", "modifie",
+    effet("moteur-a-gravite", 233, 1795076851653, "Moteur à gravité", "modifie",
         "Déplacement assisté : case « Moteur à gravité »",
         "Cochée, vos vaisseaux ont +1 mouvement ; des scientifiques sont utilisés au départ (un par vaisseau seul, deux par flotte)."),
 
-    effet("strategie-de-saut", 234, 1794335054866, "Stratégie de saut", "auto",
+    effet("strategie-de-saut", 234, 1795076851654, "Stratégie de saut", "auto",
         "Déplacement assisté, puis Conflit : combat spatial",
         "Des vaisseaux arrivés par un trou de ver ont, ce tour, la frappe en premier et +1 au combat spatial."),
 
-    effet("camouflage", 236, 1787508935658, "Camouflage", "auto",
+    effet("camouflage", 236, 1795076851656, "Camouflage", "auto",
         "Conflit : blocage d'un déplacement, combat spatial",
         "Vos vaisseaux ne sont pas bloqués par des unités adverses, et tant qu'ils n'ont engagé personne ils ne peuvent qu'être ciblés."),
 
-    effet("micro-teleporteur", 237, 1794335054868, "Micro-téléporteur", "nouveau",
+    effet("micro-teleporteur", 237, 1795076851656, "Micro-téléporteur", "nouveau",
         "Plateau joueur : « Actions de mes technologies »",
         "Phase de production : use un logisticien ; vous déplacez ensuite les unités transportables à la main."),
 
-    effet("stargate", 238, 1794335054868, "Stargate", "auto",
+    effet("stargate", 238, 1795076851657, "Stargate", "auto",
         "Déplacement assisté",
         "Pour vos déplacements, chaque système où vous avez un dock a un trou de ver alpha."),
 
-    effet("moteur-ftl", 239, 1790228808456, "Moteur FTL", "auto",
+    effet("moteur-ftl", 239, 1795076851658, "Moteur FTL", "auto",
         "Déplacement assisté",
         "Tous vos vaisseaux ont 1 de mouvement de plus."),
 
@@ -822,19 +822,19 @@ export const SCRIPTS = [
         "Résistance des unités (Conflit, où la valeur modifiée est en vert)",
         "Votre vaisseau amiral et vos systèmes de défense ont 2 de résistance de plus, vos boucliers mobiles 1."),
 
-    effet("cuve-de-clonage", 245, 1794343420980, "Cuve de clonage", "nouveau",
+    effet("cuve-de-clonage", 245, 1795046343812, "Cuve de clonage", "nouveau",
         "Fiche d'un système, à côté de « Mobiliser »",
         "Phase de production : use un logisticien et un scientifique ; une infanterie de plus, et toute la mobilisation est gratuite."),
 
-    effet("reseau-d-ingerence", 247, 1794343420983, "Réseau d'ingérence", "auto",
+    effet("reseau-d-ingerence", 247, 1795045652046, "Réseau d'ingérence", "auto",
         "Onglet Vote : décompte",
         "Un de vos scientifiques posé sur votre plateau de vote vaut 2 voix."),
 
-    effet("argumentation-vehemente", 251, 1794343420985, "Argumentation véhémente", "nouveau",
+    effet("argumentation-vehemente", 251, 1795046343814, "Argumentation véhémente", "nouveau",
         "Onglet Vote, au-dessus des lois",
         "Phase de prévote : use un politicien (qui ne reste pas sur le plateau) et 1 influence ; 2 voix s'ajoutent tout de suite au décompte, sur la loi et la colonne choisies."),
 
-    effet("strategie-dominante", 252, 1794343420986, "Stratégie dominante", "auto",
+    effet("strategie-dominante", 252, 1795072921257, "Stratégie dominante", "auto",
         "Conflit : combat spatial",
         "Vos unités à frappe en premier ont +1 ; cibler un de vos vaisseaux coûte −4 au lieu de −2."),
 
@@ -844,17 +844,17 @@ export const SCRIPTS = [
 
     // ---- lot B : production ----
 
-    effet("ia-industrielle", 193, 1790238201043, "IA industrielle", "auto",
+    effet("ia-industrielle", 193, 1795076851626, "IA industrielle", "auto",
         "Production ouverte avec un dock (Ctrl + clic sur le dock, phase de production)",
         "Vos docks produisent 2 unités de plus ; pour un dock posé sur une planète militaire, le coût total de la production baisse de 2."),
 
     // ---- lot C : commerce et agents ----
 
-    effet("propagande", 212, 1780480307120, "Propagande", "modifie",
+    effet("propagande", 212, 1795076851642, "Propagande", "modifie",
         "Plateau général : « + » de la piste d'infamie",
         "Au gain d'un point d'infamie, une fenêtre propose de dépenser un diplomate pour ne pas le gagner."),
 
-    effet("science-integree-livraison", 216, 1794335054856, "Science intégrée", "modifie",
+    effet("science-integree-livraison", 216, 1795076851645, "Science intégrée", "modifie",
         "Livraison commerciale (fiche d'une unité, Art du commerce)",
         "Lors d'une livraison, une fenêtre propose d'user un scientifique : la faction livrée gagne 4 cases de recherche d'une technologie que vous possédez (elle les coche à la main)."),
 
@@ -868,37 +868,37 @@ export const SCRIPTS = [
 
     // ---- lot D : conflits ----
 
-    effet("bombe-bacteriologique", 182, 1794335054835, "Bombe bactériologique", "auto",
+    effet("bombe-bacteriologique", 182, 1795076851615, "Bombe bactériologique", "auto",
         "Conflit : bombardement",
         "Vos dégâts de bombardement sont verts : une infanterie biologique qu'ils détruisent entraîne deux autres infanteries identiques de la planète."),
 
-    effet("canon-longue-portee", 235, 1794335054867, "Canon longue portée", "auto",
+    effet("canon-longue-portee", 235, 1795076851655, "Canon longue portée", "auto",
         "Conflit : canons spatiaux (« Mes canons spatiaux à portée »)",
         "La portée de vos canons spatiaux passe de 1 à 2."),
 
-    effet("medecine", 242, 1794335054872, "Médecine", "modifie",
+    effet("medecine", 242, 1795076851660, "Médecine", "modifie",
         "Conflit : « Terminer le combat » d'une de vos unités biologiques détruites",
         "Avant de la retirer, un jet (5 ou moins sur un dé de 10) permet de la capturer : elle va dans vos éléments actifs, d'où vous la replacez (use un logisticien, à la main)."),
 
-    effet("laser-longue-portee", 248, 1794343420984, "Laser longue portée", "auto",
+    effet("laser-longue-portee", 248, 1795046343814, "Laser longue portée", "auto",
         "Conflit : canons spatiaux (« Mes canons spatiaux à portée »)",
         "Votre vaisseau amiral a un canon spatial (6, 3 dés) ; un canon peut tirer une case plus loin que sa portée si un scientifique est aussi utilisé."),
 
-    effet("grappin-de-capture", 250, 1794335054876, "Grappin de capture", "nouveau",
+    effet("grappin-de-capture", 250, 1795076851660, "Grappin de capture", "nouveau",
         "Conflit : cadre d'un combat résolu",
         "Use un logisticien : un vaisseau adverse détruit pendant ce combat (ni soleil de guerre ni vaisseau amiral) arrive capturé dans vos éléments actifs."),
 
     // ---- lot E ----
 
-    effet("archeologie", 209, 1789973452831, "Archéologie", "modifie",
+    effet("archeologie", 209, 1795076851639, "Archéologie", "modifie",
         "Fiche d'un système : « Fouiller la ruine » ; bandeau de la phase de science : « Archéologie : piocher un plan »",
         "Une fouille rapporte deux fragments, dont vous gardez un (en haut du volet de droite). Nouveau bouton : la technologie et un scientifique sont utilisés, un plan de relique est pioché."),
 
-    effet("exploitation-du-vide", 232, 1790236251002, "Exploitation du vide", "auto",
+    effet("exploitation-du-vide", 232, 1795076851652, "Exploitation du vide", "auto",
         "Ravitaillement automatique (début de la phase) ; Conflit : conflits de domination",
         "L'entretien rapporte 1 ressource par système vide que vous dominez (3 pour une nébuleuse). Un système vide où d'autres ont des unités demande un conflit de domination : tant qu'il n'est pas résolu, le ravitaillement automatique attend."),
 
-    effet("drain-spatial", 246, 1794343420982, "Drain spatial", "nouveau",
+    effet("drain-spatial", 246, 1795046343813, "Drain spatial", "nouveau",
         "Conflit : cadre de blocage d'un déplacement",
         "Quand des vaisseaux vont entrer dans un système où vous avez un vaisseau amiral, un soleil de guerre ou un système de défense : vous exigez 1 ressource par vaisseau, ou vous laissez passer ; le joueur paie, ou ses vaisseaux restent sur la case précédente."),
 
@@ -906,13 +906,13 @@ export const SCRIPTS = [
     // REVENUS DE PHASE : unités posées et planètes possédées (Revenus.jsx)
     // --------------------------------------------------------
 
-    revenu("usine", "unit", 16, 1794049918179, "Usine", "ravit",
+    revenu("usine", "unit", 16, 1795068317081, "Usine", "ravit",
         "Chaque usine que vous avez sur la carte rapporte 2 ressources.", { gains: { res: 2 }, aussi: [893] }),
 
     revenu("statue-en-or", "unit", 23, 1794049918186, "Statue en or", "ravit",
         "Chaque statue rapporte 1 point.", { gains: { points: 1 } }),
 
-    revenu("station-meteorologique", "unit", 444, 1794335055030, "Station météorologique", "ravit",
+    revenu("station-meteorologique", "unit", 444, 1795046343838, "Station météorologique", "ravit",
         "Chaque station génère 2 de recherche tempête et 1 de recherche spatiale (notées au journal de recherche) ; plus de recherche tempête une fois la « Fin de la tempête » appliquée.", {
             recherche: [["storm", 2], ["spa", 1]],
             calcul: (source, outils) => (outils.etat.compteurs["tempete:finie"]
@@ -920,7 +920,7 @@ export const SCRIPTS = [
                 : { recherche: [["storm", 2], ["spa", 1]] }),
         }),
 
-    revenu("forge-du-vide", "unit", 868, 1794340035096, "Forge du vide", "ravit",
+    revenu("forge-du-vide", "unit", 868, 1795046343890, "Forge du vide", "ravit",
         "S'il y a un trou de ver delta dans son système : 1 ressource, 1 influence et 1 de recherche.", {
             calcul: (source, outils) => (outils.aDansLeSysteme(source.numero, /delta|hil colish/i)
                 ? { gains: { res: 1, inf: 1 }, recherche: [["", 1]] }
@@ -936,45 +936,45 @@ export const SCRIPTS = [
             },
         }),
 
-    revenu("arbre-pere", "unit", 465, 1794335055035, "Arbre père", "ravit",
+    revenu("arbre-pere", "unit", 465, 1795046343846, "Arbre père", "ravit",
         "Produit un Fruit de vie dans l'espace de son système.", { cree: { unite: 464, n: 1, ou: "espace" } }),
 
-    revenu("arbre-mere", "unit", 467, 1794335055037, "Arbre mère", "ravit",
+    revenu("arbre-mere", "unit", 467, 1795046343848, "Arbre mère", "ravit",
         "Produit autant de Letani que votre niveau de connaissance génétique, sur sa planète.", {
             calcul: (source, outils) => (outils.connaissance("gen") > 0
                 ? { cree: { unite: 423, n: outils.connaissance("gen"), ou: "ici" } }
                 : { sans: "aucun niveau de connaissance génétique" }),
         }),
 
-    revenu("colonie-ladaran", "unit", 590, 1794339608756, "Colonie Ladaran", "ravit",
+    revenu("colonie-ladaran", "unit", 590, 1795069399845, "Colonie Ladaran", "ravit",
         "Produit une de vos infanteries, à son bord.", { cree: { unite: "inf", n: 1, ou: "bord" } }),
 
     revenu("memoria-c", "unit", 770, 1794049918252, "Memoria C", "ravit",
         "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
 
-    revenu("complexe-de-guerre", "unit", 164, 1794335054826, "Complexe de guerre", "ravit",
+    revenu("complexe-de-guerre", "unit", 164, 1795074271173, "Complexe de guerre", "ravit",
         "Pose un de vos destroyeurs dans son système (si vous le contrôlez : non vérifié).",
         { cree: { unite: "dest", n: 1, ou: "espace" }, note: "si vous contrôlez le système" }),
 
-    revenu("relique-reforgee", "planet", 131, 1794335054813, "Relique reforgée", "ravit",
+    revenu("relique-reforgee", "planet", 131, 1795190407273, "Relique reforgée", "ravit",
         "Rapporte 1 point à qui la possède.", { gains: { points: 1 } }),
 
-    revenu("anneau-arcturus", "planet", 784, 1794372893706, "Anneau Arcturus", "ravit",
+    revenu("anneau-arcturus", "planet", 784, 1795190407302, "Anneau Arcturus", "ravit",
         "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
 
-    revenu("new-eden", "planet", 469, 1794054013171, "New eden", "ravit",
+    revenu("new-eden", "planet", 469, 1795190407285, "New eden", "ravit",
         "Produit 2 Letani sur la planète.", { cree: { unite: 423, n: 2, ou: "ici" } }),
 
-    revenu("asteroide-d-or", "planet", 31, 1794335054748, "Astéroïde d'or", "production",
+    revenu("asteroide-d-or", "planet", 31, 1795190407294, "Astéroïde d'or", "production",
         "Génère 3 commerce pour qui le possède.", { gains: { commerce: 3 } }),
 
-    revenu("sr-42", "planet", 33, 1794054013129, "SR-42", "science",
+    revenu("sr-42", "planet", 33, 1795190407291, "SR-42", "science",
         "Génère 2 de recherche spatiale pour qui la possède.", { recherche: [["spa", 2]] }),
 
-    revenu("sr-124", "planet", 47, 1794054013138, "SR-124", "science",
+    revenu("sr-124", "planet", 47, 1795190407282, "SR-124", "science",
         "Génère 2 de recherche sociale pour qui la possède.", { recherche: [["soc", 2]] }),
 
-    revenu("station-de-combat", "planet", 56, 1794335054765, "Station de combat", "science",
+    revenu("station-de-combat", "planet", 56, 1795190407278, "Station de combat", "science",
         "Génère 2 de recherche militaire pour qui la possède.", { recherche: [["mil", 2]] }),
 
     // --------------------------------------------------------
@@ -989,27 +989,27 @@ export const SCRIPTS = [
         "Fiche d'un système : « Fouiller la ruine »",
         "Fouiller une ruine d'une planète où vous avez un Mecha d'archéologie n'use pas de scientifique."),
 
-    regle("wanno", "planet", 46, 1794054013137, "Wanno", "modifie",
+    regle("wanno", "planet", 46, 1795190407300, "Wanno", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
         "Prendre possession de Wanno rapporte 1 infamie."),
 
-    regle("perimeter", "planet", 60, 1794054013149, "Perimeter", "modifie",
+    regle("perimeter", "planet", 60, 1795190407280, "Perimeter", "modifie",
         "Fiche d'une unité : « Livraison commerciale »",
         "Vos livraisons valent 1 commerce de plus si vous possédez Perimeter."),
 
-    regle("avar", "planet", 61, 1794335054802, "Avar", "modifie",
+    regle("avar", "planet", 61, 1795072921250, "Avar", "modifie",
         "Fiche d'un système : « Revendiquer »",
         "Avar ne peut pas être contrôlée sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris.", [783]),
 
-    regle("cormund", "planet", 49, 1794335054764, "Cormund", "modifie",
+    regle("cormund", "planet", 49, 1795073444389, "Cormund", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",
         "Il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines."),
 
-    regle("shar", "planet", 275, 1794335054888, "Shar", "auto",
+    regle("shar", "planet", 275, 1795072921243, "Shar", "auto",
         "Déplacement assisté",
         "Si vous possédez Shar, la nébuleuse de son système ne gêne pas vos déplacements."),
 
-    regle("soleil-de-guerre-production", "unit", 17, 1794335054746, "Soleil de guerre", "auto",
+    regle("soleil-de-guerre-production", "unit", 17, 1795046343776, "Soleil de guerre", "auto",
         "Réserve : production d'un soleil de guerre",
         "Produire un soleil de guerre sans la technologie « Soleil de guerre » demande une confirmation.", [199]),
 
@@ -1019,7 +1019,7 @@ export const SCRIPTS = [
 
     // Pillage (#pill) : rattaché à la frégate marchande, il vaut pour toute unité dont
     // le texte porte #pill
-    regle("pillage-unite", "unit", 11, 1794049918173, "Pillage (#pill)", "auto",
+    regle("pillage-unite", "unit", 11, 1795046343774, "Pillage (#pill)", "auto",
         "Conflit : « Terminer le combat » une unité détruite",
         "Le camp qui a infligé le dernier dégât à une unité à pillage gagne ce que dit son texte (commerce, points, infamie, recherche) quand elle est retirée — s'il a encore une unité dans le système."),
 
@@ -1027,15 +1027,15 @@ export const SCRIPTS = [
         "Conflit : « Terminer le combat » une unité détruite",
         "Chaque pillage vous rapporte 1 commerce de plus."),
 
-    regle("libre-echange", "habilite", 24, 1787854389709, "Libre échange", "auto",
+    regle("libre-echange", "habilite", 24, 1795068635404, "Libre échange", "auto",
         "Conflit : « Terminer le combat » une unité détruite",
-        "Détruire une unité commerciale non militaire vous rapporte 1 infamie."),
+        "Détruire un vaisseau de commerce non militaire vous rapporte 1 infamie."),
 
-    regle("jeollr", "planet", 59, 1794335054766, "Jeollr", "auto",
+    regle("jeollr", "planet", 59, 1795190407298, "Jeollr", "auto",
         "Conflit : bombardement",
         "Les bombardements contre Jeollr ont −2."),
 
-    regle("loki", "planet", 62, 1794054013150, "Loki", "auto",
+    regle("loki", "planet", 62, 1795072921247, "Loki", "auto",
         "Conflit : combats sur la planète",
         "Sur Loki, les attaques contre la faction qui possède la planète ont −1."),
 
@@ -1047,23 +1047,23 @@ export const SCRIPTS = [
         "Ravitaillement automatique (début de la phase)",
         "À l'entretien, vos unités biologiques posées sur la carte récupèrent 1 de résistance."),
 
-    regle("destin-legendaire", "habilite", 145, 1794335054818, "Destin légendaire", "modifie",
+    regle("destin-legendaire", "habilite", 145, 1795072921275, "Destin légendaire", "modifie",
         "Ravitaillement automatique (début de la phase) ; fiche d'un système : prise de possession",
         "L'entretien rapporte 1 point par planète légendaire possédée ; la faction qui vous prend une planète légendaire gagne 1 point et 1 infamie."),
 
-    regle("conclave-secret", "habilite", 160, 1794335054825, "Conclave secret", "auto",
+    regle("conclave-secret", "habilite", 160, 1795046343788, "Conclave secret", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main."),
 
-    regle("signal", "habilite", 765, 1794042800728, "Signal", "auto",
+    regle("signal", "habilite", 765, 1795046343872, "Signal", "auto",
         "Ravitaillement automatique (début de la phase)",
         "L'entretien pose un marqueur de signal sur un système tiré au hasard."),
 
-    regle("tempete-spatiale", "habilite", 442, 1793999783814, "Tempête spatiale", "auto",
+    regle("tempete-spatiale", "habilite", 442, 1795046343836, "Tempête spatiale", "auto",
         "Déplacement assisté ; Conflit",
         "Les vaisseaux ont −1 au mouvement ; les canons spatiaux et tous les combats ont −1."),
 
-    revenu("bdd-technique", "habilite", 487, 1793999783822, "BDD technique", "science",
+    revenu("bdd-technique", "habilite", 487, 1795046343853, "BDD technique", "science",
         "1 de recherche par fragment de relique que vous possédez.", {
             calcul: (source, outils) => (outils.fragments > 0
                 ? { recherche: [["", outils.fragments]] }
@@ -1074,7 +1074,7 @@ export const SCRIPTS = [
     // BOUTONS D'ACTION (ActionsScript.jsx)
     // --------------------------------------------------------
 
-    action("hopeld", "planet", 72, 1794054013159, "Hopeld : produire un Mech géant", "planete",
+    action("hopeld", "planet", 72, 1795190407267, "Hopeld : produire un Mech géant", "planete",
         "Production : dépensez un logisticien, un Mech géant est posé sur Hopeld (que vous possédez).", {
             phase: "production",
             possede: true,
@@ -1083,7 +1083,7 @@ export const SCRIPTS = [
             libelle: "Produire un Mech géant (dépense un logisticien)",
         }),
 
-    action("sig", "planet", 473, 1794054013172, "Obtenir la planète", "planete",
+    action("sig", "planet", 473, 1795046343768, "Obtenir la planète", "planete",
         "Science : use un scientifique, la planète SIG est à vous.", {
             phase: "science",
             agent: SCIENTIFIQUE,
@@ -1093,7 +1093,7 @@ export const SCRIPTS = [
             aussi: [474, 475, 476],
         }),
 
-    action("sphere-de-dyson", "unit", 178, 1794335054834, "Sphère de Dyson", "unite",
+    action("sphere-de-dyson", "unit", 178, 1795046343794, "Sphère de Dyson", "unite",
         "Science : use un scientifique, 2 ressources par niveau de connaissance spatiale.", {
             phase: "science",
             agent: SCIENTIFIQUE,
@@ -1115,7 +1115,7 @@ export const SCRIPTS = [
             libelle: "Arbre de vie : +4 commerce (usé, 1 dégât)",
         }),
 
-    action("magmus", "unit", 598, 1794339608758, "Magmus", "unite",
+    action("magmus", "unit", 598, 1795074271171, "Magmus", "unite",
         "Quand un vaisseau est détruit dans son système : 1 de recherche militaire (notée au journal de recherche).", {
             recherche: [["mil", 1]],
             libelle: "Un vaisseau détruit ici : +1 recherche militaire",
@@ -1135,7 +1135,7 @@ export const SCRIPTS = [
             libelle: "Étude des tempêtes : +2 recherche tempête (use un scientifique)",
         }),
 
-    action("etude-des-failles", "habilite", 815, 1794044993528, "Étude des failles", "systeme",
+    action("etude-des-failles", "habilite", 815, 1795046343881, "Étude des failles", "systeme",
         "Science : use un scientifique et active une Faille : 2 de recherche de rupture.", {
             feuille: "rupt",
             phase: "science",
@@ -1148,7 +1148,7 @@ export const SCRIPTS = [
 
     // ---- planètes et stations ----
 
-    action("canon-reparer", "planet", 27, 1794377940419, "Canon : réparer", "planete",
+    action("canon-reparer", "planet", 27, 1795190407282, "Canon : réparer", "planete",
         "Use un logisticien : vos unités du système et le canon sont réparés, 1 ressource par dégât.", {
             possede: true,
             agent: LOGISTICIEN,
@@ -1157,8 +1157,10 @@ export const SCRIPTS = [
             aussi: [30],
         }),
 
-    action("canon-ancien-restaurer", "planet", 27, 1794377940419, "Canon ancien : restaurer", "planete",
-        "Dépensez un scientifique et 2 fragments militaires : le canon devient un Canon restauré (l'unité est remplacée, sa carte arrive dans vos éléments actifs) et vous gagnez 2 points.", {
+    action("canon-ancien-restaurer", "planet", 27, 1795190407282, "Canon ancien : restaurer", "planete",
+        "Science (Reforger) : dépensez un scientifique et 2 fragments militaires, le canon devient un Canon restauré (l'unité est remplacée, sa carte arrive dans vos éléments actifs) et vous gagnez 2 points.", {
+            // (Reforger : à la phase de science, un scientifique dépensé et les fragments de la carte)
+            phase: "science",
             possede: true,
             agent: { motif: "scientifique", nom: "scientifique", depense: true },
             fragments: { mil: 2 },
@@ -1168,7 +1170,7 @@ export const SCRIPTS = [
             libelle: "Restaurer le canon (dépense un scientifique et 2 fragments militaires) : +2 points",
         }),
 
-    action("station-de-combat-reparer", "planet", 56, 1794335054765, "Station de combat : réparer", "planete",
+    action("station-de-combat-reparer", "planet", 56, 1795190407278, "Station de combat : réparer", "planete",
         "Production : use un logisticien, vos unités du système sont réparées, 1 ressource par dégât.", {
             phase: "production",
             possede: true,
@@ -1177,7 +1179,7 @@ export const SCRIPTS = [
             libelle: "Réparer (use un logisticien)",
         }),
 
-    action("mecatol-dissoudre-la-garde", "planet", 34, 1794383527582, "Mecatol Rex : dissoudre la Garde impériale", "planete",
+    action("mecatol-dissoudre-la-garde", "planet", 34, 1795190407283, "Mecatol Rex : dissoudre la Garde impériale", "planete",
         "Combat terrestre : dépensez 12 influence, les Gardes impériales de la planète sont retirées. (Les faveurs des autres factions, qui valent 4, se comptent à la main.)", {
             phase: "terrestre",
             nomPhase: "combat terrestre",
@@ -1186,7 +1188,7 @@ export const SCRIPTS = [
             libelle: "Dissoudre la Garde impériale (12 influence)",
         }),
 
-    action("starpoint", "planet", 71, 1794054013158, "Starpoint : faveur neutre", "planete",
+    action("starpoint", "planet", 71, 1795046343686, "Starpoint : faveur neutre", "planete",
         "Diplomatie : use un diplomate et dépensez 3 influence, vous obtenez une faveur neutre.", {
             phase: "diplomatie",
             possede: true,
@@ -1196,16 +1198,18 @@ export const SCRIPTS = [
             libelle: "Faveur neutre (use un diplomate, 3 influence)",
         }),
 
-    action("relique-forger", "planet", 69, 1794335054805, "Relique : forger", "planete",
-        "Science : dépensez 3 fragments et 1 fragment ancien, la carte de la Relique reforgée arrive dans vos éléments actifs.", {
+    action("relique-forger", "planet", 69, 1795190407284, "Relique : forger", "planete",
+        "Science (Reforger) : dépensez un scientifique, 3 fragments et 1 fragment ancien, la carte de la Relique reforgée arrive dans vos éléments actifs.", {
             phase: "science",
             possede: true,
+            // (Reforger : un scientifique est dépensé, en plus des fragments de la carte)
+            agent: { motif: "scientifique", nom: "scientifique", depense: true },
             fragments: { ancien: 1, autres: 3 },
             donneCarte: 131,
-            libelle: "Forger la relique (3 fragments et 1 fragment ancien)",
+            libelle: "Forger la relique (dépense un scientifique, 3 fragments et 1 fragment ancien)",
         }),
 
-    action("elysium-scientifique", "planet", 75, 1794383732780, "Elysium : poser un scientifique", "planete",
+    action("elysium-scientifique", "planet", 75, 1795072921285, "Elysium : poser un scientifique", "planete",
         "Science : la planète est activée et un de vos scientifiques y est posé ; il y reste (il n'est jamais récupéré).", {
             phase: "science",
             possede: true,
@@ -1214,7 +1218,7 @@ export const SCRIPTS = [
             libelle: "Poser un scientifique sur Elysium (il y reste)",
         }),
 
-    revenu("elysium", "planet", 75, 1794383732780, "Elysium", "ravit",
+    revenu("elysium", "planet", 75, 1795072921285, "Elysium", "ravit",
         "1 de recherche militaire, spatiale, génétique et sociale par scientifique posé sur Elysium.", {
             recherche: [["mil", 1], ["spa", 1], ["gen", 1], ["soc", 1]],
             calcul: (source, outils) => {
@@ -1226,7 +1230,7 @@ export const SCRIPTS = [
             },
         }),
 
-    action("sr-42-recherche", "planet", 33, 1794054013129, "SR-42 : recherche", "planete",
+    action("sr-42-recherche", "planet", 33, 1795190407291, "SR-42 : recherche", "planete",
         "La station est activée (une fois) : dépensez 3 ressources, 1 de recherche militaire, génétique et sociale.", {
             possede: true,
             activer: true,
@@ -1235,7 +1239,7 @@ export const SCRIPTS = [
             libelle: "SR-42 : 3 ressources → recherche militaire, génétique et sociale",
         }),
 
-    action("anneau-arcturus-recherche", "planet", 784, 1794372893706, "Anneau Arcturus : recherche", "planete",
+    action("anneau-arcturus-recherche", "planet", 784, 1795190407302, "Anneau Arcturus : recherche", "planete",
         "Science : use un scientifique, 1 de recherche sociale, 1 spatiale et 1 libre.", {
             phase: "science",
             possede: true,
@@ -1245,22 +1249,22 @@ export const SCRIPTS = [
         }),
 
     // Anneau monde : l'effet dépend de l'agent posé sur la station
-    revenu("anneau-monde-logisticien", "planet", 45, 1794335054763, "Anneau monde (logisticien)", "ravit",
+    revenu("anneau-monde-logisticien", "planet", 45, 1795190407297, "Anneau monde (logisticien)", "ravit",
         "Avec un logisticien posé sur la station : 2 ressources et 2 commerce.", {
             calcul: (source, outils) => (outils.agentsSur(source, "logisticien") ? { gains: { res: 2, commerce: 2 } } : null),
         }),
 
-    revenu("anneau-monde-scientifique", "planet", 45, 1794335054763, "Anneau monde (scientifique)", "science",
+    revenu("anneau-monde-scientifique", "planet", 45, 1795190407297, "Anneau monde (scientifique)", "science",
         "Avec un scientifique posé sur la station : 3 de recherche, dans la technologie de votre choix.", {
             calcul: (source, outils) => (outils.agentsSur(source, "scientifique") ? { recherche: [["", 3]] } : null),
         }),
 
-    revenu("anneau-monde-negociant", "planet", 45, 1794335054763, "Anneau monde (négociant)", "production",
+    revenu("anneau-monde-negociant", "planet", 45, 1795190407297, "Anneau monde (négociant)", "production",
         "Avec un négociant posé sur la station : 2 frégates marchandes gratuites dans le système.", {
             calcul: (source, outils) => (outils.agentsSur(source, MOTIF_NEGOCIANT) ? { cree: { unite: "com", n: 2, ou: "espace" } } : null),
         }),
 
-    action("anneau-monde-diplomate", "planet", 45, 1794335054763, "Anneau monde (diplomate) : faveur", "planete",
+    action("anneau-monde-diplomate", "planet", 45, 1795190407297, "Anneau monde (diplomate) : faveur", "planete",
         "Avec un diplomate posé sur la station : dépensez 4 commerce, vous gagnez une de vos faveurs.", {
             possede: true,
             visible: outils => outils.agentIci("diplomate"),
@@ -1269,7 +1273,7 @@ export const SCRIPTS = [
             libelle: "Anneau monde : une faveur (4 commerce)",
         }),
 
-    action("anneau-monde-politique", "planet", 45, 1794335054763, "Anneau monde (politique) : lois", "planete",
+    action("anneau-monde-politique", "planet", 45, 1795190407297, "Anneau monde (politique) : lois", "planete",
         "Avec un politique posé sur la station : piochez 3 lois dans votre main (vous pouvez en ajouter une à l'agenda), une fois par tour.", {
             possede: true,
             visible: outils => outils.agentIci("politi"),
@@ -1278,15 +1282,15 @@ export const SCRIPTS = [
             libelle: "Anneau monde : piocher 3 lois",
         }),
 
-    regle("anneau-monde-amiral", "planet", 45, 1794335054763, "Anneau monde (amiral)", "modifie",
+    regle("anneau-monde-amiral", "planet", 45, 1795190407297, "Anneau monde (amiral)", "modifie",
         "Fiche d'un système : « Produire ici »",
         "La production de l'Anneau monde (2 unités) demande un amiral posé sur la station."),
 
-    regle("mecatol-rex", "planet", 34, 1794383527582, "Mecatol Rex", "modifie",
+    regle("mecatol-rex", "planet", 34, 1795190407283, "Mecatol Rex", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
         "Prendre possession de Mecatol Rex vous donne aussi la carte Mecatol Rex spéciale (#229)."),
 
-    regle("haven", "planet", 1041, 1795075000000, "Haven", "auto",
+    regle("haven", "planet", 1041, 1795190407276, "Haven", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Posséder Haven compte comme posséder une planète natale : elle donne la faveur du ravitaillement, même sans planète de votre système natal."),
 
@@ -1294,11 +1298,11 @@ export const SCRIPTS = [
         "Glisser une unité sur Arcturus",
         "Poser des unités sur Arcturus sans 2 niveaux de connaissance spatiale (et 2 de connaissance génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher."),
 
-    regle("atlas", "planet", 41, 1794054013133, "Atlas", "auto",
+    regle("atlas", "planet", 41, 1795072921294, "Atlas", "auto",
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), un Ravageur neutre est ajouté sur Atlas."),
 
-    regle("cormund-attaque", "planet", 49, 1794335054764, "Cormund : attaque", "auto",
+    regle("cormund-attaque", "planet", 49, 1795073444389, "Cormund : attaque", "auto",
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), chaque unité présente sur Cormund subit une attaque de force 4 : un dé à 10 faces par unité, 1 dégât sur 4 ou moins."),
 
@@ -1313,7 +1317,7 @@ export const SCRIPTS = [
             libelle: "Clé de l'empire : réparer le système de défense (dépense un logisticien)",
         }),
 
-    action("esclaves", "habilite", 157, 1794335054822, "Esclaves", "plateau",
+    action("esclaves", "habilite", 157, 1795046343787, "Esclaves", "plateau",
         "À tout moment : dépensez un esclave (une infanterie capturée, dans vos éléments actifs), +1 ressource.", {
             depense: [{ esclaves: 1 }],
             gains: { res: 1 },
@@ -1324,7 +1328,7 @@ export const SCRIPTS = [
                 : {}),
         }),
 
-    action("camp-de-travail", "unit", 154, 1794049918192, "Camp de travail", "unite",
+    action("camp-de-travail", "unit", 154, 1795074271167, "Camp de travail", "unite",
         "Production : le camp est usé et un esclave dépensé, +4 ressources.", {
             phase: "production",
             use: true,
@@ -1341,7 +1345,7 @@ export const SCRIPTS = [
         "Conflit : conflit d'accord (revendication)",
         "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez."),
 
-    action("fin-de-la-tempete", "habilite", 443, 1793999783814, "Fin de la tempête", "carte",
+    action("fin-de-la-tempete", "habilite", 443, 1795046343837, "Fin de la tempête", "carte",
         "Phase d'événement : la Tempête spatiale est retirée de la table, les stations météorologiques ne génèrent plus de recherche tempête, chaque faction marque 2 points par niveau de connaissance de tempête, et celle qui en a le plus 3 de plus.", {
             phase: "[ée]v[ée]nement",
             nomPhase: "événement",
@@ -1367,11 +1371,11 @@ export const SCRIPTS = [
             libelle: "Appliquer la fin de la tempête",
         }),
 
-    regle("presence-de-cache", "habilite", 491, 1794335055044, "Présence de cache", "modifie",
+    regle("presence-de-cache", "habilite", 491, 1795068317107, "Présence de cache", "modifie",
         "Espace : explorer (Ctrl + clic sur un emplacement vide)",
         "Un système qui vient d'être exploré reçoit un fragment de relique tiré du sac."),
 
-    action("diplomatie-pirate", "habilite", 522, 1794335055049, "Diplomatie pirate", "bandeau",
+    action("diplomatie-pirate", "habilite", 522, 1795046343858, "Diplomatie pirate", "bandeau",
         "Diplomatie, quand des vaisseaux pirates sont sur la carte : use un diplomate et dépensez 3 commerce, l'alliance Pacte pirate arrive dans vos éléments actifs.", {
             pourTous: true,
             phase: "diplomatie",
@@ -1384,13 +1388,13 @@ export const SCRIPTS = [
         }),
 
     {
-        ...regle("rebellion-en-cours", "habilite", 558, 1794335055056, "Rébellion en cours", "auto",
+        ...regle("rebellion-en-cours", "habilite", 558, 1795046343860, "Rébellion en cours", "auto",
             "En-tête : « Nouveau tour »",
             "À chaque nouveau tour, 1D3 rebelles de plus sur chaque planète possédée par un joueur où il y en a déjà."),
         pourTous: true,
     },
 
-    regle("milice-au-coeur-du-pouvoir", "habilite", 725, 1789794426606, "Milice au cœur du pouvoir", "auto",
+    regle("milice-au-coeur-du-pouvoir", "habilite", 725, 1795046343865, "Milice au cœur du pouvoir", "auto",
         "En-tête : « Nouveau tour » (habilité posée sur la table)",
         "À partir du tour 8, à chaque nouveau tour : 1D10 miliciens sont posés sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu)."),
 
@@ -1398,11 +1402,11 @@ export const SCRIPTS = [
         "Recrutement, propositions, boutons qui coûtent de l'influence ; ravitaillement automatique",
         "Ce qui se paie en influence se paie en ressources ; l'entretien ne rapporte pas d'influence."),
 
-    regle("infiltration", "habilite", 896, 1794336276052, "Infiltration", "auto",
+    regle("infiltration", "habilite", 896, 1795046343894, "Infiltration", "auto",
         "Conflit : « Terminer le combat » un vaisseau détruit",
         "Détruire un vaisseau vous donne un token Infiltration (dans vos éléments actifs, aux couleurs de la faction touchée)."),
 
-    action("infiltration-recherche", "habilite", 896, 1794336276052, "Infiltration : recherche", "plateau",
+    action("infiltration-recherche", "habilite", 896, 1795046343894, "Infiltration : recherche", "plateau",
         "Science : use un scientifique et 2 infiltrations (usées jusqu'au nouveau tour), 4 de recherche d'une technologie que possède la faction infiltrée.", {
             phase: "science",
             agent: SCIENTIFIQUE,
@@ -1414,7 +1418,7 @@ export const SCRIPTS = [
     // ---- mercenaires : boutons de la fiche de leur carte (dans mes éléments actifs) ; la
     //      carte est usée jusqu'au nouveau tour ----
 
-    action("doctor-carrina", "mercenaire", 285, 1786999216593, "Doctor Carrina", "carte",
+    action("doctor-carrina", "mercenaire", 285, 1795076851665, "Doctor Carrina", "carte",
         "Science : son cube part dans les agents usés, 1 de recherche sociale, militaire, génétique et spatiale (la planète à activer : à la main).", {
             phase: "science",
             use: true,
@@ -1423,7 +1427,7 @@ export const SCRIPTS = [
             libelle: "Doctor Carrina : recherche sociale, militaire, génétique et spatiale",
         }),
 
-    action("xuange", "mercenaire", 286, 1789968499216, "Xuange", "carte",
+    action("xuange", "mercenaire", 286, 1795076851666, "Xuange", "carte",
         "Science : son cube part dans les agents usés, dépensez 2X influence, X de recherche sociale.", {
             phase: "science",
             use: true,
@@ -1436,7 +1440,7 @@ export const SCRIPTS = [
             libelle: "Xuange : 2X influence → X recherche sociale",
         }),
 
-    action("aktaran", "mercenaire", 287, 1787903345632, "Aktaran", "carte",
+    action("aktaran", "mercenaire", 287, 1795076851667, "Aktaran", "carte",
         "Diplomatie, lors d'une livraison : son cube part dans les agents usés, 4 de recherche d'une technologie que la cible possède.", {
             phase: "diplomatie",
             use: true,
@@ -1444,7 +1448,7 @@ export const SCRIPTS = [
             libelle: "Aktaran : +4 recherche (lors d'une livraison)",
         }),
 
-    action("yvin-korduul", "mercenaire", 288, 1789968562567, "Yvin Korduul", "carte",
+    action("yvin-korduul", "mercenaire", 288, 1795076851668, "Yvin Korduul", "carte",
         "Diplomatie : son cube part dans les agents usés, dépensez 5 influence, vous produisez une de vos faveurs.", {
             phase: "diplomatie",
             use: true,
@@ -1454,7 +1458,7 @@ export const SCRIPTS = [
         }),
 
     // (ex-« Sai Seravus », astrophysicienne : l'identifiant du script est gardé)
-    action("sai-seravus", "mercenaire", 289, 1794335054893, "Oriane Tesh", "carte",
+    action("sai-seravus", "mercenaire", 289, 1795076851669, "Oriane Tesh", "carte",
         "Science : son cube part dans les agents usés, 1 de recherche spatiale par système à anomalie où vous avez une unité.", {
             phase: "science",
             use: true,
@@ -1465,11 +1469,11 @@ export const SCRIPTS = [
             libelle: "Oriane Tesh : recherche spatiale (anomalies où vous avez une unité)",
         }),
 
-    regle("ahk-ravin", "mercenaire", 291, 1794390437899, "Ahk Ravin", "modifie",
+    regle("ahk-ravin", "mercenaire", 291, 1795076851671, "Ahk Ravin", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",
         "Quand Ahk Ravin est le scientifique d'une fouille (son cube posé sur le type Scientifique) : une fenêtre propose de dépenser 3 ressources pour 2 fragments au lieu d'un."),
 
-    action("artuno", "mercenaire", 297, 1794335054896, "Artuno", "carte",
+    action("artuno", "mercenaire", 297, 1795076851676, "Artuno", "carte",
         "Diplomatie : son cube part dans les agents usés, 1 commerce par alliance en cours chez vous.", {
             phase: "diplomatie",
             use: true,
@@ -1479,7 +1483,7 @@ export const SCRIPTS = [
             libelle: "Artuno : 1 commerce par alliance",
         }),
 
-    action("ta-zern", "mercenaire", 302, 1794335054899, "Ta Zern", "carte",
+    action("ta-zern", "mercenaire", 302, 1795076851680, "Ta Zern", "carte",
         "Science : son cube part dans les agents usés, 1 de recherche génétique par planète que vous possédez.", {
             phase: "science",
             use: true,
@@ -1490,7 +1494,7 @@ export const SCRIPTS = [
             libelle: "Ta Zern : recherche génétique (1 par planète possédée)",
         }),
 
-    action("sal-gavda", "mercenaire", 349, 1794335054958, "Sal Gavda", "carte",
+    action("sal-gavda", "mercenaire", 349, 1795076851717, "Sal Gavda", "carte",
         "Diplomatie : son cube part dans les agents usés, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité.", {
             phase: "diplomatie",
             use: true,
@@ -1500,7 +1504,7 @@ export const SCRIPTS = [
             libelle: "Sal Gavda : 1 commerce par faction voisine",
         }),
 
-    action("agnlan-oln", "mercenaire", 353, 1789878760208, "Agnlan Oln", "carte",
+    action("agnlan-oln", "mercenaire", 353, 1795076851721, "Agnlan Oln", "carte",
         "Science : son cube part dans les agents usés, un plan de relique est pioché dans votre main.", {
             phase: "science",
             use: true,
@@ -1508,7 +1512,7 @@ export const SCRIPTS = [
             libelle: "Agnlan Oln : piocher un plan de relique",
         }),
 
-    action("shipmonger-zsknck", "mercenaire", 358, 1794335054962, "Shipmonger Zsknck", "unite",
+    action("shipmonger-zsknck", "mercenaire", 358, 1795076851725, "Shipmonger Zsknck", "unite",
         "Production : le cube du mercenaire part dans les agents usés, un de vos vaisseaux non biologiques est réparé gratuitement (bouton de la fiche du vaisseau).", {
             phase: "production",
             use: true,
@@ -1520,31 +1524,31 @@ export const SCRIPTS = [
 
     // ---- mercenaires de combat : un bouton chacun dans le cadre du combat (Combat.jsx) ----
 
-    regle("so-ata", "mercenaire", 284, 1794335054892, "So Ata", "nouveau",
+    regle("so-ata", "mercenaire", 284, 1795076851665, "So Ata", "nouveau",
         "Conflit : combat spatial",
         "Deux boutons : « désigner un vaisseau » au début du combat (la restriction d'engagement est à respecter à la main) ; « capturer un vaisseau détruit » à la fin — il va dans vos éléments actifs."),
 
-    regle("claire-gibson", "mercenaire", 281, 1794335054891, "Claire Gibson", "nouveau",
+    regle("claire-gibson", "mercenaire", 281, 1795076851662, "Claire Gibson", "nouveau",
         "Conflit : combat terrestre",
         "Son cube part dans les agents usés : vos infanteries ont +1 pour ce combat."),
 
-    regle("sharsiss", "mercenaire", 299, 1794335054897, "Sharsiss", "nouveau",
+    regle("sharsiss", "mercenaire", 299, 1795076851677, "Sharsiss", "nouveau",
         "Conflit : combat spatial",
         "Son cube part dans les agents usés : autant d'unités d'une autre faction que vous en avez dans ce combat ont +1 (un bouton par faction)."),
 
-    regle("skarvald", "mercenaire", 350, 1794335054959, "Skarvald", "nouveau",
+    regle("skarvald", "mercenaire", 350, 1795076851718, "Skarvald", "nouveau",
         "Conflit : bombardement",
         "Son cube part dans les agents usés : 3 dés, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète."),
 
-    regle("henry-storcher", "mercenaire", 356, 1794335054961, "Henry Storcher", "nouveau",
+    regle("henry-storcher", "mercenaire", 356, 1795076851723, "Henry Storcher", "nouveau",
         "Conflit : combat spatial",
         "Son cube part dans les agents usés : 1 commerce par vaisseau que vous avez perdu dans ce combat."),
 
-    regle("jace-x", "mercenaire", 357, 1789967502290, "Jace X", "nouveau",
+    regle("jace-x", "mercenaire", 357, 1795076851724, "Jace X", "nouveau",
         "Conflit : combat terrestre",
         "Son cube part dans les agents usés : vos unités terrestres ont +1 pour ce combat."),
 
-    action("mirik-aun-sissiri", "mercenaire", 355, 1794335054961, "Mirik Aun Sissiri", "systeme",
+    action("mirik-aun-sissiri", "mercenaire", 355, 1795076851722, "Mirik Aun Sissiri", "systeme",
         "Mandat : son cube part dans les agents usés, vous avez +1 au combat spatial dans ce système jusqu'à la prochaine phase de mandat.", {
             phase: "mandat",
             use: true,
@@ -1567,24 +1571,24 @@ export const SCRIPTS = [
         "Conflit : malus de la tempête",
         "Le −1 de la Tempête spatiale ne s'applique pas à vos unités ; une fois la tempête finie, le Générateur de tempête ne vous touche plus."),
 
-    effet("energie-de-la-faille", 818, 1794343421184, "Énergie de la faille", "auto",
+    effet("energie-de-la-faille", 818, 1795046343882, "Énergie de la faille", "auto",
         "Conflit : combat spatial",
         "Vos vaisseaux ont +1 au combat."),
 
-    effet("soldats-dephases", 819, 1794343421185, "Soldats déphasés", "auto",
+    effet("soldats-dephases", 819, 1795046343883, "Soldats déphasés", "auto",
         "Conflit : combat terrestre",
         "Vos forces terrestres ont +1 au combat."),
 
     // ---- technologies : revenus du ravitaillement (Revenus.jsx) ----
 
-    revenu("exploitation-des-tempetes", "tech", 448, 1794343421166, "Exploitation des tempêtes", "ravit",
+    revenu("exploitation-des-tempetes", "tech", 448, 1795046343840, "Exploitation des tempêtes", "ravit",
         "+3 ressources tant que la tempête est active.", {
             calcul: (source, outils) => (outils.aScript("tempete-spatiale")
                 ? { gains: { res: 3 } }
                 : { sans: "la tempête n'est pas active" }),
         }),
 
-    revenu("reseau", "tech", 787, 1794343421173, "Réseau", "ravit",
+    revenu("reseau", "tech", 787, 1795068317110, "Réseau", "ravit",
         "+2 influence par satellite : stations que vous possédez et unités satellites posées sur la carte.", {
             calcul: (source, outils) => {
                 const n = outils.stations() + outils.unitesAvecMot(/^sat+el+ite$/i);
@@ -1592,7 +1596,7 @@ export const SCRIPTS = [
             },
         }),
 
-    revenu("relais-d-influence", "tech", 807, 1794343421181, "Relais d'influence", "ravit",
+    revenu("relais-d-influence", "tech", 807, 1795046343880, "Relais d'influence", "ravit",
         "+2 influence par station que vous possédez.", {
             calcul: (source, outils) => (outils.stations() > 0
                 ? { gains: { inf: 2 * outils.stations() } }
@@ -1601,7 +1605,7 @@ export const SCRIPTS = [
 
     // ---- technologies : boutons ----
 
-    action("vaccin", "tech", 402, 1794335055007, "Vaccin", "plateau",
+    action("vaccin", "tech", 402, 1795072921275, "Vaccin", "plateau",
         "Une seule fois : +4 points, et une faveur neutre si personne n'avait le vaccin avant ce tour.", {
             gains: { points: 4 },
             visible: outils => !Number(outils.etat.compteurs[`joueur:${outils.moi}:vaccin`]),
@@ -1621,7 +1625,7 @@ export const SCRIPTS = [
             libelle: "Vaccin : +4 points",
         }),
 
-    action("generateur-de-tempete", "tech", 447, 1794343421165, "Générateur de tempête", "systeme",
+    action("generateur-de-tempete", "tech", 447, 1795072921267, "Générateur de tempête", "systeme",
         "Combat spatial : la technologie et un scientifique sont usés, 3 ressources — tous les vaisseaux du système ont −1 au combat ce tour (la tempête finie, les factions qui ont Adaptation de la visée y échappent). La flotte ciblée (−1 de plus) : à la main.", {
             phase: "combat spatial",
             use: true,
@@ -1634,7 +1638,7 @@ export const SCRIPTS = [
             libelle: "Générateur de tempête (use la technologie et un scientifique, 3 ressources)",
         }),
 
-    action("exploitation-des-tempetes-nebuleuse", "tech", 448, 1794343421166, "Exploitation des tempêtes : nébuleuse", "systeme",
+    action("exploitation-des-tempetes-nebuleuse", "tech", 448, 1795046343840, "Exploitation des tempêtes : nébuleuse", "systeme",
         "Science : use un scientifique et active une nébuleuse (que vous contrôlez : non vérifié) — +4 ressources.", {
             phase: "science",
             agent: SCIENTIFIQUE,
@@ -1644,7 +1648,7 @@ export const SCRIPTS = [
             libelle: "Exploitation des tempêtes : +4 ressources (use un scientifique, active la nébuleuse)",
         }),
 
-    action("stimulant", "tech", 791, 1794343421176, "Stimulant", "plateau",
+    action("stimulant", "tech", 791, 1795068317111, "Stimulant", "plateau",
         "La technologie est usée : un de vos agents usés (mercenaire compris) redevient disponible.", {
             use: true,
             ...choixDansListe({
@@ -1679,7 +1683,7 @@ export const SCRIPTS = [
             libelle: "Anticipation : déplacement de Memoria (use la technologie et un scientifique)",
         }),
 
-    action("opportunite-predite", "tech", 806, 1794343421180, "Opportunité prédite", "plateau",
+    action("opportunite-predite", "tech", 806, 1795072921271, "Opportunité prédite", "plateau",
         "Recrutement : un agent de base de votre choix est ajouté sur la case de recrutement 4 (une fois par tour).", {
             phase: "recrutement",
             parTour: true,
@@ -1742,7 +1746,7 @@ export const SCRIPTS = [
 
     // ---- planète : Mecatol Rex (carte spéciale) ----
 
-    action("mecatol-rex-politique", "planet", 229, 1794383437427, "Mecatol Rex : obtenir un politique", "carte",
+    action("mecatol-rex-politique", "planet", 229, 1795190407297, "Mecatol Rex : obtenir un politique", "carte",
         "Recrutement : dépensez un de vos agents disponibles, vous obtenez un politique.", {
             phase: "recrutement",
             visible: outils => outils.aCarte("planet", 229),
@@ -1773,7 +1777,7 @@ export const SCRIPTS = [
 
     // ---- habilités d'événements et de factions neutres (valables pour toute la table) ----
 
-    action("armer-les-rebelles", "habilite", 563, 1794335055058, "Armer les rebelles", "plateau",
+    action("armer-les-rebelles", "habilite", 563, 1795046343862, "Armer les rebelles", "plateau",
         "Combat terrestre, quand des Rebelles engagent (vos unités adjacentes : non vérifié) : dépensez 3 ressources, les Rebelles ont +1 au combat ce tour.", {
             pourTous: true,
             phase: "combat terrestre",
@@ -1786,7 +1790,7 @@ export const SCRIPTS = [
             libelle: "Armer les rebelles : +1 aux Rebelles ce tour (3 ressources)",
         }),
 
-    action("offre-d-asile", "habilite", 453, 1794046867036, "Offre d'asile", "planete",
+    action("offre-d-asile", "habilite", 453, 1795046343843, "Offre d'asile", "planete",
         "Phase d'événement : une de vos planètes passe aux Réfugiés — vous gagnez autant de points que son influence, 6 Milices et un Entrepôt d'aide y sont posés, l'alliance Tuteur des réfugiés arrive chez vous.", {
             pourTous: true,
             surPlanete: true,
@@ -1817,7 +1821,7 @@ export const SCRIPTS = [
             libelle: "Offre d'asile : donner la planète aux Réfugiés",
         }),
 
-    action("refugies", "habilite", 837, 1794046867028, "Réfugiés", "bandeau",
+    action("refugies", "habilite", 837, 1795046343885, "Réfugiés", "bandeau",
         "Ravitaillement : 2 Milices sont ajoutées sur chaque planète des Réfugiés (là où est un Entrepôt d'aide) — une fois par tour, pour toute la table.", {
             pourTous: true,
             phase: "ravitaillement",
@@ -1832,7 +1836,7 @@ export const SCRIPTS = [
             libelle: "Réfugiés : 2 Milices sur chaque planète des Réfugiés",
         }),
 
-    action("entrainer-les-milices", "habilite", 838, 1794046867030, "Entraîner les milices", "plateau",
+    action("entrainer-les-milices", "habilite", 838, 1795072921277, "Entraîner les milices", "plateau",
         "Une fois par partie, détenteur de Tuteur des réfugiés : dépensez 4 ressources et posez un de vos amiraux sur cette alliance — les Milices ont +2 au combat.", {
             pourTous: true,
             cout: { res: 4 },
@@ -1884,58 +1888,58 @@ export const SCRIPTS = [
             libelle: "Deux attaques (1 influence)",
         }),
 
-    regle("jns-hylarim-annuler", "unit", 172, 1794335054831, "J.N.S. Hylarim : annuler une touche", "nouveau",
+    regle("jns-hylarim-annuler", "unit", 172, 1795046343791, "J.N.S. Hylarim : annuler une touche", "nouveau",
         "Conflit, combat spatial : « Annuler 1 » sur une unité qui doit encaisser",
         "Une autre de vos unités du système doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
 
-    regle("bouclier-mobile-annuler", "unit", 175, 1794335054831, "Bouclier mobile : annuler une touche", "nouveau",
+    regle("bouclier-mobile-annuler", "unit", 175, 1795046343792, "Bouclier mobile : annuler une touche", "nouveau",
         "Conflit, combat terrestre : « Annuler 1 » sur une unité qui doit encaisser",
         "Une autre de vos unités de la planète doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
 
-    regle("systeme-de-defense-annuler", "unit", 177, 1795039696874, "Système de défense : annuler une touche", "nouveau",
+    regle("systeme-de-defense-annuler", "unit", 177, 1795046343793, "Système de défense : annuler une touche", "nouveau",
         "Conflit, bombardement et raid : « Annuler 1 » sur une unité qui doit encaisser",
         "Une autre de vos unités de la planète doit encaisser un dégât : 1 ressource, il est annulé (le dé est attribué sans dégât)."),
 
     // ---- mécaniques de combat (Combat.jsx) ----
 
-    regle("raid", "unit", 152, 1794049918190, "Raid", "nouveau",
+    regle("raid", "unit", 152, 1795046343784, "Raid", "nouveau",
         "Fiche d'un système, à côté d'une planète : « Raid » ; conflit : combat « Raid »",
         "Bombardement spécial (#raid) des unités de l'espace du système, après les bombardements : seules les infanteries sont des cibles (s'il y a d'autres unités militaires sur la planète, il faut cibler) ; chaque infanterie touchée est capturée et part dans les éléments actifs du raideur. Sans infanterie, une réussite capture un esclave de qui possède la planète. Les effets des bombardements s'appliquent.",
         [153, 156]),
 
-    regle("salai-sai-corian", "unit", 148, 1794049918188, "Salai Sai Corian", "auto",
+    regle("salai-sai-corian", "unit", 148, 1795046343782, "Salai Sai Corian", "auto",
         "Conflit, combat spatial",
         "+1 au combat par vaisseau adverse que visent ses engagements."),
 
-    regle("complexe-de-guerre-destroyers", "unit", 164, 1794335054826, "Complexe de guerre : destroyers", "auto",
+    regle("complexe-de-guerre-destroyers", "unit", 164, 1795074271173, "Complexe de guerre : destroyers", "auto",
         "Conflit, combat spatial",
         "Vos destroyers ont +1 (non cumulable) dans le système d'un de vos complexes de guerre et dans les systèmes adjacents."),
 
-    regle("mech-aerien", "unit", 171, 1794335054830, "Mech aérien", "auto",
+    regle("mech-aerien", "unit", 171, 1795076850857, "Mech aérien", "auto",
         "Conflit, combat spatial",
         "Depuis une planète du système, il tire au combat spatial (il n'en est pas une cible)."),
 
-    regle("vaisseau-pirate", "unit", 407, 1794049918205, "Vaisseau pirate", "auto",
+    regle("vaisseau-pirate", "unit", 407, 1795075037683, "Vaisseau pirate", "auto",
         "Conflit, combat spatial",
         "Ses dés qui font 0 touchent d'abord un vaisseau de commerce du camp visé ; furtif dans un système à anomalie."),
 
-    regle("epineux-geant", "unit", 466, 1794335055036, "Épineux géant", "auto",
+    regle("epineux-geant", "unit", 466, 1795046343847, "Épineux géant", "auto",
         "Conflit, bombardement",
         "Au bombardement de sa planète, il attaque aussi les unités terrestres de la planète, avec sa valeur de combat."),
 
-    regle("duha-menaimon-attaques", "unit", 472, 1794049918214, "Duha Menaimon : attaques", "auto",
+    regle("duha-menaimon-attaques", "unit", 472, 1795074271172, "Duha Menaimon : attaques", "auto",
         "Conflit, combat spatial",
         "Autant d'attaques que votre niveau de connaissance génétique (aucune à 0)."),
 
-    regle("duha-menaimon-letani", "unit", 472, 1794049918214, "Duha Menaimon : Letani", "nouveau",
+    regle("duha-menaimon-letani", "unit", 472, 1795074271172, "Duha Menaimon : Letani", "nouveau",
         "Conflit, bombardement : « Duha Menaimon : jet »",
         "Un dé : s'il fait au plus votre niveau de connaissance génétique, un Letani est posé sur la planète bombardée."),
 
-    regle("fregate-du-khan", "unit", 524, 1794049918223, "Frégate du khan", "nouveau",
+    regle("fregate-du-khan", "unit", 524, 1795073444392, "Frégate du khan", "nouveau",
         "Conflit : « Riposte du khan » sur la frégate détruite",
         "Son destructeur lance un dé : 6 ou moins (4 ou moins si l'unité qui l'a détruite a #fpre), il encaisse 1 dégât sur une de ses unités du combat. La frégate se retire ensuite."),
 
-    regle("palais-du-khan", "unit", 525, 1794049918224, "Palais du khan", "auto",
+    regle("palais-du-khan", "unit", 525, 1795074271177, "Palais du khan", "auto",
         "Conflit : malus pour toucher",
         "L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan du combat, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage."),
 
@@ -1947,15 +1951,15 @@ export const SCRIPTS = [
         "Conflit, combat terrestre",
         "Autant d'attaques que votre niveau de connaissance militaire (aucune à 0)."),
 
-    regle("olivier-dubois", "unit", 745, 1794339608765, "Olivier Dubois", "nouveau",
+    regle("olivier-dubois", "unit", 745, 1795046343869, "Olivier Dubois", "nouveau",
         "Conflit, combat terrestre : « Olivier Dubois : +2 aux infanteries cochées »",
         "Jusqu'à votre capacité logistique de vos infanteries cochées ont +2 pour ce combat."),
 
-    regle("memoria-d", "unit", 769, 1794335055081, "Memoria D", "nouveau",
+    regle("memoria-d", "unit", 769, 1795073444382, "Memoria D", "nouveau",
         "Conflit : « Memoria D : jet » sur une de vos infanteries détruites",
         "Un dé : 6 ou moins, l'infanterie est sauvée et posée à bord de votre Memoria D."),
 
-    regle("armageddon-capture", "unit", 850, 1794339608774, "Armageddon (destruction)", "auto",
+    regle("armageddon-capture", "unit", 850, 1795046343887, "Armageddon (destruction)", "auto",
         "Conflit : « Terminer le combat » (butin)",
         "Celui qui le détruit prend le contrôle d'un Armageddon conquis (#490), avec 1 de résistance restante."),
 
@@ -1963,19 +1967,19 @@ export const SCRIPTS = [
         "Conflit : engagements",
         "Un engagement de groupe ne l'atteint jamais : elle doit être ciblée."),
 
-    regle("troupe-de-detournement", "unit", 846, 1794122783355, "Troupe de détournement", "auto",
+    regle("troupe-de-detournement", "unit", 846, 1795046343886, "Troupe de détournement", "auto",
         "Conflit, combats spatial et terrestre : phases 5 et 6 « Dernières attaques »",
         "Elle attaque après toutes les autres unités (un troisième « Prêt au combat », une fois les autres dégâts répartis). Un vaisseau qu'elle détruit est capturé : « Terminer le combat » l'envoie, réparé, dans les éléments actifs de son camp."),
 
-    regle("camp-de-travail-destruction", "unit", 154, 1794049918192, "Camp de travail (destruction)", "auto",
+    regle("camp-de-travail-destruction", "unit", 154, 1795074271167, "Camp de travail (destruction)", "auto",
         "Conflit : « Terminer le combat » (butin)",
         "Détruit : 2 esclaves de son propriétaire sont dépensés (au choix du destructeur — l'outil prend ceux des autres factions d'abord) et le destructeur pose 2 de ses infanteries sur la planète."),
 
-    effet("strategie-d-evitement", 788, 1794343421174, "Stratégie d'évitement", "nouveau",
+    effet("strategie-d-evitement", 788, 1795072921268, "Stratégie d'évitement", "nouveau",
         "Conflit, combat spatial : « Stratégie d'évitement : vaisseaux cochés »",
         "Au début du combat, vos vaisseaux militaires cochés ont −1 au combat ; un tireur dont le premier engagement ne vise qu'eux a −1."),
 
-    action("prevision-des-combats", "tech", 803, 1794343421177, "Prévision des combats", "systeme",
+    action("prevision-des-combats", "tech", 803, 1795046343879, "Prévision des combats", "systeme",
         "Combat spatial : la technologie et un scientifique sont usés — votre flotte de ce système a la frappe en premier ce tour (écran de combat).", {
             phase: "combat spatial",
             use: true,
@@ -1999,8 +2003,10 @@ export const SCRIPTS = [
             libelle: "Centre d'expansion : +1 au combat spatial ici ce tour",
         }),
 
-    action("armageddon-scientifique", "unit", 490, 1794052194776, "Armageddon conquis : scientifique", "unite",
-        "Dépensez 3 fragments militaires et posez un scientifique sur cette unité : la portée de son canon augmente de 1 et elle rapporte 2 points de plus au décompte (à compter à la main).", {
+    action("armageddon-scientifique", "unit", 490, 1795072921262, "Armageddon conquis : scientifique", "unite",
+        "Science (Reforger) : dépensez 3 fragments militaires et posez un scientifique sur cette unité, où il reste : la portée de son canon augmente de 1 et elle rapporte 2 points de plus au décompte (à compter à la main).", {
+            // (Reforger : à la phase de science ; ici le scientifique reste sur l'unité au lieu d'être dépensé)
+            phase: "science",
             fragments: { mil: 3 },
             agent: { motif: "scientifique", nom: "scientifique", pose: true, surCarte: true },
             visible: outils => !!outils.c && !Object.values(outils.etat.composants).some(x => x.sur === outils.c.id && x.ref?.type === "agent"),
@@ -2008,7 +2014,7 @@ export const SCRIPTS = [
             libelle: "Poser un scientifique (3 fragments militaires)",
         }),
 
-    action("cuve-de-clonage-produire", "unit", 570, 1794049918229, "Cuve de clonage : produire", "unite",
+    action("cuve-de-clonage-produire", "unit", 570, 1795046343863, "Cuve de clonage : produire", "unite",
         "Production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète.", {
             phase: "production",
             use: true,
@@ -2016,7 +2022,7 @@ export const SCRIPTS = [
             libelle: "Produire 2 infanteries (cuve usée)",
         }),
 
-    action("combattant-voyageur", "unit", 747, 1794339608767, "Combattant voyageur : se déplacer", "unite",
+    action("combattant-voyageur", "unit", 747, 1795046343870, "Combattant voyageur : se déplacer", "unite",
         "Débarquement : l'unité est usée et vous dépensez 3 ressources ; glissez-la sur une autre planète à 3 de distance au plus.", {
             phase: "d[ée]barquement",
             nomPhase: "débarquement",
@@ -2026,7 +2032,7 @@ export const SCRIPTS = [
             libelle: "Se déplacer (3 ressources, unité usée)",
         }),
 
-    action("vaisseau-relique-combat", "unit", 854, 1794335055091, "Vaisseau relique : +3 au combat", "unite",
+    action("vaisseau-relique-combat", "unit", 854, 1795074271178, "Vaisseau relique : +3 au combat", "unite",
         "Dépensez un fragment militaire : +3 au combat pour ce combat (ce tour).", {
             fragments: { mil: 1 },
             calcul: outils => (Number(outils.c?.marques?.reliqueMil) === outils.etat.tour ? { sans: "déjà fait ce tour" } : {}),
@@ -2034,7 +2040,7 @@ export const SCRIPTS = [
             libelle: "+3 au combat (fragment militaire)",
         }),
 
-    action("vaisseau-relique-mouvement", "unit", 854, 1794335055091, "Vaisseau relique : +3 mouvement", "unite",
+    action("vaisseau-relique-mouvement", "unit", 854, 1795074271178, "Vaisseau relique : +3 mouvement", "unite",
         "Dépensez un fragment spatial : +3 mouvement et déplacement furtif ce tour (déplacement assisté).", {
             fragments: { spa: 1 },
             calcul: outils => (Number(outils.c?.marques?.reliqueSpa) === outils.etat.tour ? { sans: "déjà fait ce tour" } : {}),
@@ -2042,7 +2048,7 @@ export const SCRIPTS = [
             libelle: "+3 mouvement et furtif (fragment spatial)",
         }),
 
-    action("vaisseau-relique-infanterie", "unit", 854, 1794335055091, "Vaisseau relique : infanterie", "unite",
+    action("vaisseau-relique-infanterie", "unit", 854, 1795074271178, "Vaisseau relique : infanterie", "unite",
         "Dépensez un fragment civil : le vaisseau est rempli d'infanteries de votre faction (jusqu'à sa capacité).", {
             fragments: { civ: 1 },
             calcul: outils => {
@@ -2056,7 +2062,7 @@ export const SCRIPTS = [
             libelle: "Remplir d'infanterie (fragment civil)",
         }),
 
-    action("vaisseau-relique-reparer", "unit", 854, 1794335055091, "Vaisseau relique : réparer", "unite",
+    action("vaisseau-relique-reparer", "unit", 854, 1795074271178, "Vaisseau relique : réparer", "unite",
         "Posez un fragment ancien sur le vaisseau : il est réparé gratuitement, et il a 1 de résistance en plus par fragment ancien posé dessus (compté au combat).", {
             fragments: { ancien: 1 },
             fragmentsPoses: true,
@@ -2066,39 +2072,39 @@ export const SCRIPTS = [
 
     // ---- remplaçants d'agent (Interaction.jsx : choisirRemplacants) ----
 
-    regle("heritier", "agent", 142, 1794335054815, "Héritier", "modifie",
+    regle("heritier", "agent", 142, 1795072921248, "Héritier", "modifie",
         "Tout agent utilisé ou dépensé : fenêtre de choix",
         "Utilisable comme politique si vous possédez Mecatol Rex, comme amiral sinon ; dépensé, il attend deux tours sur votre feuille au lieu d'être détruit."),
 
-    regle("noble-cryogenise", "relique", 396, 1794335055002, "Noble cryogénisé", "modifie",
+    regle("noble-cryogenise", "relique", 396, 1795076851738, "Noble cryogénisé", "modifie",
         "Tout agent utilisé ou dépensé : fenêtre de choix",
         "Glissez la carte sur un type d'agent de votre réserve : elle s'utilise comme cet agent ; quand elle devrait être dépensée, elle est usée."),
 
     // ---- promesses : boutons de la fiche de la carte (chez moi) ----
 
-    regle("vassal", "Promesse", 224, 1794339360457, "Vassal", "modifie",
+    regle("vassal", "Promesse", 224, 1795072921255, "Vassal", "modifie",
         "Conflit : conflit d'accord (revendication)",
         "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez."),
 
-    action("vassal-rompu", "Promesse", 224, 1794339360457, "Vassal : promesse rompue", "carte",
+    action("vassal-rompu", "Promesse", 224, 1795072921255, "Vassal : promesse rompue", "carte",
         "Si vous perdez un de vos mondes nataux : la promesse retourne à la réserve et la faction qui l'a faite gagne 1 infamie.", {
             special: promesseRompue,
             libelle: ROMPUE,
         }),
 
-    action("pacte-de-non-agression-rompu", "Promesse", 225, 1794335054861, "Pacte de non-agression : rompu", "carte",
+    action("pacte-de-non-agression-rompu", "Promesse", 225, 1795076851650, "Pacte de non-agression : rompu", "carte",
         "Si la faction qui vous l'a fourni fait un engagement contre vous : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
             special: promesseRompue,
             libelle: ROMPUE,
         }),
 
-    action("accord-de-recherche", "Promesse", 335, 1794335054917, "Accord de recherche", "carte",
+    action("accord-de-recherche", "Promesse", 335, 1795076851707, "Accord de recherche", "carte",
         "Quand la faction recherche une technologie : vous gagnez 2 de recherche dans celle-ci (notée au journal de recherche).", {
             recherche: [["", 2]],
             libelle: "Accord de recherche : +2 recherche (la faction recherche une technologie)",
         }),
 
-    action("acces-aux-archives-imperiales", "Promesse", 370, 1794335054966, "Accès aux archives impériales", "carte",
+    action("acces-aux-archives-imperiales", "Promesse", 370, 1795068317101, "Accès aux archives impériales", "carte",
         "Science : use un scientifique et activez Mecatol Rex, 3 de recherche ; les Winnu gagnent autant de recherche.", {
             phase: "science",
             agent: SCIENTIFIQUE,
@@ -2123,19 +2129,19 @@ export const SCRIPTS = [
             libelle: "Accès aux archives impériales : +3 recherche (use un scientifique, active Mecatol Rex)",
         }),
 
-    action("promesse-de-vente-rompue", "Promesse", 383, 1794335054976, "Promesse de vente : rompue", "carte",
+    action("promesse-de-vente-rompue", "Promesse", 383, 1795076851729, "Promesse de vente : rompue", "carte",
         "Si la faction ne vous a pas fourni l'élément à l'échéance : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
             special: promesseRompue,
             libelle: ROMPUE,
         }),
 
-    action("frontiere-ouverte-rompue", "Promesse", 384, 1794335054976, "Frontière ouverte : rompue", "carte",
+    action("frontiere-ouverte-rompue", "Promesse", 384, 1795076851729, "Frontière ouverte : rompue", "carte",
         "Si la faction bloque un de vos mouvements : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
             special: promesseRompue,
             libelle: ROMPUE,
         }),
 
-    action("pacte-pirate", "Promesse", 458, 1794339360468, "Pacte pirate", "carte",
+    action("pacte-pirate", "Promesse", 458, 1795072921264, "Pacte pirate", "carte",
         "Ravitaillement : dépensez 2 ressources pour garder le pacte (une fois par tour) ; sinon renvoyez la carte à la réserve.", {
             phase: "ravit",
             nomPhase: "ravitaillement",
@@ -2144,7 +2150,7 @@ export const SCRIPTS = [
             libelle: "Pacte pirate : payer 2 ressources (ravitaillement)",
         }),
 
-    action("confrerie-de-mercenaire-pioche", "habilite", 764, 1794335055080, "Confrérie de mercenaire", "bandeau",
+    action("confrerie-de-mercenaire-pioche", "habilite", 764, 1795046343871, "Confrérie de mercenaire", "bandeau",
         "Recrutement : piochez un mercenaire dans votre main, à poser sur la case de recrutement de votre choix (une fois par tour).", {
             phase: "recrut",
             nomPhase: "recrutement",
@@ -2207,7 +2213,7 @@ export const SCRIPTS = [
         "Espace : déplacement assisté",
         "Le malus de 1 au mouvement de la Tempête spatiale est ignoré."),
 
-    action("tempete-electromagnetique", "tech", 446, 1794343420997, "Tempête électromagnétique", "systeme",
+    action("tempete-electromagnetique", "tech", 446, 1795046343839, "Tempête électromagnétique", "systeme",
         "Canons spatiaux, dans une nébuleuse : use un scientifique et active la nébuleuse, 4 dés de canon à 4. Les touches se répartissent à la main dans un système à portée 1.", {
             phase: "canon",
             nomPhase: "canons spatiaux",
@@ -2237,7 +2243,7 @@ export const SCRIPTS = [
         "Conflit : cadre de blocage (passage par un trou de ver oméga)",
         "Vos vaisseaux ignorent les touches des trous de ver oméga (9 ou plus : plus de touche)."),
 
-    revenu("extraction-de-la-faille", "tech", 821, 1794343421187, "Extraction de la faille", "ravit",
+    revenu("extraction-de-la-faille", "tech", 821, 1795046343884, "Extraction de la faille", "ravit",
         "+3 ressources par Faille que vous dominez (seul dans son espace, ou vainqueur d'un test de domination ce tour). Une Faille disputée fait attendre le ravitaillement : ouvrez un test de domination depuis la fiche du système.", {
             calcul: (source, outils) => {
 
@@ -2259,7 +2265,7 @@ export const SCRIPTS = [
 
     // ----- Habilités d'événements -----
 
-    action("peage-aux-frontieres", "habilite", 452, 1794339360466, "Péage aux frontières", "carte",
+    action("peage-aux-frontieres", "habilite", 452, 1795046343842, "Péage aux frontières", "carte",
         "Phase d'événement : la faction qui domine chaque système à trou de ver alpha gagne 3 commerce (seule dans son espace, ou vainqueur d'un test de domination ce tour).", {
             phase: "[ée]v[ée]nement",
             nomPhase: "événement",
@@ -2293,7 +2299,7 @@ export const SCRIPTS = [
             libelle: "Percevoir le péage aux frontières",
         }),
 
-    action("cache", "habilite", 486, 1793999783821, "Cache", "systeme",
+    action("cache", "habilite", 486, 1795046343852, "Cache", "systeme",
         "Revendication, dans un système que vous dominez et qui contient un fragment de relique : vous prenez un fragment.", {
             phase: "revendication",
             visible: outils => outils.numero !== null && fragmentsDuSysteme(outils.index, outils.numero).length > 0,
@@ -2314,7 +2320,7 @@ export const SCRIPTS = [
             libelle: "Cache : prendre un fragment de relique",
         }),
 
-    action("domination-designer", "habilite", 254, 1794335054878, "Domination : désigner", "planete",
+    action("domination-designer", "habilite", 254, 1795072921276, "Domination : désigner", "planete",
         "Ravitaillement, à partir du tour 7 : désignez une planète légendaire ou militaire que vous ne possédez pas. Si vous la possédez à la fin du tour, « Domination : +2 points » (plateau joueur).", {
             surPlanete: true,
             phase: "ravitaill",
@@ -2334,7 +2340,7 @@ export const SCRIPTS = [
             libelle: "Domination : désigner cette planète",
         }),
 
-    action("domination-points", "habilite", 254, 1794335054878, "Domination : points", "plateau",
+    action("domination-points", "habilite", 254, 1795072921276, "Domination : points", "plateau",
         "Fin du tour : si vous possédez la planète désignée au ravitaillement, +2 points.", {
             visible: outils => Number(outils.etat.compteurs[`joueur:${outils.moi}:dominationTour`]) === outils.etat.tour,
             special: atelier => {
@@ -2375,7 +2381,7 @@ export const SCRIPTS = [
             libelle: "Distorsion gravitationnelle : un dé par unité (touche sur le numéro du tour ou moins)",
         }),
 
-    action("debarquement-du-khan", "habilite", 530, 1794335055052, "Débarquement du Khan", "bandeau",
+    action("debarquement-du-khan", "habilite", 530, 1795046343860, "Débarquement du Khan", "bandeau",
         "Débarquement, quand le Palais du khan est sur la carte : chaque planète à portée 1 du Khan reçoit 1D6 Soldats du Khan. Une fois par tour pour la table.", {
             pourTous: true,
             phase: "d[ée]barquement",
@@ -2408,7 +2414,7 @@ export const SCRIPTS = [
             libelle: "Débarquement du Khan : 1D6 Soldats du Khan par planète à portée 1",
         }),
 
-    action("negocier-avec-les-rebelles", "habilite", 560, 1786887365787, "Négocier avec les rebelles", "planete",
+    action("negocier-avec-les-rebelles", "habilite", 560, 1795073444387, "Négocier avec les rebelles", "planete",
         "Diplomatie, sur une planète où il y a des Rebelles : use un diplomate, 3 dés à 4 — chaque réussite retire un Rebelle.", {
             pourTous: true,
             surPlanete: true,
@@ -2440,7 +2446,7 @@ export const SCRIPTS = [
             libelle: "Négocier avec les rebelles : attaque 4 ×3 (use un diplomate)",
         }),
 
-    action("rebellion-armee", "habilite", 561, 1794335055057, "Rébellion armée", "bandeau",
+    action("rebellion-armee", "habilite", 561, 1795072921244, "Rébellion armée", "bandeau",
         "Combat terrestre : un combat terrestre est ouvert sur chaque planète où il y a au moins 6 Rebelles. (À la revendication, leur tentative de reprendre la planète se fait à la main.)", {
             pourTous: true,
             phase: "combat terrestre",
@@ -2460,7 +2466,7 @@ export const SCRIPTS = [
             libelle: "Rébellion armée : ouvrir les combats terrestres (6 Rebelles ou plus)",
         }),
 
-    action("arme-bacteriologique", "tech", 403, 1794335055007, "Arme bactériologique", "systeme",
+    action("arme-bacteriologique", "tech", 403, 1795073444377, "Arme bactériologique", "systeme",
         "Bombardement, dans un système où d'autres camps ont des infanteries : use un scientifique, un dé par infanterie adverse des planètes du système — détruite sur 5 ou moins (1 si son propriétaire a le Vaccin).", {
             phase: "bombardement",
             agent: SCIENTIFIQUE,
@@ -2491,10 +2497,10 @@ export const SCRIPTS = [
 
     // ----- Signal capté : SIG-1 à SIG-4 -----
 
-    signal(1, 481, 1794343421167),
-    signal(2, 482, 1794343421168),
-    signal(3, 483, 1794343421169),
-    signal(4, 484, 1794343421170),
+    signal(1, 481, 1795072921271),
+    signal(2, 482, 1795072921272),
+    signal(3, 483, 1795072921273),
+    signal(4, 484, 1795072921274),
 
     // ----- Pirate Mentak -----
 
@@ -2561,7 +2567,7 @@ export const SCRIPTS = [
             libelle: "Racket : réclamer les ressources (test de domination)",
         }),
 
-    action("pluie-d-asteroides", "tech", 941, 1795038954354, "Pluie d'astéroïdes", "planete",
+    action("pluie-d-asteroides", "tech", 941, 1795076851750, "Pluie d'astéroïdes", "planete",
         "À côté d'une planète à portée 3 d'un champ d'astéroïdes non activé : le champ le plus proche est activé, un logisticien et un amiral sont usés, le marqueur « Ciblage astéroïde » est posé sur la planète.", {
             surPlanete: true,
             agent: LOGISTICIEN,
@@ -2592,7 +2598,7 @@ export const SCRIPTS = [
             libelle: "Pluie d'astéroïdes : poser le ciblage (use un logisticien et un amiral)",
         }),
 
-    action("pluie-d-asteroides-frappe", "tech", 941, 1795038954354, "Pluie d'astéroïdes : frappe", "planete",
+    action("pluie-d-asteroides-frappe", "tech", 941, 1795076851750, "Pluie d'astéroïdes : frappe", "planete",
         "Bombardement, à côté d'une planète qui porte un marqueur « Ciblage astéroïde » : un dé par unité de la planète, 1 dégât sur 4 ou moins ; le marqueur est retiré.", {
             surPlanete: true,
             phase: "bombardement",
@@ -2618,11 +2624,11 @@ export const SCRIPTS = [
 
     // ----- Omni-esprit d'Arborec -----
 
-    effet("recomposition", 592, 1794343421170, "Recomposition", "nouveau",
+    effet("recomposition", 592, 1795073444383, "Recomposition", "nouveau",
         "Onglet Décision, à la fin des canons spatiaux et du combat spatial",
         "Le coût de vos unités biologiques détruites dans la phase est cumulé à « Terminer le combat ». L'onglet Décision propose le jet (autant de dés, réussite sur 3 ou moins), garde le nombre de réussites, puis laisse produire des vaisseaux dans le système choisi tant que leur coût cumulé tient dans ce nombre — un généticien (ou un logisticien) usé par vaisseau."),
 
-    action("croissance", "tech", 593, 1794343421171, "Croissance", "unite",
+    action("croissance", "tech", 593, 1795046343863, "Croissance", "unite",
         "Production, sur la fiche d'un de vos vaisseaux biologiques : la technologie est usée, le vaisseau est remplacé par un vaisseau biologique qui coûte jusqu'à 2 de plus (choix dans l'onglet Décision).", {
             phase: "production",
             use: true,
@@ -2631,7 +2637,7 @@ export const SCRIPTS = [
             libelle: "Croissance : remplacer ce vaisseau (use la technologie)",
         }),
 
-    action("croissance-geneticien", "tech", 593, 1794343421171, "Croissance (généticien)", "unite",
+    action("croissance-geneticien", "tech", 593, 1795046343863, "Croissance (généticien)", "unite",
         "Production, sur la fiche d'un de vos vaisseaux biologiques : un généticien est usé, le vaisseau est remplacé par un vaisseau biologique qui coûte jusqu'à 2 de plus (choix dans l'onglet Décision).", {
             phase: "production",
             agent: { motif: "g[ée]n[ée]ticien", nom: "généticien", depense: false },
@@ -2642,7 +2648,7 @@ export const SCRIPTS = [
 
     // ----- Le Nomade -----
 
-    action("contact-mercenaire", "tech", 789, 1794343421175, "Contact mercenaire", "systeme",
+    action("contact-mercenaire", "tech", 789, 1795046343878, "Contact mercenaire", "systeme",
         "Diplomatie, dans un système à portée 2 d'un satellite que vous possédez : la technologie est usée, un vaisseau militaire de votre faction (choix dans l'onglet Décision) est produit dans le système, payé en influence.", {
             phase: "diplomatie",
             use: true,
@@ -2689,7 +2695,7 @@ export const SCRIPTS = [
 
     // ----- Volée argentée -----
 
-    action("seigneur", "habilite", 168, 1794335054829, "Seigneur", "plateau",
+    action("seigneur", "habilite", 168, 1795068317090, "Seigneur", "plateau",
         "Quand vous détruisez un vaisseau amiral ou un soleil de guerre, gagnez un vote de siège ou obtenez un vassal : un de vos agents disponibles du type voulu (choix dans l'onglet Décision) devient un Seigneur.", {
             demande: {
                 question: () => "Seigneur : quel agent transformer en Seigneur ?\n" +
@@ -2717,7 +2723,7 @@ export const SCRIPTS = [
             libelle: "Seigneur : transformer un agent",
         }),
 
-    action("vassalisation-forcee", "habilite", 166, 1794335054828, "Vassalisation forcée", "plateau",
+    action("vassalisation-forcee", "habilite", 166, 1795072921253, "Vassalisation forcée", "plateau",
         "Diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs, avec son marqueur. La condition (5 systèmes où elle a des planètes, son système natal comptant pour 3) se vérifie à la main.", {
             phase: "diplomatie",
             agent: { motif: "diplomate", nom: "diplomate", depense: true },
@@ -2791,7 +2797,7 @@ export const SCRIPTS = [
 
     // ----- Aide humanitaire -----
 
-    action("aide-humanitaire-livrer", "habilite", 404, 1794335055008, "Aide humanitaire : livrer", "unite",
+    action("aide-humanitaire-livrer", "habilite", 404, 1795069498037, "Aide humanitaire : livrer", "unite",
         "Sur la fiche d'une de vos unités à livraison, dans un système à trou de ver alpha ou bêta : elle livre son commerce à l'aide humanitaire (négociant usé, unité dépensée ou usée, comme une livraison). Le total par faction est compté pour le décompte.", {
             cible: contenu => /#livr\(\d+\)/i.test(contenu?.habilite || ""),
             visible: outils => {
@@ -2822,7 +2828,7 @@ export const SCRIPTS = [
         }),
 
     // (carte « Bilan de l'aide humanitaire », posée trois tours après « Aide humanitaire »)
-    action("aide-humanitaire-decompte", "habilite", 1038, 1794335055008, "Bilan de l'aide humanitaire", "carte",
+    action("aide-humanitaire-decompte", "habilite", 1038, 1795069498039, "Bilan de l'aide humanitaire", "carte",
         "Chaque faction marque 1 point par 4 commerce livrés à l'aide humanitaire ; celle qui en a livré le plus (seule) gagne une faveur neutre. Les cartes « Aide humanitaire » et « Bilan de l'aide humanitaire » sont retirées.", {
             special: atelier => {
 
@@ -2857,7 +2863,7 @@ export const SCRIPTS = [
         "Production (case « Production » de la réserve)",
         "Vous pouvez produire des Stations météorologiques."),
 
-    regle("station-meteorologique-production", "unit", 444, 1794335055030, "Station météorologique (production)", "modifie",
+    regle("station-meteorologique-production", "unit", 444, 1795046343838, "Station météorologique (production)", "modifie",
         "Production (case « Production » de la réserve)",
         "Produire une Station météorologique demande la technologie « Station météorologique » : sinon la production demande une confirmation."),
 
@@ -2867,7 +2873,7 @@ export const SCRIPTS = [
         "Espace : déplacement assisté",
         "Les nébuleuses ne gênent pas vos déplacements : y entrer ou en sortir ne met pas fin au mouvement."),
 
-    action("fouille-des-nebuleuses", "tech", 959, 1795041387418, "Fouille des nébuleuses", "systeme",
+    action("fouille-des-nebuleuses", "tech", 959, 1795046343900, "Fouille des nébuleuses", "systeme",
         "Science, dans une nébuleuse : use un scientifique et active la nébuleuse, vous gagnez un fragment spatial.", {
             phase: "science",
             agent: SCIENTIFIQUE,
@@ -2888,7 +2894,7 @@ export const SCRIPTS = [
 
     // ----- Redevance de protection (Pirate Mentak) -----
 
-    action("redevance-de-protection-payer", "Promesse", 226, 1794335054862, "Redevance de protection : payer", "carte",
+    action("redevance-de-protection-payer", "Promesse", 226, 1795072921263, "Redevance de protection : payer", "carte",
         "Ravitaillement, une fois par tour : 2 commerce sont transférés au Pirate Mentak pour garder la promesse.", {
             phase: "ravit",
             nomPhase: "ravitaillement",
@@ -2906,7 +2912,7 @@ export const SCRIPTS = [
             libelle: "Redevance de protection : payer 2 commerce au Mentak",
         }),
 
-    action("redevance-de-protection-rendre", "Promesse", 226, 1794335054862, "Redevance de protection : rendre", "carte",
+    action("redevance-de-protection-rendre", "Promesse", 226, 1795072921263, "Redevance de protection : rendre", "carte",
         "Ravitaillement, à la place du paiement — ou si vous engagez ou bloquez les Mentaks : la promesse est dépensée (retour à la réserve).", {
             special: atelier => ({
                 actions: rendrePromesse(atelier),
@@ -2915,7 +2921,7 @@ export const SCRIPTS = [
             libelle: "Redevance de protection : dépenser la promesse (sans payer)",
         }),
 
-    action("redevance-de-protection-rompue", "Promesse", 226, 1794335054862, "Redevance de protection : le Mentak y met fin", "carte",
+    action("redevance-de-protection-rompue", "Promesse", 226, 1795072921263, "Redevance de protection : le Mentak y met fin", "carte",
         "Ravitaillement : le Pirate Mentak met fin à la promesse — elle retourne à la réserve et il gagne 1 infamie.", {
             special: promesseRompue,
             libelle: "Le Mentak met fin à la redevance (il gagne 1 infamie)",
@@ -2923,7 +2929,7 @@ export const SCRIPTS = [
 
     // ----- Soutien politique -----
 
-    action("soutien-politique-annoncer", "Promesse", 227, 1794335054863, "Soutien politique : annoncer", "carte",
+    action("soutien-politique-annoncer", "Promesse", 227, 1795076851651, "Soutien politique : annoncer", "carte",
         "Prévote : la promesse est engagée (carte usée) et vous annoncez une issue — la loi et le vote se choisissent dans l'onglet Décision ; la faction qui l'a faite doit y mettre autant de voix que la valeur de la promesse.", {
             phase: "prevote",
             visible: outils => !outils.c?.marques?.use,
@@ -2955,7 +2961,7 @@ export const SCRIPTS = [
             libelle: "Soutien politique : engager la promesse (annoncer une issue)",
         }),
 
-    action("soutien-politique-regler", "Promesse", 227, 1794335054863, "Soutien politique : régler", "carte",
+    action("soutien-politique-regler", "Promesse", 227, 1795076851651, "Soutien politique : régler", "carte",
         "Après le vote, plateaux révélés : le décompte dit si la faction a mis assez de voix sur l'issue annoncée — la promesse retourne à la réserve, et la faction gagne 1 infamie si elle n'a pas tenu.", {
             visible: outils => !!outils.c?.marques?.use && !!outils.c?.marques?.voteLoi,
             special: atelier => {
@@ -2989,7 +2995,7 @@ export const SCRIPTS = [
             libelle: "Soutien politique : régler d'après le décompte",
         }),
 
-    action("soutien-politique-respecte", "Promesse", 227, 1794335054863, "Soutien politique : respecté", "carte",
+    action("soutien-politique-respecte", "Promesse", 227, 1795076851651, "Soutien politique : respecté", "carte",
         "Après le vote : la faction a voté à hauteur de la promesse, qui retourne à la réserve.", {
             visible: outils => !!outils.c?.marques?.use,
             special: atelier => ({
@@ -3002,7 +3008,7 @@ export const SCRIPTS = [
             libelle: "Soutien politique : respecté (retour à la réserve)",
         }),
 
-    action("soutien-politique-rompu", "Promesse", 227, 1794335054863, "Soutien politique : non respecté", "carte",
+    action("soutien-politique-rompu", "Promesse", 227, 1795076851651, "Soutien politique : non respecté", "carte",
         "Après le vote : la faction n'a pas voté à hauteur de la promesse — elle retourne à la réserve et cette faction gagne 1 infamie.", {
             visible: outils => !!outils.c?.marques?.use,
             special: atelier => {
@@ -3015,7 +3021,7 @@ export const SCRIPTS = [
 
     // ----- Mercenaires qui votent (décompte : Vote.jsx) -----
 
-    action("zeu", "mercenaire", 294, 1789968637695, "Z'eu", "carte",
+    action("zeu", "mercenaire", 294, 1795076851673, "Z'eu", "carte",
         "Vote : son cube part dans les agents usés, X commerce sont dépensés (4 au plus) pour X voix de plus sur la loi et le vote choisis (onglet Décision), ajoutées à votre colonne du décompte.", {
             phase: "phase de vote",
             nomPhase: "vote",
@@ -3048,21 +3054,21 @@ export const SCRIPTS = [
             libelle: "Z'eu : X commerce → X voix",
         }),
 
-    regle("harrugh-gefhara", "mercenaire", 300, 1794335054898, "Harrugh Gefhara", "auto",
+    regle("harrugh-gefhara", "mercenaire", 300, 1795076851678, "Harrugh Gefhara", "auto",
         "En-tête : « Phase suivante », en quittant la phase de vote",
         "Vous gagnez 1 commerce par loi résolue selon votre vote majoritaire (la colonne où vous avez, seule, le plus de voix)."),
 
-    regle("ilyane-vorsk-votes", "mercenaire", 910, 1794343464302, "Ilyane Vorsk : votes", "auto",
+    regle("ilyane-vorsk-votes", "mercenaire", 910, 1795076851749, "Ilyane Vorsk : votes", "auto",
         "Onglet Vote : décompte",
         "Son cube noir (ou sa carte) posé sur une case de votre plateau de vote compte comme un politicien, et rapporte 1 voix de plus par autre faction dont c'est le vote majoritaire."),
 
     // ----- Mandats des Winnu -----
 
-    regle("concession-commerciale", "Promesse", 228, 1794335054864, "Concession commerciale", "modifie",
+    regle("concession-commerciale", "Promesse", 228, 1795046343641, "Concession commerciale", "modifie",
         "Fiche d'une unité à livraison : faction livrée",
         "Vous comptez comme ayant un comptoir sur Mecatol Rex : une unité qui livre dans son système peut vous livrer (mandat non épuisé)."),
 
-    regle("protecteur-de-l-empire", "Promesse", 368, 1794335054965, "Protecteur de l'empire", "nouveau",
+    regle("protecteur-de-l-empire", "Promesse", 368, 1795046343820, "Protecteur de l'empire", "nouveau",
         "Conflit, combats spatial et terrestre : boutons sous le combat",
         "Contre une faction qui a plus d'infamie que vous : « Protecteur de l'empire » use un politique, +1 au combat pour vos unités ce combat. Le Winnu a le même bouton pour vous : les deux se cumulent (+2)."),
 
@@ -3102,7 +3108,7 @@ export const SCRIPTS = [
 
     // ----- Volée argentée -----
 
-    action("embuscade", "Promesse", 262, 1794339360458, "Embuscade", "carte",
+    action("embuscade", "Promesse", 262, 1795072921265, "Embuscade", "carte",
         "Après le déplacement, dans un système où vous avez des unités (choix dans l'onglet Décision) : la Volée argentée choisit, dans son onglet Décision, de poser un de ses destroyers (un logisticien usé, 2 ressources) ou de gagner 1 infamie. Le destroyer est à vous pour ce combat spatial (frappe en premier, +2), puis lui est rendu.", {
             demande: {
                 question: outils => "Embuscade : dans quel système (où vous avez des unités) ?\n" +
@@ -3138,19 +3144,19 @@ export const SCRIPTS = [
 
     // ----- Kabal de l'ombre -----
 
-    regle("commerce-d-esclave", "Promesse", 336, 1794339360462, "Commerce d'esclave", "nouveau",
+    regle("commerce-d-esclave", "Promesse", 336, 1795073444379, "Commerce d'esclave", "nouveau",
         "Conflit, combat terrestre : ligne d'une infanterie détruite",
         "Pour chaque infanterie que vous détruisez : « Commerce d'esclave : jet » — sur 2 ou moins, « Terminer le combat » l'envoie chez la Kabal de l'ombre (esclave) et vous donne une dette de 1 de la Kabal, à payer dans 3 tours."),
 
     // ----- Partage de technologie -----
 
-    regle("partage-de-technologie", "Promesse", 421, 1794339360465, "Partage de technologie", "auto",
+    regle("partage-de-technologie", "Promesse", 421, 1795046343643, "Partage de technologie", "auto",
         "Onglet Technologie : votre marqueur de faction posé sur une technologie débloquée de l'autre faction",
         "Tant que l'alliance est en jeu entre vous deux, la faction qui pose son marqueur sur une technologie débloquée de l'autre en profite : ses scripts jouent pour elle."),
 
     // ----- Tuteur des réfugiés -----
 
-    action("tuteur-des-refugies-attaque", "Promesse", 454, 1794339360467, "Tuteur des réfugiés : attaque", "carte",
+    action("tuteur-des-refugies-attaque", "Promesse", 454, 1795072921266, "Tuteur des réfugiés : attaque", "carte",
         "Si vous attaquez vos Réfugiés : la promesse est dépensée (retour à la réserve) et vous gagnez 1 infamie.", {
             special: atelier => ({
                 actions: [
@@ -3162,7 +3168,7 @@ export const SCRIPTS = [
             libelle: "Tuteur des réfugiés : j'attaque mes Réfugiés (+1 infamie, promesse dépensée)",
         }),
 
-    action("tuteur-des-refugies-faveur", "Promesse", 454, 1794339360467, "Tuteur des réfugiés : faveur", "planete",
+    action("tuteur-des-refugies-faveur", "Promesse", 454, 1795072921266, "Tuteur des réfugiés : faveur", "planete",
         "Phase d'événement, à côté d'une planète qui porte un Entrepôt d'aide : l'entrepôt est usé, 4 commerce posés dessus sont dépensés, vous gagnez une faveur des Réfugiés.", {
             surPlanete: true,
             phase: "[ée]v[ée]nement",
@@ -3222,7 +3228,7 @@ export const SCRIPTS = [
         "Onglet Vote : décompte",
         "Pour chaque loi, si votre vote majoritaire (la colonne où vous avez, seule, le plus de voix) est le même que celui des Empyréens, vous avez 1 voix de plus dans cette colonne — une fois les deux plateaux révélés."),
 
-    regle("chemin-du-vide", "Promesse", 964, 1795039776983, "Chemin du vide", "auto",
+    regle("chemin-du-vide", "Promesse", 964, 1795072921254, "Chemin du vide", "auto",
         "Espace : déplacement assisté",
         "Les anomalies que contrôlent les Empyréens (eux seuls, avec vous au plus, ont des unités dans leur espace) ne gênent pas vos déplacements : supernova, champ d'astéroïdes, nébuleuse."),
 
@@ -3232,7 +3238,7 @@ export const SCRIPTS = [
         "Espace : déplacement assisté",
         "Les supernovas ne bloquent pas vos déplacements."),
 
-    action("etude-de-la-forge", "habilite", 1023, 1795042399688, "Étude de la forge", "systeme",
+    action("etude-de-la-forge", "habilite", 1023, 1795046343903, "Étude de la forge", "systeme",
         "Science : use un scientifique et active une supernova : 4 de recherche de forge d'arme.", {
             feuille: "forge",
             phase: "science",
@@ -3257,11 +3263,11 @@ export const SCRIPTS = [
 
     // ----- Héritiers de Winnu : Mandat -----
 
-    regle("mandat", "habilite", 146, 1794335054819, "Mandat", "modifie",
+    regle("mandat", "habilite", 146, 1795072921249, "Mandat", "modifie",
         "Onglet Transactions : donner un mandat (promesse de type mandat)",
         "Un mandat ne se donne que si vous contrôlez Mecatol Rex, dans une transaction que vous proposez (vos diplomates), à une faction qui n'en a pas déjà un : sinon la transaction l'indique et demande une confirmation à l'application."),
 
-    action("mandat-revoquer", "habilite", 146, 1794335054819, "Mandat : révoquer", "plateau",
+    action("mandat-revoquer", "habilite", 146, 1795072921249, "Mandat : révoquer", "plateau",
         "Diplomatie : use un diplomate, le mandat choisi (onglet Décision) quitte la faction qui le détient et revient dans votre main ; ses marqueurs sont retirés.", {
             phase: "diplomatie",
             agent: DIPLOMATE,
@@ -3283,7 +3289,7 @@ export const SCRIPTS = [
             libelle: "Mandat : révoquer un mandat (use un diplomate)",
         }),
 
-    action("mandat-epuiser", "habilite", 146, 1794335054819, "Mandat : Mecatol Rex", "plateau",
+    action("mandat-epuiser", "habilite", 146, 1795072921249, "Mandat : Mecatol Rex", "plateau",
         "Si vous perdez le contrôle de Mecatol Rex, vos mandats sont épuisés (cartes usées chez leurs détenteurs) ; ils le restent tant que vous ne le reprenez pas. Le bouton les épuise ou les rétablit selon que vous contrôlez Mecatol Rex.", {
             visible: outils => mandatsDonnes(outils).some(x => !!x.marques?.use === outils.aCarte("planet", 34)),
             special: atelier => {
@@ -3307,7 +3313,7 @@ export const SCRIPTS = [
 
     // ----- Conclave secret (faction neutre #718) -----
 
-    action("achat-de-votes", "habilite", 722, 1794335055068, "Achat de votes", "bandeau",
+    action("achat-de-votes", "habilite", 722, 1795046343864, "Achat de votes", "bandeau",
         "Diplomatie, quand le Conclave secret est sur la table, une fois par tour et par faction : use un diplomate, un de vos Soutiens politiques de valeur 3 est donné au Conclave (posé sur son habilité, avec votre marqueur), et 5 commerce vous attendent sur votre case du tour T+2.", {
             pourTous: true,
             phase: "diplomatie",
@@ -3333,7 +3339,7 @@ export const SCRIPTS = [
             libelle: "Achat de votes : Soutien politique 3 au Conclave, 5 commerce à T+2 (use un diplomate)",
         }),
 
-    action("vote-du-conclave-soutiens", "habilite", 720, 1794335055067, "Vote du conclave : soutiens", "bandeau",
+    action("vote-du-conclave-soutiens", "habilite", 720, 1795073444380, "Vote du conclave : soutiens", "bandeau",
         "Prévote, quand le Conclave secret est sur la table : un dé par Soutien politique qu'il possède, activé sur 2 ou moins. Une fois par tour pour la table.", {
             pourTous: true,
             phase: "prevote",
@@ -3360,7 +3366,7 @@ export const SCRIPTS = [
             libelle: "Vote du conclave : jets des Soutiens politiques (activés sur 2 ou moins)",
         }),
 
-    action("vote-du-conclave-votes", "habilite", 720, 1794335055067, "Vote du conclave : votes", "bandeau",
+    action("vote-du-conclave-votes", "habilite", 720, 1795073444380, "Vote du conclave : votes", "bandeau",
         "Vote, quand le Conclave secret est sur la table : 1D10 votes (3D10 si l'agenda « Soutien au conclave » est en jeu). Le message rappelle ce qu'il vote. Une fois par tour pour la table.", {
             pourTous: true,
             phase: "phase de vote",

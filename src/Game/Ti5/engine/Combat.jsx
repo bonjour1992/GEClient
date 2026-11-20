@@ -1015,7 +1015,8 @@ function CombatSysteme({ lieu }) {
             }
         }
 
-        if (aMot(v.u, "com") && !aMot(v.u, "mil") && aScript(camp, "libre-echange")) {
+        // (Libre échange : un vaisseau de commerce non militaire, comme l'écrit la carte)
+        if (aMot(v.u, "ship") && aMot(v.u, "com") && !aMot(v.u, "mil") && aScript(camp, "libre-echange")) {
             actions.push(...actionsPiste(etat, camp, "infamie", 1));
             gains.push("1 infamie (Libre échange)");
         }
