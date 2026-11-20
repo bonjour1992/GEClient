@@ -626,7 +626,9 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
             `${nom} : mis en place — ${script.description}`,
             rebellion.bilan,
             secondaires.bilan,
-            script.explores && `Un fragment de relique posé sur ${fragments.length} système(s) exploré(s)` +
+            script.explores && !etat.depart &&
+                "Cette partie n'a pas ses paramètres de départ : les fragments de relique des systèmes explorés sont à poser à la main.",
+            script.explores && !!etat.depart && `Un fragment de relique posé sur ${fragments.length} système(s) exploré(s)` +
                 (fragments.length < explores.length ? ` (le sac est vide : il en manque ${explores.length - fragments.length})` : "") + ".",
             script.anomalies && `${pirates.length} système(s) concerné(s).`,
             horsDeroule.length && `Après le dernier tour, non posé : ${horsDeroule.join(", ")}.`,

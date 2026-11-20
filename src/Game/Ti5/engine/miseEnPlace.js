@@ -851,7 +851,8 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 // Systèmes explorés depuis le lancement : tuiles de la carte (hors systèmes
 // secondaires, numérotés à partir de 1000) posées sur une case qui n'avait
 // pas de système au départ et qui n'est pas une case natale.
-export const systemesExplores = etat => Object.values(etat?.composants || {})
+// (sans paramètres de départ — partie lancée par un serveur d'avant — aucun n'est reconnu)
+export const systemesExplores = etat => (!etat?.depart ? [] : Object.values(etat.composants)
     .filter(c => !c.cache && c.ref?.type === "system" && /^hex:\d{1,3}$/.test(c.zone || "") &&
-        etat.depart?.systemes?.[c.zone.slice(4)] === undefined &&
-        !(etat.depart?.natales || []).includes(Number(c.zone.slice(4))));
+        etat.depart.systemes?.[c.zone.slice(4)] === undefined &&
+        !(etat.depart.natales || []).includes(Number(c.zone.slice(4)))));
