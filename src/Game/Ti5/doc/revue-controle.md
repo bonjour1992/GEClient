@@ -236,4 +236,5 @@ ou sa planète (unités de la planète) — confirmé par Loïc le 20 novembre e
 
 Questions de la section 5 tranchées : 1, 2, 5, 6 (possession 2 sur une planète), 7, 8, 13, 15, 20. Restent
 ouvertes : 3, 4 (en partie : le SDP compte partout, en plus de sa planète), 9, 10, 11, 12, 14, 16, 17, 18, 19, 21.
-Non tranché : une unité qui s'est déplacée est-elle « engagée » pour la phase (elle ne l'est pas dans l'outil) ?
+Tranché ensuite : un vaisseau qui s'est déplacé est engagé pour la phase — il ne bloque plus, n'aide plus et
+n'égalise plus (marque `blocAgi` posée au départ, `Deplacement.jsx`).

@@ -29,7 +29,8 @@ import { rangDePhase, estMilitaire, ESPACE_CONTROLE } from "./regleControle.js";
 //
 // Marques d'une unité :
 //   bloc       rang de la phase : engagée dans un test de blocage
-//   blocAgi    rang de la phase : a fait son action (débarquement)
+//   blocAgi    rang de la phase : a fait son action (déplacement, débarquement, tir de canon,
+//              production)
 //   blocChoix  pendant un test : « b<acteur> » bloque, « a<acteur> »
 //              aide, « p<acteur> » égalise (unité de l'acteur),
 //              « n<acteur> » ne fait rien (neutres : ils bloquent
@@ -73,7 +74,7 @@ export function lieuDe(c) {
 // L'unité a servi à un test de blocage de cette phase : elle est bloquée
 export const estBloquee = (etat, c) => rangDePhase(etat) > 0 && Number(c.marques?.[MARQUE_BLOQUEE]) === rangDePhase(etat);
 
-// L'unité a fait son action à cette phase (débarquement ; bombardement : marque « bombarde » du tour)
+// L'unité a fait son action à cette phase (déplacement, débarquement, canon, production ; bombardement : marque « bombarde » du tour)
 export const aAgi = (etat, c) =>
     (rangDePhase(etat) > 0 && Number(c.marques?.[MARQUE_AGI]) === rangDePhase(etat)) ||
     (/bombard/i.test(etat.phase || "") && String(c.marques?.bombarde || "").endsWith(":" + etat.tour));

@@ -29,8 +29,10 @@ import { ChoixDesCamps } from "./BlocageAction";
 //            le joueur qui se déplace égalise le surplus avec ses
 //            propres unités — militaires d'abord, puis transports, puis
 //            les autres : un vaisseau en route engagé s'arrête ici.
-//            Toute unité qui a servi est engagée pour la phase ; le
-//            test n'est subi qu'une fois par case et par phase ;
+//            Toute unité qui a servi est engagée pour la phase, comme
+//            tout vaisseau qui s'est déplacé (marque posée au départ,
+//            Deplacement.jsx) ; le test n'est subi qu'une fois par case
+//            et par phase ;
 //   jets     rupture gravitationnelle quittée par un bord, ou trou
 //            de ver oméga : un dé de 10 par vaisseau, 3 ou moins le
 //            bloque (oméga : 9 ou plus, il passe avec une touche).

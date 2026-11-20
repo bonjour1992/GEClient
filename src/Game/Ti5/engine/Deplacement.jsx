@@ -3,6 +3,8 @@ import { useEngine, BoutonRegle, nomCase, nomElement, Pions, styleMini } from ".
 import { useElements, contenuEnCache } from "./sync";
 import { MARQUEUR, campDe, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace";
 import { etatDuControle, actionsOuvrirControleEtat, ESPACE_CONTROLE } from "./Controle";
+import { MARQUE_AGI } from "./regleBlocage";
+import { rangDePhase } from "./regleControle";
 import { centreCase, centreCaseBande } from "../plateauVue";
 import { COLONNES_BANDE } from "../hexSpirale";
 import { capaciteDe, depenserAgent, estDeplacementFurtif, placePrise, estSoleilDeGuerre } from "./effets";
@@ -404,6 +406,9 @@ export function useDeplacement({ tuiles, systemes = {} }) {
             // (compte des vaisseaux déplacés : « Finir le déplacement »)
             { type: "compteur", id: compteurDeplaces(moi), delta: partent.length },
             ...partent.flatMap(v => [
+                // (un vaisseau qui se déplace est engagé pour la phase : il ne bloque plus, n'aide
+                //  plus et n'égalise plus — regleBlocage.js)
+                Number(v.marques?.[MARQUE_AGI]) !== rangDePhase(etat) && { type: "marquer", c: v.id, marque: MARQUE_AGI, valeur: rangDePhase(etat) },
                 saut && { type: "marquer", c: v.id, marque: "saut", valeur: etat.tour },
                 k >= 0 && { type: "deplacer", c: v.id, vers: "hex:" + trajet[k], de: zoneDepart },
                 reste.length > 0 && { type: "marquer", c: v.id, marque: TRAJET, valeur: reste.join(">") },
