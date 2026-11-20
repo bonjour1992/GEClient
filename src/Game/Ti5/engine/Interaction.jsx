@@ -5,7 +5,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { PlayerColor, turnNumber } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
-import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
+import { capaciteDe, victimesBombe, depenserAgent, placePrise, controleDe } from "./effets";
 import { demander } from "./demande";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
@@ -2357,7 +2357,36 @@ export function Plan({ children, style }) {
             const depense = surPlanete && presentes.length > 0;
             const logisticien = besoin ? agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN) : null;
 
+            // On construit sur une planète ou dans un système que l'on contrôle (phase de construction,
+            // règle « Contrôle ») : sur une planète, les unités qui s'y trouvent comptent ; dans un
+            // système, les vaisseaux et les structures spatiales. Mon contrôle doit dépasser celui des
+            // unités militaires qui s'y opposent ; sans rien, je ne contrôle rien. La possession de la
+            // planète (sa carte dans mes éléments actifs) vaut 2 de contrôle. L'opposition se déclare
+            // (conflit de contrôle) : l'outil ne la connaît pas, il compare donc à toutes les unités
+            // militaires des autres camps.
+            const lieu = surPlanete ? "cette planète" : "ce système";
+            const unitesIci = ici.filter(c => !c.cache && c.ref?.type === "unit");
+            const controle = liste => liste.reduce((total, c) => total + controleDe(contenuEnCache(c.ref.id), campDe(c), aScript), 0);
+
+            const [, caseDuLieu, rangPlanete] = /^hex:(\d+)(?::planete:(\d+))?/.exec(zone);
+            const idPlanete = surPlanete
+                ? Number(contenuEnCache(tuileDe(index, Number(caseDuLieu))?.ref?.id)?.elems?.[Number(rangPlanete)]?.id) || 0
+                : 0;
+            const possession = idPlanete > 0 && (index.parZone.get(`joueur:${moi}:actif`) || [])
+                .some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === idPlanete) ? 2 : 0;
+
+            const monControle = controle(unitesIci.filter(c => campDe(c) === moi)) + possession;
+            const controleAdverse = controle(unitesIci.filter(c => campDe(c) !== moi && aMot(contenuEnCache(c.ref.id), "mil")));
+            const detail = possession ? `${monControle}, dont 2 pour la possession` : String(monControle);
+
             obstacles.push(
+                construites.length > 0 && monControle === 0 &&
+                    (surPlanete
+                        ? "vous n'avez ni unité ni possession sur cette planète : vous ne la contrôlez pas"
+                        : "vous n'avez aucune unité dans ce système : sans unité, vous ne le contrôlez pas"),
+                construites.length > 0 && monControle > 0 && controleAdverse > 0 && monControle <= controleAdverse &&
+                    `votre contrôle (${detail}) ne dépasse pas celui des unités militaires des autres camps (${controleAdverse}) : ` +
+                    `vous ne contrôlez ${lieu} que si elles ne s'y opposent pas`,
                 construites.length < unites.length &&
                     `ce n'est pas une structure : ${noms(unites.filter(ref => !estStructure(ref.id)))}`,
                 doubles.length > 0 && `cette structure est déjà construite ici : ${noms(doubles)}`,

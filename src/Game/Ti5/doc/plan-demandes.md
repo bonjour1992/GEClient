@@ -586,5 +586,10 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   « Construction », glisser le portail vers un système dépense un scientifique et 2 fragments spatiaux
   et donne 1 point, sans logisticien (`payerProduction`, `REFORGE_PORTAIL`). Relique et Canon ancien :
   bouton masqué une fois reforgés. Non essayé à l'écran (le glisser n'a pas pu être simulé).
+- ☑ Construction et contrôle (2026-11-20) : construire demande le contrôle du lieu (phase de construction,
+  règle « Contrôle » #1033). `payerProduction` demande une confirmation si je n'ai rien sur place, ou si
+  mon contrôle ne dépasse pas celui des unités militaires des autres camps (l'opposition se déclare :
+  l'outil ne la connaît pas). Planète : les unités qui s'y trouvent, plus 2 pour sa possession (indiqué
+  par Loïc ; absent du texte de la règle #1033, à compléter). Système : vaisseaux et structures spatiales.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
