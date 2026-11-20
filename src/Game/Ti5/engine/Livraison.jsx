@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, agentDisponible, nomElement, tuileDe } from "./Interaction";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, tuileDe, confirmerRegle } from "./Interaction";
+import { demanderBlocage } from "./BlocageAction";
+import { lieuDe } from "./regleBlocage";
 import { useElement, contenuEnCache } from "./sync";
 import { DETTE, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
 import { demander } from "./demande";
@@ -96,7 +98,7 @@ export async function livrer({ etat, index, moi, search, aScript, nomDe }, cible
 export function LivraisonCommerciale({ c, fermer }) {
 
     const ctx = useEngine();
-    const { etat, index, envoyer, moi, search, nomDe, aviser } = ctx;
+    const { etat, index, envoyer, moi, search, nomDe, aviser, allerA } = ctx;
 
     const contenu = useElement(c.ref.id);
     const [choisie, setChoisie] = useState("");
@@ -132,6 +134,21 @@ export function LivraisonCommerciale({ c, fermer }) {
     const negociant = avecNegociant ? agentDisponible({ index, moi, search }, MOTIF_NEGOCIANT) : null;
 
     async function faire(commentaire) {
+
+        // « Nécessite que l'unité soit non bloquée » : test de blocage là où est l'unité, si
+        // d'autres factions peuvent la bloquer (BlocageAction.jsx)
+        const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
+            { ...lieuDe(c), action: "livraison", libelle: `Livraison commerciale par ${nomElement(search, c.ref)}` });
+
+        if (!blocage) {
+            return;
+        }
+
+        if (blocage.engagees.includes(c.id) && confirmerRegle("Livraison commerciale", [
+            "cette unité est bloquée pour cette phase (engagée dans le test de blocage)",
+        ]) === null) {
+            return;
+        }
 
         const { actions, messages } = await livrer(ctx, cible, valeur);
 

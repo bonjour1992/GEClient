@@ -543,7 +543,7 @@ export function Partie({ id }) {
     const conflits = combats.length + passages.length + controles.length + dominations.length + accords.length + blocagesAction.length;
     const combatEnCours = conflits > 0;
     const combatAvecMoi = combats.some(n => aDesUnites(index, n, moi)) ||
-        blocagesAction.some(b => b.acteur === moi || aDesUnites(index, String(b.numero), moi)) ||
+        blocagesAction.some(b => b.acteur === moi || aDesUnites(index, b.lieu, moi)) ||
         passages.some(p => p.mover === moi || aDesUnites(index, String(p.numero), moi)) ||
         controles.some(c => c.demandeur === moi || aDesUnites(index, `${c.numero}p${c.k}`, moi)) ||
         dominations.some(d => aDesUnites(index, String(d.numero), moi)) ||

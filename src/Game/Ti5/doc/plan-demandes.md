@@ -635,6 +635,7 @@ devient « engagement » ; Récupération tranchée par un test de domination ; 
 mobiliser et la production d'une unité spatiale par un dock demandent le contrôle ; test de blocage
 unité par unité au bombardement et au débarquement (`regleBlocage.js`, `BlocageAction.jsx`).
 Test des règles pures : `node E:\GE\demandes-ti5\test-regles-controle-blocage.mjs`.
-Restent à faire sur demande : le même test de blocage pour les canons spatiaux, la production, les
-livraisons, les réparations ; les effets déclenchés par un blocage (Frontière ouverte, Redevance de
-protection, dettes) ; la coalition.
+Étendu le même soir aux canons spatiaux, à la production (unité qui produit), aux réparations et aux
+livraisons commerciales ; le test se fait là où est l'unité qui agit (espace ou planète).
+Restent à faire sur demande : les effets déclenchés par un blocage (Frontière ouverte, Redevance de
+protection, dettes) ; la coalition ; mitose et fusion ; une planète ou une station qui produit.

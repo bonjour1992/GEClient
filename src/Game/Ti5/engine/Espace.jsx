@@ -38,6 +38,8 @@ import {
     cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
     demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION,
 } from "./Controle";
+import { demanderBlocage } from "./BlocageAction";
+import { peutEtreBloque, blocageSubi, estBloquee } from "./regleBlocage";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -1285,11 +1287,36 @@ function FicheSysteme({ numero, id, fermer }) {
     // Réparer coûte 1 ressource par dégât ; indisponible sans les ressources
     const coutReparation = aReparer.reduce((total, c) => total + Number(c.marques.degat), 0);
 
-    function reparer(commentaire) {
+    // « Réparer autant d'unités non bloquées… » : test de blocage dans l'espace du système si
+    // d'autres factions peuvent bloquer (BlocageAction.jsx) ; les unités bloquées ne sont pas réparées.
+    async function reparer(commentaire) {
+
+        if (peutEtreBloque({ etat, unites: unitesDuControle(index, numero, ESPACE_CONTROLE), contenuDe: contenuEnCache, acteur: moi }) &&
+            !blocageSubi(etat, numero, moi)) {
+            fermer();
+        }
+
+        const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA }, { numero, action: "reparation", libelle: "Réparation" });
+
+        if (!blocage) {
+            return;
+        }
+
+        const libres = aReparer.filter(c => !blocage.engagees.includes(c.id) && !estBloquee(etat, c));
+        const cout = libres.reduce((total, c) => total + Number(c.marques.degat), 0);
+
+        if (libres.length < aReparer.length) {
+            aviser(`Réparation : ${aReparer.length - libres.length} unité(s) bloquée(s) ne sont pas réparées.`);
+        }
+
+        if (!libres.length) {
+            return;
+        }
+
         envoyer([
-            { type: "compteur", id: `joueur:${moi}:res`, delta: -coutReparation },
+            { type: "compteur", id: `joueur:${moi}:res`, delta: -cout },
             // (si : refusé si les dégâts ont changé entre-temps)
-            ...aReparer.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: 0, si: c.marques.degat })),
+            ...libres.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: 0, si: c.marques.degat })),
         ], commentaire);
     }
 

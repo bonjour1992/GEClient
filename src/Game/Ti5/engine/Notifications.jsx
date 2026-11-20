@@ -72,9 +72,9 @@ export function Notifications() {
         }
 
         for (const b of blocagesActionEnCours(etat)) {
-            if (b.acteur !== moi && aDesUnites(index, String(b.numero), moi)) {
+            if (b.acteur !== moi && aDesUnites(index, b.lieu, moi)) {
                 attentes["blocageAction:" + b.cle] =
-                    `${nomDe(b.acteur)} veut faire ${ACTIONS_BLOQUABLES[b.action][1]} dans un système où vous avez des unités : bloquer, aider ou ne rien faire.`;
+                    `${nomDe(b.acteur)} veut faire ${ACTIONS_BLOQUABLES[b.action][1]} là où vous avez des unités : bloquer, aider ou ne rien faire.`;
             }
         }
 

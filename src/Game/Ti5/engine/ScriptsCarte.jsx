@@ -1,6 +1,9 @@
 import {
     useEngine, BoutonRegle, nomElement, distanceCases, agentDisponible, estSecondaire, DECALAGE_SECONDAIRE, nomCase,
+    confirmerRegle,
 } from "./Interaction";
+import { demanderBlocage } from "./BlocageAction";
+import { lieuDe } from "./regleBlocage";
 import { chargerContenu, useElement, useElements } from "./sync";
 import { normaliserPlateau, distanceBande, COLONNES_BANDE } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
@@ -74,7 +77,7 @@ export function ScriptsCarte({ c, fermer }) {
 
 function ReparationImprovisee({ c, fermer }) {
 
-    const { etat, index, envoyer, moi, search } = useEngine();
+    const { etat, index, envoyer, moi, search, aviser, allerA } = useEngine();
 
     const contenu = useElement(c.ref.id);
     const degat = Number(c.marques?.degat) || 0;
@@ -95,7 +98,24 @@ function ReparationImprovisee({ c, fermer }) {
                 !logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)",
                 ressources < degat && `ressources insuffisantes : ${degat} à payer, vous en avez ${ressources}`,
             ]}
-            faire={commentaire => {
+            faire={async commentaire => {
+
+                // « Un de vos vaisseaux non bloqué » : test de blocage là où est le vaisseau, si
+                // d'autres factions peuvent le bloquer (BlocageAction.jsx)
+                const lieu = lieuDe(c);
+                const blocage = !lieu ? { engagees: [] }
+                    : await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA }, { ...lieu, action: "reparation", libelle: "Réparation improvisée" });
+
+                if (!blocage) {
+                    return;
+                }
+
+                if (blocage.engagees.includes(c.id) && confirmerRegle("Réparation improvisée", [
+                    "ce vaisseau est bloqué pour cette phase (engagé dans le test de blocage)",
+                ]) === null) {
+                    return;
+                }
+
                 envoyer([
                     logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
                     { type: "compteur", id: `joueur:${moi}:res`, delta: -degat },

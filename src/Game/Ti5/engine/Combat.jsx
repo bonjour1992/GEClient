@@ -14,7 +14,8 @@ import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
 import { BlocagesAction, demanderBlocage } from "./BlocageAction";
-import { estBloquee } from "./regleBlocage";
+import { estBloquee, lieuDe, MARQUE_AGI } from "./regleBlocage";
+import { rangDePhase } from "./regleControle";
 import {
     Controles, demanderControleSysteme, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
     actionsOuvrirDomination, resultatDomination, cleRecuperation,
@@ -1558,9 +1559,11 @@ function CombatSysteme({ lieu }) {
     const aDejaBombarde = v => bombe && String(v.c.marques?.bombarde || "").endsWith(":" + etat.tour) &&
         v.c.marques.bombarde !== CE_COMBAT;
 
-    // Bombardement, raid : une unité engagée dans un test de blocage de cette phase est bloquée,
-    // elle ne tire pas (regleBlocage.js, BlocageAction.jsx)
-    const bloquee = v => bombe && estBloquee(etat, v.c);
+    // Bombardement, raid, canons spatiaux (« activer une unité non bloquée ») : une unité engagée
+    // dans un test de blocage de cette phase est bloquée, elle ne tire pas (regleBlocage.js,
+    // BlocageAction.jsx)
+    const soumisAuBlocage = bombe || sorte === "canons";
+    const bloquee = v => soumisAuBlocage && estBloquee(etat, v.c);
 
     const tireurs = vaisseaux.filter(v =>
         v.tire && attaque(v) > 0 && nombreDes(v) > 0 && (engagement(v).length > 0 || sansInfanterie) && !estDetruit(v) &&
@@ -1580,6 +1583,9 @@ function CombatSysteme({ lieu }) {
         v.c.marques?.[M.desA] !== undefined && marquer(v.id, M.desA, []),
         { type: "des", n: nombreDes(v), faces: FACES, c: v.id, marque: M.des },
         bombe && v.c.marques?.bombarde !== CE_COMBAT && { type: "marquer", c: v.id, marque: "bombarde", valeur: CE_COMBAT },
+        // (canons spatiaux : l'unité qui a tiré est engagée pour la phase — elle ne bloque plus)
+        sorte === "canons" && Number(v.c.marques?.[MARQUE_AGI]) !== rangDePhase(etat) &&
+            { type: "marquer", c: v.id, marque: MARQUE_AGI, valeur: rangDePhase(etat) },
     ]).filter(Boolean);
 
     // --------------------------------------------------------
@@ -1640,23 +1646,29 @@ function CombatSysteme({ lieu }) {
             return;
         }
 
-        // Bombardement, raid : « activer une unité non bloquée » — si d'autres factions peuvent me
-        // bloquer dans ce système et que je n'y ai pas encore subi le test à cette phase, le test
-        // de blocage s'ouvre (onglet Conflit) ; une fois conclu, je me redis prêt : mes unités
+        // Bombardement, raid, canons spatiaux : « activer une unité non bloquée » — là où sont mes
+        // unités qui tirent (l'espace de leur système, ou leur planète), si d'autres factions
+        // peuvent me bloquer et que je n'y ai pas encore subi le test à cette phase, le test de
+        // blocage s'ouvre (onglet Conflit) ; une fois conclu, je me redis prêt : mes unités
         // bloquées ne tirent pas.
-        if (bombe && tireurs.some(v => v.camp === moi)) {
+        if (soumisAuBlocage) {
 
-            const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
-                { numero, action: sorte === "raid" ? "raid" : "bombardement", libelle: SORTES[sorte] });
+            const lieux = new Map(tireurs.filter(v => v.camp === moi).map(v => lieuDe(v.c)).filter(Boolean)
+                .map(l => [`${l.numero}p${l.k}`, l]));
 
-            if (!blocage) {
-                return;
-            }
+            for (const lieu of lieux.values()) {
 
-            if (blocage.attendu) {
-                aviser("Blocage résolu : vos unités bloquées ne tireront pas. Cliquez de nouveau sur « Prêt au combat » pour " +
-                    (sorte === "raid" ? "le raid" : "bombarder") + " avec les autres.");
-                return;
+                const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
+                    { ...lieu, action: sorte === "canons" ? "canons" : (sorte === "raid" ? "raid" : "bombardement"), libelle: SORTES[sorte] });
+
+                if (!blocage) {
+                    return;
+                }
+
+                if (blocage.attendu) {
+                    aviser("Blocage résolu : vos unités bloquées ne tireront pas. Cliquez de nouveau sur « Prêt au combat » pour tirer avec les autres.");
+                    return;
+                }
             }
         }
 

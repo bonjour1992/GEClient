@@ -192,18 +192,21 @@ Test de blocage d'une action (règle #1033 et exemple de Loïc) : les autres fac
 unité, leurs unités militaires de l'espace du système pour bloquer, ou des unités pour aider ; la
 faction qui agit égalise le surplus avec ses propres unités (militaires d'abord), qui sont bloquées.
 Toute unité qui a servi, ou qui a fait son action, est engagée pour la phase. Une faction ne subit le
-test qu'une fois par système et par phase.
+test qu'une fois par lieu et par phase.
+
+Le test se fait là où est l'unité qui agit : l'espace de son système (vaisseaux, structures spatiales)
+ou sa planète (unités de la planète) — choix de l'outil, la règle ne le dit pas (question 15).
 
 | Où le blocage est évoqué | Texte | État |
 |---|---|---|
 | phase 03 Déplacement | blocage case par case | **fait** (`Blocage.jsx`) |
 | phase 07 Bombardement | « activer une unité avec #bomb non bloquée » | **fait** : test au premier « Prêt au combat » (raid compris) |
 | phase 08 Débarquement, 1.1 / 1.2.1 | « évaluer le blocage », « unité non bloquée qui transporte » | **fait** : test au premier glisser d'un vaisseau vers une planète (sauf planète où l'on a un dock) |
-| phase 08, 1.2.2 et mot-clé #livr | livraison commerciale avec une unité non bloquée | à faire : même test, action « livraison » |
-| phase 05 Canons spatiaux | « activer une unité avec #can non bloquée » | à faire : même test, dans le système de l'unité qui tire |
-| phase 12 Production | source « non bloquée », vaisseau non bloqué pour embarquer, réparation d'unités non bloquées | à faire : même test, à l'ouverture de la production ou à la réparation |
-| tech#195, tech#419 Réparation improvisée | « vaisseau non bloqué », « unité non bloquée » | à faire : même test |
-| mots-clés mitose, fusion | « non bloqué » | à faire : même test |
+| phase 08, 1.2.2 et mot-clé #livr | livraison commerciale avec une unité non bloquée | **fait** : test au bouton « Livraison commerciale » |
+| phase 05 Canons spatiaux | « activer une unité avec #can non bloquée » | **fait** : test au premier « Prêt au combat », là où est chaque unité qui tire |
+| phase 12 Production | source « non bloquée », vaisseau non bloqué pour embarquer, réparation d'unités non bloquées | **fait** pour l'unité qui produit (Ctrl + clic) et pour « Réparer toutes mes unités » ; pas pour une planète ou une station qui produit, ni pour le vaisseau qui embarque |
+| tech#195, tech#419 Réparation improvisée | « vaisseau non bloqué », « unité non bloquée » | **fait** pour le vaisseau réparé ; « un système où vous avez une unité non bloquée » (#419) non vérifié |
+| mots-clés mitose, fusion | « non bloqué » | à faire : ces capacités n'ont pas de bouton |
 | tech#246 Drain spatial | « ou à être bloqué dans le système précédent » | **fait** (blocage de déplacement) |
 | #deplfurtif, Camouflage | non bloqué par des vaisseaux en se déplaçant | **fait** |
 | rupture gravitationnelle, trou de ver oméga, hab#814 | blocage sur un jet | **fait** |

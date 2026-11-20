@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import { useEngine, nomCase, nomElement, agentDisponible, tuileDe } from "./Interaction";
 import { contenuEnCache, chargerContenu } from "./sync";
 import { ACTIVATION, typeUnite, MOTIF_LOGISTICIEN } from "./miseEnPlace";
+import { demanderBlocage } from "./BlocageAction";
+import { lieuDe, MARQUE_AGI } from "./regleBlocage";
+import { rangDePhase } from "./regleControle";
 
 // ============================================================
 // PRODUCTION
@@ -124,9 +127,28 @@ export async function ouvrirProduction(ctx, c, confirmer) {
         return true;
     }
 
+    // « Activer une unité avec #prod et non bloquée » : test de blocage là où est l'unité (l'espace
+    // de son système, ou sa planète) si d'autres factions peuvent la bloquer (BlocageAction.jsx).
+    // La production s'ouvre à sa conclusion ; une unité engagée dans le test est bloquée.
+    const blocage = await demanderBlocage(ctx, { ...lieuDe(c), action: "production", libelle: `Production avec ${nom}` });
+
+    if (!blocage) {
+        return true;
+    }
+
+    if (blocage.engagees.includes(c.id) && !confirmer(`Produire avec ${nom} (${nomCase(numero)})`, [
+        "cette unité est bloquée pour cette phase (engagée dans le test de blocage)",
+    ])) {
+        return true;
+    }
+
     ouvrirProductionLieu(
         { index, moi, search, envoyer, setProduction, capaciteLogistique },
-        { source: c.id, nom, numero, capacite, activation: { sur: c.id }, bonus: ia ? 2 : 0, reduction: militaire ? 2 : 0 },
+        {
+            source: c.id, nom, numero, capacite, activation: { sur: c.id }, bonus: ia ? 2 : 0, reduction: militaire ? 2 : 0,
+            // (l'unité qui a produit est engagée pour la phase : elle ne bloque plus)
+            extra: [{ type: "marquer", c: c.id, marque: MARQUE_AGI, valeur: rangDePhase(etat) }],
+        },
         commentaire
     );
 
@@ -136,7 +158,8 @@ export async function ouvrirProduction(ctx, c, confirmer) {
 // Ouvre une production : un logisticien est utilisé (s'il y en a un), la source
 // est activée, et la production devient celle en cours.
 //   lieu : { source, nom, numero, capacite (lireProduction), activation ({ sur } ou
-//            { zone } du marqueur), bonus (quantité en plus), reduction (coût en moins) }
+//            { zone } du marqueur), bonus (quantité en plus), reduction (coût en moins),
+//            extra (actions de plus, dans le même coup) }
 export function ouvrirProductionLieu(ctx, lieu, commentaire) {
 
     const { index, moi, search, envoyer, setProduction, capaciteLogistique } = ctx;
@@ -147,6 +170,7 @@ export function ouvrirProductionLieu(ctx, lieu, commentaire) {
     envoyer([
         logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
         { type: "creer", jeton: ACTIVATION, ...lieu.activation },
+        ...(lieu.extra || []),
     ], commentaire);
 
     setProduction({

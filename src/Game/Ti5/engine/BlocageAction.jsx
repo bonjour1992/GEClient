@@ -1,5 +1,5 @@
-import { useEngine, BoutonRegle, nomCase, nomElement, nomDuCamp, pastilleCamp, styleMini } from "./Interaction";
-import { useElements, contenuEnCache } from "./sync";
+import { useEngine, BoutonRegle, nomCase, nomElement, nomDuCamp, pastilleCamp, styleMini, tuileDe } from "./Interaction";
+import { useElement, useElements, contenuEnCache } from "./sync";
 import { NEUTRE, campDe } from "./miseEnPlace";
 import { unitesDuLieu, rangDePhase, ESPACE_CONTROLE } from "./regleControle";
 import {
@@ -11,12 +11,14 @@ import { RapportDeForce } from "./Controle";
 // ============================================================
 // TEST DE BLOCAGE D'UNE ACTION (onglet Conflit)
 //
-// Bombardement, raid, débarquement : l'action demande des unités non
+// Bombardement, raid, débarquement, canons spatiaux, production,
+// réparation, livraison commerciale : l'action demande des unités non
 // bloquées. Même modèle que le blocage d'un déplacement (Blocage.jsx),
 // mais unité par unité — la règle et le calcul sont dans
-// regleBlocage.js :
-//   - chaque autre camp engage ses unités militaires de l'espace du
-//     système pour bloquer, ou des unités pour aider ;
+// regleBlocage.js. Le test se fait là où est l'unité qui agit
+// (l'espace de son système, ou sa planète) :
+//   - chaque autre camp engage ses unités militaires du lieu pour
+//     bloquer, ou des unités pour aider ;
 //   - la faction qui agit égalise le surplus de blocage avec ses
 //     propres unités (les militaires d'abord), qui sont alors bloquées ;
 //   - à la conclusion, toutes les unités qui ont servi sont engagées
@@ -38,26 +40,27 @@ function conclureAttente(cle, resultat) {
     return !!resolve;
 }
 
-const unitesEspace = (index, numero, contenuDe = contenuEnCache) => unitesDuLieu({ index, contenuDe, numero, k: ESPACE_CONTROLE });
+const unitesIci = (index, numero, k, contenuDe = contenuEnCache) => unitesDuLieu({ index, contenuDe, numero, k });
 
-// Mes unités de ce système déjà bloquées à cette phase
-const mesBloquees = (etat, index, numero, moi) =>
-    unitesEspace(index, numero).filter(c => campDe(c) === moi && estBloquee(etat, c)).map(c => c.id);
+// Mes unités de ce lieu déjà bloquées à cette phase
+const mesBloquees = (etat, index, numero, k, moi) =>
+    unitesIci(index, numero, k).filter(c => campDe(c) === moi && estBloquee(etat, c)).map(c => c.id);
 
 //   ctx     { etat, index, moi, envoyer, aviser, allerA } (contexte de l'engine)
+//   numero, k  le lieu de l'unité qui agit : l'espace de la case (k absent), ou sa planète k
 //   action  clé d'ACTIONS_BLOQUABLES ; libelle : l'action, pour le journal
-export async function demanderBlocage(ctx, { numero, action, libelle }) {
+export async function demanderBlocage(ctx, { numero, k = ESPACE_CONTROLE, action, libelle }) {
 
     const { etat, index, moi, envoyer, aviser, allerA } = ctx;
 
-    const unites = unitesEspace(index, numero);
+    const unites = unitesIci(index, numero, k);
 
     // Test déjà subi ici à cette phase, ou personne pour bloquer : les unités libres agissent
-    if (blocageSubi(etat, numero, moi) || !peutEtreBloque({ etat, unites, contenuDe: contenuEnCache, acteur: moi })) {
-        return { engagees: mesBloquees(etat, index, numero, moi), attendu: false };
+    if (blocageSubi(etat, numero, moi, k) || !peutEtreBloque({ etat, unites, contenuDe: contenuEnCache, acteur: moi })) {
+        return { engagees: mesBloquees(etat, index, numero, k, moi), attendu: false };
     }
 
-    const cle = cleBlocage(numero, moi);
+    const cle = cleBlocage(numero, moi, k);
 
     if (!etat.compteurs[cle]) {
         await envoyer([
@@ -104,7 +107,14 @@ function BlocageAction({ test }) {
 
     const { etat, index, envoyer, moi, joueur, search, nomDe, couleurDe, aviser, aScript } = useEngine();
 
-    const { cle, numero, acteur, action } = test;
+    const { cle, numero, k, acteur, action } = test;
+
+    // (test sur une planète : son nom)
+    const systeme = useElement(tuileDe(index, numero)?.ref.id ?? -1);
+    const planete = useElement(k === ESPACE_CONTROLE ? -1 : (Number(systeme?.elems?.[k]?.id) || -1));
+    const nomLieu = k === ESPACE_CONTROLE
+        ? `dans le système ${nomCase(numero)}`
+        : `sur ${planete?.name || "la planète"} (${nomCase(numero)})`;
 
     // (contenus de toutes les unités du système : un système de défense posé sur une planète compte dans l'espace)
     const toutes = [...index.parZone]
@@ -113,7 +123,7 @@ function BlocageAction({ test }) {
 
     const contenus = useElements([...new Set(toutes.map(c => c.ref.id))].sort((a, b) => a - b));
     const contenuDe = id => contenus[id];
-    const unites = unitesEspace(index, numero, contenuDe);
+    const unites = unitesIci(index, numero, k, contenuDe);
 
     const clePlus = camp => `${cle}:${camp}:plus`;
     const plus = camp => Number(etat.compteurs[clePlus(camp)]) || 0;
@@ -152,7 +162,7 @@ function BlocageAction({ test }) {
         await envoyer([
             ...engagees.map(c => ({ type: "marquer", c: c.id, marque: MARQUE_BLOQUEE, valeur: rang })),
             ...effacement(),
-            { type: "compteur", id: cleSubi(numero, acteur), valeur: rang },
+            { type: "compteur", id: cleSubi(numero, acteur, k), valeur: rang },
         ], [
             commentaire,
             `${engagees.length} unité(s) engagée(s) pour la phase`,
@@ -162,8 +172,8 @@ function BlocageAction({ test }) {
         conclureAttente(cle, { engagees: miennesEngagees, attendu: true });
 
         aviser(impossible
-            ? "Blocage : vous ne pouvez pas égaliser, toutes vos unités de ce système sont bloquées pour cette phase."
-            : `Blocage résolu : ${miennesEngagees.length} de vos unités sont bloquées ; les autres peuvent agir dans ce système, sans nouveau test à cette phase.`);
+            ? "Blocage : vous ne pouvez pas égaliser, toutes vos unités de ce lieu sont bloquées pour cette phase."
+            : `Blocage résolu : ${miennesEngagees.length} de vos unités sont bloquées ; les autres peuvent agir ici, sans nouveau test à cette phase.`);
     }
 
     // Une unité, avec ses boutons si je réponds pour elle
@@ -213,7 +223,7 @@ function BlocageAction({ test }) {
         >
             <div>
                 {pastille(acteur)}
-                <b>{nomCamp(acteur)}</b> veut faire <b>{nomAction}</b> dans le système {nomCase(numero)} : <b>test de blocage</b>.
+                <b>{nomCamp(acteur)}</b> veut faire <b>{nomAction}</b> {nomLieu} : <b>test de blocage</b>.
                 {" "}Les autres camps engagent leurs unités militaires pour bloquer, ou des unités pour aider ; {nomCamp(acteur)}{" "}
                 égalise le surplus avec ses propres unités, qui sont alors bloquées. Toute unité qui sert est engagée pour la phase.
             </div>
@@ -227,7 +237,7 @@ function BlocageAction({ test }) {
                 </div>
             ))}
 
-            {campsAutres.length === 0 && <div style={{ marginTop: 3 }}><i>Aucune autre unité libre dans l'espace de ce système.</i></div>}
+            {campsAutres.length === 0 && <div style={{ marginTop: 3 }}><i>Aucune autre unité libre ici.</i></div>}
 
             <div data-camp={acteur} style={{ marginTop: 3 }}>
                 {pastille(acteur)}<b>{nomCamp(acteur)}</b> égalise avec :{" "}
