@@ -1,5 +1,5 @@
 import { ElementContent, Link, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { EnumInput } from "../../Input/EnumInput"
 import { NumberInput } from "../../Input/NumberInput"
@@ -124,4 +124,4 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Systéme", classe: Classe, form: Form, display: { default: Display }, print: "grid-cols-4" }
+export default { name: "Systéme", classe: Classe, form: Form, filter: [{ name: "anomaly", label: "Anomalie", enumClass: anomaly }, ...filtreLien], display: { default: Display }, print: "grid-cols-4" }

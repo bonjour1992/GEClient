@@ -1,5 +1,5 @@
 import { ElementContent, Link, aggregation } from "../../lib/datatype.js";
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien";
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien";
 import { backgroundColor, borderColor } from "./ti5Const.js";
 import { ModalPickerInput } from "../../Input/ModalPickerInput";
 import { ImagePicker } from "../../Input/ImagePicker.jsx";
@@ -215,4 +215,4 @@ function Form({ content, onChange, onSubmit, style }) {
 
 
 
-export default { name: "Feuille de technologie", classe: TechSheet, form: Form, display: { default: Display, small: SmallDisplay }, print: "grid-cols-1" }
+export default { name: "Feuille de technologie", classe: TechSheet, form: Form, filter: [{ name: "techType", label: "Type", enumClass: techType }, ...filtreLien], display: { default: Display, small: SmallDisplay }, print: "grid-cols-1" }

@@ -96,6 +96,6 @@ function Verso({ content, explication, style = {} }) {
 
 
 
-export default { name: "Evenement", classe: Habilite, form: Form, display: { default: Display,verso:Verso } ,print:{
+export default { name: "Evenement", classe: Habilite, form: Form, filter: [{ name: "type", label: "Type", enumClass: typeEvenement }], display: { default: Display,verso:Verso } ,print:{
     numPage:9,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
 } }

@@ -1,5 +1,5 @@
 import { ElementContent, Link, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { ModalPickerInput } from "../../Input/ModalPickerInput"
 import { Nom as NomCommun } from "./Component/Nom"
 import { EditorInput } from "../../Input/EditorInput"
@@ -85,4 +85,4 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Agent", classe: Classe, form: Form, display: { default: Display,nom:Nom } }
+export default { name: "Agent", classe: Classe, form: Form, filter: [...filtreLien], display: { default: Display,nom:Nom } }

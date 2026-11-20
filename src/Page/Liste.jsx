@@ -1,8 +1,16 @@
-import { useLoaderData, useParams, NavLink } from "react-router";
+import { useLoaderData, useParams, NavLink, useSearchParams } from "react-router";
 import { getHandler } from "../Game/games";
 import { Action } from "../Component/Action";
+import { Filtres, filtrer } from "../Component/Filtres";
 
 export default function Liste() {
+
+    // Filtres : paramètres donnés par l'export « filter » du type d'élément
+    // (Component/Filtres.jsx), choix gardés dans l'adresse de la page
+    const { jeu, elem } = useParams()
+    const handler = getHandler(jeu, elem)
+    const elements = useLoaderData().element
+    const [params] = useSearchParams()
 
     return (<>
         <div>Liste</div>
@@ -10,12 +18,14 @@ export default function Liste() {
         <br />
         <NavLink to={"./print"}>Page impression</NavLink>
 
+        <Filtres handler={handler} elements={elements} />
+
         <div style={{
             display: "flex",
             flexWrap: "wrap"
         }}>
-            {useLoaderData().element.map((e, i) =>
-                <Displayeur key={i} elem={e} />
+            {filtrer(elements, handler, params).map((e) =>
+                <Displayeur key={e.id} elem={e} />
             )}
         </div>
     </>)

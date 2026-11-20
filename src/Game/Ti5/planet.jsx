@@ -1,5 +1,5 @@
 import { ElementContent, Link, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { TagInput } from "../../Input/TagInput"
 import { NumberInput } from "../../Input/NumberInput"
@@ -68,7 +68,19 @@ class Classe extends aggregation(ElementContent, TypeLienCarac) {
 
 //TODO: native unit color for type of planet
 
-export default { name: "Planete", classe: Classe, form: Form, display: { default: Display, pict: PlanetPict,verso:Verso }, print:{
+// Filtres de la page liste (le type de ruine ne compte que s'il y a une ruine)
+const filter = [
+    { name: "type", label: "Type", enumClass: objectType },
+    { name: "planetType", label: "Type de planète", enumClass: planetType },
+    { name: "stationType", label: "Type de station", enumClass: stationType },
+    { name: "techSpe", label: "Spécialité technologique", enumClass: techType },
+    { name: "legendary", label: "Légendaire" },
+    { name: "ruine", label: "Ruine" },
+    { name: "ruineType", label: "Type de ruine", enumClass: ruineType, value: content => (content.ruine ? content.ruineType : null) },
+    ...filtreLien,
+]
+
+export default { name: "Planete", classe: Classe, form: Form, filter, display: { default: Display, pict: PlanetPict,verso:Verso }, print:{
     numPage:18,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
 } }
 export function PlanetPict({ content, style, context, explication }) {

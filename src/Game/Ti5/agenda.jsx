@@ -1,5 +1,5 @@
 import { ElementContent, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
@@ -83,6 +83,6 @@ function Form({ content, onChange, onSubmit,style}) {
 }
 
 
-export default { name: "Agenda", classe: Classe, form: Form, display: {default:Display}, print:{
+export default { name: "Agenda", classe: Classe, form: Form, filter: [{ name: "type", label: "Type", enumClass: typeLoi }, ...filtreLien], display: {default:Display}, print:{
     numPage:18,padding:12,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
 } }

@@ -1,5 +1,5 @@
 import { ElementContent, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { EnumInput } from "../../Input/EnumInput"
 import { TagInput } from "../../Input/TagInput"
 import { NumberInput } from "../../Input/NumberInput"
@@ -280,7 +280,7 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 export default {
-    name: "Unité", classe: Ship, form: Form, display: { default: Display, neutral: NeutralUnit, nom: Nom, verso: Verso, merc: Merc, mercVerso: MercVerso }, print: {
+    name: "Unité", classe: Ship, form: Form, filter: [{ name: "type", label: "Type", enumClass: shipClasse }, { name: "mot_cle", label: "Mot-clé", enumClass: tag }, ...filtreLien], display: { default: Display, neutral: NeutralUnit, nom: Nom, verso: Verso, merc: Merc, mercVerso: MercVerso }, print: {
         numPage: 20, padding: 10, bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
     }
 }

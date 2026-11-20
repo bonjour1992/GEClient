@@ -9,7 +9,7 @@ import { SmallPa } from "../../Component/Size"
 import { EnumInput } from "../../Input/EnumInput"
 import { NumberInput } from "../../Input/NumberInput"
 import FormBase from "../../Input/FormBase"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 
 export const TechColor = {
     vide: { borderColor: "#666666", backgroundColor: "#DDDDDD" },
@@ -123,4 +123,4 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Technologie", classe: Tech, form: Form, display: { default: Display }, print: "grid-cols-3" }
+export default { name: "Technologie", classe: Tech, form: Form, filter: [{ name: "techType", label: "Type", enumClass: techType }, { name: "tier", label: "Tier" }, ...filtreLien], display: { default: Display }, print: "grid-cols-3" }

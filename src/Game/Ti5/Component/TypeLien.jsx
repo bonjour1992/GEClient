@@ -43,6 +43,19 @@ export class TypeLienCarac {
     lienElement = new Link("faction")
 }
 
+// Paramètres de filtre de la page liste (Component/Filtres.jsx), à
+// ajouter à l'export « filter » d'un élément qui porte un type de lien :
+//   filter: [..., ...filtreLien]
+// « Lié à » ne compte que si le type de lien désigne un élément.
+export const filtreLien = [
+    { name: "lienType", label: "Type de lien", enumClass: typeLien },
+    {
+        name: "lienElement",
+        label: "Lié à",
+        value: content => (typeElementLie[content.lienType] ? content.lienElement : null),
+    },
+];
+
 export function TypeLienForm({ onChange, content }) {
 
     const type = typeElementLie[content.lienType];

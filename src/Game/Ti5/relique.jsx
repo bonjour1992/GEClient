@@ -1,6 +1,6 @@
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { Text } from "../../Component/Text"
 import { backgroundColorFull, borderColor, police } from "./ti5Const"
@@ -127,6 +127,6 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Relique", classe: Habilite, form: Form, display: { default: Display, verso: Verso },print:{
+export default { name: "Relique", classe: Habilite, form: Form, filter: [...filtreLien], display: { default: Display, verso: Verso },print:{
     numPage:18,padding:14,bgColor: backgroundColorFull.backgroundColor, page: "A4 paysage"
 } }

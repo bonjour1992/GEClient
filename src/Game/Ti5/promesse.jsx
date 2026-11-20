@@ -1,5 +1,5 @@
 import { ElementContent, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { EnumInput } from "../../Input/EnumInput"
 import { EditorInput } from "../../Input/EditorInput"
@@ -109,4 +109,4 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 
-export default { name: "Promesse", classe: Classe, form: Form, display: { default: Display ,verso:Verso}, print: "grid-cols-6" }
+export default { name: "Promesse", classe: Classe, form: Form, filter: [{ name: "type", label: "Type", enumClass: typePromesse }, ...filtreLien], display: { default: Display ,verso:Verso}, print: "grid-cols-6" }

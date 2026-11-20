@@ -84,6 +84,6 @@ function Form({ content, onChange, onSubmit, style }) {
 }
 
 export default {
-    name: "Token", classe: Token, form: Form, display: { default: Display },
+    name: "Token", classe: Token, form: Form, filter: [{ name: "forme", label: "Forme", enumClass: formesToken }], display: { default: Display },
     print: { numPage: 80, padding: 20, bgColor: "#FFFFFF", page: "A4 portrait" }
 }

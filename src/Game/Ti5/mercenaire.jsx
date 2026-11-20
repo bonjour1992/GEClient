@@ -1,7 +1,7 @@
 import { TextInput } from "../../Input/TextInput"
 import { EditorInput } from "../../Input/EditorInput"
 import { ElementContent, aggregation } from "../../lib/datatype"
-import { TypeLienCarac, TypeLienForm } from "./Component/TypeLien"
+import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien"
 import { ExemplairesCarac, ExemplairesForm } from "./Component/Exemplaires"
 import { Text } from "../../Component/Text"
 import { backgroundColorFull, borderColor, police } from "./ti5Const"
@@ -98,7 +98,7 @@ function Form({ content, onChange, onSubmit, style }) {
 
 
 export default {
-    name: "Mercenaire", classe: Habilite, form: Form,
+    name: "Mercenaire", classe: Habilite, form: Form, filter: [...filtreLien],
     display: { default: Display, verso: Verso },
     print: { bgColor: backgroundColorFull.backgroundColor, numPage: 18, padding: 8, page: "A4 portrait" }
 }
