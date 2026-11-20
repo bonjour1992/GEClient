@@ -541,5 +541,20 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   bombardement ni combat terrestre sur un satellite ou une planète spéciale (rouge gris) ;
   un seul bombardement par unité et par tour. Verso de faction : illustration, système et
   infos de planète côte à côte. Détail : `combat.md`, `structure.md`.
+- ☑ Décisions, exploration, événements (2026-11-20) :
+  - plus de fenêtre du navigateur pour une question : tout passe par `demande.js` (`demander`,
+    `confirmer`) et s'ouvre dans l'onglet Décision, qui s'affiche tout seul — agent de base ou
+    remplaçant, Bio stimulant, Connexion, Science intégrée, Ahk Ravin, confirmations, propositions
+    piochées. Le coup part une fois la décision prise ; les fenêtres (`Modale`) se masquent
+    pendant la réponse. Seule exception voulue : la confirmation d'un élément semi-bloqué
+    (`confirmerRegle`, rouge gris) reste un `window.confirm` ;
+  - une décision en attente semi-bloque « Joueur suivant » et « Passer » (rouge gris) ;
+  - exploration : tout joueur explore avec un logisticien et un scientifique ; la technologie
+    « Exploration efficace » (218) n'en use qu'un, au choix ; la tuile explorée porte la marque
+    `explore` ;
+  - événements : section « Événements » de `implementabilite.md` ; Signal capté pose ses
+    fragments sur les systèmes explorés, Rupture de l'espace-temps pose Akhenar, les failles,
+    leurs Nefs et les trous de ver oméga tirés au sort, « Faire arriver le grand Khan » sur la
+    fiche de la faction neutre.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

@@ -9,6 +9,7 @@
 // ============================================================
 
 import { campDe } from "./miseEnPlace.js";
+import { demander } from "./demande.js";
 
 // ------------------------------------------------------------
 // DÉ À 10 FACES : NUMÉROTÉ DE 0 À 9
@@ -158,9 +159,10 @@ export const estDeplacementFurtif = (contenu, possesseur, aScript) =>
     /#deplfurtif\b/i.test(contenu?.habilite || "") || !!aScript?.(possesseur, "camouflage");
 
 // Actions qui dépensent (détruisent) un de mes agents. Bio stimulant : une
-// fenêtre propose de l'utiliser et de payer 2 ressources à la place.
+// décision (onglet Décision) propose de l'utiliser et de payer 2 ressources
+// à la place — la fonction est donc asynchrone.
 //   nom : celui de l'agent, pour la question
-export function depenserAgent({ aScript, moi, etat }, agent, nom = "cet agent") {
+export async function depenserAgent({ aScript, moi, etat }, agent, nom = "cet agent") {
 
     if (!agent) {
         return [];
@@ -168,11 +170,15 @@ export function depenserAgent({ aScript, moi, etat }, agent, nom = "cet agent") 
 
     const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
 
-    const epargne = agent.ref?.type === "agent" && aScript(moi, "bio-stimulant") && window.confirm(
-        `Bio stimulant : ${nom} doit être détruit.\n\n` +
-        `OK : l'utiliser et payer 2 ressources à la place (vous en avez ${ressources}).\n` +
-        "Annuler : le détruire."
-    );
+    const epargne = agent.ref?.type === "agent" && aScript(moi, "bio-stimulant") && (await demander({
+        titre: "Bio stimulant",
+        texte: `${nom} doit être détruit.`,
+        choix: [
+            { valeur: 1, libelle: `L'utiliser et payer 2 ressources à la place (vous en avez ${ressources})` },
+            { valeur: 2, libelle: "Le détruire" },
+        ],
+        renoncer: false,
+    })) === 1;
 
     return epargne
         ? [

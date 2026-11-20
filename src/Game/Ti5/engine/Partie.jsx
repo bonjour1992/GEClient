@@ -41,6 +41,7 @@ import {
     useRepli,
     COULEUR_A_FAIRE,
     COULEUR_NEUTRE,
+    STYLE_INDISPONIBLE,
     estTreve,
     BoutonRegle,
     confirmerRegle,
@@ -62,7 +63,8 @@ import { BoutonsScripts } from "./ActionsScript";
 import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
-import { Decisions, decisionsDurables } from "./Decisions";
+import { Decisions, OuvrirDecisions, decisionsDurables } from "./Decisions";
+import { reglerDemande, confirmer } from "./demande";
 import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
@@ -354,7 +356,8 @@ export function Partie({ id }) {
         joueur: estJoueur,
         // (payerConnexion : script Connexion, un négociant utilisé à la place d'un autre agent ;
         // choisirRemplacants : un mercenaire, le Noble ou un Héritier à la place d'un agent)
-        jouer: actions => p.jouer(choisirRemplacants(payerConnexion(actions))),
+        // (asynchrones : ces choix sont des décisions du joueur, onglet Décision)
+        jouer: async actions => p.jouer(await choisirRemplacants(await payerConnexion(actions))),
         ouvrirFiche: setFiche,
         nomDe: userId => trouver(userId)?.nom || "personne",
         factionDe: userId => trouver(userId)?.faction ?? null,
@@ -372,7 +375,8 @@ export function Partie({ id }) {
         ecrire: p.ecrire,
 
         // Envoie tout de suite ces actions (avec celles en attente) en un coup commenté
-        envoyer: (actions, commentaire, surRefus) => p.envoyer(commentaire, choisirRemplacants(payerConnexion(actions)), surRefus),
+        envoyer: async (actions, commentaire, surRefus) =>
+            p.envoyer(commentaire, await choisirRemplacants(await payerConnexion(actions)), surRefus),
         couleurDe: userId => (trouver(userId) ? couleurJoueur(trouver(userId)) : null),
 
         // Production (case de la réserve) et message d'erreur de l'en-tête
@@ -389,6 +393,12 @@ export function Partie({ id }) {
         decider,
         decisions,
         repondre,
+
+        // Propositions piochées (phase de proposition) : le choix se fait dans l'onglet Décision
+        propositions: {
+            cartes: index.parZone.get(`joueur:${moi}:choix`) || [],
+            choisir: idCarte => choisirProposition(idCarte),
+        },
 
         // Script d'effet : il est en service et le joueur a débloqué sa technologie
         aScript: (userId, id) => {
@@ -481,6 +491,9 @@ export function Partie({ id }) {
     };
 
     reglerConnexion({ aScript: ctx.aScript, moi, etat, index, search, aviser: setAvis });
+
+    // Questions au joueur (demande.js) : elles s'ouvrent dans l'onglet Décision de cette partie
+    reglerDemande(decider);
 
     // Combats et blocages de déplacement en cours : l'onglet Conflit est mis
     // en avant, d'une couleur différente selon que j'y ai des unités ou non
@@ -931,11 +944,12 @@ export function Partie({ id }) {
             ]);
 
             if (commentaire) {
-                p.envoyer(commentaire, choisirRemplacants([
+                // (agent ou remplaçant : décision du joueur, le coup part ensuite)
+                choisirRemplacants([
                     politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
                     { type: "deplacer", c: id, vers: `general:agenda:${etat.tour + 1}` },
                     { type: "compteur", id: compteur, valeur: etat.tour },
-                ]));
+                ]).then(actions => p.envoyer(commentaire, actions));
             }
 
             return true;
@@ -976,9 +990,11 @@ export function Partie({ id }) {
 
         if (achete.ref.type === "agent" && (c.zone === stock || c.zone === uses)) {
             // (Ctrl + clic : dépensé — le script Bio stimulant propose de l'user à la place)
-            p.jouer(choisirRemplacants(event.ctrlKey
+            Promise.resolve(event.ctrlKey
                 ? depenserAgent(ctx, c, nomElement(search, c.ref))
-                : { type: "deplacer", c: id, vers: c.zone === stock ? uses : stock }));
+                : { type: "deplacer", c: id, vers: c.zone === stock ? uses : stock })
+                .then(choisirRemplacants)
+                .then(actions => p.jouer(actions));
 
             return true;
         }
@@ -1105,10 +1121,10 @@ export function Partie({ id }) {
             return;
         }
 
-        p.jouer(choisirRemplacants([
+        choisirRemplacants([
             { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` },
             { type: "partie", joueurActif: suivantId },
-        ]));
+        ]).then(actions => p.jouer(actions));
     }
 
     // --------------------------------------------------------
@@ -1178,7 +1194,7 @@ export function Partie({ id }) {
 
     async function supprimer() {
 
-        if (!window.confirm(`Supprimer définitivement la partie « ${partie.nom} » ?`)) {
+        if (!await confirmer("Supprimer la partie", `Supprimer définitivement la partie « ${partie.nom} » ?`, "Supprimer définitivement")) {
             return;
         }
 
@@ -1477,7 +1493,7 @@ export function Partie({ id }) {
                             [enScience, <>
                                 <b>Explorer :</b> Ctrl + clic sur un emplacement vide à côté d'un
                                 système pose la première tuile de la pioche (use un logisticien
-                                et un scientifique).{" "}
+                                et un scientifique ; un seul des deux avec Exploration efficace).{" "}
                                 <b>Rechercher, fouiller une ruine :</b> cliquer sur un système,
                                 les boutons sont à côté de chaque planète.
                                 {/* Script Archéologie : piocher un plan de relique */}
@@ -1766,7 +1782,7 @@ export function Partie({ id }) {
                 {cachee && <FicheCachee zone={cachee} fermer={() => setCachee(null)} />}
                 {libre && <FicheLibre id={libre} fermer={() => setLibre(null)} />}
                 {transaction && <Transaction fermer={() => setTransaction(false)} />}
-                {aChoisir.length > 0 && <ChoixProposition cartes={aChoisir} choisir={choisirProposition} />}
+                <OuvrirDecisions />
             </div>
         </Engine>
     );
@@ -1803,74 +1819,7 @@ function Bandeau({ couleurs: [fond, texte, bord], top = 8, fermer, children, ...
     );
 }
 
-// ============================================================
-// PROPOSITIONS PIOCHÉES : en prendre une en main
-// ============================================================
-
-function ChoixProposition({ cartes, choisir }) {
-
-    // Réduite : la fenêtre laisse voir sa main et la carte avant de choisir
-    const [reduite, setReduite] = useState(false);
-
-    if (reduite) {
-        return (
-            <button
-                type="button"
-                onClick={() => setReduite(false)}
-                style={{
-                    position: "fixed",
-                    left: 12,
-                    bottom: 12,
-                    zIndex: 9000,
-                    padding: "8px 14px",
-                    fontWeight: "bold",
-                    backgroundColor: COULEUR_A_FAIRE,
-                    border: "2px solid #444",
-                    borderRadius: 8,
-                    cursor: "pointer",
-                }}
-            >
-                Propositions piochées ({cartes.length}) : en choisir une…
-            </button>
-        );
-    }
-
-    return (
-        <Modale style={{ maxWidth: "94vw" }}>
-                <div style={styleBarre}>
-                    <b style={{ fontSize: 18 }}>Propositions piochées</b>
-                    <button
-                        type="button"
-                        onClick={() => setReduite(true)}
-                        title="Masque cette fenêtre le temps de regarder votre main ou la carte"
-                        style={{ marginLeft: "auto" }}
-                    >
-                        Réduire
-                    </button>
-                </div>
-                <div style={{ margin: "4px 0 8px" }}>
-                    Choisissez-en une à prendre en main. Les autres retournent sous la pioche.
-                </div>
-
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                    {cartes.map(c => (
-                        <div key={c.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-                            {c.ref
-                                ? <LoadAndDisplay link={{ ...c.ref, __link: true }} />
-                                : <i>carte inconnue</i>}
-                            <button
-                                type="button"
-                                onClick={() => choisir(c.id)}
-                                style={{ fontWeight: "bold", padding: "6px 12px" }}
-                            >
-                                Prendre en main
-                            </button>
-                        </div>
-                    ))}
-                </div>
-        </Modale>
-    );
-}
+// (Propositions piochées : le choix se fait dans l'onglet Décision, Decisions.jsx)
 
 // ============================================================
 // CARTE FACE CACHÉE (clic sur une carte cachée d'une zone publique)
@@ -1976,8 +1925,19 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
     // « Doit jouer », dans l'en-tête déplié, reste la correction manuelle.
     const tourDunAutre = !monTour && ctx.partie.joueurs.some(j => j.userId === ctx.etat.joueurActif);
 
+    // Une décision m'attend (onglet Décision) : « Joueur suivant » et « Passer » sont
+    // semi-bloqués — rouge gris, utilisables après la confirmation qui dit pourquoi
+    const enAttente = ctx.decisions.length + decisionsDurables(ctx);
+
+    const obstacles = [enAttente > 0 &&
+        `${enAttente} décision${enAttente > 1 ? "s vous attendent" : " vous attend"} dans l'onglet Décision`];
+
+    const semiBloque = enAttente > 0 ? { ...STYLE_INDISPONIBLE, fontWeight: "bold" } : {};
+    const titreBloque = enAttente > 0 ? ` — ${obstacles[0]} (reste utilisable, après confirmation)` : "";
+
     return (
         <div
+            data-fin-de-tour={enAttente > 0 ? "semi-bloque" : "libre"}
             style={{
                 padding: 6,
                 borderRadius: 8,
@@ -1987,11 +1947,12 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
         >
             <button
                 type="button"
+                data-action="joueur-suivant"
                 disabled={p.envoi || tourDunAutre}
-                onClick={() => p.jouer({ type: "partie", joueurActif: suivantId })}
+                onClick={() => confirmerRegle("Joueur suivant", obstacles) && p.jouer({ type: "partie", joueurActif: suivantId })}
                 title={tourDunAutre
                     ? `C'est le tour de ${ctx.nomDe(ctx.etat.joueurActif)}`
-                    : "Passe la main au joueur suivant dans l'ordre d'initiative"}
+                    : "Passe la main au joueur suivant dans l'ordre d'initiative" + titreBloque}
                 style={{
                     display: "block",
                     width: "100%",
@@ -2002,6 +1963,7 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                     border: "1px solid #333",
                     borderRadius: 4,
                     cursor: "pointer",
+                    ...(tourDunAutre ? {} : semiBloque),
                 }}
             >
                 {monTour
@@ -2026,10 +1988,11 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
 
             <button
                 type="button"
+                data-action="passer"
                 disabled={p.envoi || aPasse}
-                onClick={passer}
-                title="Vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase"
-                style={{ display: "block", width: "100%", marginTop: 4 }}
+                onClick={() => confirmerRegle("Passer", obstacles) && passer()}
+                title={"Vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase" + titreBloque}
+                style={{ display: "block", width: "100%", marginTop: 4, ...(aPasse ? {} : semiBloque) }}
             >
                 {aPasse ? "Vous avez passé" : "Passer (jusqu'à la fin de la phase)"}
             </button>
@@ -2226,13 +2189,16 @@ function Fiche({ id, fermer }) {
 
     const marquer = (marque, valeur) => jouer({ type: "marquer", c: c.id, marque, valeur });
 
-    function deplacer(zone) {
+    async function deplacer(zone) {
 
         // Vers la main d'un autre : on ne pourra pas la reprendre soi-même
         const autre = /^joueur:(\d+):main$/.exec(zone);
 
-        if (autre && Number(autre[1]) !== moi &&
-            !window.confirm(`Donner cet élément à ${nomDe(Number(autre[1]))} ? Il ira dans sa main, que vous ne voyez pas.`)) {
+        if (autre && Number(autre[1]) !== moi && !await confirmer(
+            `Donner à ${nomDe(Number(autre[1]))}`,
+            "Cet élément ira dans sa main, que vous ne voyez pas.",
+            "Donner"
+        )) {
             return;
         }
 
@@ -2262,7 +2228,7 @@ function Fiche({ id, fermer }) {
 
     const pointsRelique = Number(contenu?.point) || 0;
 
-    function construire() {
+    async function construire() {
 
         const mesFragments = index.parZone.get(`joueur:${moi}:fragments`) || [];
         const aRetirer = [];
@@ -2292,7 +2258,7 @@ function Fiche({ id, fermer }) {
 
         jouer([
             // (le scientifique est dépensé : Bio stimulant propose de l'user à la place)
-            ...depenserAgent({ aScript, moi, etat }, scientifique, "le scientifique"),
+            ...await depenserAgent({ aScript, moi, etat }, scientifique, "le scientifique"),
             ...aRetirer.map(f => ({ type: "supprimer", c: f.id })),
             { type: "deplacer", c: c.id, vers: `joueur:${moi}:actif` },
             // Mon marqueur avance sur la piste des points du déroulé

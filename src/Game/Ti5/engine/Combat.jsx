@@ -5,6 +5,7 @@ import {
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceDe } from "./effets";
+import { confirmer } from "./demande";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
@@ -1683,7 +1684,7 @@ function CombatSysteme({ lieu }) {
     const recupCochee = u => Number(etat.compteurs[RECUP + u]) !== 2;
     const epaves = (Number(etat.compteurs[DETRUITS]) || 0) + aRetirer.length;
 
-    function terminer() {
+    async function terminer() {
 
         const cochees = recuperateurs.filter(recupCochee);
 
@@ -1700,7 +1701,9 @@ function CombatSysteme({ lieu }) {
 
         const commentaire = obstacles.some(Boolean)
             ? confirmerRegle("Terminer le combat", obstacles)
-            : (window.confirm("Terminer ce combat ? Les engagements et les dés seront effacés pour tout le monde.") ? "Combat terminé" : null);
+            : ((await confirmer("Terminer ce combat", "Les engagements et les dés seront effacés pour tout le monde.", "Terminer le combat"))
+                ? "Combat terminé"
+                : null);
 
         if (!commentaire) {
             return;

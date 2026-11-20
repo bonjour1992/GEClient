@@ -229,9 +229,9 @@ function Livraison() {
                     !/diplo/i.test(etat.phase) && "ce n'est pas la phase de diplomatie",
                     utilisee && etat.compteurs[utilisee] && "la technologie est déjà utilisée ce tour",
                 ]}
-                faire={commentaire => {
+                faire={async commentaire => {
                     // (Livraison.jsx : commerce donné, dettes réduites, scripts de livraison)
-                    const { actions, messages } = livrer(ctx, cible, 2);
+                    const { actions, messages } = await livrer(ctx, cible, 2);
 
                     envoyer([utilisee && { type: "compteur", id: utilisee, valeur: 1 }, ...actions], [commentaire, ...messages].join(" — "));
                     aviser(messages.join(" "));

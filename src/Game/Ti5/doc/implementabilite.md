@@ -1,6 +1,8 @@
 # Implémentabilité des règles TI5 dans l'outil de partie
 
-Pour chaque technologie, habilité, unité et planète : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 18 novembre 2026).
+Pour chaque technologie, habilité, unité, planète et événement : ce que l'outil de partie applique, **comment il touche à l'interface**, et ce qu'il resterait à scripter. Analyse du 10 novembre 2026, tenue à jour à chaque script écrit (dernière mise à jour : 20 novembre 2026).
+
+Depuis le 20 novembre 2026, une « fenêtre de choix » citée dans ces tableaux est un cadre de l'onglet Décision, qui s'ouvre tout seul : l'action part une fois la décision prise. Seule la confirmation d'un bouton rouge gris (« Normalement impossible… ») reste une fenêtre du navigateur.
 
 Colonnes :
 
@@ -26,7 +28,8 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
-| **Total** | **368** | **268** | **74** | **26** | **148** | **61** | **121** |
+| Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
+| **Total** | **378** | **278** | **74** | **26** | **158** | **61** | **121** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -70,7 +73,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 214 | Extorsion | **oui** | nouveau bouton | Plateau joueur, « Actions de mes technologies » : « Extorsion » use un diplomate, dette de 3 pour la faction choisie, à payer dans 3 tours. | — |
 | 216 | Science intégrée | **oui** | bouton existant modifié | Recrutement (Ctrl + clic) : scientifiques à −1. Livraison commerciale : une fenêtre propose d'user un scientifique, la faction livrée gagne 4 cases de recherche d'une technologie que vous possédez. | Les 4 cases se cochent à la main chez la faction livrée. |
 | 217 | Rayon tracteur | **oui** | automatique | Conflit : dans le blocage d'un déplacement et les conflits de contrôle et de domination, vos vaisseaux à plus de 1 de résistance comptent 1 de contrôle de plus. | — |
-| 218 | Exploration | **oui** | bouton existant modifié | Onglet Espace, phase de science : l'exploration (Ctrl + clic sur un emplacement vide) est réservée à qui a la technologie ; la ligne « explorer » est retirée des scientifiques. | — |
+| 218 | Exploration efficace | **oui** | bouton existant modifié | Onglet Espace, phase de science : tout joueur explore (Ctrl + clic sur un emplacement vide) en usant un scientifique et un logisticien. Avec la technologie, un seul des deux : s'il a les deux, l'onglet Décision fait choisir lequel. | — |
 | 231 | Cartographie de l'espace | **oui** | automatique | Conflit, combat spatial et canons : −1 aux attaques contre vos vaisseaux dans un système à anomalie. | — |
 | 232 | Exploitation du vide | **oui** | nouveau bouton + automatique | Ravitaillement automatique : +1 ressource par système vide dominé (+3 pour une nébuleuse). Un système vide disputé ouvre un conflit de domination (onglet Conflit) ; Ravitaillement automatique est rouge gris tant qu'il n'est pas résolu. | — |
 | 233 | Moteur à gravité | **oui** | bouton existant modifié | Déplacement assisté : case « Moteur à gravité » — +1 mouvement, des scientifiques sont utilisés au départ. | — |
@@ -440,6 +443,35 @@ Agents spéciaux et reliques qui remplacent un agent (même fenêtre de choix qu
 |---|---|---|---|---|---|
 | 142 | Héritier (agent des Winnu) | **oui** | bouton existant modifié | Quand un politique (si vous possédez Mecatol Rex) ou un amiral (sinon) est utilisé ou dépensé, la fenêtre propose un Héritier à sa place ; sans agent de ce type, l'Héritier agit d'office. Dépensé, il va sur la case du tour + 2 de votre feuille au lieu d'être détruit. | Le reprendre au tour dit : à la main (le glisser dans ses agents). |
 | 396 | Noble cryogénisé (relique) | **oui** | bouton existant modifié | Glisser la carte sur un type d'agent de « Mes agents » : elle s'utilise comme cet agent (fenêtre de choix) ; quand elle devrait être dépensée, elle est usée. Usée, elle redevient disponible à l'Ravitaillement automatique. | Changer de type : glisser la carte sur un autre type. |
+
+## Événements
+
+Chaque événement a un bouton « Mettre en place » sur sa fiche (clic sur la carte, une fois révélée sur sa case Événement du déroulé). T est le tour de sa case. Le bouton fait tout ce que dit le texte de la carte ; il ne sert qu'une fois (rouge gris ensuite). Les dés (rébellion, systèmes tirés au sort) sont lancés par le serveur et notés au journal.
+
+| n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
+|---|---|---|---|---|---|
+| 450 | Tempête spatiale | **oui** | nouveau bouton | « Tempête spatiale » sur la case Événement du tour T+1, « Fin de la tempête » sur celle du tour T+5, la feuille de technologie « Tempête stellaire » chez chaque joueur (onglet Technologie). | — |
+| 455 | Catastrophe lointaine | **oui** | nouveau bouton | « Péage aux frontières » aux tours T+1 et T+2, « Offre d'asile » au tour T+2, les promesses « Tuteur des réfugiés » dans la réserve de promesses. | — |
+| 459 | Recrudescence de la piraterie | **oui** | nouveau bouton | La faction neutre « Pirate » sur la table ; 2 Vaisseaux pirates sur chaque champ d'astéroïdes et chaque rupture gravitationnelle qui ne touche pas une case natale. | — |
+| 485 | Signal capté | **oui** | nouveau bouton | « Présence de cache » au tour T ; les 4 signaux mélangés, cachés et numérotés (un marqueur « Signal N » par signal sur la table) ; SIG-1 à SIG-4 chez chaque joueur ; les 4 tuiles SIG mélangées aux 12 tuiles du dessus de la pioche ; un fragment de relique, tiré du sac, sur chaque système exploré (la tuile porte la marque « explore » depuis l'exploration). | Systèmes explorés avant le 20 novembre 2026 : leur tuile n'est pas marquée, fragment à poser à la main. |
+| 553 | Grand Khan | **oui** | nouveau bouton | La faction neutre « Invasion du grand Khan » sur la case Événement du tour T+1. | — |
+| 526 | Invasion du grand Khan (arrivée) | **oui** | nouveau bouton | Fiche de la faction neutre, phase d'événement du tour où elle est sur la case Événement : « Faire arriver le grand Khan » — un système de la carte est tiré au sort, 1 Palais du Khan et 25 Frégates du Khan y sont posés. Une fois par partie. | Tout système de la carte peut être tiré, natal compris (le texte dit « un endroit aléatoire »). |
+| 562 | Rébellion interplanétaire | **oui** | nouveau bouton | La faction neutre « Rébellion interplanétaire » sur la table, l'agenda « Collaboration contre révolutionnaire » dans les lois à venir du tour T+1 ; un jet de rébellion (1D6) par planète possédée hors système natal — sauvage ou culturelle 3+, militaire 5+, autre 4+ — et 1D3 Rebelles par jet réussi. | — |
+| 719 | Comment la démocratie meurt | **oui** | nouveau bouton | La faction neutre « Conclave secret » sur la table ; quatre agendas dans les lois à venir des tours T+2 à T+5. | — |
+| 823 | Rupture de l'espace-temps | **oui** | nouveau bouton | « Rupture de l'espace-temps » et « Étude des failles » sur la table, la feuille « Rupture » chez chaque joueur ; Akhenar entouré des failles (moitié des joueurs, arrondie au supérieur, + 1) dans les systèmes secondaires, chaque faille avec ses 3 Nefs de la rupture ; un jeton trou de ver oméga sur autant de systèmes de la carte, tirés au sort. | Sans place libre dans les systèmes secondaires, les tuiles vont dans la réserve de tuiles : pose à la main. |
+| 1039 | Peste lointaine | **oui** | nouveau bouton | « Vaccin » et « Arme bactériologique » chez chaque joueur, « Aide humanitaire » au tour T, « Bilan de l'aide humanitaire » au tour T+3. | — |
+
+Ce que les événements mettent en jeu a sa ligne dans les autres tableaux :
+
+- **habilités posées sur le déroulé ou la table** (tableau Habilités) : Tempête spatiale (442), Fin de la tempête (443), Péage aux frontières (452), Offre d'asile (453), Présence de cache (491), Aide humanitaire (404) et son bilan (1038), Rupture de l'espace-temps (814), Étude des failles (815) — toutes implémentées ;
+- **règles des factions neutres** (tableau Habilités) : Pirate — Diplomatie pirate (522) faite, Mouvement pirate (406) et Combat pirate (523) non ; Grand Khan — Débarquement (530) fait, Combat (528) et Déplacement (529) non ; Rébellion (558, 560, 563 faites, 561 partielle) ; Conclave (720 partielle, 722 et 725 faites) ; Réfugiés (837 à 839 faites) ;
+- **technologies distribuées** (tableau Technologies) : SIG-1 à SIG-4, Vaccin, Arme bactériologique, feuilles « Tempête stellaire » et « Rupture » ;
+- **lois ajoutées à l'agenda** (564, 717, 721, 726, 727) : votées dans l'onglet Vote ; leur application reste manuelle, comme pour toutes les lois.
+
+Reste hors script, pour tous les événements :
+
+- **révéler la carte** à la phase d'événement : à la main (clic sur la carte face cachée de la case Événement, « Révéler à tous ») — un bouton du bandeau « À faire » serait facile ;
+- **déplacements et combats des factions neutres** (pirates, Khan) : difficile, voir les lignes 406, 523, 528 et 529.
 
 ## Mots-clés d'unité
 

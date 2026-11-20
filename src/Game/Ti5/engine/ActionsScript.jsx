@@ -489,15 +489,23 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             // du composant), leur suite part dans un second coup
             const tirages = propre.tirages || [];
 
+            // Agents dépensés : le script Bio stimulant pose sa question (onglet Décision)
+            // avant l'envoi du coup
+            const actionsAgent = agent ? (s.agent.depense
+                ? await depenserAgent({ aScript, moi, etat }, agent, `le ${s.agent.nom} (${s.nom})`)
+                : [s.agent.surCarte && c
+                    ? { type: "deplacer", c: agent.id, sur: c.id, proprio: moi }
+                    : (s.agent.pose && zone
+                        ? { type: "deplacer", c: agent.id, vers: zone, proprio: moi }
+                        : { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` })]) : [];
+
+            const actionsAgentDepense = choisi.agentDepense
+                ? await depenserAgent({ aScript, moi, etat }, choisi.agentDepense, `l'agent (${s.nom})`)
+                : [];
+
             const envoi = envoyer([
-                ...(agent ? (s.agent.depense
-                    ? depenserAgent({ aScript, moi, etat }, agent, `le ${s.agent.nom} (${s.nom})`)
-                    : [s.agent.surCarte && c
-                        ? { type: "deplacer", c: agent.id, sur: c.id, proprio: moi }
-                        : (s.agent.pose && zone
-                            ? { type: "deplacer", c: agent.id, vers: zone, proprio: moi }
-                            : { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` })]) : []),
-                ...(choisi.agentDepense ? depenserAgent({ aScript, moi, etat }, choisi.agentDepense, `l'agent (${s.nom})`) : []),
+                ...actionsAgent,
+                ...actionsAgentDepense,
                 ...coutDe(choisi).map(([cle, n]) => ({ type: "compteur", id: `joueur:${moi}:${compteurDe(cle)}`, delta: -n })),
                 // (fragmentsPoses : les fragments restent posés sur la carte au lieu d'être dépensés)
                 ...payes.map(f => (s.fragmentsPoses && c

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useEngine, nomElement } from "./Interaction";
 import { TYPES_PIOCHE, SAC, PIOCHE_TUILES, TUILES_PIOCHEES, RESERVE_TUILES } from "./miseEnPlace";
+import { confirmer } from "./demande";
 
 // ============================================================
 // ENVOYER UN ÉLÉMENT AILLEURS, MONTRER UNE CARTE
@@ -95,13 +96,16 @@ export function EnvoyerVers({ c: composant, lien, surEnvoi, apres, libelle = "En
         return null;
     }
 
-    function envoyer(zone) {
+    async function envoyer(zone) {
 
         // Vers la main d'un autre : on ne pourra pas la reprendre soi-même
         const autre = /^joueur:(\d+):main$/.exec(zone);
 
-        if (autre && Number(autre[1]) !== moi &&
-            !window.confirm(`Donner cet élément à ${nomDe(Number(autre[1]))} ? Il ira dans sa main, que vous ne voyez pas.`)) {
+        if (autre && Number(autre[1]) !== moi && !await confirmer(
+            `Donner à ${nomDe(Number(autre[1]))}`,
+            "Cet élément ira dans sa main, que vous ne voyez pas.",
+            "Donner"
+        )) {
             return;
         }
 

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, agentDisponible, nomElement, tuileDe } from "./Interaction";
 import { useElement, contenuEnCache } from "./sync";
 import { DETTE, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
+import { demander } from "./demande";
 
 // ============================================================
 // LIVRAISON COMMERCIALE
@@ -19,13 +20,14 @@ import { DETTE, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
 // dépensée (« #spend »).
 //
 // Scripts : Commerce profitable (+1 si je l'ai, +1 si la faction
-// livrée l'a), Science intégrée (une fenêtre propose d'user un
+// livrée l'a), Science intégrée (une décision propose d'user un
 // scientifique : la faction livrée gagne 4 cases de recherche d'une
 // technologie que je possède, qu'elle ajoute à la main).
 // ============================================================
 
 // Actions d'une livraison de `valeur` commerce à `cible` -> { actions, messages }
-export function livrer({ etat, index, moi, search, aScript, nomDe }, cible, valeur) {
+// (asynchrone : Science intégrée pose une question, onglet Décision)
+export async function livrer({ etat, index, moi, search, aScript, nomDe }, cible, valeur) {
 
     // Règle de Perimeter : mes livraisons valent 1 commerce de plus si je possède la planète
     const perimeter = aScript(moi, "perimeter") && Object.values(etat.composants).some(c =>
@@ -69,14 +71,20 @@ export function livrer({ etat, index, moi, search, aScript, nomDe }, cible, vale
         messages.push(`Vos dettes envers ${nomDe(cible)} baissent de ${rembourse}.`);
     }
 
-    // Science intégrée : fenêtre, lors d'une livraison
+    // Science intégrée : décision (onglet Décision), lors d'une livraison
     const scientifique = aScript(moi, "science-integree-livraison")
         ? agentDisponible({ index, moi, search }, "scientifique")
         : null;
 
-    if (scientifique && window.confirm(
-        `Science intégrée : user un scientifique pour que ${nomDe(cible)} gagne 4 cases de recherche ` +
-        "d'une technologie que vous possédez ?")) {
+    if (scientifique && (await demander({
+        titre: "Science intégrée",
+        texte: `Vous livrez du commerce à ${nomDe(cible)}.`,
+        choix: [
+            { valeur: 1, libelle: `User un scientifique : ${nomDe(cible)} gagne 4 cases de recherche d'une technologie que vous possédez` },
+            { valeur: 2, libelle: "Ne pas user de scientifique" },
+        ],
+        renoncer: false,
+    })) === 1) {
         actions.push({ type: "deplacer", c: scientifique.id, vers: `joueur:${moi}:agentsUses` });
         messages.push(`Science intégrée : ${nomDe(cible)} gagne 4 cases de recherche d'une technologie que vous possédez (à cocher dans son onglet Technologie).`);
     }
@@ -123,9 +131,9 @@ export function LivraisonCommerciale({ c, fermer }) {
     const depensee = /#spend[^<]*#livr/i.test(texte);
     const negociant = avecNegociant ? agentDisponible({ index, moi, search }, MOTIF_NEGOCIANT) : null;
 
-    function faire(commentaire) {
+    async function faire(commentaire) {
 
-        const { actions, messages } = livrer(ctx, cible, valeur);
+        const { actions, messages } = await livrer(ctx, cible, valeur);
 
         envoyer([
             negociant && { type: "deplacer", c: negociant.id, vers: `joueur:${moi}:agentsUses` },

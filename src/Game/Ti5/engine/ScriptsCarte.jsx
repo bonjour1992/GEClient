@@ -1,9 +1,14 @@
-import { useEngine, BoutonRegle, nomElement, distanceCases, agentDisponible } from "./Interaction";
+import {
+    useEngine, BoutonRegle, nomElement, distanceCases, agentDisponible, estSecondaire, DECALAGE_SECONDAIRE, nomCase,
+} from "./Interaction";
 import { chargerContenu, useElement, useElements } from "./sync";
-import { normaliserPlateau } from "../hexSpirale";
+import { normaliserPlateau, distanceBande, COLONNES_BANDE } from "../hexSpirale";
 import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
-import { RESERVE_TUILES, PIOCHE_TUILES, exemplaires, LIBRE, COULEUR_LIBRE, MOTIF_LOGISTICIEN } from "./miseEnPlace";
+import {
+    RESERVE_TUILES, PIOCHE_TUILES, SAC_FRAGMENTS, exemplaires, LIBRE, COULEUR_LIBRE, MOTIF_LOGISTICIEN,
+} from "./miseEnPlace";
+import { premiereFace } from "./etat";
 import { lotsDeDes, desDeLaReponse } from "./effets";
 import { LivraisonCommerciale } from "./Livraison";
 import { BoutonsScripts } from "./ActionsScript";
@@ -31,7 +36,9 @@ export function ScriptsCarte({ c, fermer }) {
             .filter(s => s.sorte === "bouton" && concerne(s, c.ref))
             .map(s => (s.bouton === "evenement"
                 ? <MettreEnPlaceEvenement key={s.id} c={c} script={s} fermer={fermer} />
-                : null)),
+                : (s.bouton === "arrivee"
+                    ? <ArriveeNeutre key={s.id} c={c} script={s} fermer={fermer} />
+                    : null))),
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && aScript(moi, "reparation-improvisee") &&
             <ReparationImprovisee key="reparation-improvisee" c={c} fermer={fermer} />,
         // Réparation illimitée (#rep, Dock) : une de mes unités endommagées de la carte
@@ -156,6 +163,125 @@ function ReparationIllimitee({ c, fermer }) {
             title={`Réparation illimitée (${nomReparatrice} dans le système) : à la phase de production, 1 ressource par dégât`}
         >
             Réparer ({degat} ressource{degat > 1 ? "s" : ""})
+        </BoutonRegle>
+    );
+}
+
+// ------------------------------------------------------------
+// SYSTÈMES TIRÉS AU SORT (« un endroit aléatoire de la galaxie »)
+//
+// n systèmes différents de la carte (hors systèmes secondaires), tirés
+// par les dés du serveur dans un coup à part, commenté `motif`.
+// -> les numéros de case, dans l'ordre du tirage ; [] s'il n'y a aucun
+//    système ; null si les dés n'ont pas pu être lus
+// ------------------------------------------------------------
+
+async function tirerSystemes({ etat, envoyer, moi }, n, motif) {
+
+    const cases = Object.values(etat.composants)
+        .filter(x => !x.cache && x.ref?.type === "system" && /^hex:\d+$/.test(x.zone || "") && !estSecondaire(x.zone.slice(4)))
+        .map(x => Number(x.zone.slice(4)))
+        .sort((a, b) => a - b);
+
+    const voulu = Math.min(n, cases.length);
+
+    if (voulu <= 0) {
+        return [];
+    }
+
+    if (cases.length === 1) {
+        return [cases[0]];
+    }
+
+    // (un dé du serveur a 100 faces au plus)
+    const faces = Math.min(100, cases.length);
+    const des = desDeLaReponse(await envoyer([{ type: "des", n: voulu, faces }], motif), moi);
+
+    if (!Array.isArray(des) || des.length !== voulu) {
+        return null;
+    }
+
+    // Chaque dé désigne un système parmi ceux qui restent
+    const restantes = [...cases];
+
+    return des.map(d => restantes.splice((d - premiereFace(faces)) % restantes.length, 1)[0]);
+}
+
+// Unités natives d'un système et de ses planètes (nativeUnit × unitNum), à poser avec sa tuile
+async function unitesNatives(idSysteme, zone) {
+
+    const natives = [];
+
+    const ajouter = (contenu, ou) => {
+        if (contenu?.nativeUnit?.id > 0 && contenu.nativeUnit.type === "unit") {
+            natives.push({ type: "creer", ref: { type: "unit", id: contenu.nativeUnit.id }, zone: ou, n: Number(contenu.unitNum) || 1 });
+        }
+    };
+
+    const systeme = await chargerContenu(idSysteme);
+
+    ajouter(systeme, zone);
+
+    for (const [k, lien] of (systeme?.elems || []).entries()) {
+        if (lien?.id > 0) {
+            ajouter(await chargerContenu(lien.id), `${zone}:planete:${k}`);
+        }
+    }
+
+    return natives;
+}
+
+// ------------------------------------------------------------
+// ARRIVÉE D'UNE FACTION NEUTRE (Invasion du grand Khan)
+//
+// Bouton de la fiche de la faction neutre, posée par son événement sur
+// la case Événement du tour d'arrivée : ses unités (`unites` du script)
+// arrivent dans un système tiré au sort. Le compteur `compteur` du
+// script retient que c'est fait.
+// ------------------------------------------------------------
+
+function ArriveeNeutre({ c, script, fermer }) {
+
+    const { etat, envoyer, search, aviser, signaler, moi } = useEngine();
+
+    const nom = nomElement(search, c.ref);
+    const tour = Number(/^general:evenement:(\d+)$/.exec(c.zone || "")?.[1]) || 0;
+
+    async function faire(commentaire) {
+
+        const tirage = await tirerSystemes({ etat, envoyer, moi }, 1, `${nom} : tirage du système d'arrivée`);
+
+        if (!tirage?.length) {
+            signaler(`${nom} : le système d'arrivée n'a pas pu être tiré. Rien n'est posé : réessayez.`);
+            return;
+        }
+
+        const numero = tirage[0];
+
+        envoyer([
+            ...script.unites.map(u => ({ type: "creer", ref: { type: "unit", id: u.id }, zone: "hex:" + numero, n: u.n })),
+            { type: "compteur", id: script.compteur, valeur: 1 },
+        ], `${commentaire} — ${nomCase(numero)}`.slice(0, 300));
+
+        aviser(`${nom} : arrivée dans le système ${nomCase(numero)} — ` +
+            `${script.unites.map(u => `${u.n} ${nomElement(search, { type: "unit", id: u.id })}`).join(", ")}.`);
+
+        fermer?.();
+    }
+
+    return (
+        <BoutonRegle
+            data-action="arrivee-neutre"
+            nom={`${script.nom}`}
+            obstacles={[
+                !/[ée]v[ée]nement/i.test(etat.phase || "") && "ce n'est pas la phase d'événement",
+                tour !== etat.tour && "cette carte n'est pas sur la case Événement de ce tour",
+                etat.compteurs[script.compteur] && "cette arrivée est déjà faite",
+            ]}
+            faire={faire}
+            title={script.description}
+        >
+            {script.libelle}
         </BoutonRegle>
     );
 }
@@ -308,6 +434,77 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
         };
     }
 
+    // Systèmes secondaires (Rupture de l'espace-temps) : le système `centre` entouré de
+    // n systèmes `autour`, dans la bande des systèmes secondaires, avec leurs unités
+    // natives ; un jeton `jeton` sur autant de systèmes de la galaxie tirés au sort.
+    // Faute de place libre dans la bande, les tuiles vont dans la réserve de tuiles.
+    // -> { actions, bilan }, ou null si les dés n'ont pas pu être lus
+    async function poserSecondaires({ centre, autour, n, jeton }) {
+
+        const nombre = n(partie.joueurs.length);
+        const lignes = Math.max(1, Math.min(10, Number(etat.compteurs["espace:secondaire:lignes"]) || 3));
+        const cases = Array.from({ length: COLONNES_BANDE * lignes }, (_, j) => j);
+
+        const libre = j => !Object.values(etat.composants)
+            .some(x => x.ref?.type === "system" && x.zone === "hex:" + (DECALAGE_SECONDAIRE + j));
+
+        const voisines = j => cases.filter(k => k !== j && libre(k) && distanceBande(j, k) === 1);
+
+        // Tuile déjà en jeu (réserve de tuiles) : elle est déplacée, sinon créée
+        const dejaPrises = new Set();
+
+        const poser = (id, zone) => {
+            const enJeu = Object.values(etat.composants)
+                .find(x => !x.cache && x.ref?.type === "system" && x.ref.id === id && x.zone === RESERVE_TUILES && !dejaPrises.has(x.id));
+
+            if (enJeu) {
+                dejaPrises.add(enJeu.id);
+                return { type: "deplacer", c: enJeu.id, vers: zone };
+            }
+
+            return { type: "creer", ref: { type: "system", id }, zone };
+        };
+
+        const milieu = cases.find(j => libre(j) && voisines(j).length >= nombre);
+        const actions = [];
+        let bilan;
+
+        if (milieu === undefined) {
+            // (la réserve est complétée : les tuiles déjà en jeu comptent)
+            const manquantes = (id, voulu) => Math.max(0, voulu - Object.values(etat.composants)
+                .filter(x => x.ref?.type === "system" && x.ref.id === id).length);
+
+            actions.push(...[[centre, 1], [autour, nombre]]
+                .filter(([id, voulu]) => manquantes(id, voulu) > 0)
+                .map(([id, voulu]) => ({ type: "creer", ref: { type: "system", id }, zone: RESERVE_TUILES, n: manquantes(id, voulu) })));
+
+            bilan ="pas de place libre dans les systèmes secondaires : les tuiles sont dans la réserve de tuiles, à poser à la main avec leurs unités.";
+        } else {
+            const zoneDuCentre = "hex:" + (DECALAGE_SECONDAIRE + milieu);
+
+            actions.push(poser(centre, zoneDuCentre), ...await unitesNatives(centre, zoneDuCentre));
+
+            for (const k of voisines(milieu).slice(0, nombre)) {
+                const zone = "hex:" + (DECALAGE_SECONDAIRE + k);
+
+                actions.push(poser(autour, zone), ...await unitesNatives(autour, zone));
+            }
+
+            bilan = `${nomElement(search, { type: "system", id: centre })} et ${nombre} ${nomElement(search, { type: "system", id: autour })}(s) posés dans les systèmes secondaires, avec leurs unités.`;
+        }
+
+        const tirage = await tirerSystemes({ etat, envoyer, moi }, nombre, `${nom} : tirage de ${nombre} système(s)`);
+
+        if (!tirage) {
+            return null;
+        }
+
+        return {
+            actions: [...actions, ...tirage.map(numero => ({ type: "creer", ref: { type: "token", id: jeton }, zone: "hex:" + numero }))],
+            bilan: `${bilan} ${nomElement(search, { type: "token", id: jeton })} : ${tirage.map(nomCase).join(", ") || "aucun système"}.`,
+        };
+    }
+
     async function faire(commentaire) {
 
         const actions = [];
@@ -389,8 +586,29 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
             })),
         ] : [];
 
+        // Systèmes explorés (Signal capté) : un fragment de relique, tiré du sac, sur chaque
+        // système qui porte la marque « explore » (posée par l'exploration, Espace.jsx)
+        const explores = script.explores
+            ? Object.values(etat.composants).filter(x => x.ref?.type === "system" && /^hex:\d+$/.test(x.zone || "") &&
+                x.marques?.explore !== undefined && x.marques?.explore !== null)
+            : [];
+
+        const fragments = explores.slice(0, (index.parZone.get(SAC_FRAGMENTS) || []).length);
+
+        const secondaires = script.secondaires ? await poserSecondaires(script.secondaires) : { actions: [], bilan: "" };
+
+        if (!secondaires) {
+            signaler(`${nom} : le tirage des systèmes n'a pas pu être lu. Rien n'est mis en place : réessayez.`);
+            return;
+        }
+
         envoyer(
-            [...actions, ...melange, ...pirates, ...rebellion.actions, ...actionsSignaux, { type: "compteur", id: compteur, valeur: 1 }],
+            [
+                ...actions, ...melange, ...pirates, ...rebellion.actions, ...actionsSignaux,
+                ...fragments.map(tuile => ({ type: "piocher", de: SAC_FRAGMENTS, vers: tuile.zone })),
+                ...secondaires.actions,
+                { type: "compteur", id: compteur, valeur: 1 },
+            ],
             // (le journal garde le détail des jets, dans la limite d'un commentaire)
             [commentaire, rebellion.bilan].filter(Boolean).join(" — ").slice(0, 300)
         );
@@ -398,6 +616,9 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
         aviser([
             `${nom} : mis en place — ${script.description}`,
             rebellion.bilan,
+            secondaires.bilan,
+            script.explores && `Un fragment de relique posé sur ${fragments.length} système(s) exploré(s)` +
+                (fragments.length < explores.length ? ` (le sac est vide : il en manque ${explores.length - fragments.length})` : "") + ".",
             script.anomalies && `${pirates.length} système(s) concerné(s).`,
             horsDeroule.length && `Après le dernier tour, non posé : ${horsDeroule.join(", ")}.`,
             script.reste && `Reste à faire à la main : ${script.reste}.`,

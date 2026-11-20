@@ -802,7 +802,7 @@ export function PlateauGeneral() {
             }
 
             if (choix === 1) {
-                envoyer(depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
+                envoyer(await depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
                     "Propagande : un diplomate dépensé, le point d'infamie n'est pas gagné");
                 return;
             }

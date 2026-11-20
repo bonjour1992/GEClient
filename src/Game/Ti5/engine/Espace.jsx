@@ -27,6 +27,7 @@ import { useElement, useElements, chargerContenu, contenuEnCache, useUnitesDeFac
 import { cleCombat, combatsActifs, aDesUnites } from "./Combat";
 import { EnvoyerVers } from "./Envoi";
 import { depenserAgent } from "./effets";
+import { demander } from "./demande";
 import { ProductionEnCours, lireProduction, ouvrirProductionLieu } from "./Production";
 import { zoneFouille } from "./Archeologie";
 import { noter } from "./recherche";
@@ -346,18 +347,41 @@ export function Espace() {
         const logisticien = agentDisponible({ index, moi, search }, "logisticien");
         const scientifique = agentDisponible({ index, moi, search }, "scientifique");
 
+        // Tout joueur explore, avec un logisticien et un scientifique. Script
+        // Exploration efficace (technologie) : un seul des deux, au choix.
+        const efficace = aScript(moi, "exploration");
+
         // Effet du jeu déclenché par un Ctrl + clic : hors conditions, une
         // confirmation dit pourquoi (un agent absent n'est pas usé)
         const commentaire = confirmerRegle(`Explorer (${nomCase(numero)})`, [
-            // (script Exploration : l'exploration vient de cette technologie)
-            !aScript(moi, "exploration") && "vous n'avez pas la technologie « Exploration »",
             !explorables.has(numero) && "il faut un emplacement vide à côté d'un système où vous avez une unité",
-            !logisticien && manque("logisticien"),
-            !scientifique && manque("scientifique"),
+            ...(efficace
+                ? [!logisticien && !scientifique && "vous n'avez ni logisticien ni scientifique disponible (aucun ne sera usé)"]
+                : [!logisticien && manque("logisticien"), !scientifique && manque("scientifique")]),
         ]);
 
         if (!commentaire) {
             return;
+        }
+
+        let agents = [logisticien, scientifique].filter(Boolean);
+
+        if (efficace && agents.length === 2) {
+
+            const choix = await demander({
+                titre: "Exploration efficace",
+                texte: `Explorer (${nomCase(numero)}) : un seul agent est utilisé, lequel ?`,
+                choix: [
+                    { valeur: 1, libelle: "Le logisticien" },
+                    { valeur: 2, libelle: "Le scientifique" },
+                ],
+            });
+
+            if (!choix) {
+                return;
+            }
+
+            agents = [choix === 1 ? logisticien : scientifique];
         }
 
         const uses = `joueur:${moi}:agentsUses`;
@@ -367,8 +391,7 @@ export function Espace() {
         const reponse = await envoyer([
             // Au-delà du bord : la carte gagne un anneau
             anneauDeIndex(numero) > anneaux && { type: "partie", anneaux: anneauDeIndex(numero) },
-            logisticien && { type: "deplacer", c: logisticien.id, vers: uses },
-            scientifique && { type: "deplacer", c: scientifique.id, vers: uses },
+            ...agents.map(agent => ({ type: "deplacer", c: agent.id, vers: uses })),
             { type: "piocher", de: PIOCHE_TUILES, vers: zone },
         ].filter(Boolean), commentaire);
 
@@ -404,13 +427,17 @@ export function Espace() {
         // Habilité Présence de cache : un fragment de relique tiré du sac sur le système exploré
         const cache = aScript(moi, "presence-de-cache") && (index.parZone.get(SAC_FRAGMENTS) || []).length > 0;
 
-        if (natives.length || cache) {
-            envoyer(
-                [...natives, cache && { type: "piocher", de: SAC_FRAGMENTS, vers: zone }],
-                [natives.length && "Unités natives du système exploré", cache && "Présence de cache : un fragment de relique"]
-                    .filter(Boolean).join(" — ")
-            );
-        }
+        // (marque « explore » de la tuile : le tour où le système a été exploré —
+        // l'événement Signal capté pose un fragment de relique sur ces systèmes)
+        envoyer(
+            [
+                { type: "marquer", c: tuile.id, marque: "explore", valeur: etat.tour },
+                ...natives,
+                cache && { type: "piocher", de: SAC_FRAGMENTS, vers: zone },
+            ],
+            [natives.length && "Unités natives du système exploré", cache && "Présence de cache : un fragment de relique"]
+                .filter(Boolean).join(" — ") || "Système exploré"
+        );
     }
 
     // Clic sur une case (hors pion) : en mode « modifier la carte », la
@@ -1110,7 +1137,7 @@ function FicheSysteme({ numero, id, fermer }) {
     // Phase de science, fouiller une ruine : active la ruine, utilise un
     // scientifique et rapporte un fragment de relique — celui du type de la
     // ruine, ou tiré dans le sac pour une ruine « normale ».
-    function fouiller(k, ruine, type, commentaire) {
+    async function fouiller(k, ruine, type, commentaire) {
 
         const fragment = FRAGMENTS[type];
 
@@ -1128,7 +1155,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         // (le choix du scientifique — agent de base ou remplaçant — est résolu ici, avant
         // l'envoi, pour savoir si c'est Ahk Ravin qui fouille)
-        const actions = choisirRemplacants([
+        const actions = await choisirRemplacants([
             !mechaSur(k) && utiliser("scientifique"),
             { type: "creer", jeton: ACTIVATION, zone: zonePlanete(k), marques: { ruine } },
             fragment
@@ -1146,10 +1173,15 @@ function FicheSysteme({ numero, id, fermer }) {
             (a.type === "marquer" && a.marque === "carte" && a.valeur === ahk.id) ||
             (a.type === "creer" && a.marques?.carte === ahk.id));
 
-        const double = parAhk && (fragment || sac >= (archeologie ? 2 : 1) + 1) && window.confirm(
-            "Ahk Ravin fouille cette ruine.\n\n" +
-            `OK : dépenser 3 ressources pour 2 fragments au lieu d'un (vous avez ${mesRessources} ressource(s)).\n` +
-            "Annuler : un seul fragment, sans rien payer.");
+        const double = parAhk && (fragment || sac >= (archeologie ? 2 : 1) + 1) && (await demander({
+            titre: "Ahk Ravin",
+            texte: "Ahk Ravin fouille cette ruine.",
+            choix: [
+                { valeur: 1, libelle: `Dépenser 3 ressources pour 2 fragments au lieu d'un (vous avez ${mesRessources} ressource(s))` },
+                { valeur: 2, libelle: "Un seul fragment, sans rien payer" },
+            ],
+            renoncer: false,
+        })) === 1;
 
         envoyer([
             ...actions,
@@ -1434,13 +1466,13 @@ function FicheSysteme({ numero, id, fermer }) {
         !aDiplomate && manque("diplomate", "détruit"),
     ].filter(Boolean);
 
-    function declarerTreve(commentaire) {
+    async function declarerTreve(commentaire) {
 
         const diplomate = agentDisponible({ index, moi, search }, "diplomate");
 
         envoyer([
             // (le diplomate est dépensé : Bio stimulant propose de l'user à la place)
-            ...depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
+            ...await depenserAgent({ aScript, moi, etat }, diplomate, "le diplomate"),
             // Le token « Trêve » des données du jeu
             tokenTreve(search) && { type: "creer", ref: { type: "token", id: tokenTreve(search).id }, zone: zoneEspace, proprio: moi },
         ].filter(Boolean), commentaire);

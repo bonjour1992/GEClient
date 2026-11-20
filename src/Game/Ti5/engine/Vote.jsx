@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
 import { MARQUEUR, CUBES } from "./miseEnPlace";
+import { demander, confirmer } from "./demande";
 import { PlayerColor } from "../ti5Const";
 
 // ============================================================
@@ -395,12 +396,13 @@ function Decompte({ lois }) {
                         data-action="reinitialiser-votes"
                         title="Tous les plateaux de vote sont vidés et cachés (agents des cases : agents usés ; ceux des carrés de droite et le reste : retirés du jeu), les ajustements manuels effacés. Fait aussi à chaque nouveau tour."
                         style={{ marginLeft: "auto" }}
-                        onClick={() => window.confirm(
-                            "Réinitialiser le décompte des votes pour tous les joueurs ?\n" +
+                        onClick={async () => (await confirmer(
+                            "Réinitialiser le décompte des votes pour tous les joueurs",
                             "Tous les plateaux de vote sont vidés et cachés : les agents des cases " +
                             "(utilisés) vont dans les agents usés, ceux des carrés de droite (dépensés) sont retirés du jeu. " +
-                            "Les ajustements manuels sont effacés."
-                        ) && envoyer([{ type: "reinitialiserVotes" }], "Vote : décompte réinitialisé")}
+                            "Les ajustements manuels sont effacés.",
+                            "Réinitialiser le décompte"
+                        )) && envoyer([{ type: "reinitialiserVotes" }], "Vote : décompte réinitialisé")}
                     >
                         Réinitialiser le décompte
                     </button>
@@ -425,7 +427,13 @@ function Decompte({ lois }) {
                             data-action="oublier-votes-locaux"
                             title="Annule tout ce que vous avez fait en secret depuis le début de ce vote"
                             style={{ ...styleMini, marginLeft: 6 }}
-                            onClick={() => window.confirm("Annuler vos votes gardés sur cet appareil ?") && oublierVotesLocaux()}
+                            // (pas `confirmer` : son bouton « Annuler » se lirait à l'envers ici)
+                            onClick={async () => (await demander({
+                                titre: "Annuler vos votes gardés sur cet appareil",
+                                texte: "Tout ce que vous avez fait en secret depuis le début de ce vote est annulé.",
+                                choix: [{ valeur: 1, libelle: "Annuler mes votes gardés" }],
+                                renoncer: "Les garder",
+                            })) === 1 && oublierVotesLocaux()}
                         >
                             Les annuler
                         </button>
@@ -612,12 +620,14 @@ export function Vote({ vu }) {
         .filter(([zone]) => zone.startsWith(base + ":vote:"))
         .flatMap(([, liste]) => liste);
 
-    function reinitialiser() {
+    async function reinitialiser() {
 
         // Retire du jeu les agents des carrés de droite (dépensés) et tout ce qui n'est pas un agent
-        if (poses.length && !window.confirm(
-            "Réinitialiser votre plateau de vote ? Les agents des cases (1 voix, utilisés) vont " +
-            "dans vos agents usés ; ceux des carrés de droite (2 voix, dépensés) sont retirés du jeu."
+        if (poses.length && !await confirmer(
+            "Réinitialiser votre plateau de vote",
+            "Les agents des cases (1 voix, utilisés) vont " +
+            "dans vos agents usés ; ceux des carrés de droite (2 voix, dépensés) sont retirés du jeu.",
+            "Réinitialiser"
         )) {
             return;
         }

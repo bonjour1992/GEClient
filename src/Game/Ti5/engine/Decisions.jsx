@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase, tuileDe } from "./Interaction";
 import { useUnitesDeFaction } from "./sync";
 import { MARQUEUR, actionsPiste, typeUnite, MOTIF_LOGISTICIEN, aMot } from "./miseEnPlace";
@@ -20,7 +21,13 @@ import { lotsDeDes, desDeLaReponse } from "./effets";
 //                 choix   [{ valeur, libelle }] : un bouton par choix
 //                 nombre  { min, max, defaut }  : un montant à saisir
 //               Les boutons de script à `demande` (ActionsScript.jsx), So Ata
-//               (Combat.jsx) et Propagande (PlateauGeneral.jsx) passent par là.
+//               (Combat.jsx) et Propagande (PlateauGeneral.jsx) passent par là,
+//               ainsi que toute question posée par demande.js (`demander`,
+//               `confirmer`) : agent de base ou remplaçant, Bio stimulant,
+//               Connexion, confirmations. `renoncer` : libellé du bouton qui
+//               renonce, ou false pour une question qui n'a que ses choix.
+//               Tant qu'une décision ponctuelle attend, les fenêtres (Modale)
+//               sont masquées.
 //
 //   durable     lue dans l'état de la partie : elle reste tant qu'elle n'est pas
 //               réglée, d'un navigateur à l'autre. Recomposition (Arborec) : le jet,
@@ -124,10 +131,52 @@ function Ponctuelle({ decision }) {
                 </div>
             )}
 
-            <div>
-                <button type="button" data-action="decision-renoncer" onClick={() => repondre(decision.id, null)}>
-                    Renoncer (l'action n'est pas faite)
-                </button>
+            {decision.renoncer !== false && (
+                <div>
+                    <button type="button" data-action="decision-renoncer" onClick={() => repondre(decision.id, null)}>
+                        {decision.renoncer || "Renoncer (l'action n'est pas faite)"}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ------------------------------------------------------------
+// Propositions piochées (phase de proposition) : en prendre une en main,
+// les autres retournent sous la pioche. `propositions` (contexte de
+// l'engine) : { cartes, choisir(id) }.
+// ------------------------------------------------------------
+
+function Propositions() {
+
+    const { propositions } = useEngine();
+
+    if (!propositions?.cartes.length) {
+        return null;
+    }
+
+    return (
+        <div data-decision="propositions" style={styleCarte}>
+            <b>Propositions piochées</b>
+            <div>Choisissez-en une à prendre en main. Les autres retournent sous la pioche.</div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                {propositions.cartes.map(c => (
+                    <div key={c.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                        {c.ref
+                            ? <LoadAndDisplay link={{ ...c.ref, __link: true }} />
+                            : <i>carte inconnue</i>}
+                        <button
+                            type="button"
+                            data-action="proposition-prendre"
+                            onClick={() => propositions.choisir(c.id)}
+                            style={styleChoix}
+                        >
+                            Prendre en main
+                        </button>
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -174,7 +223,29 @@ export function decisionsDurables(ctx) {
 
     return (etatRecomposition(ctx) ? 1 : 0) +
         (ctx.etat.compteurs[`embuscade:${ctx.moi}`] ? 1 : 0) +
-        (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0);
+        (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0) +
+        (ctx.propositions?.cartes.length ? 1 : 0);
+}
+
+// Ouverture directe : dès qu'une décision durable de plus m'attend (des propositions
+// piochées, une promesse dont un autre se sert…), l'onglet Décision s'ouvre. Les
+// décisions ponctuelles l'ouvrent elles-mêmes (decider, Partie.jsx). Sans affichage.
+export function OuvrirDecisions() {
+
+    const ctx = useEngine();
+    const attendues = decisionsDurables(ctx);
+    const precedent = useRef(attendues);
+    const allerA = ctx.allerA;
+
+    useEffect(() => {
+        if (attendues > precedent.current) {
+            allerA("decision");
+        }
+
+        precedent.current = attendues;
+    }, [attendues, allerA]);
+
+    return null;
 }
 
 // ------------------------------------------------------------
@@ -480,6 +551,7 @@ export function Decisions() {
         <div data-onglet-decision style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {decisions.map(d => <Ponctuelle key={d.id} decision={d} />)}
 
+            {joueur && <Propositions />}
             {joueur && <Recomposition />}
             {joueur && <Embuscade />}
             {joueur && <Pupille />}

@@ -520,10 +520,14 @@ export const SCRIPTS = [
     // rebellion : { unite, faces, seuils (par type de planète), defaut, renforts } —
     //          un dé par planète possédée par un joueur, hors système natal ;
     //          sur le seuil ou plus, 1 dé « renforts » d'unités neutres sur la planète
+    // explores : vrai — un fragment de relique du sac sur chaque système exploré
+    // secondaires : { centre, autour, n, jeton } — le système `centre` entouré de n
+    //          systèmes `autour` dans les systèmes secondaires, avec leurs unités
+    //          natives, et un jeton sur n systèmes de la carte tirés au sort
     // reste : ce qui reste à faire à la main (rappelé dans le bandeau orange)
     // --------------------------------------------------------
 
-    evenement("evenement-tempete-spatiale", 450, 1794335055032, "Tempête spatiale", {
+    evenement("evenement-tempete-spatiale", 450, 1795072921301, "Tempête spatiale", {
         description: "« Tempête spatiale » au tour T+1, « Fin de la tempête » au tour T+5, la feuille « Tempête stellaire » chez chaque joueur.",
         poses: [
             { type: "habilite", id: 442, vers: { evenement: 1 } },
@@ -532,7 +536,7 @@ export const SCRIPTS = [
         ],
     }),
 
-    evenement("evenement-catastrophe-lointaine", 455, 1794335055033, "Catastrophe lointaine", {
+    evenement("evenement-catastrophe-lointaine", 455, 1795072921303, "Catastrophe lointaine", {
         description: "« Péage aux frontières » aux tours T+1 et T+2, « Offre d'asile » au tour T+2, les promesses « Tuteur des réfugiés » dans la réserve.",
         poses: [
             { type: "habilite", id: 452, vers: { evenement: 1 }, n: 1 },
@@ -542,7 +546,7 @@ export const SCRIPTS = [
         ],
     }),
 
-    evenement("evenement-peste-lointaine", 1039, 1795069770290, "Peste lointaine", {
+    evenement("evenement-peste-lointaine", 1039, 1795072921302, "Peste lointaine", {
         description: "« Vaccin » et « Arme bactériologique » chez chaque joueur (onglet Technologie, technologies isolées) ; « Aide humanitaire » au tour T, « Bilan de l'aide humanitaire » au tour T+3.",
         poses: [
             { type: "tech", id: 402, vers: "joueurs" },
@@ -558,7 +562,7 @@ export const SCRIPTS = [
         anomalies: { unite: 407, n: 2, types: ["ast", "rift"], loinDesNatals: true },
     }),
 
-    evenement("evenement-signal-capte", 485, 1794335055043, "Signal capté", {
+    evenement("evenement-signal-capte", 485, 1795073444394, "Signal capté", {
         description: "« Présence de cache » au tour T ; les 4 signaux (« Cache », « BDD technique », « vaisseau relique » et « Plan ancien ») mélangés, cachés et numérotés de 1 à 4 — un marqueur libre « Signal N » par signal sur la table, que prend la technologie SIG-N ; les technologies SIG-1 à SIG-4 chez chaque joueur (onglet Technologie, technologies isolées) ; les 4 tuiles SIG mélangées aux 12 prochaines tuiles de la pioche.",
         poses: [
             { type: "habilite", id: 491, vers: { evenement: 0 } },
@@ -579,16 +583,35 @@ export const SCRIPTS = [
             { type: "unit", id: 854 },
             { type: "relique", id: 853 },
         ],
-        reste: "un fragment de relique sur chaque système exploré",
+        // Un fragment de relique, tiré du sac, sur chaque système exploré (marque « explore »
+        // de sa tuile, posée par l'exploration depuis le 20 novembre 2026)
+        explores: true,
+        reste: "un fragment de relique sur les systèmes explorés avant le 20 novembre 2026 (leur tuile n'est pas marquée)",
     }),
 
-    evenement("evenement-grand-khan", 553, 1794335055053, "Grand Khan", {
-        description: "La faction neutre « Invasion du grand Khan » au tour T+1.",
+    evenement("evenement-grand-khan", 553, 1795072921305, "Grand Khan", {
+        description: "La faction neutre « Invasion du grand Khan » au tour T+1 ; à ce tour, le bouton « Faire arriver le grand Khan » de sa fiche pose ses unités.",
         poses: [{ type: "neutral", id: 526, vers: { evenement: 1 } }],
-        reste: "au tour T+1, à un endroit aléatoire : 1 Palais du khan et 25 frégates du khan (réserve des unités neutres)",
     }),
 
-    evenement("evenement-rebellion-interplanetaire", 562, 1794335055058, "Rébellion interplanétaire", {
+    // Arrivée du grand Khan : bouton de la fiche de la faction neutre (ScriptsCarte.jsx, ArriveeNeutre),
+    // au tour où elle est sur la case Événement — ses unités dans un système tiré au sort
+    {
+        id: "arrivee-du-grand-khan",
+        sorte: "bouton",
+        mode: "nouveau",
+        ou: "Fiche de la faction neutre « Invasion du grand Khan » (case Événement du tour) : « Faire arriver le grand Khan »",
+        carte: { type: "neutral", id: 526 },
+        ecritLe: 1795076851742,
+        nom: "Arrivée du grand Khan",
+        description: "Phase d'événement du tour où la faction neutre est sur la case Événement : un système de la carte est tiré au sort (dé du serveur), 1 Palais du Khan et 25 Frégates du Khan y sont posés. Une fois par partie.",
+        bouton: "arrivee",
+        libelle: "Faire arriver le grand Khan (système tiré au sort)",
+        compteur: "evenement:553:arrivee",
+        unites: [{ id: 525, n: 1 }, { id: 524, n: 25 }],
+    },
+
+    evenement("evenement-rebellion-interplanetaire", 562, 1795072921304, "Rébellion interplanétaire", {
         description: "La faction neutre « Rébellion interplanétaire » sur la table ; l'agenda « Collaboration contre révolutionnaire » dans les lois à venir du tour T+1 ; " +
             "un jet de rébellion (1D6) par planète possédée hors système natal — sauvage ou culturelle 3+, militaire 5+, autre 4+ — et 1D3 rebelles par jet réussi.",
         poses: [
@@ -598,7 +621,7 @@ export const SCRIPTS = [
         rebellion: { unite: 557, faces: 6, seuils: { sauv: 3, civ: 3, mil: 5 }, defaut: 4, renforts: 3 },
     }),
 
-    evenement("evenement-comment-la-democratie-meurt", 719, 1794335055066, "Comment la démocratie meurt", {
+    evenement("evenement-comment-la-democratie-meurt", 719, 1795072921306, "Comment la démocratie meurt", {
         description: "La faction neutre « Conclave secret » sur la table ; quatre agendas dans les lois à venir des tours T+2 à T+5.",
         poses: [
             { type: "neutral", id: 718, vers: "table" },
@@ -610,15 +633,15 @@ export const SCRIPTS = [
     }),
 
     evenement("evenement-rupture-espace-temps", 823, 1794045501935, "Rupture de l'espace-temps", {
-        description: "« Rupture de l'espace-temps » et « Étude des failles » sur la table ; Akhenar et les failles (la moitié des joueurs, arrondie au supérieur, + 1) dans la réserve de tuiles spéciales ; la feuille « Rupture » chez chaque joueur.",
+        description: "« Rupture de l'espace-temps » et « Étude des failles » sur la table ; Akhenar entouré des failles (la moitié des joueurs, arrondie au supérieur, + 1) dans les systèmes secondaires, chaque faille avec ses 3 Nefs de la rupture ; un jeton trou de ver oméga sur autant de systèmes de la carte, tirés au sort ; la feuille « Rupture » chez chaque joueur.",
         poses: [
             { type: "habilite", id: 814, vers: "table" },
             { type: "habilite", id: 815, vers: "table" },
-            { type: "system", id: 813, vers: "tuiles", n: 1 },
-            { type: "system", id: 811, vers: "tuiles", n: joueurs => Math.ceil(joueurs / 2) + 1 },
             { type: "techsheet", id: 822, vers: "joueurs" },
         ],
-        reste: "posez Akhenar et les failles à côté du plateau (systèmes secondaires) ; par faille : 3 Nefs de la rupture, et un jeton trou de ver oméga sur un système aléatoire de la galaxie",
+        // Akhenar au milieu des failles, dans la bande des systèmes secondaires (unités natives
+        // posées avec les tuiles), et les jetons trou de ver oméga tirés au sort (ScriptsCarte.jsx)
+        secondaires: { centre: 813, autour: 811, n: joueurs => Math.ceil(joueurs / 2) + 1, jeton: 830 },
     }),
 
     // --------------------------------------------------------
@@ -763,9 +786,9 @@ export const SCRIPTS = [
         "Conflit : blocage d'un déplacement, conflits de contrôle",
         "Vos vaisseaux qui ont plus de 1 de résistance comptent 1 de contrôle de plus."),
 
-    effet("exploration", 218, 1790236587336, "Exploration", "modifie",
+    effet("exploration", 218, 1795045652040, "Exploration efficace", "modifie",
         "Onglet Espace, phase de science : Ctrl + clic sur un emplacement vide",
-        "L'exploration (use un scientifique et un logisticien, pioche une tuile) est réservée à qui a cette technologie : sans elle, la confirmation le dit."),
+        "Tout joueur explore en usant un scientifique et un logisticien. Avec cette technologie, un seul des deux : s'il a les deux, l'onglet Décision fait choisir lequel."),
 
     effet("cartographie-de-l-espace", 231, 1794335054865, "Cartographie de l'espace", "auto",
         "Conflit : combat spatial, canons spatiaux",
@@ -3444,7 +3467,7 @@ function effet(id, carte, ecritLe, nom, mode, ou, description, aussi = []) {
 }
 
 // Script de mise en place d'un événement (bouton de sa fiche)
-function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, rebellion, signaux, reste }) {
+function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, rebellion, signaux, explores, secondaires, reste }) {
     return {
         id,
         sorte: "bouton",
@@ -3459,6 +3482,8 @@ function evenement(id, carte, ecritLe, nom, { description, poses, anomalies, reb
         anomalies,
         rebellion,
         signaux,
+        explores,
+        secondaires,
         reste,
     };
 }

@@ -361,7 +361,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     // Départ : agents, puis les vaisseaux vont jusqu'à la première
     // case à risque (ils y gardent leur trajet restant : Blocage.jsx prend la
     // suite), ou jusqu'à l'arrivée s'il n'y en a pas
-    function partir(commentaire) {
+    async function partir(commentaire) {
 
         const uses = `joueur:${moi}:agentsUses`;
 
@@ -372,12 +372,21 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         const saut = !reste.length && aScript(moi, "strategie-de-saut") &&
             (etapes[etapes.length - 1]?.sorte || "").startsWith("trou:");
 
+        // Agents : utilisés, ou dépensés si le système de départ est déjà activé
+        // (dépensés : le script Bio stimulant propose de les user à la place — une
+        // décision par agent, l'une après l'autre, avant l'envoi du coup)
+        const actionsAgents = [];
+
+        for (const b of besoins) {
+            for (const agent of b.dispo.slice(0, b.cout)) {
+                actionsAgents.push(...(depuisActive
+                    ? await depenserAgent({ aScript, moi, etat }, agent, `${b.nom} (départ d'un système déjà activé)`)
+                    : [{ type: "deplacer", c: agent.id, vers: uses }]));
+            }
+        }
+
         envoyer([
-            // Agents : utilisés, ou dépensés si le système de départ est déjà activé
-            // (dépensés : le script Bio stimulant propose de les user à la place)
-            ...besoins.flatMap(b => b.dispo.slice(0, b.cout).flatMap(agent => (depuisActive
-                ? depenserAgent({ aScript, moi, etat }, agent, `${b.nom} (départ d'un système déjà activé)`)
-                : [{ type: "deplacer", c: agent.id, vers: uses }]))),
+            ...actionsAgents,
             ...scientifiquesGravite.map(agent => ({ type: "deplacer", c: agent.id, vers: uses })),
             // (compte des vaisseaux déplacés : « Finir le déplacement »)
             { type: "compteur", id: compteurDeplaces(moi), delta: partent.length },

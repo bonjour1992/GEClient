@@ -6,6 +6,7 @@ import { PlayerColor, turnNumber } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
+import { demander } from "./demande";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -112,7 +113,9 @@ export function lireRegle(commentaire) {
 
 // Effet du jeu sur le point d'être fait. obstacles : raisons pour lesquelles
 // il ne devrait pas l'être (les valeurs fausses sont ignorées). S'il y en a,
-// une confirmation les rappelle. Retourne le commentaire du coup (à passer à
+// une confirmation les rappelle : c'est la seule fenêtre du navigateur qui
+// reste (voulu par l'auteur) — toute autre question est une décision de
+// l'onglet Décision (demande.js). Retourne le commentaire du coup (à passer à
 // envoyer), ou null si le joueur renonce.
 export function confirmerRegle(nom, obstacles = []) {
 
@@ -638,28 +641,41 @@ export const reglerConnexion = contexte => {
 const substitutions = new Map();
 
 // Ajoute au coup le prix des négociants utilisés à la place d'un autre agent
-export function payerConnexion(actions) {
+// (asynchrone : chaque substitution est une décision du joueur)
+export async function payerConnexion(actions) {
 
     const liste = (Array.isArray(actions) ? actions : [actions]).filter(Boolean);
     const vues = new Set();
+    const gardees = [];
+    let payes = 0;
 
-    const gardees = liste.filter(action => {
+    for (const action of liste) {
 
         const demande = (action.type === "deplacer" || action.type === "supprimer") && substitutions.get(action.c);
 
         if (!demande || vues.has(action.c)) {
-            return true;
+            gardees.push(action);
+            continue;
         }
 
         vues.add(action.c);
         substitutions.delete(action.c);
 
-        return window.confirm(
-            `Connexion : vous n'avez pas l'agent demandé (${demande.replace(/[|\\[\]]/g, " ")}).\n\n` +
-            "OK : utiliser un négociant à sa place, pour 2 commerce.\nAnnuler : aucun agent n'est utilisé.") && vues.add("ok:" + action.c);
-    });
+        const reponse = await demander({
+            titre: "Connexion",
+            texte: `Vous n'avez pas l'agent demandé (${demande.replace(/[|\\[\]]/g, " ")}).`,
+            choix: [
+                { valeur: 1, libelle: "Utiliser un négociant à sa place, pour 2 commerce" },
+                { valeur: 2, libelle: "N'utiliser aucun agent" },
+            ],
+            renoncer: false,
+        });
 
-    const payes = [...vues].filter(x => String(x).startsWith("ok:")).length;
+        if (reponse === 1) {
+            payes++;
+            gardees.push(action);
+        }
+    }
 
     return payes && connexion
         ? [...gardees, { type: "compteur", id: `joueur:${connexion.moi}:commerce`, delta: -2 * payes }]
@@ -795,7 +811,8 @@ export function remplacantsDisponibles({ index, moi, search }, test) {
 const decides = new WeakSet();
 
 // À l'envoi d'un coup : qui agit, l'agent de base ou un remplaçant ?
-export function choisirRemplacants(actions) {
+// (asynchrone : le choix est une décision du joueur, onglet Décision)
+export async function choisirRemplacants(actions) {
 
     const liste = (Array.isArray(actions) ? actions : [actions]).filter(Boolean);
 
@@ -859,7 +876,8 @@ export function choisirRemplacants(actions) {
             ? (use ? " (relique)" : " (relique : usé au lieu d'être dépensé)")
             : (use ? " (mercenaire)" : " (mercenaire : sa carte sera retirée du jeu)")));
 
-    const resultat = liste.flatMap(action => {
+    // Ce que devient une action du coup
+    const traduire = async action => {
 
         const c = etat.composants[action.c];
         const use = action.type === "deplacer" && action.vers === uses;
@@ -893,12 +911,15 @@ export function choisirRemplacants(actions) {
             return [action];
         }
 
-        const reponse = window.prompt(
-            `${type} à ${use ? "utiliser" : "dépenser"} — tapez le numéro de votre choix :\n\n` +
-            `1 : ${type} (agent de base)\n` +
-            candidats.map((r, k) => `${k + 2} : ${nomElement(search, r.ref)}${precision(r, use)}`).join("\n"),
-            "1"
-        );
+        const reponse = await demander({
+            titre: `${type} à ${use ? "utiliser" : "dépenser"}`,
+            texte: "Qui agit ?",
+            choix: [
+                { valeur: 1, libelle: `${type} (agent de base)` },
+                ...candidats.map((r, k) => ({ valeur: k + 2, libelle: `${nomElement(search, r.ref)}${precision(r, use)}` })),
+            ],
+            renoncer: false,
+        });
 
         const choisi = candidats[Math.floor(Number(reponse)) - 2];
 
@@ -908,7 +929,13 @@ export function choisirRemplacants(actions) {
         }
 
         return pour(choisi, use);
-    });
+    };
+
+    const resultat = [];
+
+    for (const action of liste) {
+        resultat.push(...await traduire(action));
+    }
 
     if (messages.length) {
         connexion.aviser?.(messages.join(" "));
@@ -1808,15 +1835,21 @@ export function Cartes({ zone, zoom = 1, separes }) {
 //   fond   : couleur du fond ; style : ce qui change du panneau (largeur…)
 //   role, titre : rôle et nom accessibles du panneau
 export function Modale({ fermer, fond = "#0008", style, role, titre, children }) {
+
+    // Une question est posée au joueur (onglet Décision) : la fenêtre s'efface
+    // le temps de la réponse, sans perdre son contenu
+    const masquee = (useEngine()?.decisions?.length || 0) > 0;
+
     return (
         <div
             onClick={fermer}
+            data-modale={masquee ? "masquee" : "ouverte"}
             style={{
                 position: "fixed",
                 inset: 0,
                 zIndex: 9000,
                 backgroundColor: fond,
-                display: "flex",
+                display: masquee ? "none" : "flex",
                 alignItems: "flex-start",
                 justifyContent: "center",
                 paddingTop: 50,
@@ -2235,9 +2268,10 @@ export function Plan({ children, style }) {
     // Case « Production » (ou « Construction ») cochée : poser ces unités coûte
     // leur coût en ressources. Retourne les actions de paiement ([] s'il n'y a
     // rien à payer), ou null si les ressources ne suffisent pas ou si le
-    // joueur renonce.
+    // joueur renonce. Asynchrone : un logisticien dépensé peut poser une
+    // question (Bio stimulant, onglet Décision).
     //   zone : là où les unités sont posées (celle du vaisseau qui les embarque)
-    function payerProduction(refs, zone) {
+    async function payerProduction(refs, zone) {
 
         if (!production) {
             return [];
@@ -2316,10 +2350,10 @@ export function Plan({ children, style }) {
                     `vous n'avez pas de logisticien disponible (aucun ne sera ${depense ? "dépensé" : "usé"})`,
             );
 
-            apres = () => [
+            apres = async () => [
                 ...(!logisticien ? [] : (depense
                     // (dépensé : le script Bio stimulant propose de l'user à la place)
-                    ? depenserAgent({ aScript, moi, etat }, logisticien, "le logisticien (la planète porte déjà une structure)")
+                    ? await depenserAgent({ aScript, moi, etat }, logisticien, "le logisticien (la planète porte déjà une structure)")
                     : [{ type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` }])),
                 ...(besoin && surPlanete ? [{ type: "creer", jeton: ACTIVATION, zone }] : []),
             ];
@@ -2352,7 +2386,7 @@ export function Plan({ children, style }) {
 
         return [
             ...(cout ? [{ type: "compteur", id: compteur, delta: -cout }] : []),
-            ...apres(),
+            ...await apres(),
         ];
     }
 
@@ -2462,7 +2496,9 @@ export function Plan({ children, style }) {
         }
     }
 
-    function onPointerUp(event) {
+    // (asynchrone : le paiement d'une production peut poser une question — payerProduction ;
+    // tout ce qui se lit sur l'événement et sur la page l'est avant de l'attendre)
+    async function onPointerUp(event) {
 
         const a = appui.current;
         appui.current = null;
@@ -2628,7 +2664,7 @@ export function Plan({ children, style }) {
 
             const paiement = jeton || a.source.neutre
                 ? []
-                : payerProduction([a.source], embarque ? etat.composants[pionCible.dataset.composant]?.zone : zone);
+                : await payerProduction([a.source], embarque ? etat.composants[pionCible.dataset.composant]?.zone : zone);
 
             if (!paiement) {
                 return;
@@ -2714,7 +2750,7 @@ export function Plan({ children, style }) {
 
                 const paiement = etat.composants[porteur.dataset.composant]?.zone === reserveDepart
                     ? []
-                    : payerProduction(ids
+                    : await payerProduction(ids
                         .map(id => etat.composants[id])
                         .filter(c => c?.zone === reserveDepart)
                         .map(c => c.ref), etat.composants[porteur.dataset.composant]?.zone);
@@ -2813,9 +2849,14 @@ export function Plan({ children, style }) {
         // Production : une unité qui quitte ma réserve se paie en ressources
         const reserve = `joueur:${moi}:reserve`;
 
+        // Pile d'une pioche : ajouté en haut, en bas (dessous), ou mélangé
+        // data-position : zones de dépôt d'une pile (pioche, zone libre)
+        // (lu avant le paiement, qui peut attendre une décision)
+        const position = cible.closest("[data-position]")?.dataset.position;
+
         const paiement = zone === reserve
             ? []
-            : payerProduction(aDeplacer
+            : await payerProduction(aDeplacer
                 .map(id => etat.composants[id])
                 .filter(c => c.zone === reserve)
                 .map(c => c.ref), zone);
@@ -2823,10 +2864,6 @@ export function Plan({ children, style }) {
         if (!paiement) {
             return;
         }
-
-        // Pile d'une pioche : ajouté en haut, en bas (dessous), ou mélangé
-        // data-position : zones de dépôt d'une pile (pioche, zone libre)
-        const position = cible.closest("[data-position]")?.dataset.position;
 
         jouer([
             ...paiement,
