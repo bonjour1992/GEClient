@@ -195,7 +195,8 @@ Toute unité qui a servi, ou qui a fait son action, est engagée pour la phase. 
 test qu'une fois par lieu et par phase.
 
 Le test se fait là où est l'unité qui agit : l'espace de son système (vaisseaux, structures spatiales)
-ou sa planète (unités de la planète) — choix de l'outil, la règle ne le dit pas (question 15).
+ou sa planète (unités de la planète) — confirmé par Loïc le 20 novembre et écrit dans la règle #1033
+(répond à la question 15 : un dock est bloqué par les troupes de sa planète).
 
 | Où le blocage est évoqué | Texte | État |
 |---|---|---|
