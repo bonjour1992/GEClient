@@ -13,13 +13,16 @@ import { controleDe } from "./effets.js";
 //   - planète : les unités de la planète comptent ; système : les
 //     vaisseaux et les structures spatiales (unités de l'espace,
 //     non embarquées) ;
-//   - seules les unités militaires participent — sauf celles de la
-//     faction qui agit, quand l'action le dit (« le contrôle de vos
-//     unités » : construction) ;
-//   - la possession d'une planète y vaut 2 de contrôle pour la
-//     faction qui l'a, même sans unité ;
+//   - les unités militaires et la possession de la planète (2, même
+//     sans unité) génèrent du contrôle ; d'autres effets peuvent en
+//     ajouter (une valeur « #con(n) » écrite sur une unité non
+//     militaire, Rapport de force…), mais une faction qui n'a ni
+//     unité militaire ni possession ne participe pas ;
 //   - le contrôle de ceux qui soutiennent doit dépasser celui de
-//     ceux qui s'opposent.
+//     ceux qui s'opposent ; un test auquel personne ne peut
+//     s'opposer réussit toujours (0 contre 0 réussit) ;
+//   - un contrôle n'a pas de durée : il vaut pour l'action qui l'a
+//     demandé, pas pour la phase.
 //
 // Quand faut-il un conflit (onglet Conflit) ? S'opposer est un
 // choix et des effets peuvent changer le contrôle : un conflit
@@ -35,9 +38,13 @@ export const ESPACE_CONTROLE = 99;
 
 export const cleControle = (numero, k) => `controle:${numero}p${k}`;
 
-// Contrôle acquis par un joueur à cet endroit, pour la phase en cours
-//   controleAcquis:<case>p<planète>:<joueur> = rang de la phase
+// Rang de la phase en cours (tour × 100 + numéro de phase) : ce qui ne vaut que pour une phase le porte
 export const rangDePhase = etat => etat.tour * 100 + Number(/^(\d+)/.exec(etat.phase || "")?.[1] ?? 0);
+
+// Contrôle acquis par un joueur à cet endroit, en attente de son action : un conflit gagné
+// alors que l'action n'attendait plus (page rechargée). Il sert une seule fois — l'action
+// refaite le consomme (demanderControle) — et tombe de toute façon à la fin de la phase.
+//   controleAcquis:<case>p<planète>:<joueur> = rang de la phase
 export const cleAcquis = (numero, k, joueur) => `controleAcquis:${numero}p${k}:${joueur}`;
 export const controleAcquis = (etat, numero, k, joueur) =>
     rangDePhase(etat) > 0 && Number(etat.compteurs[cleAcquis(numero, k, joueur)]) === rangDePhase(etat);
@@ -68,38 +75,47 @@ export function unitesDuLieu({ index, contenuDe, numero, k }) {
 }
 
 // Une unité dont le contenu n'est pas encore connu est comptée comme militaire
-const estMilitaire = (contenuDe, c) => contenuDe(c.ref.id)?.mot_cle?.includes("mil") !== false;
+export const estMilitaire = (contenuDe, c) => contenuDe(c.ref.id)?.mot_cle?.includes("mil") !== false;
 
-// Camps d'un test de contrôle : [{ camp, unites, possession, controle }]
+// Autre effet qui génère du contrôle : une valeur « #con(n) » écrite sur une unité non militaire
+const controleEcrit = (contenuDe, c) => /#con\(\d+\)/i.test(contenuDe(c.ref.id)?.habilite || "");
+
+// Camps d'un test de contrôle : [{ camp, unites, possession, participe, controle }]
 //   unites      unités du lieu (planète : celles de la planète ; espace : celles de l'espace, non embarquées)
 //   contenuDe   id d'élément -> contenu (cache des éléments)
 //   possesseur  joueur qui possède la planète, ou null (espace, station)
-//   acteur      faction qui agit : toujours listée, même sans unité
-//   toutes      toutes les unités de l'acteur comptent, pas seulement les militaires
-export function campsDeControle({ unites, contenuDe, aScript, possesseur = null, acteur = null, toutes = false }) {
+//   acteur      faction qui agit : toujours listée, même si elle ne peut pas participer (contrôle 0)
+// Seuls participent les camps qui ont une unité militaire sur place ou la possession ; leurs
+// unités non militaires ne comptent que si leur texte leur donne une valeur de contrôle.
+export function campsDeControle({ unites, contenuDe, aScript, possesseur = null, acteur = null }) {
 
-    const parCamp = new Map();
+    const militaires = new Map();
+    const autres = new Map();
 
     for (const c of unites) {
-        if (estMilitaire(contenuDe, c) || (toutes && campDe(c) === acteur)) {
-            parCamp.set(campDe(c), [...(parCamp.get(campDe(c)) || []), c]);
+        if (estMilitaire(contenuDe, c)) {
+            militaires.set(campDe(c), [...(militaires.get(campDe(c)) || []), c]);
+        } else if (controleEcrit(contenuDe, c)) {
+            autres.set(campDe(c), [...(autres.get(campDe(c)) || []), c]);
         }
     }
 
     const camps = [...new Set([
         ...(acteur !== null ? [acteur] : []),
         ...(possesseur ? [possesseur] : []),
-        ...parCamp.keys(),
+        ...militaires.keys(),
     ])];
 
     return camps.map(camp => {
-        const liste = parCamp.get(camp) || [];
         const possession = possesseur && camp === possesseur ? CONTROLE_POSSESSION : 0;
+        const participe = militaires.has(camp) || possession > 0;
+        const liste = participe ? [...(militaires.get(camp) || []), ...(autres.get(camp) || [])] : [];
 
         return {
             camp,
             unites: liste,
             possession,
+            participe,
             // (contrôle de chaque unité : effets.js — #con, Rayon tracteur)
             controle: liste.reduce((total, c) => total + controleDe(contenuDe(c.ref.id), camp, aScript), 0) + possession,
         };
@@ -107,10 +123,11 @@ export function campsDeControle({ unites, contenuDe, aScript, possesseur = null,
 }
 
 // Test préalable d'une action de `moi` : { conflit, mien, neutre, camps }
-//   conflit  vrai : un conflit de contrôle doit trancher ; faux : réglé d'office (mien > 0 : contrôle acquis)
-export function evaluerControle({ unites, contenuDe, moi, possesseur = null, aScript, toutes = false }) {
+//   conflit  vrai : un conflit de contrôle doit trancher ; faux : personne ne peut s'opposer
+//            (ou seulement des neutres dépassés) — le test réussit, même à 0 contre 0
+export function evaluerControle({ unites, contenuDe, moi, possesseur = null, aScript }) {
 
-    const camps = campsDeControle({ unites, contenuDe, aScript, possesseur, acteur: moi, toutes });
+    const camps = campsDeControle({ unites, contenuDe, aScript, possesseur, acteur: moi });
 
     const mien = camps.find(c => c.camp === moi)?.controle || 0;
     const neutre = camps.find(c => c.camp === NEUTRE)?.controle || 0;
@@ -118,3 +135,41 @@ export function evaluerControle({ unites, contenuDe, moi, possesseur = null, aSc
 
     return { conflit: autreFaction || (neutre > 0 && mien <= neutre), mien, neutre, camps };
 }
+
+// ------------------------------------------------------------
+// DOMINATION : UN TEST PAR SUJET
+//
+// Un test de domination est ouvert pour un sujet : la carte ou l'effet qui demande la
+// domination (son identifiant ; 0 : test ouvert à la main). Toutes les factions qui veulent
+// faire la même action passent par ce seul test : celle qui domine la fait, personne à
+// égalité. Une fois clos, il ne se rouvre pas pour le même sujet (pendant ce tour).
+//   dominant:<case>:s<sujet>        camp qui domine (0 : personne, ou les neutres)
+//   dominant:<case>:s<sujet>:tour   tour de ce résultat
+// ------------------------------------------------------------
+
+export const cleDominant = (numero, sujet) => `dominant:${numero}:s${Number(sujet) || 0}`;
+
+// Camp qui domine d'après le test clos ce tour pour ce sujet ; null : pas de test clos
+export const resultatDomination = (etat, numero, sujet) =>
+    (Number(etat.compteurs[cleDominant(numero, sujet) + ":tour"]) === etat.tour
+        ? Number(etat.compteurs[cleDominant(numero, sujet)]) || 0
+        : null);
+
+// Sujets des tests de domination (identifiant de la carte)
+export const SUJETS_DOMINATION = {
+    185: "Récupération",
+    232: "Exploitation du vide",
+    452: "Péage aux frontières",
+    486: "Cache",
+    821: "Extraction de la faille",
+    942: "Racket",
+};
+
+// Actions qui ouvrent un test de domination pour ce sujet (les choix d'un test précédent sont oubliés)
+export const actionsOuvrirDomination = (etat, numero, moi, sujet = 0) => [
+    ...Object.keys(etat.compteurs)
+        .filter(id => id.startsWith(`domination:${numero}:`) && etat.compteurs[id])
+        .map(id => ({ type: "compteur", id, valeur: 0 })),
+    sujet > 0 && { type: "compteur", id: `domination:${numero}:motif`, valeur: sujet },
+    { type: "compteur", id: `domination:${numero}`, valeur: moi },
+].filter(Boolean);

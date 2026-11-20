@@ -7,7 +7,10 @@ import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
 import { demander } from "./demande";
-import { controleAcquis, possesseurActuel, evaluerControle, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
+import { possesseurActuel, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
+import { demanderBlocage } from "./BlocageAction";
+import { MARQUE_AGI } from "./regleBlocage";
+import { rangDePhase } from "./regleControle";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -2311,6 +2314,22 @@ export function Plan({ children, style }) {
             );
         }
 
+        // Unité terrestre qui produit une unité spatiale : « placez l'unité dans l'espace du système
+        // que vous devez contrôler » (phase de production) — règle générale du contrôle
+        if (ouverte && unites.length && /^hex:\d+$/.test(zone || "") &&
+            /:planete:\d+$/.test(etat.composants[ouverte.source]?.zone || "")) {
+
+            const caseProduction = Number(zone.slice(4));
+
+            controleRequis = () => demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, {
+                numero: caseProduction,
+                k: ESPACE_CONTROLE,
+                unites: unitesDuControle(index, caseProduction, ESPACE_CONTROLE),
+                motif: { action: "production" },
+                libelle: `Production de ${noms(unites)}`,
+            });
+        }
+
         // Règle « Soleil de guerre » : il demande sa technologie
         obstacles.push(
             unites.some(ref => typeUnite(contenuEnCache(ref.id)) === "sun") &&
@@ -2382,25 +2401,20 @@ export function Plan({ children, style }) {
                 : elemsDuSysteme.some(lien => mesCartes.has(Number(lien?.id)));
             const present = unitesIci.some(c => campDe(c) === moi) || possede;
 
-            // Le contrôle lui-même : un seul calcul pour tout le jeu (regleControle.js). Toutes mes
-            // unités comptent (« le contrôle de vos unités »), plus 2 pour la possession de la planète.
-            // Si d'autres peuvent s'opposer, c'est un conflit de contrôle « pour la construction de… »
-            // qui tranche (demanderControle, Controle.jsx) : la construction part quand le contrôle
-            // est acquis, et n'a pas lieu s'il ne l'est pas. Acquis, il vaut ici jusqu'à la fin de
-            // la phase.
+            // Le contrôle lui-même : un seul calcul pour tout le jeu (regleControle.js). Mes unités
+            // militaires comptent, plus 2 pour la possession de la planète ; sans opposant possible le
+            // test réussit (même à 0 contre 0). Si d'autres peuvent s'opposer, c'est un conflit de
+            // contrôle « pour la construction de… » qui tranche (demanderControle, Controle.jsx) : la
+            // construction part quand le contrôle est acquis, et n'a pas lieu s'il ne l'est pas.
             const numeroDuLieu = Number(caseDuLieu);
             const rangDuLieu = surPlanete ? Number(rangPlanete) : ESPACE_CONTROLE;
             const possesseur = surPlanete ? possesseurActuel(etat, Number(elemsDuSysteme[Number(rangPlanete)]?.id)) : null;
-            const test = evaluerControle({ unites: unitesIci, moi, possesseur, aScript, toutes: true });
-            const acquis = controleAcquis(etat, numeroDuLieu, rangDuLieu, moi);
-
-            if (construites.length > 0 && present && !acquis && test.conflit) {
+            if (construites.length > 0 && present) {
                 controleRequis = () => demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, {
                     numero: numeroDuLieu,
                     k: rangDuLieu,
                     unites: unitesIci,
                     possesseur,
-                    toutes: true,
                     motif: { construction: construites[0].id },
                     libelle: `Construction de ${noms(construites)}`,
                 });
@@ -2411,9 +2425,6 @@ export function Plan({ children, style }) {
                     (surPlanete
                         ? "vous n'avez ni unité sur cette planète ni sa possession : vous ne la contrôlez pas"
                         : "vous n'avez ni unité dans ce système ni la possession d'une de ses planètes : vous ne le contrôlez pas"),
-                // (le contrôle est exigé dans tous les cas : sans opposition possible, il doit encore être positif)
-                construites.length > 0 && present && !acquis && !test.conflit && test.mien === 0 &&
-                    "votre contrôle sur ce système est nul : la possession d'une planète ne compte pas dans l'espace, il y faut un vaisseau ou une structure spatiale",
                 construites.length < unites.length &&
                     `ce n'est pas une structure : ${noms(unites.filter(ref => !estStructure(ref.id)))}`,
                 doubles.length > 0 && `cette structure est déjà construite ici : ${noms(doubles)}`,
@@ -2953,8 +2964,46 @@ export function Plan({ children, style }) {
             return;
         }
 
+        // Phase de débarquement : débarquer d'un vaisseau sur une planète demande une unité non
+        // bloquée (« activer une unité non bloquée qui transporte… ») — test de blocage si d'autres
+        // factions peuvent bloquer (BlocageAction.jsx). Pas de test vers une planète où j'ai un dock.
+        // Le vaisseau qui a débarqué est engagé pour la phase.
+        let marquesDebarquement = [];
+
+        const porteurs = !/d[ée]barquement/i.test(etat.phase || "") || !estPlanete(zone) ? [] : [...new Set(aDeplacer
+            .map(id => etat.composants[id])
+            .filter(c => c?.ref?.type === "unit" && c.sur && campDe(c) === moi &&
+                /^hex:\d+$/.test(c.zone || "") && zone.startsWith(c.zone + ":"))
+            .map(c => c.sur))];
+
+        const monDock = (index.parZone.get(zone) || []).some(c =>
+            c.ref?.type === "unit" && campDe(c) === moi && typeUnite(contenuEnCache(c.ref.id)) === "dock");
+
+        if (porteurs.length && !monDock) {
+
+            const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
+                { numero: Number(/^hex:(\d+)/.exec(zone)[1]), action: "debarquement", libelle: "Débarquement" });
+
+            if (!blocage) {
+                return;
+            }
+
+            const bloques = porteurs.filter(id => blocage.engagees.includes(Number(id)) || blocage.engagees.includes(id));
+
+            if (bloques.length && confirmerRegle("Débarquement", [
+                `${bloques.map(id => nomElement(search, etat.composants[id]?.ref)).join(", ")} : unité bloquée pour cette phase (engagée dans le test de blocage)`,
+            ]) === null) {
+                return;
+            }
+
+            marquesDebarquement = porteurs
+                .filter(id => Number(etat.composants[id]?.marques?.[MARQUE_AGI]) !== rangDePhase(etat))
+                .map(id => ({ type: "marquer", c: id, marque: MARQUE_AGI, valeur: rangDePhase(etat) }));
+        }
+
         jouer([
             ...paiement,
+            ...marquesDebarquement,
             ...aDeplacer.map(c => ({
                 type: "deplacer",
                 c,

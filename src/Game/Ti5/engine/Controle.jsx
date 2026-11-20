@@ -5,6 +5,7 @@ import { SCRIPTS } from "./scripts";
 import {
     cleControle, cleAcquis, rangDePhase, controleAcquis, ESPACE_CONTROLE, CONTROLE_POSSESSION,
     campsDeControle, evaluerControle as evaluer, unitesDuLieu,
+    cleDominant, resultatDomination, SUJETS_DOMINATION, actionsOuvrirDomination,
 } from "./regleControle";
 
 // ============================================================
@@ -63,7 +64,7 @@ export function controlesEnCours(etat) {
 // Effet au choix qui change le contrôle pendant un conflit — script Rapport de force (#205) :
 // « Lors de l'évaluation du contrôle : usez un diplomate, ajoutez 2 à votre valeur de contrôle. »
 // Le bonus est gardé dans <clé du choix du camp>:plus, pour ce conflit seulement.
-function RapportDeForce({ clePlus, numero }) {
+export function RapportDeForce({ clePlus, numero }) {
 
     const { etat, index, envoyer, moi, joueur, search, aScript } = useEngine();
 
@@ -109,8 +110,17 @@ function RapportDeForce({ clePlus, numero }) {
 //   (aucun)                        prendre possession de la planète ou de la station
 //   controle:<…>:motif = id        construire cette structure (unité)
 //   controle:<…>:script = rang + 1 effet d'une carte : le script de ce rang dans SCRIPTS
+//   controle:<…>:action = code     action de phase (ACTIONS_DE_PHASE) : recherche, fouille…
 //   planète 99 (ESPACE_CONTROLE)   l'espace du système
 // ------------------------------------------------------------
+
+// Actions de phase qui demandent le contrôle : code du compteur, et leur nom dans « pour … »
+export const ACTIONS_DE_PHASE = {
+    recherche: [1, "la recherche"],
+    fouille: [2, "la fouille d'une ruine"],
+    mobilisation: [3, "la mobilisation"],
+    production: [4, "la production d'une unité spatiale"],
+};
 
 const attentes = new Map();     // clé du conflit -> resolve de la promesse en attente
 
@@ -123,33 +133,32 @@ function conclureAttente(cle, acquis) {
 }
 
 //   ctx    { etat, moi, envoyer, aviser, allerA, aScript } (contexte de l'engine)
-//   motif  { construction: idUnite } | { script: idScript } ; libelle : l'action, pour le journal
-export async function demanderControle(ctx, { numero, k, unites, possesseur = null, toutes = false, motif = {}, libelle = "Action" }) {
+//   motif  { construction: idUnite } | { script: idScript } | { action: clé d'ACTIONS_DE_PHASE } ;
+//   libelle : l'action, pour le journal
+export async function demanderControle(ctx, { numero, k, unites, possesseur = null, motif = {}, libelle = "Action" }) {
 
     const { etat, moi, envoyer, aviser, allerA, aScript } = ctx;
-
-    if (controleAcquis(etat, numero, k, moi)) {
-        return true;
-    }
-
-    const test = evaluerControle({ unites, moi, possesseur, aScript, toutes });
-
-    // Réglé d'office : personne d'autre ne peut participer, ou seulement des neutres dépassés
-    if (!test.conflit) {
-
-        if (test.mien <= 0) {
-            aviser?.(`${libelle} : vous ne contrôlez pas ce lieu (${nomCase(numero)}) — aucune de vos unités n'y compte. L'action n'a pas lieu.`);
-        }
-
-        return test.mien > 0;
-    }
 
     const cle = cleControle(numero, k);
     const enCours = controlesEnCours(etat).find(c => c.cle === cle);
 
+    // Tant qu'un conflit de contrôle est en cours ici, personne d'autre ne tente d'action sur ce lieu
     if (enCours && enCours.demandeur !== moi) {
         aviser?.("Un conflit de contrôle est déjà en cours ici : attendez qu'il soit clos (onglet Conflit).");
         return false;
+    }
+
+    // Conflit gagné alors que l'action n'attendait plus : ce contrôle sert une fois, pour cette action
+    if (controleAcquis(etat, numero, k, moi)) {
+        await envoyer([{ type: "compteur", id: cleAcquis(numero, k, moi), valeur: 0 }], `${libelle} (${nomCase(numero)}) — contrôle acquis au conflit`);
+        return true;
+    }
+
+    const test = evaluerControle({ unites, moi, possesseur, aScript });
+
+    // Personne ne peut s'opposer (ou seulement des neutres dépassés) : le test réussit, même à 0 contre 0
+    if (!test.conflit) {
+        return true;
     }
 
     if (!enCours) {
@@ -161,6 +170,7 @@ export async function demanderControle(ctx, { numero, k, unites, possesseur = nu
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
             motif.construction && { type: "compteur", id: cle + ":motif", valeur: motif.construction },
             rangScript > 0 && { type: "compteur", id: cle + ":script", valeur: rangScript },
+            ACTIONS_DE_PHASE[motif.action] && { type: "compteur", id: cle + ":action", valeur: ACTIONS_DE_PHASE[motif.action][0] },
             { type: "compteur", id: cle, valeur: moi },
         ].filter(Boolean), `${libelle} (${nomCase(numero)}) — conflit de contrôle ouvert`);
     }
@@ -175,13 +185,12 @@ export async function demanderControle(ctx, { numero, k, unites, possesseur = nu
     });
 }
 
-// Contrôle de l'espace d'un système pour l'effet d'une carte (toutes mes unités de l'espace comptent)
+// Contrôle de l'espace d'un système pour l'effet d'une carte
 //   ctx : { etat, index, moi, envoyer, aviser, allerA, aScript }
 export const demanderControleSysteme = (ctx, numero, idScript, libelle) => demanderControle(ctx, {
     numero,
     k: ESPACE_CONTROLE,
     unites: unitesDuControle(ctx.index, numero, ESPACE_CONTROLE),
-    toutes: true,
     motif: { script: idScript },
     libelle,
 });
@@ -346,8 +355,9 @@ function Controle({ conflit }) {
     const motif = Number(etat.compteurs[cle + ":motif"]) || 0;
     const construction = motif > 0;
     const script = SCRIPTS[(Number(etat.compteurs[cle + ":script"]) || 0) - 1] || null;
-    // (construction, carte : l'action n'est pas faite ici — elle part quand le contrôle est acquis)
-    const actionAilleurs = construction || !!script;
+    const actionDePhase = Object.values(ACTIONS_DE_PHASE).find(a => a[0] === Number(etat.compteurs[cle + ":action"]))?.[1] || null;
+    // (construction, carte, action de phase : l'action n'est pas faite ici — elle part quand le contrôle est acquis)
+    const actionAilleurs = construction || !!script || !!actionDePhase;
     const espace = k === ESPACE_CONTROLE;
 
     // Station, ou espace du système : contrôle spatial (les unités de l'espace du système comptent)
@@ -362,12 +372,10 @@ function Controle({ conflit }) {
     // (règle « Contrôle »). Pas pour une station : son contrôle est celui de l'espace du système.
     const possesseur = spatial ? null : possesseurActuel(etat, idPlanete);
 
-    // Camps et contrôle de chacun : le calcul unique de regleControle.js (construction, carte :
-    // toutes les unités du demandeur comptent — « le contrôle de vos unités » ; l'opposition
-    // reste militaire). Le demandeur est toujours de la partie ; le possesseur aussi.
-    const camps = campsDeControle({
-        unites, contenuDe: id => contenus[id], aScript, possesseur, acteur: demandeur, toutes: actionAilleurs,
-    });
+    // Camps et contrôle de chacun : le calcul unique de regleControle.js. Seuls participent les
+    // camps qui ont une unité militaire sur place ou la possession ; le demandeur est toujours
+    // listé (contrôle 0 s'il ne peut pas participer : d'autres peuvent le soutenir).
+    const camps = campsDeControle({ unites, contenuDe: id => contenus[id], aScript, possesseur, acteur: demandeur });
 
     const cleChoix = camp => `${cle}:${camp}`;
 
@@ -389,11 +397,12 @@ function Controle({ conflit }) {
     const nomPlanete = espace ? "l'espace du système" : (planete?.name || "la planète");
     const nomStructure = construction ? nomElement(search, { type: "unit", id: motif }) : "";
     // L'action pour laquelle le contrôle est demandé (toujours dite)
-    const nomAction = construction ? `la construction de ${nomStructure}` : (script ? `« ${script.nom} »` : "la prise de possession");
+    const nomAction = construction ? `la construction de ${nomStructure}`
+        : (script ? `« ${script.nom} »` : (actionDePhase || "la prise de possession"));
     const estDemandeur = !!joueur && moi === demandeur;
 
     // Clôt le conflit : le compteur et les choix sont remis à zéro
-    const cloture = () => [cle, cle + ":agent", cle + ":motif", cle + ":script", ...camps.flatMap(c => [cleChoix(c.camp), clePlus(c.camp)])]
+    const cloture = () => [cle, cle + ":agent", cle + ":motif", cle + ":script", cle + ":action", ...camps.flatMap(c => [cleChoix(c.camp), clePlus(c.camp)])]
         .filter(id => etat.compteurs[id])
         .map(id => ({ type: "compteur", id, valeur: 0 }));
 
@@ -433,7 +442,7 @@ function Controle({ conflit }) {
             <div>
                 {pastille(demandeur)}
                 {actionAilleurs
-                    ? <span data-motif={construction ? "construction" : "script"}><b>{nomCamp(demandeur)}</b> veut le contrôle de <b>{nomPlanete}</b> ({nomCase(numero)}) pour <b>{nomAction}</b>.</span>
+                    ? <span data-motif={construction ? "construction" : (script ? "script" : "action")}><b>{nomCamp(demandeur)}</b> veut le contrôle de <b>{nomPlanete}</b> ({nomCase(numero)}) pour <b>{nomAction}</b>.</span>
                     : <span data-motif="possession"><b>{nomCamp(demandeur)}</b> veut prendre possession de <b>{nomPlanete}</b> ({nomCase(numero)}).</span>}
                 {spatial && !espace && " Station : contrôle spatial, les unités militaires de l'espace du système comptent."}
                 {espace && " Contrôle spatial : les vaisseaux et les structures spatiales comptent."}
@@ -453,14 +462,16 @@ function Controle({ conflit }) {
                             <b>{nomCamp(c.camp)}</b> : contrôle {c.controle + plus(c.camp)}{" "}
                             <span style={{ color: "#555" }}>
                                 ({[
-                                    c.unites.map(u => nomElement(search, u.ref)).join(", ") || "aucune unité militaire",
+                                    c.unites.map(u => nomElement(search, u.ref)).join(", ") ||
+                                        (c.participe ? "aucune unité militaire" : "ni unité militaire ni possession : ne participe pas"),
                                     c.possession > 0 && `possession de la planète : ${c.possession}`,
                                     plus(c.camp) > 0 && `Rapport de force : ${plus(c.camp)}`,
                                 ].filter(Boolean).join(" ; ")})
                             </span>
                         </span>
 
-                        {c.camp === moi && <RapportDeForce clePlus={clePlus(c.camp)} numero={numero} />}
+                        {/* (les autres effets ne s'ajoutent qu'au contrôle d'un camp qui participe) */}
+                        {c.camp === moi && c.participe && <RapportDeForce clePlus={clePlus(c.camp)} numero={numero} />}
 
                         {repond
                             ? CHOIX.map(([valeur, libelle]) => (
@@ -505,14 +516,18 @@ function Controle({ conflit }) {
                             pour <= contre && `contrôle insuffisant : ${pour} pour, ${contre} contre`,
                         ]}
                         faire={async commentaire => {
+                            // (le contrôle n'a pas de durée : il n'est noté acquis que si l'action n'attend
+                            //  plus — page rechargée —, pour qu'elle puisse être refaite une fois)
+                            const attendue = attentes.has(cle);
+
                             await envoyer(
-                                [...cloture(), { type: "compteur", id: cleAcquis(numero, k, demandeur), valeur: rangDePhase(etat) }],
+                                [...cloture(), ...(attendue ? [] : [{ type: "compteur", id: cleAcquis(numero, k, demandeur), valeur: rangDePhase(etat) }])],
                                 commentaire
                             );
 
                             // (page rechargée depuis l'ouverture : l'action n'attend plus, il faut la refaire)
                             if (!conclureAttente(cle, true)) {
-                                aviser(`Contrôle acquis (${nomCase(numero)}) : refaites l'action — ${nomAction} — elle est permise ici jusqu'à la fin de la phase.`);
+                                aviser(`Contrôle acquis (${nomCase(numero)}) : refaites l'action — ${nomAction} — ce contrôle vaut pour elle, une fois, pendant cette phase.`);
                             }
                         }}
                         title="Le conflit est clos et l'action qui attendait le contrôle s'exécute"
@@ -811,23 +826,44 @@ function Accord({ conflit }) {
 }
 
 // ============================================================
-// CONFLIT DE DOMINATION (script Exploitation du vide)
+// CONFLIT DE DOMINATION
 //
 // Test de domination d'un système : chaque camp qui y a des unités
 // militaires dans l'espace les fait participer à la domination du
 // camp de son choix (le sien par défaut ; les neutres, la leur). Le
 // camp qui réunit, seul, le plus de contrôle domine le système.
 //
+// Un test par sujet (regleControle.js) : il est ouvert pour une carte
+// ou un effet (domination:<case>:motif = son identifiant ; 0 : à la
+// main). Son résultat ne vaut que pour ce sujet et il ne se rouvre
+// pas une fois clos : toutes les factions qui veulent faire la même
+// action passent par ce seul test, celle qui domine la fait, personne
+// à égalité.
+//
+// Récupération (#185) : seules les factions qui ont la technologie et
+// la demandent (recup:<case>:<joueur>) peuvent dominer. Chaque camp
+// soutient l'une d'elles, s'engage contre toutes (−2) ou s'abstient ;
+// le résultat qui réunit le plus de contrôle l'emporte, et la faction
+// gagnante prend le butin (recup:<case>). Une seule faction à la
+// demander : c'est un test de contrôle simple pour elle.
+//
 // Compteurs :
 //   domination:<case>           joueur qui a ouvert le conflit (0 : clos)
-//   domination:<case>:<camp>    camp soutenu (−1 : s'abstient)
-//   dominant:<case>             camp qui domine, une fois le conflit clos
-//   dominant:<case>:tour        tour de ce résultat
+//   domination:<case>:motif     sujet du test
+//   domination:<case>:<camp>    camp soutenu (−1 : s'abstient ; −2 : contre tous)
+//   dominant:<case>:s<sujet>    camp qui domine, une fois le conflit clos (+ :tour)
 //
 // L'entretien d'un joueur qui a « Exploitation du vide » compte ses
 // systèmes vides dominés : sans autre unité, ou dont il a gagné le
-// conflit ce tour (useExploitationDuVide, PlateauJoueur.jsx).
+// test ce tour (useExploitationDuVide, PlateauJoueur.jsx).
 // ============================================================
+
+const RECUPERATION = 185;
+const RACKET = 942;
+const ABSTENTION = -1;
+const CONTRE_TOUS = -2;
+
+export { actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION };
 
 export function dominationsEnCours(etat) {
     return Object.keys(etat.compteurs)
@@ -836,9 +872,20 @@ export function dominationsEnCours(etat) {
         .map(m => ({ cle: m[0], numero: Number(m[1]), demandeur: Number(etat.compteurs[m[0]]) }));
 }
 
+// Récupération en attente dans un système : { butin, candidats } (compteurs recup:<case>…)
+export const cleRecuperation = numero => `recup:${numero}`;
+
+const recuperationDe = (etat, numero) => ({
+    butin: Number(etat.compteurs[cleRecuperation(numero)]) || 0,
+    candidats: Object.keys(etat.compteurs)
+        .map(id => new RegExp(`^recup:${numero}:(\\d+)$`).exec(id))
+        .filter(m => m && etat.compteurs[m[0]])
+        .map(m => Number(m[1])),
+});
+
 // Systèmes vides (sans planète) où le joueur a des unités dans l'espace :
 //   gain       ressources de l'entretien (1 par système dominé, 3 pour une nébuleuse)
-//   aResoudre  cases disputées dont le conflit de domination n'est pas résolu ce tour
+//   aResoudre  cases disputées dont le test de domination n'est pas clos ce tour
 export function useExploitationDuVide(userId) {
 
     const { etat, index, aScript } = useEngine();
@@ -857,10 +904,8 @@ export function useExploitationDuVide(userId) {
 
     const dispute = n => (index.parZone.get("hex:" + n) || []).some(c => c.ref?.type === "unit" && campDe(c) !== userId);
 
-    // Camp qui domine d'après un conflit clos ce tour, ou null
-    const resultat = n => (Number(etat.compteurs[`dominant:${n}:tour`]) === etat.tour
-        ? Number(etat.compteurs[`dominant:${n}`]) || 0
-        : null);
+    // Camp qui domine d'après le test clos ce tour pour « Exploitation du vide », ou null
+    const resultat = n => resultatDomination(etat, n, 232);
 
     const domines = vides.filter(n => !dispute(n) || resultat(n) === userId);
 
@@ -872,40 +917,66 @@ export function useExploitationDuVide(userId) {
 
 function Domination({ conflit }) {
 
-    const { etat, index, envoyer, moi, joueur, nomDe, couleurDe, aScript, partie, search } = useEngine();
+    const { etat, index, envoyer, moi, joueur, nomDe, couleurDe, aScript, partie } = useEngine();
 
     const { cle, numero, demandeur } = conflit;
 
     const contenus = useElements([...new Set(unitesDuSysteme(index, numero).map(c => c.ref.id))].sort((a, b) => a - b));
     const unites = unitesDuLieu({ index, contenuDe: id => contenus[id], numero, k: ESPACE_CONTROLE });
 
-    // Contrôle de chaque camp : le calcul unique de regleControle.js (unités militaires de l'espace)
-    const camps = campsDeControle({ unites, contenuDe: id => contenus[id], aScript })
-        .map(c => ({ camp: c.camp, controle: c.controle }));
-    const cleChoix = camp => `${cle}:${camp}`;
-
-    // Carte pour laquelle le test a été ouvert (domination:<case>:motif = son identifiant)
+    // Sujet du test (domination:<case>:motif) : la carte pour laquelle il a été ouvert
     const motif = Number(etat.compteurs[cle + ":motif"]) || 0;
 
-    // Camp soutenu : le sien par défaut ; −1 : s'abstient (les neutres soutiennent les neutres)
-    const soutien = camp => (camp === NEUTRE ? NEUTRE : (Number(etat.compteurs[cleChoix(camp)]) || camp));
+    // Récupération : seules les factions qui la demandent peuvent dominer
+    const recup = motif === RECUPERATION ? recuperationDe(etat, numero) : null;
+    const candidats = recup ? recup.candidats : null;
+    const simple = !!candidats && candidats.length === 1;
 
-    const totaux = new Map();
+    // Contrôle de chaque camp : le calcul unique de regleControle.js (unités militaires de l'espace).
+    // Une faction qui demande la Récupération est listée même sans unité (elle ne participe pas,
+    // mais d'autres peuvent la soutenir).
+    const presents = campsDeControle({ unites, contenuDe: id => contenus[id], aScript })
+        .map(c => ({ camp: c.camp, controle: c.controle, participe: c.participe }));
+
+    const camps = [
+        ...presents,
+        ...(candidats || []).filter(u => !presents.some(c => c.camp === u)).map(u => ({ camp: u, controle: 0, participe: false })),
+    ];
+
+    const cleChoix = camp => `${cle}:${camp}`;
+
+    // Camp soutenu. Domination ordinaire : le sien par défaut (les neutres, la leur). Récupération :
+    // une faction qui la demande se soutient ; les autres, et les neutres, s'engagent contre toutes.
+    function soutien(camp) {
+
+        const choisi = Number(etat.compteurs[cleChoix(camp)]) || 0;
+
+        if (!candidats) {
+            return camp === NEUTRE ? NEUTRE : (choisi || camp);
+        }
+
+        return camp === NEUTRE ? CONTRE_TOUS : (choisi || (candidats.includes(camp) ? camp : CONTRE_TOUS));
+    }
 
     // (Rapport de force : +2 au contrôle d'un camp pour ce conflit)
     const clePlus = camp => cleChoix(camp) + ":plus";
     const plus = camp => Number(etat.compteurs[clePlus(camp)]) || 0;
 
+    const totaux = new Map((candidats || []).map(u => [u, 0]));
+
     for (const c of camps) {
-        if (soutien(c.camp) >= 0) {
+        if (c.participe && soutien(c.camp) !== ABSTENTION) {
             totaux.set(soutien(c.camp), (totaux.get(soutien(c.camp)) || 0) + c.controle + plus(c.camp));
         }
     }
 
+    // Le résultat qui réunit, seul, le plus de contrôle l'emporte ; « contre tous » en tête : personne
     const classes = [...totaux].sort((a, b) => b[1] - a[1]);
-    const gagnant = classes.length && (classes.length === 1 || classes[0][1] > classes[1][1]) ? classes[0][0] : null;
+    const premier = classes.length && (classes.length === 1 || classes[0][1] > classes[1][1]) ? classes[0][0] : null;
+    const gagnant = premier === CONTRE_TOUS ? null : premier;
 
     const nomCamp = camp => nomDuCamp(nomDe, camp);
+    const nomResultat = valeur => (valeur === CONTRE_TOUS ? "contre tous" : nomCamp(valeur));
 
     // Rackets en attente sur les planètes de ce système (script Racket, Pirate Mentak) :
     // compteur racket:<case>p<k> = le joueur qui réclame. À la clôture, s'il domine, il
@@ -915,7 +986,8 @@ function Domination({ conflit }) {
     const liensPlanetes = (systeme?.elems || []).map(lien => Number(lien?.id) || 0);
     const planetes = useElements(liensPlanetes.filter(id => id > 0));
 
-    const rackets = Object.keys(etat.compteurs)
+    // (un racket n'est tranché que par le test ouvert pour lui — ou par un test « à la main »)
+    const rackets = motif !== RACKET && motif !== 0 ? [] : Object.keys(etat.compteurs)
         .map(id => new RegExp(`^racket:${numero}p(\\d+)$`).exec(id))
         .filter(m => m && etat.compteurs[m[0]])
         .map(m => {
@@ -946,11 +1018,38 @@ function Domination({ conflit }) {
         ? `Racket sur ${r.nom} : ${nomCamp(r.u)} +${r.res} ressource(s), ${nomCamp(r.proprietaire)} −${r.pris}`
         : `Racket sur ${r.nom} : ${nomCamp(r.u)} ne domine pas, rien n'est pris`));
 
+    // Récupération : la faction gagnante prend le butin (1 ressource par vaisseau détruit au combat)
+    const actionsRecup = !recup ? [] : [
+        gagnant > 0 && recup.butin > 0 && { type: "compteur", id: `joueur:${gagnant}:res`, delta: recup.butin },
+        ...[cleRecuperation(numero), ...recup.candidats.map(u => `${cleRecuperation(numero)}:${u}`)]
+            .filter(id => etat.compteurs[id]).map(id => ({ type: "compteur", id, valeur: 0 })),
+    ].filter(Boolean);
+
+    const bilanRecup = !recup ? [] : [gagnant > 0
+        ? `Récupération : ${nomCamp(gagnant)} +${recup.butin} ressource(s)`
+        : "Récupération : personne ne l'emporte, rien n'est gagné"];
+
     const pastille = camp => pastilleCamp(couleurDe, camp);
+
+    // Ce que mon camp peut choisir
+    const options = candidats
+        ? [
+            ...candidats.map(u => [u, simple ? (u === moi ? "moi-même" : `soutenir ${nomCamp(u)}`) : nomCamp(u)]),
+            [CONTRE_TOUS, simple ? "s'opposer" : "contre tous"],
+            [ABSTENTION, "personne (s'abstient)"],
+        ]
+        : [
+            ...camps.filter(x => x.camp !== NEUTRE).map(x => [x.camp, nomCamp(x.camp)]),
+            [ABSTENTION, "personne (s'abstient)"],
+        ];
+
+    const nomChoixDe = camp => options.find(o => o[0] === soutien(camp))?.[1] || nomResultat(soutien(camp));
+    const nomSujet = SUJETS_DOMINATION[motif];
 
     return (
         <div
             data-domination={cle}
+            data-sujet={motif}
             style={{
                 marginTop: 6,
                 padding: "6px 10px",
@@ -963,14 +1062,19 @@ function Domination({ conflit }) {
             }}
         >
             <div>
-                <b>Domination du système {nomCase(numero)}</b> — test ouvert par {nomCamp(demandeur)}
+                <b>{simple ? "Contrôle" : "Domination"} du système {nomCase(numero)}</b> — test ouvert par {nomCamp(demandeur)}
                 {/* (l'action qui demande la domination est toujours dite) */}
                 <span data-motif-domination={motif || (rackets.length ? "racket" : "main")}>
-                    {motif > 0
-                        ? <> pour <b>« {nomElement(search, { type: "tech", id: motif })} »</b></>
+                    {nomSujet
+                        ? <> pour <b>« {nomSujet} »</b></>
                         : (rackets.length > 0 ? " pour un Racket" : " à la main, depuis la fiche du système")}
                 </span>.
-                {" "}Son résultat vaut pour tout le tour : les effets qui demandent la domination de ce système le lisent.
+                {" "}
+                {recup
+                    ? (simple
+                        ? `${nomCamp(candidats[0])} est seul à demander la Récupération : test de contrôle simple — s'il réunit plus de contrôle que ceux qui s'opposent, il gagne ${recup.butin} ressource(s).`
+                        : `Chaque camp soutient une des factions qui demandent la Récupération, s'engage contre toutes ou s'abstient : le résultat qui réunit le plus de contrôle l'emporte (${recup.butin} ressource(s) en jeu).`)
+                    : "Un seul test pour ce sujet : la faction qui domine fait l'action, personne à égalité. Il ne sera pas rouvert."}
             </div>
 
             {/* Rackets en attente du résultat (script Racket) */}
@@ -985,53 +1089,57 @@ function Domination({ conflit }) {
             {camps.map(c => (
                 <div key={c.camp} data-camp={c.camp} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 6, marginTop: 2 }}>
                     <span>
-                        {pastille(c.camp)}<b>{nomCamp(c.camp)}</b> : contrôle {c.controle + plus(c.camp)}
-                        {plus(c.camp) > 0 ? ` (dont ${plus(c.camp)} : Rapport de force)` : ""}, soutient
+                        {pastille(c.camp)}<b>{nomCamp(c.camp)}</b> :{" "}
+                        {c.participe
+                            ? <>contrôle {c.controle + plus(c.camp)}{plus(c.camp) > 0 ? ` (dont ${plus(c.camp)} : Rapport de force)` : ""}, choisit</>
+                            : "aucune unité militaire ici : ne participe pas"}
                     </span>
 
-                    {joueur && c.camp === moi
+                    {c.participe && (joueur && c.camp === moi
                         ? (
                             <select
+                                data-choix-domination
                                 value={soutien(c.camp)}
                                 onChange={e => envoyer(
                                     [{ type: "compteur", id: cleChoix(c.camp), valeur: Number(e.target.value) }],
-                                    `Domination ${nomCase(numero)} : ${nomCamp(c.camp)} ` +
-                                        (Number(e.target.value) < 0 ? "s'abstient" : `soutient ${nomCamp(Number(e.target.value))}`)
+                                    `Domination ${nomCase(numero)} : ${nomCamp(c.camp)} — ` +
+                                        (options.find(o => o[0] === Number(e.target.value))?.[1] || "")
                                 )}
                             >
-                                {camps.filter(x => x.camp !== NEUTRE).map(x => <option key={x.camp} value={x.camp}>{nomCamp(x.camp)}</option>)}
-                                <option value={-1}>personne (s'abstient)</option>
+                                {options.map(([valeur, libelle]) => <option key={valeur} value={valeur}>{libelle}</option>)}
                             </select>
                         )
-                        : <b>{soutien(c.camp) < 0 ? "personne (s'abstient)" : nomCamp(soutien(c.camp))}</b>}
+                        : <b>{nomChoixDe(c.camp)}</b>)}
 
-                    {c.camp === moi && <RapportDeForce clePlus={clePlus(c.camp)} numero={numero} />}
+                    {c.camp === moi && c.participe && <RapportDeForce clePlus={clePlus(c.camp)} numero={numero} />}
                 </div>
             ))}
 
             <div data-bilan-domination style={{ marginTop: 4 }}>
-                {classes.map(([camp, total]) => `${nomCamp(camp)} : ${total}`).join(" ; ") || "Aucune unité militaire."}{" — "}
+                {classes.map(([valeur, total]) => `${nomResultat(valeur)} : ${total}`).join(" ; ") || "Aucune unité militaire."}{" — "}
                 {gagnant !== null
-                    ? <b style={{ color: "#1b5e20" }}>{nomCamp(gagnant)} domine le système.</b>
-                    : <b style={{ color: "#b71c1c" }}>Personne ne domine le système.</b>}
+                    ? <b style={{ color: "#1b5e20" }}>{nomCamp(gagnant)} {recup ? "l'emporte" : "domine le système"}.</b>
+                    : <b style={{ color: "#b71c1c" }}>{recup ? "Personne ne l'emporte." : "Personne ne domine le système."}</b>}
             </div>
 
             {joueur && (
                 <BoutonRegle
                     data-action="clore-domination"
-                    nom={`Clore le conflit de domination ${nomCase(numero)} : ${gagnant !== null ? nomCamp(gagnant) + " domine" : "personne ne domine"}`}
+                    nom={`Clore le test de domination ${nomCase(numero)}${nomSujet ? ` (${nomSujet})` : ""} : ` +
+                        (gagnant !== null ? `${nomCamp(gagnant)} ${recup ? "l'emporte" : "domine"}` : "personne ne l'emporte")}
                     faire={commentaire => envoyer([
-                        { type: "compteur", id: `dominant:${numero}`, valeur: gagnant ?? 0 },
-                        // (0 : personne, ou les neutres ; le tour dit que le conflit est résolu)
-                        { type: "compteur", id: `dominant:${numero}:tour`, valeur: etat.tour },
+                        { type: "compteur", id: cleDominant(numero, motif), valeur: gagnant ?? 0 },
+                        // (0 : personne, ou les neutres ; le tour dit que le test de ce sujet est clos)
+                        { type: "compteur", id: cleDominant(numero, motif) + ":tour", valeur: etat.tour },
                         ...camps.flatMap(c => [cleChoix(c.camp), clePlus(c.camp)]).filter(id => etat.compteurs[id])
                             .map(id => ({ type: "compteur", id, valeur: 0 })),
                         { type: "compteur", id: cle, valeur: 0 },
                         ...(motif ? [{ type: "compteur", id: cle + ":motif", valeur: 0 }] : []),
                         // (rackets en attente : appliqués si leur auteur domine, effacés dans tous les cas)
                         ...actionsRackets,
-                    ], [commentaire, ...bilanRackets].join(" — ").slice(0, 300))}
-                    title="Enregistre qui domine le système pour ce tour et clôt le conflit"
+                        ...actionsRecup,
+                    ], [commentaire, ...bilanRackets, ...bilanRecup].join(" — ").slice(0, 300))}
+                    title="Enregistre le résultat de ce test (il ne sera pas rouvert pour ce sujet) et clôt le conflit"
                     style={{ marginTop: 4, padding: "3px 14px" }}
                 >
                     Clore le conflit

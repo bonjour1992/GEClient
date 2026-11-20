@@ -13,7 +13,12 @@ import { turnNumber } from "../ti5Const";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
-import { Controles, demanderControleSysteme } from "./Controle";
+import { BlocagesAction, demanderBlocage } from "./BlocageAction";
+import { estBloquee } from "./regleBlocage";
+import {
+    Controles, demanderControleSysteme, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
+    actionsOuvrirDomination, resultatDomination, cleRecuperation,
+} from "./Controle";
 
 // ============================================================
 // ONGLET CONFLIT : les combats, et les blocages de déplacement
@@ -196,6 +201,7 @@ export function Combat() {
             <div style={{ padding: 8, color: "#444" }}>
                 <Controles />
                 <Blocages />
+                <BlocagesAction />
                 Aucun combat en cours. Dans l'onglet Espace, ouvrir la fiche d'un système :
                 « Combat spatial » ou « Canons spatiaux » pour le système, « Combat terrestre »
                 ou « Bombardement » à côté d'une planète.
@@ -215,6 +221,7 @@ export function Combat() {
         <div>
             <Controles />
             <Blocages />
+            <BlocagesAction />
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                 {combats.map((n, k) => {
@@ -1551,9 +1558,13 @@ function CombatSysteme({ lieu }) {
     const aDejaBombarde = v => bombe && String(v.c.marques?.bombarde || "").endsWith(":" + etat.tour) &&
         v.c.marques.bombarde !== CE_COMBAT;
 
+    // Bombardement, raid : une unité engagée dans un test de blocage de cette phase est bloquée,
+    // elle ne tire pas (regleBlocage.js, BlocageAction.jsx)
+    const bloquee = v => bombe && estBloquee(etat, v.c);
+
     const tireurs = vaisseaux.filter(v =>
         v.tire && attaque(v) > 0 && nombreDes(v) > 0 && (engagement(v).length > 0 || sansInfanterie) && !estDetruit(v) &&
-        !aDejaBombarde(v));
+        !aDejaBombarde(v) && !bloquee(v));
 
     // Troupe de détournement : elle attaque après toutes les autres unités (3e temps)
     const attaqueEnDernier = v => /attaque après toutes les autres/i.test(v.u.habilite || "") &&
@@ -1622,11 +1633,31 @@ function CombatSysteme({ lieu }) {
 
     const titreLancement = enPreventive ? "Combat : frappe en premier" : (enDerniers ? "Combat : dernières attaques" : "Combat : attaques");
 
-    function basculerPret() {
+    async function basculerPret() {
 
         if (estPret(moi)) {
             envoyer([{ type: "compteur", id: PRET + moi, valeur: 0 }], "");
             return;
+        }
+
+        // Bombardement, raid : « activer une unité non bloquée » — si d'autres factions peuvent me
+        // bloquer dans ce système et que je n'y ai pas encore subi le test à cette phase, le test
+        // de blocage s'ouvre (onglet Conflit) ; une fois conclu, je me redis prêt : mes unités
+        // bloquées ne tirent pas.
+        if (bombe && tireurs.some(v => v.camp === moi)) {
+
+            const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
+                { numero, action: sorte === "raid" ? "raid" : "bombardement", libelle: SORTES[sorte] });
+
+            if (!blocage) {
+                return;
+            }
+
+            if (blocage.attendu) {
+                aviser("Blocage résolu : vos unités bloquées ne tireront pas. Cliquez de nouveau sur « Prêt au combat » pour " +
+                    (sorte === "raid" ? "le raid" : "bombarder") + " avec les autres.");
+                return;
+            }
         }
 
         // Je suis le dernier attendu : les attaques partent avec mon « prêt »
@@ -1674,10 +1705,14 @@ function CombatSysteme({ lieu }) {
     //
     // Script Récupération (combat spatial) : chaque joueur du combat qui a la
     // technologie a une case, cochée d'office (compteur combat:<lieu>:recup:<u>
-    // à 2 = décochée) ; à la fin du combat il gagne 1 ressource par unité
-    // détruite pendant ce combat (compteur combat:<lieu>:detruits, plus celles
-    // qui ne sont pas encore retirées). Deux cases cochées : une seule faction
-    // domine le système, le bouton le dit avant de confirmer.
+    // à 2 = décochée) : il demande le butin, 1 ressource par unité détruite
+    // pendant ce combat (compteur combat:<lieu>:detruits, plus celles qui ne
+    // sont pas encore retirées). « Si à la fin du combat vous avez la
+    // domination du système » : une seule faction le demande et personne ne
+    // peut s'y opposer, elle le gagne tout de suite ; sinon un test de
+    // domination « Récupération » s'ouvre (Controle.jsx) — chaque camp soutient
+    // une des factions qui le demandent, s'engage contre toutes ou s'abstient ;
+    // une seule à le demander : test de contrôle simple pour elle.
     const DETRUITS = COMBAT + ":detruits";
     const RECUP = COMBAT + ":recup:";
 
@@ -1687,11 +1722,21 @@ function CombatSysteme({ lieu }) {
 
     async function terminer() {
 
-        const cochees = recuperateurs.filter(recupCochee);
+        const cochees = epaves > 0 ? recuperateurs.filter(recupCochee) : [];
+
+        // Récupération : qui reste dans l'espace une fois les unités détruites retirées ?
+        const restantes = unitesDuControle(index, numero, ESPACE_CONTROLE).filter(c => !aRetirer.some(x => x.id === c.id));
+        const disputee = cochees.length > 1 ||
+            (cochees.length === 1 && evaluerControle({ unites: restantes, moi: cochees[0], aScript }).conflit);
+
+        // (un seul test de domination ouvert par système, un seul test par sujet et par tour)
+        const testImpossible = disputee && (etat.compteurs[`domination:${numero}`]
+            ? "un test de domination est déjà en cours dans ce système : la Récupération ne sera pas attribuée"
+            : (resultatDomination(etat, numero, 185) !== null
+                && "le test de domination « Récupération » de ce système a déjà été clos ce tour : elle ne sera pas attribuée"));
 
         const obstacles = [
-            cochees.length > 1 &&
-                `Récupération est cochée par ${cochees.map(nomDe).join(" et ")} : une seule faction domine le système`,
+            testImpossible,
             // (une frégate du khan détruite attend sa riposte : elle sera retirée sans elle)
             aRetirer.some(khanEnAttente) && "une frégate du khan détruite attend encore sa riposte (elle sera retirée sans elle)",
         ];
@@ -1710,12 +1755,20 @@ function CombatSysteme({ lieu }) {
             return;
         }
 
-        const gain = epaves > 0 && cochees.length > 0;
+        // Seule à demander la Récupération et sans opposant possible : gain immédiat
+        const gain = cochees.length === 1 && !disputee;
+        const testRecup = disputee && !testImpossible;
 
         envoyer([
             ...effacer([M.engage, M.des, M.desF, M.desA, M.ajust, M.ajustN]),
             ...remiseEtape,
             ...(gain ? cochees.map(u => ({ type: "compteur", id: `joueur:${u}:res`, delta: epaves })) : []),
+            // Récupération disputée : test de domination pour ce sujet, butin et demandeurs en compteurs
+            ...(testRecup ? [
+                ...actionsOuvrirDomination(etat, numero, moi, 185),
+                { type: "compteur", id: cleRecuperation(numero), valeur: epaves },
+                ...cochees.map(u => ({ type: "compteur", id: `${cleRecuperation(numero)}:${u}`, valeur: 1 })),
+            ] : []),
             // Compteurs des scripts de ce combat (Écoles militaires, Récupération, esclave du raid)
             ...Object.keys(etat.compteurs)
                 .filter(id => id.startsWith(COMBAT + ":") && /:(plus|recup|perdus|merc\d+|protecteur|protecteurW):\d+$|:(detruits|esclave)$/.test(id) && etat.compteurs[id])
@@ -1747,7 +1800,14 @@ function CombatSysteme({ lieu }) {
             aRetirer.length > 0 && `${aRetirer.length} unité(s) détruite(s) retirée(s)`,
             ...butins,
             gain && `Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}`,
+            testRecup && `Récupération (${epaves} ressource(s)) demandée par ${cochees.map(nomDe).join(", ")} : test de domination ouvert`,
         ].filter(Boolean).join(" — ").slice(0, 300));
+
+        if (testRecup) {
+            aviser(cochees.length > 1
+                ? "Récupération : plusieurs factions la demandent, un test de domination est ouvert (onglet Conflit, « Conflits de contrôle »)."
+                : "Récupération : d'autres peuvent s'y opposer, un test de contrôle est ouvert (onglet Conflit, « Conflits de contrôle »).");
+        }
 
         if (butins.length) {
             aviser(butins.join(" ; "));
@@ -2571,7 +2631,7 @@ function CombatSysteme({ lieu }) {
                                 <label
                                     key={u}
                                     data-recuperation={u}
-                                    title="Récupération : à la fin du combat, si vous dominez le système, +1 ressource par vaisseau détruit pendant ce combat"
+                                    title="Récupération : à la fin du combat, si vous dominez le système, +1 ressource par vaisseau détruit pendant ce combat — un test de domination s'ouvre si d'autres peuvent s'y opposer ou la demandent aussi"
                                     style={{ fontSize: 12 }}
                                 >
                                     <input

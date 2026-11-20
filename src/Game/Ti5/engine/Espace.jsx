@@ -36,6 +36,7 @@ import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
+    demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION,
 } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
@@ -958,6 +959,9 @@ function FicheSysteme({ numero, id, fermer }) {
 
     const systeme = useElement(id);
 
+    // Sujet du test de domination ouvert à la main (l'effet qui le demande ; 0 : aucun)
+    const [sujetDomination, setSujetDomination] = useState(0);
+
     // Station spéciale : agent choisi pour la tenir (rang 1 à 6 dans AGENTS_STATION)
     const [agentStation, setAgentStation] = useState(1);
 
@@ -1103,9 +1107,29 @@ function FicheSysteme({ numero, id, fermer }) {
     const monUniteSur = (k, idUnite) =>
         mesUnitesSur(k, c => idUnite === undefined || c.ref.id === idUnite).length > 0;
 
+    // Contrôle de la planète k pour une action de phase (rechercher, fouiller, mobiliser) : règle
+    // générale (demanderControle, Controle.jsx). Si d'autres peuvent s'opposer, un conflit de
+    // contrôle « pour <cette action> » s'ouvre et l'action attend sa conclusion ; faux : elle n'a
+    // pas lieu. Tant qu'un conflit est en cours sur la planète, personne d'autre n'y tente d'action.
+    async function controlePlanete(k, idPlanete, action, libelle) {
+
+        const lieu = { numero, k, unites: unitesDuControle(index, numero, k), possesseur: possesseurActuel(etat, idPlanete) };
+
+        if (evaluerControle({ ...lieu, moi, aScript }).conflit) {
+            fermer();
+        }
+
+        return demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, { ...lieu, motif: { action }, libelle });
+    }
+
     // La recherche est notée au journal de recherche du tour (onglet Technologie).
     // Règle du Laboratoire : 1 de recherche de plus sur une planète où j'en ai un.
-    function rechercher(k, idPlanete, commentaire) {
+    // « Activer une planète que vous contrôlez » : le contrôle de la planète est demandé.
+    async function rechercher(k, idPlanete, commentaire) {
+
+        if (!await controlePlanete(k, idPlanete, "recherche", commentaire)) {
+            return;
+        }
 
         const laboratoire = aScript(moi, "laboratoire") && monUniteSur(k, 176);
 
@@ -1135,7 +1159,8 @@ function FicheSysteme({ numero, id, fermer }) {
     // Phase de science, fouiller une ruine : active la ruine, utilise un
     // scientifique et rapporte un fragment de relique — celui du type de la
     // ruine, ou tiré dans le sac pour une ruine « normale ».
-    async function fouiller(k, ruine, type, commentaire) {
+    //   idPlanete : la planète de la ruine — fouiller demande son contrôle
+    async function fouiller(k, ruine, type, commentaire, idPlanete) {
 
         const fragment = FRAGMENTS[type];
 
@@ -1148,6 +1173,10 @@ function FicheSysteme({ numero, id, fermer }) {
         // (rien à tirer d'un sac vide : là, l'action est impossible)
         if (!fragment && !(index.parZone.get(SAC_FRAGMENTS) || []).length) {
             signaler("Le sac de fragments est vide.");
+            return;
+        }
+
+        if (!await controlePlanete(k, idPlanete, "fouille", commentaire)) {
             return;
         }
 
@@ -1206,7 +1235,12 @@ function FicheSysteme({ numero, id, fermer }) {
 
     //   clonage : script Cuve de clonage — un scientifique est usé, une infanterie
     //   de plus est posée et toute la mobilisation est gratuite
-    function mobiliser(k, n, commentaire, clonage = false) {
+    //   Mobiliser demande la possession de la planète et son contrôle.
+    async function mobiliser(k, n, commentaire, clonage = false) {
+
+        if (!await controlePlanete(k, liensPlanetes.find(x => x.k === k)?.lien.id, "mobilisation", commentaire)) {
+            return;
+        }
 
         const cout = clonage ? 0 : n * coutInfanterie;
 
@@ -1393,14 +1427,8 @@ function FicheSysteme({ numero, id, fermer }) {
     function demanderStation(idPlanete, k, planete, commentaire) {
 
         // (règle générale : evaluerControle — contrôle spatial, les unités de l'espace du système)
-        const { conflit, mien } = evaluerControle({ unites: unitesDuControle(index, numero, ESPACE_CONTROLE), moi, aScript, toutes: true });
-
-        // (« Vous devez contrôler le système » : sans opposition possible, le contrôle doit encore être positif)
-        if (!conflit && mien === 0 && confirmerRegle("Prendre possession de la station", [
-            "vous ne contrôlez pas ce système : aucune de vos unités n'est dans son espace",
-        ]) === null) {
-            return;
-        }
+        // (un test de contrôle auquel personne ne peut s'opposer réussit toujours)
+        const { conflit } = evaluerControle({ unites: unitesDuControle(index, numero, ESPACE_CONTROLE), moi, aScript });
 
         if (!conflit) {
             prendre(idPlanete, k, commentaire, poseSurStation(k, planete, idPlanete).actions, true, true);
@@ -1556,21 +1584,34 @@ function FicheSysteme({ numero, id, fermer }) {
                                 etat.compteurs["domination:" + numero]
                                     ? <button type="button" onClick={() => allerA("combat")} style={{ fontWeight: "bold" }}>Voir : test de domination</button>
                                     : (
-                                        <BoutonRegle
-                                            data-action="test-de-domination"
-                                            nom={`Test de domination (${nomCase(numero)})`}
-                                            obstacles={[
-                                                !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
-                                                Number(etat.compteurs[`dominant:${numero}:tour`]) === etat.tour &&
-                                                    "un test de domination de ce système a déjà été clos ce tour",
-                                            ]}
-                                            faire={commentaire => envoyer(
-                                                [{ type: "compteur", id: "domination:" + numero, valeur: moi }],
-                                                commentaire || "Test de domination ouvert")}
-                                            title="Plusieurs camps ont des unités dans l'espace de ce système : ouvre un test de domination (onglet Conflit), que chacun peut soutenir puis clore"
-                                        >
-                                            Test de domination
-                                        </BoutonRegle>
+                                        <>
+                                            <BoutonRegle
+                                                data-action="test-de-domination"
+                                                nom={`Test de domination (${nomCase(numero)})` +
+                                                    (SUJETS_DOMINATION[sujetDomination] ? ` pour « ${SUJETS_DOMINATION[sujetDomination]} »` : "")}
+                                                obstacles={[
+                                                    !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
+                                                    resultatDomination(etat, numero, sujetDomination) !== null &&
+                                                        "le test de domination de ce sujet a déjà été clos ce tour dans ce système : il ne se rouvre pas",
+                                                ]}
+                                                faire={commentaire => envoyer(
+                                                    actionsOuvrirDomination(etat, numero, moi, sujetDomination),
+                                                    commentaire || "Test de domination ouvert")}
+                                                title="Plusieurs camps ont des unités dans l'espace de ce système : ouvre un test de domination (onglet Conflit) pour l'effet choisi — un seul test par sujet, la faction qui domine fait l'action"
+                                            >
+                                                Test de domination
+                                            </BoutonRegle>
+                                            {/* (le sujet : l'effet qui demande la domination) */}
+                                            <select
+                                                data-sujet-domination
+                                                value={sujetDomination}
+                                                onChange={e => setSujetDomination(Number(e.target.value))}
+                                                title="L'effet pour lequel la domination est demandée"
+                                            >
+                                                <option value={0}>à la main</option>
+                                                {[821, 452, 486].map(id => <option key={id} value={id}>pour « {SUJETS_DOMINATION[id]} »</option>)}
+                                            </select>
+                                        </>
                                     )
                             )}
 
@@ -1807,7 +1848,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                         key={ruine}
                                                         nom={`Fouiller une ruine de ${nomPlanete(planete)}`}
                                                         obstacles={obstaclesFouille(k, lien.id)}
-                                                        faire={commentaire => fouiller(k, ruine, type, commentaire)}
+                                                        faire={commentaire => fouiller(k, ruine, type, commentaire, lien.id)}
                                                         title="Pose un marqueur d'activation sur la ruine, use un scientifique et rapporte un fragment de relique"
                                                     >
                                                         Fouiller la ruine{ruines.length > 1 ? " " + ruine : ""} (

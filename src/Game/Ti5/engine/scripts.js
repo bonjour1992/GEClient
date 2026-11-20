@@ -47,6 +47,7 @@
 // ============================================================
 
 import { campDe, aMot, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace.js";
+import { resultatDomination, actionsOuvrirDomination } from "./regleControle.js";
 
 // Nom de l'élément « reglage » qui garde la liste des scripts désactivés
 export const SCRIPTS_DESACTIVES = "Scripts désactivés";
@@ -221,12 +222,15 @@ const conversion = (outils, x, vers) => {
 };
 const LOGISTICIEN = { motif: MOTIF_LOGISTICIEN, nom: "logisticien", depense: false };
 
-// Camp qui domine une case : celui du test de domination clos ce tour (Controle.jsx), sinon
-// le seul camp qui a des unités dans son espace. null : disputée sans test clos ; 0 : personne
-const dominantDe = (etat, index, numero) => {
+// Camp qui domine une case pour un sujet (la carte qui demande la domination) : celui du test
+// de domination clos ce tour pour ce sujet (regleControle.js, Controle.jsx), sinon le seul camp
+// qui a des unités dans son espace. null : disputée sans test clos ; 0 : personne
+const dominantDe = (etat, index, numero, sujet) => {
 
-    if (Number(etat.compteurs[`dominant:${numero}:tour`]) === etat.tour) {
-        return Number(etat.compteurs[`dominant:${numero}`]) || 0;
+    const resultat = resultatDomination(etat, numero, sujet);
+
+    if (resultat !== null) {
+        return resultat;
     }
 
     const camps = [...new Set((index.parZone.get("hex:" + numero) || [])
@@ -684,10 +688,11 @@ export const SCRIPTS = [
         "Fiche d'un système, à côté de chaque planète : « Manipulation mentale »",
         "Phase de production : use un diplomate et pose une de vos infanteries sur la planète (une de vos unités doit être dans le système ou un système voisin)."),
 
-    effet("recuperation", 185, 1795076851619, "Récupération", "modifie",
-        "Conflit : « Terminer le combat » (case « Récupération », cochée d'office)",
-        "À la fin d'un combat spatial, +1 ressource par vaisseau détruit pendant ce combat. La case est cochée d'office ; " +
-        "si deux factions l'ont cochée, « Terminer le combat » devient rouge gris."),
+    effet("recuperation", 185, 1795202001313, "Récupération", "modifie",
+        "Conflit : « Terminer le combat » (case « Récupération », cochée d'office), puis test de domination",
+        "À la fin d'un combat spatial, +1 ressource par vaisseau détruit pendant ce combat pour la faction qui domine le système. " +
+        "Seul dans l'espace : gain immédiat. Sinon un test s'ouvre (onglet Conflit) : chaque camp soutient une des factions qui " +
+        "demandent la Récupération, s'engage contre toutes ou s'abstient ; une seule à la demander : test de contrôle simple."),
 
     effet("bouclier-deflecteur", 186, 1795076851620, "Bouclier déflecteur", "auto",
         "Conflit : canons spatiaux ; déplacement assisté",
@@ -2258,20 +2263,20 @@ export const SCRIPTS = [
         "Vos vaisseaux ignorent les touches des trous de ver oméga (9 ou plus : plus de touche)."),
 
     revenu("extraction-de-la-faille", "tech", 821, 1795046343884, "Extraction de la faille", "ravit",
-        "+3 ressources par Faille que vous dominez (seul dans son espace, ou vainqueur d'un test de domination ce tour). Une Faille disputée fait attendre le ravitaillement : ouvrez un test de domination depuis la fiche du système.", {
+        "+3 ressources par Faille que vous dominez (seul dans son espace, ou vainqueur du test de domination ouvert pour « Extraction de la faille » ce tour). Une Faille disputée fait attendre le ravitaillement : ouvrez ce test depuis la fiche du système.", {
             calcul: (source, outils) => {
 
                 const failles = casesDuSysteme(outils.index, 811);
-                const dominees = failles.filter(n => dominantDe(outils.etat, outils.index, n) === outils.userId);
+                const dominees = failles.filter(n => dominantDe(outils.etat, outils.index, n, 821) === outils.userId);
 
-                const disputees = failles.filter(n => dominantDe(outils.etat, outils.index, n) === null &&
+                const disputees = failles.filter(n => dominantDe(outils.etat, outils.index, n, 821) === null &&
                     (outils.index.parZone.get("hex:" + n) || []).some(x => !x.cache && x.ref?.type === "unit" && campDe(x) === outils.userId));
 
                 return {
                     gains: { res: 3 * dominees.length },
                     note: `${dominees.length} Faille(s) dominée(s)`,
                     attente: disputees.length
-                        ? `${disputees.length} Faille(s) disputée(s) : test de domination à ouvrir (fiche du système) et à clore`
+                        ? `${disputees.length} Faille(s) disputée(s) : test de domination « Extraction de la faille » à ouvrir (fiche du système) et à clore`
                         : null,
                 };
             },
@@ -2280,7 +2285,7 @@ export const SCRIPTS = [
     // ----- Habilités d'événements -----
 
     action("peage-aux-frontieres", "habilite", 452, 1795046343842, "Péage aux frontières", "carte",
-        "Phase d'événement : la faction qui domine chaque système à trou de ver alpha gagne 3 commerce (seule dans son espace, ou vainqueur d'un test de domination ce tour).", {
+        "Phase d'événement : la faction qui domine chaque système à trou de ver alpha gagne 3 commerce (seule dans son espace, ou vainqueur du test de domination ouvert pour « Péage aux frontières » ce tour).", {
             phase: "[ée]v[ée]nement",
             nomPhase: "événement",
             special: atelier => {
@@ -2293,7 +2298,7 @@ export const SCRIPTS = [
                 const alphas = atelier.cases().filter(x => (x.systeme?.elems || []).some(lien => Number(lien?.id) === 25) ||
                     dansLeSysteme(atelier.index, x.numero).some(c => c.ref?.type === "token" && c.ref.id === 826));
 
-                const etats = alphas.map(x => ({ n: x.numero, d: dominantDe(atelier.etat, atelier.index, x.numero) }));
+                const etats = alphas.map(x => ({ n: x.numero, d: dominantDe(atelier.etat, atelier.index, x.numero, 452) }));
                 const payes = etats.filter(x => x.d > 0);
                 const disputes = etats.filter(x => x.d === null);
 
@@ -2303,7 +2308,7 @@ export const SCRIPTS = [
                         { type: "compteur", id: "peage:tour", valeur: atelier.etat.tour },
                     ],
                     sans: disputes.length
-                        ? `système(s) disputé(s) sans test de domination clos ce tour (${disputes.map(x => atelier.nomCase(x.n)).join(", ")}) : ils ne rapporteront rien`
+                        ? `système(s) disputé(s) sans test de domination « Péage aux frontières » clos ce tour (${disputes.map(x => atelier.nomCase(x.n)).join(", ")}) : ils ne rapporteront rien`
                         : null,
                     avis: "Péage aux frontières : " + (payes.length
                         ? payes.map(x => `${atelier.nomDe(x.d)} +3 commerce (${atelier.nomCase(x.n)})`).join(", ")
@@ -2320,14 +2325,14 @@ export const SCRIPTS = [
             special: atelier => {
 
                 const fragment = fragmentsDuSysteme(atelier.index, atelier.numero)[0];
-                const dominant = dominantDe(atelier.etat, atelier.index, atelier.numero);
+                const dominant = dominantDe(atelier.etat, atelier.index, atelier.numero, 486);
 
                 return {
                     actions: fragment ? [{ type: "deplacer", c: fragment.id, vers: `joueur:${atelier.moi}:fragments` }] : [],
                     sans: !fragment
                         ? "aucun fragment de relique dans ce système"
                         : (dominant === atelier.moi ? null
-                            : (dominant === null ? "système disputé : faites d'abord un test de domination" : "vous ne dominez pas ce système")),
+                            : (dominant === null ? "système disputé : ouvrez d'abord le test de domination « Cache » (fiche du système)" : "vous ne dominez pas ce système")),
                     avis: fragment ? `Cache : ${fragment.jeton} pris.` : "",
                 };
             },
@@ -2552,11 +2557,14 @@ export const SCRIPTS = [
                     return { actions: [], sans: "cette planète ne rapporte aucune ressource" };
                 }
 
-                // Test de domination déjà clos ce tour : le résultat s'applique tout de suite
-                if (Number(compteurs[`dominant:${m[1]}:tour`]) === tour) {
+                // Test de domination du Racket déjà clos ce tour dans ce système : il ne se rouvre
+                // pas, son résultat s'applique tout de suite
+                const dejaClos = resultatDomination(atelier.etat, Number(m[1]), 942);
 
-                    if (Number(compteurs[`dominant:${m[1]}`]) !== atelier.moi) {
-                        return { actions: [], sans: "vous ne dominez pas ce système (test de domination clos ce tour)" };
+                if (dejaClos !== null) {
+
+                    if (dejaClos !== atelier.moi) {
+                        return { actions: [], sans: "vous ne dominez pas ce système (test de domination du Racket clos ce tour)" };
                     }
 
                     const pris = Math.min(res, atelier.compte(proprietaire, "res"));
@@ -2571,11 +2579,16 @@ export const SCRIPTS = [
                     };
                 }
 
+                // (un seul test de domination ouvert par système : un autre sujet y est en cours)
+                if (compteurs[`domination:${m[1]}`] && Number(compteurs[`domination:${m[1]}:motif`]) !== 942) {
+                    return { actions: [], sans: "un test de domination est déjà en cours dans ce système pour un autre effet : attendez qu'il soit clos" };
+                }
+
                 return {
                     actions: [
-                        !compteurs[`domination:${m[1]}`] && { type: "compteur", id: `domination:${m[1]}`, valeur: atelier.moi },
+                        ...(compteurs[`domination:${m[1]}`] ? [] : actionsOuvrirDomination(atelier.etat, Number(m[1]), atelier.moi, 942)),
                         { type: "compteur", id: cle, valeur: atelier.moi },
-                    ].filter(Boolean),
+                    ],
                     avis: `Racket : test de domination ouvert (onglet Conflit). À sa clôture, si vous dominez, +${res} ressource(s) prises à ${atelier.nomDe(proprietaire)}.`,
                 };
             },
@@ -3171,8 +3184,8 @@ export const SCRIPTS = [
 
     // ----- Tuteur des réfugiés -----
 
-    action("tuteur-des-refugies-attaque", "Promesse", 454, 1795072921266, "Tuteur des réfugiés : attaque", "carte",
-        "Si vous attaquez vos Réfugiés : la promesse est dépensée (retour à la réserve) et vous gagnez 1 infamie.", {
+    action("tuteur-des-refugies-attaque", "Promesse", 454, 1795202001294, "Tuteur des réfugiés : engagement", "carte",
+        "Si vous engagez vos Réfugiés : la promesse est dépensée (retour à la réserve) et vous gagnez 1 infamie.", {
             special: atelier => ({
                 actions: [
                     ...rendrePromesse(atelier),
@@ -3180,10 +3193,10 @@ export const SCRIPTS = [
                 ],
                 avis: "Tuteur des réfugiés : promesse dépensée, vous gagnez 1 infamie.",
             }),
-            libelle: "Tuteur des réfugiés : j'attaque mes Réfugiés (+1 infamie, promesse dépensée)",
+            libelle: "Tuteur des réfugiés : j'engage mes Réfugiés (+1 infamie, promesse dépensée)",
         }),
 
-    action("tuteur-des-refugies-faveur", "Promesse", 454, 1795072921266, "Tuteur des réfugiés : faveur", "planete",
+    action("tuteur-des-refugies-faveur", "Promesse", 454, 1795202001294, "Tuteur des réfugiés : faveur", "planete",
         "Phase d'événement, à côté d'une planète qui porte un Entrepôt d'aide : l'entrepôt est usé, 4 commerce posés dessus sont dépensés, vous gagnez une faveur des Réfugiés.", {
             surPlanete: true,
             phase: "[ée]v[ée]nement",

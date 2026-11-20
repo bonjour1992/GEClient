@@ -418,7 +418,6 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             k: s.controle === "planete" ? planeteControle : ESPACE_CONTROLE,
             unites: unitesDuControle(index, caseControle, s.controle === "planete" ? planeteControle : ESPACE_CONTROLE),
             possesseur: s.controle === "planete" && idElement ? possesseurActuel(etat, idElement) : null,
-            toutes: true,
         };
 
         const controleDejaAcquis = !!lieuControle && controleAcquis(etat, lieuControle.numero, lieuControle.k, moi);
@@ -426,8 +425,6 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
         const obstacles = [
             s.controle && !lieuControle && "le lieu du contrôle n'est pas connu ici : contrôle à vérifier à la main",
-            testControle && !testControle.conflit && testControle.mien === 0 &&
-                `vous ne contrôlez pas ${s.controle === "planete" ? "cette planète" : "ce système"} (aucune de vos unités n'y compte)`,
             s.phase && !new RegExp(s.phase, "i").test(etat.phase || "") &&
                 `ce n'est pas la phase ${/^[aeiouyéè]/i.test(s.nomPhase || s.phase) ? "d'" : "de "}${s.nomPhase || s.phase}`,
             s.possede && !possede && "vous ne possédez pas cette planète",
@@ -504,9 +501,12 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
             // Contrôle disputé : le conflit de contrôle s'ouvre en disant pour quel effet, et
             // l'action attend sa conclusion. Sans le contrôle, elle n'a pas lieu : rien n'est dépensé.
-            if (testControle?.conflit) {
+            // (Sans opposant possible le test réussit ; un contrôle acquis au conflit est consommé ici.)
+            if (lieuControle) {
 
-                apres?.();
+                if (testControle?.conflit) {
+                    apres?.();
+                }
 
                 if (!await demanderControle({ etat, moi, envoyer, aviser, allerA, aScript },
                     { ...lieuControle, motif: { script: s.id }, libelle: s.nom })) {

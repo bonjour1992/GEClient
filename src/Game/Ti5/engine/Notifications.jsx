@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useEngine } from "./Interaction";
 import { combatsActifs, aDesUnites } from "./Combat";
 import { passagesEnCours } from "./Blocage";
+import { blocagesActionEnCours, ACTIONS_BLOQUABLES } from "./regleBlocage";
 import { controlesEnCours, accordsEnCours } from "./Controle";
 
 // ============================================================
@@ -70,6 +71,13 @@ export function Notifications() {
             }
         }
 
+        for (const b of blocagesActionEnCours(etat)) {
+            if (b.acteur !== moi && aDesUnites(index, String(b.numero), moi)) {
+                attentes["blocageAction:" + b.cle] =
+                    `${nomDe(b.acteur)} veut faire ${ACTIONS_BLOQUABLES[b.action][1]} dans un système où vous avez des unités : bloquer, aider ou ne rien faire.`;
+            }
+        }
+
         for (const a of accordsEnCours(etat)) {
             if (a.demandeur !== moi && (aDesUnites(index, String(a.numero), moi) || aDesUnites(index, `${a.numero}p${a.k}`, moi))) {
                 attentes["accord:" + a.cle] =
@@ -80,7 +88,7 @@ export function Notifications() {
         for (const c of controlesEnCours(etat)) {
             if (c.demandeur !== moi && aDesUnites(index, `${c.numero}p${c.k}`, moi)) {
                 attentes["controle:" + c.cle] =
-                    `${nomDe(c.demandeur)} veut prendre possession d'une planète où vous avez des unités.`;
+                    `${nomDe(c.demandeur)} demande le contrôle d'un lieu où vous avez des unités : soutenir, vous opposer ou vous abstenir.`;
             }
         }
     }

@@ -46,7 +46,8 @@ Passent par ce chemin : la prise de possession d'une planète et d'une station, 
 - Le conflit d'accord de la revendication (« Revendiquer ») n'est pas un test de contrôle : c'est
   un droit de refus des camps qui ont des unités militaires dans le système.
 - Le test de blocage (`Blocage.jsx`) est un mécanisme à part, non repris ici.
-- Un test de domination vaut pour tout le tour (`dominant:<case>:tour`).
+- Un test de domination vaut pour son sujet (la carte qui le demande), pendant le tour :
+  `dominant:<case>:s<sujet>` — voir la section 6.
 
 ## 2. Cartes qui demandent le contrôle (#con)
 
@@ -168,3 +169,51 @@ dans l'espace). Les valeurs « #Con(n) » des unités sont toutes lues par `cont
 20. **Enrôlement** : la planète doit-elle être contrôlée (test), ou les esclaves sont-ils posés
     « sous vos ordres » ?
 21. **Abandonner une possession** : permis à tout moment ? (Bouton de l'outil, aucune règle.)
+
+## 6. Décisions de Loïc (20 novembre, soir) et ce qui en a été fait
+
+| Décision | Dans l'outil |
+|---|---|
+| Les unités militaires et la possession génèrent du contrôle ; d'autres effets peuvent en ajouter, mais sans unité militaire ni possession une faction ne participe pas | `campsDeControle` (`regleControle.js`) : plus d'option « toutes mes unités » ; une unité non militaire ne compte que si son texte porte `#con(n)`, pour un camp qui participe ; Rapport de force réservé aux camps qui participent |
+| Un test de contrôle non opposé réussit toujours (0 contre 0) | `demanderControle` : plus d'obstacle « contrôle nul » (construction, cartes, station) |
+| Pas de durée au contrôle | le contrôle vaut pour l'action qui l'a demandé ; `controleAcquis` ne sert plus qu'une fois, quand la page a été rechargée pendant le conflit |
+| Domination : un seul test par sujet, la gagnante fait l'action, personne à égalité ; pas de réouverture | `dominant:<case>:s<sujet>` ; le test ouvert à la main choisit son sujet (Extraction de la faille, Péage aux frontières, Cache) ; Racket et Exploitation du vide ont le leur |
+| Le contrôle n'est jamais une « attaque » ; le terme devient « engagement » | textes de la base (règle #1033, phases 05, 07, 10, 18, Tuteur des réfugiés, mot-clé #infa) ; les « attaques » d'une unité au combat (jets) ne sont pas renommées |
+| Récupération : domination entre les factions qui l'ont, ou contre toutes ; une seule : contrôle simple | `Combat.jsx` (« Terminer le combat ») ouvre le test ; `Domination` (`Controle.jsx`) le tranche et verse le butin |
+| Fouiller une ruine demande le contrôle ; mobiliser la possession et le contrôle ; pas de recherche ni de fouille pendant un conflit de contrôle sur la même planète | `controlePlanete` (`Espace.jsx`) → `demanderControle`, motif « action de phase » ; rechercher et la production d'une unité spatiale par une unité terrestre y passent aussi (textes des phases 11 et 12) |
+| Test de blocage au bombardement et au débarquement | `regleBlocage.js` (calcul), `BlocageAction.jsx` (onglet Conflit) — section 7 |
+
+Restent ouvertes : les questions 3, 4, 9 à 12, 14 à 21 de la section 5, et « le contrôle comme état »
+(question 5 : a priori un conflit par système, exemple à fournir).
+
+## 7. Le blocage dans les règles
+
+Test de blocage d'une action (règle #1033 et exemple de Loïc) : les autres factions engagent, unité par
+unité, leurs unités militaires de l'espace du système pour bloquer, ou des unités pour aider ; la
+faction qui agit égalise le surplus avec ses propres unités (militaires d'abord), qui sont bloquées.
+Toute unité qui a servi, ou qui a fait son action, est engagée pour la phase. Une faction ne subit le
+test qu'une fois par système et par phase.
+
+| Où le blocage est évoqué | Texte | État |
+|---|---|---|
+| phase 03 Déplacement | blocage case par case | **fait** (`Blocage.jsx`) |
+| phase 07 Bombardement | « activer une unité avec #bomb non bloquée » | **fait** : test au premier « Prêt au combat » (raid compris) |
+| phase 08 Débarquement, 1.1 / 1.2.1 | « évaluer le blocage », « unité non bloquée qui transporte » | **fait** : test au premier glisser d'un vaisseau vers une planète (sauf planète où l'on a un dock) |
+| phase 08, 1.2.2 et mot-clé #livr | livraison commerciale avec une unité non bloquée | à faire : même test, action « livraison » |
+| phase 05 Canons spatiaux | « activer une unité avec #can non bloquée » | à faire : même test, dans le système de l'unité qui tire |
+| phase 12 Production | source « non bloquée », vaisseau non bloqué pour embarquer, réparation d'unités non bloquées | à faire : même test, à l'ouverture de la production ou à la réparation |
+| tech#195, tech#419 Réparation improvisée | « vaisseau non bloqué », « unité non bloquée » | à faire : même test |
+| mots-clés mitose, fusion | « non bloqué » | à faire : même test |
+| tech#246 Drain spatial | « ou à être bloqué dans le système précédent » | **fait** (blocage de déplacement) |
+| #deplfurtif, Camouflage | non bloqué par des vaisseaux en se déplaçant | **fait** |
+| rupture gravitationnelle, trou de ver oméga, hab#814 | blocage sur un jet | **fait** |
+| tech#820 Stabilisateur de rupture | ignore les touches des trous de ver oméga | **fait** |
+| unit#810 Nef de la rupture | « ignore le blocage et les touches des #tvo » | à faire (sens à préciser : blocage du trou de ver seulement ?) |
+| mercenaire#295 Viscount Unlenn | déplacement « en ignorant les règles de blocage » | à la main |
+| hab#1022 Physiologie gashlai | les supernovas ne bloquent pas vos déplacements | à vérifier dans le déplacement assisté |
+| Promesse#384 Frontière ouverte | « si la faction bloque un de vos mouvements : #spend, elle gagne #infa(1) » | à faire : bouton proposé au joueur bloqué quand le blocage est conclu |
+| Promesse#226 Redevance de protection | « si vous engagez ou bloquez le Mentak : #spend » | à faire : même principe |
+| règle #1033, « contrôle et diplomatie » | bloquer un vaisseau de commerce d'une faction endettée lui permet de mettre fin à ses dettes | à faire : bouton proposé au joueur bloqué |
+| règle #1033, « coalition » | plusieurs factions font un seul test puis leurs actions à la suite | non géré : chaque faction passe son test |
+| règle #1033 (spécial) | les neutres bloquent | **fait** : d'office, un joueur peut en décider autrement |
+| hab#529 Déplacement du Khan | blocage du Khan | non géré |

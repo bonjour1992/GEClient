@@ -625,3 +625,16 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   - revue complète (cartes, actions de phase, 21 questions de règles) : `doc/revue-controle.md`.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
+
+## Contrôle, domination, blocage : décisions du 2026-11-20 (soir)
+
+Règles tranchées par Loïc et appliquées (détail : `doc/revue-controle.md`, sections 6 et 7) : seules
+les factions qui ont une unité militaire ou la possession participent à un contrôle ; un test non opposé
+réussit (0 contre 0) ; le contrôle n'a pas de durée ; un test de domination par sujet ; « attaque »
+devient « engagement » ; Récupération tranchée par un test de domination ; rechercher, fouiller,
+mobiliser et la production d'une unité spatiale par un dock demandent le contrôle ; test de blocage
+unité par unité au bombardement et au débarquement (`regleBlocage.js`, `BlocageAction.jsx`).
+Test des règles pures : `node E:\GE\demandes-ti5\test-regles-controle-blocage.mjs`.
+Restent à faire sur demande : le même test de blocage pour les canons spatiaux, la production, les
+livraisons, les réparations ; les effets déclenchés par un blocage (Frontière ouverte, Redevance de
+protection, dettes) ; la coalition.
