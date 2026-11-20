@@ -545,7 +545,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   - plus de fenêtre du navigateur pour une question : tout passe par `demande.js` (`demander`,
     `confirmer`) et s'ouvre dans l'onglet Décision, qui s'affiche tout seul — agent de base ou
     remplaçant, Bio stimulant, Connexion, Science intégrée, Ahk Ravin, confirmations, propositions
-    piochées. Le coup part une fois la décision prise ; les fenêtres (`Modale`) se masquent
+    piochées, carte face cachée (révéler ou consulter). Le coup part une fois la décision prise ; les fenêtres (`Modale`) se masquent
     pendant la réponse. Seule exception voulue : la confirmation d'un élément semi-bloqué
     (`confirmerRegle`, rouge gris) reste un `window.confirm` ;
   - une décision en attente semi-bloque « Joueur suivant » et « Passer » (rouge gris) ;
@@ -555,6 +555,7 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   - événements : section « Événements » de `implementabilite.md` ; Signal capté pose ses
     fragments sur les systèmes explorés, Rupture de l'espace-temps pose Akhenar, les failles,
     leurs Nefs et les trous de ver oméga tirés au sort, « Faire arriver le grand Khan » sur la
-    fiche de la faction neutre.
+    fiche de la faction neutre ; Recrudescence de la piraterie pose aussi ses pirates sur les
+    nébuleuses (texte de la carte modifié, `migrate-piraterie-neb.mjs`).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

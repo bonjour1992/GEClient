@@ -57,7 +57,7 @@ export function lireQuestion(question) {
     return { texte: texte.join(" "), choix };
 }
 
-const styleCarte = {
+export const styleCarte = {
     border: "2px solid #ef6c00",
     borderRadius: 8,
     backgroundColor: "#fff3e0",
@@ -224,7 +224,9 @@ export function decisionsDurables(ctx) {
     return (etatRecomposition(ctx) ? 1 : 0) +
         (ctx.etat.compteurs[`embuscade:${ctx.moi}`] ? 1 : 0) +
         (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0) +
-        (ctx.propositions?.cartes.length ? 1 : 0);
+        (ctx.propositions?.cartes.length ? 1 : 0) +
+        // (carte face cachée sur laquelle j'ai cliqué : la révéler ou la consulter)
+        (ctx.cadreCachee ? 1 : 0);
 }
 
 // Ouverture directe : dès qu'une décision durable de plus m'attend (des propositions
@@ -551,6 +553,7 @@ export function Decisions() {
         <div data-onglet-decision style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {decisions.map(d => <Ponctuelle key={d.id} decision={d} />)}
 
+            {ctx.cadreCachee}
             {joueur && <Propositions />}
             {joueur && <Recomposition />}
             {joueur && <Embuscade />}

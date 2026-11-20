@@ -556,10 +556,10 @@ export const SCRIPTS = [
         ],
     }),
 
-    evenement("evenement-recrudescence-piraterie", 459, 1794335055034, "Recrudescence de la piraterie", {
-        description: "La faction neutre « Pirate » sur la table ; 2 vaisseaux pirates sur chaque champ d'astéroïdes et chaque rupture gravitationnelle non adjacents à une case natale.",
+    evenement("evenement-recrudescence-piraterie", 459, 1795178126980, "Recrudescence de la piraterie", {
+        description: "La faction neutre « Pirate » sur la table ; 2 vaisseaux pirates sur chaque champ d'astéroïdes, chaque nébuleuse et chaque rupture gravitationnelle non adjacents à une case natale.",
         poses: [{ type: "neutral", id: 521, vers: "table" }],
-        anomalies: { unite: 407, n: 2, types: ["ast", "rift"], loinDesNatals: true },
+        anomalies: { unite: 407, n: 2, types: ["ast", "neb", "rift"], loinDesNatals: true },
     }),
 
     evenement("evenement-signal-capte", 485, 1795073444394, "Signal capté", {

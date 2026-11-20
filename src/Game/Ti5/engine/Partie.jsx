@@ -63,7 +63,7 @@ import { BoutonsScripts } from "./ActionsScript";
 import { PlateauGeneral, Des, actionsRecrutement } from "./PlateauGeneral";
 import { Journal } from "./Journal";
 import { Aide } from "./Aide";
-import { Decisions, OuvrirDecisions, decisionsDurables } from "./Decisions";
+import { Decisions, OuvrirDecisions, decisionsDurables, styleCarte } from "./Decisions";
 import { reglerDemande, confirmer } from "./demande";
 import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
@@ -179,6 +179,7 @@ export function Partie({ id }) {
 
     // Zone d'une carte face cachée sur laquelle on a cliqué
     const [cachee, setCachee] = useState(null);
+    const retourCachee = useRef(null);
 
     // Marqueur libre dont la fenêtre est ouverte (texte, couleur)
     const [libre, setLibre] = useState(null);
@@ -368,7 +369,31 @@ export function Partie({ id }) {
         oublierVotesLocaux: p.oublierVotesLocaux,
         // Fin de mon tour : ces actions, puis la main au joueur suivant (un seul coup)
         finirTour: (actions, commentaire) => finirTour(actions, commentaire),
-        ouvrirCachee: setCachee,
+        // Carte face cachée : « Révéler » ou « Consulter » se décide dans l'onglet Décision
+        // (cadreCachee ; l'onglet s'ouvre tout seul, et on revient d'où l'on venait en fermant)
+        ouvrirCachee: zone => {
+            if (onglet !== "decision") {
+                retourCachee.current = onglet;
+            }
+
+            setCachee(zone);
+            setOnglet("decision");
+        },
+        cadreCachee: cachee
+            ? (
+                <FicheCachee
+                    key={cachee}
+                    zone={cachee}
+                    fermer={() => {
+                        setCachee(null);
+
+                        if (onglet === "decision" && retourCachee.current && !decisions.length) {
+                            setOnglet(retourCachee.current);
+                        }
+                    }}
+                />
+            )
+            : null,
 
         // Fenêtre d'un marqueur libre (texte, couleur), et message privé du chat
         ouvrirLibre: setLibre,
@@ -1779,7 +1804,6 @@ export function Partie({ id }) {
                 </Plan>
 
                 {fiche && <Fiche id={fiche} fermer={() => setFiche(null)} />}
-                {cachee && <FicheCachee zone={cachee} fermer={() => setCachee(null)} />}
                 {libre && <FicheLibre id={libre} fermer={() => setLibre(null)} />}
                 {transaction && <Transaction fermer={() => setTransaction(false)} />}
                 <OuvrirDecisions />
@@ -1827,6 +1851,9 @@ function Bandeau({ couleurs: [fond, texte, bord], top = 8, fermer, children, ...
 //   Révéler    la retourne face visible pour tout le monde
 //   Consulter  la montre à soi seul ; la carte reste cachée, et la
 //              consultation est notée dans le journal
+//
+// Un cadre de l'onglet Décision (cadreCachee du contexte), qui s'ouvre
+// au clic ; « Fermer » ramène à l'onglet d'où l'on venait.
 // ============================================================
 
 function FicheCachee({ zone, fermer }) {
@@ -1856,9 +1883,9 @@ function FicheCachee({ zone, fermer }) {
     }
 
     return (
-        <Modale fermer={fermer}>
+        <div data-decision="carte-cachee" style={styleCarte}>
                 <div style={styleBarre}>
-                    <b style={{ fontSize: 18 }}>Carte face cachée</b>
+                    <b>Carte face cachée</b>
                     <span style={{ color: "#666" }}>{nomZone(zone, nomDe)}</span>
                     <button type="button" onClick={fermer} style={{ marginLeft: "auto" }}>Fermer</button>
                 </div>
@@ -1902,7 +1929,7 @@ function FicheCachee({ zone, fermer }) {
                         </div>
                     ))}
                 </div>
-        </Modale>
+        </div>
     );
 }
 
