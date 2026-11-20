@@ -14,7 +14,7 @@ export const systemSize = {
     height: 339 / 1.15306122
 }
 
-const anomaly = {
+export const anomaly = {
     ast: "Champ d'astéroïde",
     sup: "Supernova",
     rift: "Rupture gravitationelle",

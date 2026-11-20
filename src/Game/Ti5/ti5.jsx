@@ -22,6 +22,7 @@ import tokenHandler from "./token"
 import reglageHandler from "./reglage"
 import OutilParties from "./engine/Parties"
 import OutilScripts from "./engine/OutilScripts"
+import OutilStatSystemes from "./OutilStatSystemes"
 import { Nom } from "./Component/Nom"
 
 
@@ -58,7 +59,8 @@ for (const handler of Object.values(Handler)) {
 
 export const Tools = {
     "partie": { name: "Parties", component: OutilParties },
-    "scripts": { name: "Scripts de règles", component: OutilScripts }
+    "scripts": { name: "Scripts de règles", component: OutilScripts },
+    "stat-systemes": { name: "Statistiques des systèmes", component: OutilStatSystemes }
 }
 
 

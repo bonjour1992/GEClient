@@ -20,20 +20,20 @@ const objectType = {
     sat: "Sattelite",
     spe: "Special"
 }
-const ruineType = {
+export const ruineType = {
     normal: "Normal",
     mil: "Militaire",
     ancien: "Ancien",
     civ: "Civile",
     spa: "Spatiale"
 }
-const planetType = {
+export const planetType = {
     civ: "Civile",
     mil: "Militaire",
     sauv: "Sauvage"
 }
 
-const stationType = {
+export const stationType = {
     mil: "militaire",
     log: "logistique",
     scien: "scientifique",
