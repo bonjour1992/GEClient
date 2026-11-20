@@ -35,6 +35,43 @@ export const cleControle = (numero, k) => `controle:${numero}p${k}`;
 // qui l'a, même si elle n'y a aucune unité (règle « Contrôle »)
 export const CONTROLE_POSSESSION = 2;
 
+// Conflit de contrôle ouvert pour construire (et non pour prendre possession) :
+//   controle:<case>p<planète>:motif     identifiant de la structure à construire
+//   planète 99 (ESPACE_CONTROLE)        l'espace du système : structure spatiale
+//   controleAcquis:<case>p<planète>:<joueur> = rang de la phase : le contrôle est acquis pour
+//                                       construire ici jusqu'à la fin de la phase
+export const ESPACE_CONTROLE = 99;
+export const rangDePhase = etat => etat.tour * 100 + Number(/^(\d+)/.exec(etat.phase || "")?.[1] ?? 0);
+export const cleAcquis = (numero, k, joueur) => `controleAcquis:${numero}p${k}:${joueur}`;
+export const controleAcquis = (etat, numero, k, joueur) =>
+    rangDePhase(etat) > 0 && Number(etat.compteurs[cleAcquis(numero, k, joueur)]) === rangDePhase(etat);
+
+// Faut-il un conflit de contrôle pour cette action ? Règle générale de tout test de contrôle du jeu :
+// s'opposer est un choix et des effets peuvent changer le contrôle, donc c'est un conflit (onglet
+// Conflit) qui tranche — sauf dans deux cas, réglés d'office :
+//   - aucune autre faction n'est en mesure de participer au contrôle ;
+//   - il n'y a que des unités neutres, et le contrôle de la faction qui agit dépasse le leur.
+//   unites      unités du lieu (planète : celles de la planète ; espace : celles de l'espace, non embarquées)
+//   possesseur  joueur qui possède la planète (2 de contrôle, même sans unité), ou null
+//   toutes      toutes mes unités comptent (« le contrôle de vos unités »), pas seulement les militaires
+// -> { conflit, mien, neutre } (contrôle de l'acteur et des neutres)
+// (une unité dont le contenu n'est pas encore connu est comptée comme militaire)
+export function evaluerControle({ unites, moi, possesseur = null, aScript, toutes = false }) {
+
+    const militaire = c => contenuEnCache(c.ref.id)?.mot_cle?.includes("mil") !== false;
+    const somme = liste => liste.reduce((total, c) => total + controleDe(contenuEnCache(c.ref.id), campDe(c), aScript), 0);
+
+    const mien = somme(unites.filter(c => campDe(c) === moi && (toutes || militaire(c)))) +
+        (possesseur === moi ? CONTROLE_POSSESSION : 0);
+
+    const autres = unites.filter(c => campDe(c) !== moi && militaire(c));
+    const neutre = somme(autres.filter(c => campDe(c) === NEUTRE));
+
+    const autreFaction = autres.some(c => campDe(c) !== NEUTRE) || (!!possesseur && possesseur !== moi);
+
+    return { conflit: autreFaction || (neutre > 0 && mien <= neutre), mien, neutre };
+}
+
 // Joueur qui possède la planète (sa carte est dans ses éléments actifs), ou null
 export const possesseurActuel = (etat, idPlanete) =>
     Number(/^joueur:(\d+):actif$/.exec(carteDePlanete(etat, idPlanete)?.zone || "")?.[1]) || null;
@@ -202,8 +239,13 @@ function Controle({ conflit }) {
     const idPlanete = Number(systeme?.elems?.[k]?.id) || -1;
     const planete = useElement(idPlanete);
 
-    // Station : contrôle spatial (les unités de l'espace du système comptent)
-    const spatial = planete?.type === "sat";
+    // Motif du conflit : une construction (la structure à construire), sinon une prise de possession
+    const motif = Number(etat.compteurs[cle + ":motif"]) || 0;
+    const construction = motif > 0;
+    const espace = k === ESPACE_CONTROLE;
+
+    // Station, ou espace du système : contrôle spatial (les unités de l'espace du système comptent)
+    const spatial = espace || planete?.type === "sat";
 
     // Unités militaires de la planète (ou de l'espace, pour une station), par camp : 1 de contrôle chacune
     const unites = (index.parZone.get(spatial ? "hex:" + numero : zonePlanete) || [])
@@ -212,7 +254,9 @@ function Controle({ conflit }) {
 
     const parCamp = new Map();
 
-    for (const c of unites.filter(x => contenus[x.ref.id]?.mot_cle?.includes("mil"))) {
+    // (construction : toutes les unités du demandeur comptent, pas seulement les militaires —
+    //  « le contrôle de vos unités », règle du mot-clé contrôle ; l'opposition reste militaire)
+    for (const c of unites.filter(x => contenus[x.ref.id]?.mot_cle?.includes("mil") || (construction && campDe(x) === demandeur))) {
         parCamp.set(campDe(c), [...(parCamp.get(campDe(c)) || []), c]);
     }
 
@@ -244,11 +288,12 @@ function Controle({ conflit }) {
     const idInfanterie = liens.find(lien => typeUnite(mesUnites[lien.id]) === "inf")?.id ?? null;
 
     const nomCamp = camp => nomDuCamp(nomDe, camp);
-    const nomPlanete = planete?.name || "la planète";
+    const nomPlanete = espace ? "l'espace du système" : (planete?.name || "la planète");
+    const nomStructure = construction ? nomElement(search, { type: "unit", id: motif }) : "";
     const estDemandeur = !!joueur && moi === demandeur;
 
     // Clôt le conflit : le compteur et les choix sont remis à zéro
-    const cloture = () => [cle, cle + ":agent", ...camps.map(c => cleChoix(c.camp))]
+    const cloture = () => [cle, cle + ":agent", cle + ":motif", ...camps.map(c => cleChoix(c.camp))]
         .filter(id => etat.compteurs[id])
         .map(id => ({ type: "compteur", id, valeur: 0 }));
 
@@ -287,8 +332,11 @@ function Controle({ conflit }) {
         >
             <div>
                 {pastille(demandeur)}
-                <b>{nomCamp(demandeur)}</b> veut prendre possession de <b>{nomPlanete}</b> ({nomCase(numero)}).
-                {spatial && " Station : contrôle spatial, les unités militaires de l'espace du système comptent."}
+                {construction
+                    ? <span data-motif="construction"><b>{nomCamp(demandeur)}</b> veut le contrôle de <b>{nomPlanete}</b> ({nomCase(numero)}) pour la construction de <b>{nomStructure}</b>.</span>
+                    : <span><b>{nomCamp(demandeur)}</b> veut prendre possession de <b>{nomPlanete}</b> ({nomCase(numero)}).</span>}
+                {spatial && !espace && " Station : contrôle spatial, les unités militaires de l'espace du système comptent."}
+                {espace && " Contrôle spatial : les vaisseaux et les structures spatiales comptent."}
             </div>
 
             {camps.map(c => {
@@ -338,11 +386,44 @@ function Controle({ conflit }) {
             <div data-bilan-controle style={{ marginTop: 4 }}>
                 Contrôle : {pour} pour, {contre} contre.{" "}
                 {pour > contre
-                    ? <b style={{ color: "#1b5e20" }}>La prise de possession est possible.</b>
+                    ? <b style={{ color: "#1b5e20" }}>{construction ? "La construction est possible." : "La prise de possession est possible."}</b>
                     : <b style={{ color: "#b71c1c" }}>Impossible : il faut plus de contrôle pour que contre.</b>}
             </div>
 
-            {estDemandeur && (
+            {estDemandeur && construction && (
+                <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
+                    <BoutonRegle
+                        data-action="controle-acquis-construction"
+                        nom={`Contrôle de ${nomPlanete} pour la construction de ${nomStructure} (${pour} pour, ${contre} contre)`}
+                        obstacles={[
+                            ...camps.filter(c => !choixDe(c.camp)).map(c => `${nomCamp(c.camp)} n'a pas encore choisi (compté comme une abstention)`),
+                            pour <= contre && `contrôle insuffisant : ${pour} pour, ${contre} contre`,
+                        ]}
+                        faire={commentaire => {
+                            envoyer(
+                                [...cloture(), { type: "compteur", id: cleAcquis(numero, k, demandeur), valeur: rangDePhase(etat) }],
+                                commentaire
+                            );
+                            aviser(`Contrôle acquis : glissez de nouveau ${nomStructure} (${nomCase(numero)}), la construction y est permise jusqu'à la fin de la phase.`);
+                        }}
+                        title="Le conflit est clos ; vous pourrez construire ici jusqu'à la fin de la phase, en glissant de nouveau la structure"
+                        style={{ padding: "3px 14px" }}
+                    >
+                        Contrôle acquis : construire
+                    </BoutonRegle>
+
+                    <button
+                        type="button"
+                        data-action="renoncer-controle"
+                        style={styleMini}
+                        onClick={() => envoyer(cloture(), `Construction de ${nomStructure} abandonnée (${nomCase(numero)})`)}
+                    >
+                        Renoncer
+                    </button>
+                </div>
+            )}
+
+            {estDemandeur && !construction && (
                 <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, marginTop: 6 }}>
                     <BoutonRegle
                         data-action="prendre-possession-controle"
@@ -373,7 +454,7 @@ function Controle({ conflit }) {
 
             {!estDemandeur && (
                 <div style={{ marginTop: 4, color: "#555" }}>
-                    Les camps présents choisissent ; {nomCamp(demandeur)} prend ensuite possession, ou renonce.
+                    Les camps présents choisissent ; {nomCamp(demandeur)} {construction ? "construit ensuite" : "prend ensuite possession"}, ou renonce.
                 </div>
             )}
         </div>

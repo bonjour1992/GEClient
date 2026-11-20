@@ -7,6 +7,7 @@ import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise, controleDe } from "./effets";
 import { demander } from "./demande";
+import { cleControle, controlesEnCours, controleAcquis, possesseurActuel, evaluerControle, ESPACE_CONTROLE } from "./Controle";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -2163,7 +2164,7 @@ export function Plan({ children, style }) {
 
     const {
         etat, index, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
-        search, aScript, factionDe, connaissance, aviser,
+        search, aScript, factionDe, connaissance, aviser, allerA,
     } = useEngine();
 
     const appui = useRef(null);
@@ -2383,20 +2384,47 @@ export function Plan({ children, style }) {
             const mesUnitesIci = unitesIci.filter(c => campDe(c) === moi);
             const present = mesUnitesIci.length > 0 || possede;
             const monControle = controle(mesUnitesIci) + possession;
-            const controleAdverse = controle(unitesIci.filter(c => campDe(c) !== moi && aMot(contenuEnCache(c.ref.id), "mil")));
-            const detail = possession ? `${monControle}, dont 2 pour la possession` : String(monControle);
+
+            // D'autres peuvent s'opposer à mon contrôle (unités militaires d'une autre faction, autre
+            // faction qui possède la planète, ou neutres que mon contrôle ne dépasse pas) : c'est un
+            // conflit de contrôle (onglet Conflit) qui tranche, pas un calcul d'office — règle
+            // générale, evaluerControle (Controle.jsx). Une fois le contrôle acquis, il vaut pour ce
+            // lieu jusqu'à la fin de la phase.
+            const numeroDuLieu = Number(caseDuLieu);
+            const rangDuLieu = surPlanete ? Number(rangPlanete) : ESPACE_CONTROLE;
+            const possesseur = surPlanete ? possesseurActuel(etat, Number(elemsDuSysteme[Number(rangPlanete)]?.id)) : null;
+            const conteste = evaluerControle({ unites: unitesIci, moi, possesseur, aScript, toutes: true }).conflit;
+            const acquis = controleAcquis(etat, numeroDuLieu, rangDuLieu, moi);
+
+            if (construites.length > 0 && present && conteste && !acquis) {
+
+                const cle = cleControle(numeroDuLieu, rangDuLieu);
+
+                if (!controlesEnCours(etat).some(c => c.cle === cle)) {
+                    envoyer([
+                        // (les choix d'un conflit précédent au même endroit sont oubliés)
+                        ...Object.keys(etat.compteurs).filter(id => id.startsWith(cle + ":") && etat.compteurs[id])
+                            .map(id => ({ type: "compteur", id, valeur: 0 })),
+                        { type: "compteur", id: cle + ":motif", valeur: construites[0].id },
+                        { type: "compteur", id: cle, valeur: moi },
+                    ], `Construction de ${noms(construites)} (${nomCase(numeroDuLieu)}) — conflit de contrôle ouvert`);
+                }
+
+                aviser?.(`D'autres camps peuvent s'opposer à votre contrôle de ${lieu} : un conflit de contrôle est ouvert (onglet Conflit). ` +
+                    "Une fois le contrôle acquis, glissez de nouveau la structure.");
+                allerA?.("combat");
+
+                return null;
+            }
 
             obstacles.push(
                 construites.length > 0 && !present &&
                     (surPlanete
                         ? "vous n'avez ni unité sur cette planète ni sa possession : vous ne la contrôlez pas"
                         : "vous n'avez ni unité dans ce système ni la possession d'une de ses planètes : vous ne le contrôlez pas"),
-                // (le contrôle est exigé dans tous les cas : il doit dépasser l'opposition, même nulle)
-                construites.length > 0 && present && controleAdverse === 0 && monControle === 0 &&
+                // (le contrôle est exigé dans tous les cas : sans opposition possible, il doit encore être positif)
+                construites.length > 0 && present && !acquis && monControle === 0 &&
                     "votre contrôle sur ce système est nul : la possession d'une planète ne compte pas dans l'espace, il y faut un vaisseau ou une structure spatiale",
-                construites.length > 0 && present && controleAdverse > 0 && monControle <= controleAdverse &&
-                    `votre contrôle (${detail}) ne dépasse pas celui des unités militaires des autres camps (${controleAdverse}) : ` +
-                    `vous ne contrôlez ${lieu} que si elles ne s'y opposent pas`,
                 construites.length < unites.length &&
                     `ce n'est pas une structure : ${noms(unites.filter(ref => !estStructure(ref.id)))}`,
                 doubles.length > 0 && `cette structure est déjà construite ici : ${noms(doubles)}`,

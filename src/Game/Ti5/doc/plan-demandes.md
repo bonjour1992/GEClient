@@ -597,5 +597,14 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
 - ☑ Conflits de contrôle et possession (2026-11-20, `Controle.jsx`, `Espace.jsx`) : la faction qui
   possède la planète entre dans le conflit avec 2 de contrôle, même sans unité (pas pour une station :
   contrôle spatial) ; « Prendre possession » ouvre le conflit dès qu'une autre faction possède la planète.
+- ☑ Règle générale des tests de contrôle (2026-11-20, précisée par Loïc ; `evaluerControle`,
+  `Controle.jsx`) : s'opposer est un choix et des effets peuvent changer le contrôle, donc un conflit de
+  contrôle s'ouvre — sauf si aucune autre faction ne peut participer, ou s'il n'y a que des neutres que
+  l'on dépasse. Appliquée à la prise de possession (planète, station) et à la construction : un conflit
+  « pour la construction de … » s'ouvre (`controle:<case>p<k>:motif`, k = 99 pour l'espace) ; « Contrôle
+  acquis : construire » le clôt et permet de construire là jusqu'à la fin de la phase
+  (`controleAcquis:<case>p<k>:<joueur>`), en glissant de nouveau la structure. Reste à faire : les
+  cartes qui demandent le contrôle sans le vérifier (Complexe de guerre, Exploitation des tempêtes,
+  Mandat… : `demandes-ti5/scripts-controle.mjs`).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.

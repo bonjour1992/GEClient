@@ -35,7 +35,7 @@ import { BoutonsScripts } from "./ActionsScript";
 import { choisirRemplacants } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
-    cleAccord, accordsEnCours, campsAConsulter, possesseurActuel,
+    cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle,
 } from "./Controle";
 import { pub } from "../../../lib/fetch";
 
@@ -1338,9 +1338,15 @@ function FicheSysteme({ numero, id, fermer }) {
         // Une autre faction possède la planète : sa possession vaut 2 de contrôle, qu'elle peut
         // opposer même sans unité (règle « Contrôle »)
         const possesseur = possesseurActuel(etat, idPlanete);
-        const possedee = !!possesseur && possesseur !== moi;
 
-        if (!opposants && !possedee) {
+        // Règle générale (evaluerControle, Controle.jsx) : pas de conflit si aucune autre faction ne
+        // peut participer, ou s'il n'y a que des neutres que mon contrôle dépasse
+        const { conflit } = evaluerControle({
+            unites: (index.parZone.get(zonePlanete(k)) || []).filter(c => !c.cache && c.ref?.type === "unit"),
+            moi, possesseur, aScript,
+        });
+
+        if (!conflit) {
             prendre(idPlanete, k, commentaire);
             return;
         }
@@ -1389,9 +1395,13 @@ function FicheSysteme({ numero, id, fermer }) {
     // un conflit de contrôle spatial s'ouvre d'abord (Controle.jsx).
     function demanderStation(idPlanete, k, planete, commentaire) {
 
-        const opposants = (index.parZone.get(zoneEspace) || []).some(c => !c.sur && estMilitaireAdverse(c));
+        // (règle générale : evaluerControle — contrôle spatial, les unités de l'espace du système)
+        const { conflit } = evaluerControle({
+            unites: (index.parZone.get(zoneEspace) || []).filter(c => !c.cache && !c.sur && c.ref?.type === "unit"),
+            moi, aScript,
+        });
 
-        if (!opposants) {
+        if (!conflit) {
             prendre(idPlanete, k, commentaire, poseSurStation(k, planete, idPlanete).actions, true, true);
             return;
         }
