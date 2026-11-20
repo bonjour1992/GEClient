@@ -2154,7 +2154,7 @@ export const SCRIPTS = [
         }),
 
     action("frontiere-ouverte-rompue", "Promesse", 384, 1795076851729, "Frontière ouverte : rompue", "carte",
-        "Si la faction bloque un de vos mouvements : la promesse retourne à la réserve et cette faction gagne 1 infamie.", {
+        "Si la faction bloque un de vos mouvements : la promesse retourne à la réserve et cette faction gagne 1 infamie. Proposé d'office (onglet Décision) quand son blocage arrête un de vos vaisseaux ; le bouton de la carte reste pour les autres cas.", {
             special: promesseRompue,
             libelle: ROMPUE,
         }),
@@ -2941,7 +2941,7 @@ export const SCRIPTS = [
         }),
 
     action("redevance-de-protection-rendre", "Promesse", 226, 1795072921263, "Redevance de protection : rendre", "carte",
-        "Ravitaillement, à la place du paiement — ou si vous engagez ou bloquez les Mentaks : la promesse est dépensée (retour à la réserve).", {
+        "Ravitaillement, à la place du paiement — ou si vous engagez ou bloquez les Mentaks : la promesse est dépensée (retour à la réserve). Dépensée d'office quand votre blocage porte contre eux (déplacement ou test de blocage d'une action) ; le bouton reste pour un engagement.", {
             special: atelier => ({
                 actions: rendrePromesse(atelier),
                 avis: "Redevance de protection : promesse dépensée, de retour à la réserve.",

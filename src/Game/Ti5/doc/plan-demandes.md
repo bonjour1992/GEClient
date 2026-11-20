@@ -637,5 +637,6 @@ unité par unité au bombardement et au débarquement (`regleBlocage.js`, `Bloca
 Test des règles pures : `node E:\GE\demandes-ti5\test-regles-controle-blocage.mjs`.
 Étendu le même soir aux canons spatiaux, à la production (unité qui produit), aux réparations et aux
 livraisons commerciales ; le test se fait là où est l'unité qui agit (espace ou planète).
-Restent à faire sur demande : les effets déclenchés par un blocage (Frontière ouverte, Redevance de
-protection, dettes) ; la coalition ; mitose et fusion ; une planète ou une station qui produit.
+Effets déclenchés par un blocage qui porte (`effetsBlocage.js`) : Redevance de protection dépensée
+d'office, Frontière ouverte et fin des dettes proposées au joueur bloqué (onglet Décision).
+Restent à faire sur demande : la coalition ; mitose et fusion ; une planète ou une station qui produit.

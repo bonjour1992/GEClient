@@ -5,6 +5,8 @@ import { MARQUEUR, NEUTRE, campDe } from "./miseEnPlace";
 import { estHyperlane, hyperlaneRelie } from "./hyperlane";
 import { controleDe, estDeplacementFurtif } from "./effets";
 import { contenuEnCache } from "./sync";
+import { redevancesRompues, frontieresOuvertes, dettesAnnulables, estCommerceNonMilitaire } from "./effetsBlocage";
+import { demander } from "./demande";
 
 // ============================================================
 // BLOCAGE D'UN DÉPLACEMENT, CASE PAR CASE (onglet Conflit)
@@ -411,8 +413,61 @@ export function Passage({ passage }) {
             : [];
     }
 
+    // Effets déclenchés par un blocage par unités qui a porté (effetsBlocage.js) : Redevance de
+    // protection (automatique), Frontière ouverte et fin des dettes (questions au joueur bloqué,
+    // onglet Décision). -> { actions, textes }
+    async function effetsDuBlocage() {
+
+        if (stade !== "unites" || aBloquer <= 0 || !arretes.length) {
+            return { actions: [], textes: [] };
+        }
+
+        const bloqueurs = adverses.filter(a => choixDe(a.camp) === 3).map(a => a.camp);
+        const actions = [];
+        const textes = [];
+
+        for (const r of redevancesRompues({ etat, bloqueurs, bloque: mover, aScript })) {
+            actions.push(...r.actions);
+            textes.push(`${nomCamp(r.camp)} bloque ${nomCamp(mover)} : sa Redevance de protection est dépensée`);
+        }
+
+        for (const f of frontieresOuvertes({ etat, bloqueurs, bloque: mover, aScript })) {
+
+            if (await demander({
+                titre: "Frontière ouverte",
+                texte: `${nomCamp(f.camp)} bloque votre mouvement ${nomCase(numero)}. Dépenser la promesse « Frontière ouverte » ? ${nomCamp(f.camp)} gagne 1 infamie.`,
+                choix: [{ valeur: 1, libelle: `Dépenser la promesse (${nomCamp(f.camp)} : +1 infamie)` }, { valeur: 2, libelle: "La garder" }],
+                renoncer: false,
+            }) === 1) {
+                actions.push(...f.actions);
+                textes.push(`Frontière ouverte dépensée : ${nomCamp(f.camp)} gagne 1 infamie`);
+            }
+        }
+
+        // (dettes : seulement si un vaisseau de commerce non militaire est arrêté)
+        if (arretes.some(v => estCommerceNonMilitaire(carte.contenus[v.ref.id]))) {
+
+            for (const d of dettesAnnulables({ etat, bloqueurs, bloque: mover })) {
+
+                if (await demander({
+                    titre: "Vaisseau de commerce bloqué",
+                    texte: `${nomCamp(d.camp)} bloque votre vaisseau de commerce ${nomCase(numero)} : vous pouvez mettre fin à vos dettes envers cette faction (${d.dettes.length} dette(s), ${d.montant} au total).`,
+                    choix: [{ valeur: 1, libelle: `Mettre fin à mes dettes envers ${nomCamp(d.camp)}` }, { valeur: 2, libelle: "Les garder" }],
+                    renoncer: false,
+                }) === 1) {
+                    actions.push(...d.actions);
+                    textes.push(`dettes envers ${nomCamp(d.camp)} annulées (${d.montant})`);
+                }
+            }
+        }
+
+        return { actions, textes };
+    }
+
     // Applique le stade en cours : arrête ceux qui s'arrêtent, fait suivre les autres
-    function appliquer(commentaire) {
+    async function appliquer(commentaire) {
+
+        const effets = await effetsDuBlocage();
 
         // Après un blocage par unités, s'il reste un jet à faire, les
         // vaisseaux qui passent restent sur la case le temps du jet
@@ -438,7 +493,12 @@ export function Passage({ passage }) {
             ...(encoreIci
                 ? continuent.map(v => ({ type: "marquer", c: v.id, marque: acquis, valeur: "c" + numero }))
                 : avancer(continuent)),
-        ], commentaire);
+            ...effets.actions,
+        ], [commentaire, ...effets.textes].join(" — ").slice(0, 300));
+
+        if (effets.textes.length) {
+            aviser(effets.textes.join(" ; ") + ".");
+        }
 
         if (arretes.length) {
             aviser(`${arretes.length} vaisseau(x) arrêté(s) ${nomCase(numero)}.` +

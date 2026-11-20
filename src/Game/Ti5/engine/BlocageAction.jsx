@@ -7,6 +7,7 @@ import {
     blocagesActionEnCours, choixDe, peutEtreBloque, bilanBlocage,
 } from "./regleBlocage";
 import { RapportDeForce } from "./Controle";
+import { redevancesRompues } from "./effetsBlocage";
 
 // ============================================================
 // TEST DE BLOCAGE D'UNE ACTION (onglet Conflit)
@@ -159,14 +160,22 @@ function BlocageAction({ test }) {
         const engagees = bilan.engagees;
         const miennesEngagees = engagees.filter(c => campDe(c) === acteur).map(c => c.id);
 
+        // Redevance de protection (effetsBlocage.js) : un camp qui a bloqué la faction dont il tient
+        // la promesse la perd — si le blocage a porté (un surplus à égaliser)
+        const redevances = net <= 0 ? [] : redevancesRompues({
+            etat, bloqueurs: [...new Set(bilan.bloquent.map(campDe))], bloque: acteur, aScript,
+        });
+
         await envoyer([
             ...engagees.map(c => ({ type: "marquer", c: c.id, marque: MARQUE_BLOQUEE, valeur: rang })),
             ...effacement(),
             { type: "compteur", id: cleSubi(numero, acteur, k), valeur: rang },
+            ...redevances.flatMap(r => r.actions),
         ], [
             commentaire,
             `${engagees.length} unité(s) engagée(s) pour la phase`,
             impossible && `${nomCamp(acteur)} ne peut pas égaliser : toutes ses unités sont bloquées`,
+            ...redevances.map(r => `${nomCamp(r.camp)} bloque ${nomCamp(acteur)} : sa Redevance de protection est dépensée`),
         ].filter(Boolean).join(" — ").slice(0, 300));
 
         conclureAttente(cle, { engagees: miennesEngagees, attendu: true });
