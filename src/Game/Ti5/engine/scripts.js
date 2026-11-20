@@ -521,6 +521,7 @@ export const SCRIPTS = [
     //          un dé par planète possédée par un joueur, hors système natal ;
     //          sur le seuil ou plus, 1 dé « renforts » d'unités neutres sur la planète
     // explores : vrai — un fragment de relique du sac sur chaque système exploré
+    //          (système de la carte absent du plateau de départ)
     // secondaires : { centre, autour, n, jeton } — le système `centre` entouré de n
     //          systèmes `autour` dans les systèmes secondaires, avec leurs unités
     //          natives, et un jeton sur n systèmes de la carte tirés au sort
@@ -583,13 +584,12 @@ export const SCRIPTS = [
             { type: "unit", id: 854 },
             { type: "relique", id: 853 },
         ],
-        // Un fragment de relique, tiré du sac, sur chaque système exploré (marque « explore »
-        // de sa tuile, posée par l'exploration depuis le 20 novembre 2026)
+        // Un fragment de relique, tiré du sac, sur chaque système exploré : ceux de la carte
+        // qui ne sont pas sur le plateau de départ (paramètres de départ, miseEnPlace.js)
         explores: true,
-        reste: "un fragment de relique sur les systèmes explorés avant le 20 novembre 2026 (leur tuile n'est pas marquée)",
     }),
 
-    evenement("evenement-grand-khan", 553, 1795072921305, "Grand Khan", {
+    evenement("evenement-grand-khan", 553, 1795178766098, "Grand Khan", {
         description: "La faction neutre « Invasion du grand Khan » au tour T+1 ; à ce tour, le bouton « Faire arriver le grand Khan » de sa fiche pose ses unités.",
         poses: [{ type: "neutral", id: 526, vers: { evenement: 1 } }],
     }),
@@ -604,9 +604,9 @@ export const SCRIPTS = [
         carte: { type: "neutral", id: 526 },
         ecritLe: 1795076851742,
         nom: "Arrivée du grand Khan",
-        description: "Phase d'événement du tour où la faction neutre est sur la case Événement : un système de la carte est tiré au sort (dé du serveur), 1 Palais du Khan et 25 Frégates du Khan y sont posés. Une fois par partie.",
+        description: "Phase d'événement du tour où la faction neutre est sur la case Événement : un système non spécial de la carte (ni natal, ni système d'événement ou spécial) est tiré au sort (dé du serveur), 1 Palais du Khan et 25 Frégates du Khan y sont posés. Une fois par partie.",
         bouton: "arrivee",
-        libelle: "Faire arriver le grand Khan (système tiré au sort)",
+        libelle: "Faire arriver le grand Khan (système non spécial tiré au sort)",
         compteur: "evenement:553:arrivee",
         unites: [{ id: 525, n: 1 }, { id: 524, n: 25 }],
     },

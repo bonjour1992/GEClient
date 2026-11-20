@@ -821,5 +821,37 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
     etat.joueurActif = ordre[0]?.userId ?? null;
 
+    // --------------------------------------------------------
+    // PARAMÈTRES DE DÉPART
+    //
+    // Gardés tels quels pour toute la partie : fenêtre « Infos de la
+    // partie » (Partie.jsx), et systèmes explorés — ceux de la carte qui
+    // ne sont ni sur une case de départ, ni sur une case natale
+    // (systemesExplores).
+    //   systemes : { <case>: id du système posé au lancement }
+    //   natales  : cases natales du plateau (les joueurs y posent leur système)
+    // --------------------------------------------------------
+
+    etat.depart = {
+        date: Date.now(),
+        plateau: partie.plateau,
+        nomPlateau: contenuPlateau.name || "",
+        anneaux: plateau.anneaux,
+        joueurs: partie.joueurs.map(j => ({ userId: j.userId, nom: j.nom, faction: j.faction })),
+        natales: plateau.type.map((type, index) => (type === "natal" ? index : -1)).filter(index => index >= 0),
+        systemes: Object.fromEntries(Object.values(etat.composants)
+            .filter(c => c.ref?.type === "system" && /^hex:\d+$/.test(c.zone))
+            .map(c => [c.zone.slice(4), c.ref.id])),
+        tuilesEnPioche: composantsDeZone(etat, PIOCHE_TUILES).length,
+    };
+
     return etat;
 }
+
+// Systèmes explorés depuis le lancement : tuiles de la carte (hors systèmes
+// secondaires, numérotés à partir de 1000) posées sur une case qui n'avait
+// pas de système au départ et qui n'est pas une case natale.
+export const systemesExplores = etat => Object.values(etat?.composants || {})
+    .filter(c => !c.cache && c.ref?.type === "system" && /^hex:\d{1,3}$/.test(c.zone || "") &&
+        etat.depart?.systemes?.[c.zone.slice(4)] === undefined &&
+        !(etat.depart?.natales || []).includes(Number(c.zone.slice(4))));

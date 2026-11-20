@@ -7,6 +7,7 @@ import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
 import {
     RESERVE_TUILES, PIOCHE_TUILES, SAC_FRAGMENTS, exemplaires, LIBRE, COULEUR_LIBRE, MOTIF_LOGISTICIEN,
+    systemesExplores, horsReserveCommune,
 } from "./miseEnPlace";
 import { premiereFace } from "./etat";
 import { lotsDeDes, desDeLaReponse } from "./effets";
@@ -172,16 +173,26 @@ function ReparationIllimitee({ c, fermer }) {
 //
 // n systèmes différents de la carte (hors systèmes secondaires), tirés
 // par les dés du serveur dans un coup à part, commenté `motif`.
+//   nonSpeciaux : seuls les systèmes communs sont tirés — ni natal, ni
+//                 système d'événement ou spécial (horsReserveCommune)
 // -> les numéros de case, dans l'ordre du tirage ; [] s'il n'y a aucun
 //    système ; null si les dés n'ont pas pu être lus
 // ------------------------------------------------------------
 
-async function tirerSystemes({ etat, envoyer, moi }, n, motif) {
+async function tirerSystemes({ etat, envoyer, moi }, n, motif, { nonSpeciaux = false } = {}) {
 
-    const cases = Object.values(etat.composants)
-        .filter(x => !x.cache && x.ref?.type === "system" && /^hex:\d+$/.test(x.zone || "") && !estSecondaire(x.zone.slice(4)))
-        .map(x => Number(x.zone.slice(4)))
-        .sort((a, b) => a - b);
+    const tuiles = Object.values(etat.composants)
+        .filter(x => !x.cache && x.ref?.type === "system" && /^hex:\d+$/.test(x.zone || "") && !estSecondaire(x.zone.slice(4)));
+
+    const cases = [];
+
+    for (const tuile of tuiles) {
+        if (!nonSpeciaux || !horsReserveCommune(await chargerContenu(tuile.ref.id))) {
+            cases.push(Number(tuile.zone.slice(4)));
+        }
+    }
+
+    cases.sort((a, b) => a - b);
 
     const voulu = Math.min(n, cases.length);
 
@@ -249,7 +260,8 @@ function ArriveeNeutre({ c, script, fermer }) {
 
     async function faire(commentaire) {
 
-        const tirage = await tirerSystemes({ etat, envoyer, moi }, 1, `${nom} : tirage du système d'arrivée`);
+        // (un système non spécial : ni natal, ni système d'événement ou spécial)
+        const tirage = await tirerSystemes({ etat, envoyer, moi }, 1, `${nom} : tirage du système d'arrivée`, { nonSpeciaux: true });
 
         if (!tirage?.length) {
             signaler(`${nom} : le système d'arrivée n'a pas pu être tiré. Rien n'est posé : réessayez.`);
@@ -587,11 +599,8 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
         ] : [];
 
         // Systèmes explorés (Signal capté) : un fragment de relique, tiré du sac, sur chaque
-        // système qui porte la marque « explore » (posée par l'exploration, Espace.jsx)
-        const explores = script.explores
-            ? Object.values(etat.composants).filter(x => x.ref?.type === "system" && /^hex:\d+$/.test(x.zone || "") &&
-                x.marques?.explore !== undefined && x.marques?.explore !== null)
-            : [];
+        // système de la carte absent du plateau de départ (paramètres de départ, miseEnPlace.js)
+        const explores = script.explores ? systemesExplores(etat) : [];
 
         const fragments = explores.slice(0, (index.parZone.get(SAC_FRAGMENTS) || []).length);
 

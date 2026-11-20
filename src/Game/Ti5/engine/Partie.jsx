@@ -65,6 +65,7 @@ import { Journal } from "./Journal";
 import { Aide } from "./Aide";
 import { Decisions, OuvrirDecisions, decisionsDurables, styleCarte } from "./Decisions";
 import { reglerDemande, confirmer } from "./demande";
+import { InfosPartie } from "./InfosPartie";
 import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
@@ -180,6 +181,9 @@ export function Partie({ id }) {
     // Zone d'une carte face cachée sur laquelle on a cliqué
     const [cachee, setCachee] = useState(null);
     const retourCachee = useRef(null);
+
+    // Fenêtre « Infos de la partie » (paramètres de départ, suppression)
+    const [infos, setInfos] = useState(false);
 
     // Marqueur libre dont la fenêtre est ouverte (texte, couleur)
     const [libre, setLibre] = useState(null);
@@ -1217,9 +1221,10 @@ export function Partie({ id }) {
         ]);
     }
 
+    // (gestion de la partie, pas un choix du jeu : une fenêtre, pas une décision)
     async function supprimer() {
 
-        if (!await confirmer("Supprimer la partie", `Supprimer définitivement la partie « ${partie.nom} » ?`, "Supprimer définitivement")) {
+        if (!window.confirm(`Supprimer définitivement la partie « ${partie.nom} » ?`)) {
             return;
         }
 
@@ -1418,9 +1423,10 @@ export function Partie({ id }) {
 
                     {!estJoueur && <i>Vous regardez cette partie.</i>}
 
-                    {partie.createur === moi && !enteteReduit && (
-                        <button type="button" onClick={supprimer} style={{ marginLeft: "auto" }}>
-                            Supprimer la partie
+                    {/* Infos de la partie : paramètres de départ, et « Supprimer la partie » pour son créateur */}
+                    {!enteteReduit && (
+                        <button type="button" data-action="infos-partie" onClick={() => setInfos(true)} style={{ marginLeft: "auto" }}>
+                            Infos de la partie
                         </button>
                     )}
                 </div>
@@ -1806,6 +1812,7 @@ export function Partie({ id }) {
                 {fiche && <Fiche id={fiche} fermer={() => setFiche(null)} />}
                 {libre && <FicheLibre id={libre} fermer={() => setLibre(null)} />}
                 {transaction && <Transaction fermer={() => setTransaction(false)} />}
+                {infos && <InfosPartie fermer={() => setInfos(false)} supprimer={partie.createur === moi ? supprimer : null} />}
                 <OuvrirDecisions />
             </div>
         </Engine>

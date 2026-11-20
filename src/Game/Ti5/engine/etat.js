@@ -103,6 +103,7 @@ export function nouvelEtat() {
         composants: {},
         compteurs: {},
         references: {},      // éléments GE utiles à l'affichage (déroulé)
+        depart: null,        // paramètres de départ, écrits au lancement (miseEnPlace.js) et jamais modifiés
         secrets: {},         // choix scellés : { <joueur>: { faveurs: [ids] } }, jamais envoyés aux autres
         prochainId: 1,
         prochainOrdre: 1,

@@ -427,17 +427,15 @@ export function Espace() {
         // Habilité Présence de cache : un fragment de relique tiré du sac sur le système exploré
         const cache = aScript(moi, "presence-de-cache") && (index.parZone.get(SAC_FRAGMENTS) || []).length > 0;
 
-        // (marque « explore » de la tuile : le tour où le système a été exploré —
-        // l'événement Signal capté pose un fragment de relique sur ces systèmes)
-        envoyer(
-            [
-                { type: "marquer", c: tuile.id, marque: "explore", valeur: etat.tour },
-                ...natives,
-                cache && { type: "piocher", de: SAC_FRAGMENTS, vers: zone },
-            ],
-            [natives.length && "Unités natives du système exploré", cache && "Présence de cache : un fragment de relique"]
-                .filter(Boolean).join(" — ") || "Système exploré"
-        );
+        // (un système exploré se reconnaît à sa case, absente du plateau de départ :
+        // systemesExplores, miseEnPlace.js)
+        if (natives.length || cache) {
+            envoyer(
+                [...natives, cache && { type: "piocher", de: SAC_FRAGMENTS, vers: zone }],
+                [natives.length && "Unités natives du système exploré", cache && "Présence de cache : un fragment de relique"]
+                    .filter(Boolean).join(" — ")
+            );
+        }
     }
 
     // Clic sur une case (hors pion) : en mode « modifier la carte », la

@@ -557,5 +557,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
     leurs Nefs et les trous de ver oméga tirés au sort, « Faire arriver le grand Khan » sur la
     fiche de la faction neutre ; Recrudescence de la piraterie pose aussi ses pirates sur les
     nébuleuses (texte de la carte modifié, `migrate-piraterie-neb.mjs`).
+- ☑ Paramètres de départ et infos de la partie (2026-11-20) : le lancement garde dans
+  `etat.depart` le plateau, les joueurs, les cases natales et les systèmes posés
+  (`miseEnPlace.js`, côté serveur) ; bouton « Infos de la partie » de l'en-tête (`InfosPartie.jsx`,
+  une fenêtre : gestion, pas décision), qui porte « Supprimer la partie ». Signal capté en
+  déduit les systèmes explorés (`systemesExplores`) : plus de marque `explore`. Le grand Khan
+  arrive dans un système non spécial (texte de la carte modifié, `migrate-khan-non-special.mjs`).
+  Une partie lancée avant n'a pas ces paramètres.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
