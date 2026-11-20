@@ -27,6 +27,9 @@ import {
     NEUTRE,
     aMot,
     MOTIF_LOGISTICIEN,
+    FRAGMENTS,
+    actionsPoints,
+    REFORGE_PORTAIL,
 } from "./miseEnPlace";
 import { joueurDeMain, estPioche } from "./etat";
 import { distanceIndex, distanceBande } from "../hexSpirale";
@@ -2336,9 +2339,21 @@ export function Plan({ children, style }) {
                 presentes.some(c => sorte(c.ref.id) === sorte(ref.id)) ||
                 construites.findIndex(x => sorte(x.id) === sorte(ref.id)) !== i);
 
+            // Structure qui se reforge au lieu de se construire (Portail de repli, script
+            // portail-de-repli-reforger) : pas de logisticien ni de coût — un scientifique
+            // et ses fragments de relique sont dépensés, et elle rapporte ses points.
+            const reforge = ref => ref.id === REFORGE_PORTAIL.unite && aScript(moi, "portail-de-repli-reforger");
+            const reforgees = construites.filter(reforge);
+            const baties = construites.filter(ref => !reforge(ref));
+
+            const scientifique = reforgees.length ? agentDisponible({ index, moi, search }, "scientifique") : null;
+            const voulus = reforgees.length * REFORGE_PORTAIL.fragments;
+            const fragments = (index.parZone.get(`joueur:${moi}:fragments`) || [])
+                .filter(f => !f.ref && f.jeton === FRAGMENTS[REFORGE_PORTAIL.type][0]).slice(0, voulus);
+
             const surPlanete = estPlanete(zone);
             const activee = ici.some(c => !c.ref && c.jeton === ACTIVATION && !c.marques?.ruine);
-            const besoin = construites.length > 0 && (!surPlanete || !activee);
+            const besoin = baties.length > 0 && (!surPlanete || !activee);
             const depense = surPlanete && presentes.length > 0;
             const logisticien = besoin ? agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN) : null;
 
@@ -2348,9 +2363,20 @@ export function Plan({ children, style }) {
                 doubles.length > 0 && `cette structure est déjà construite ici : ${noms(doubles)}`,
                 besoin && !logisticien &&
                     `vous n'avez pas de logisticien disponible (aucun ne sera ${depense ? "dépensé" : "usé"})`,
+                reforgees.length > 0 && !scientifique &&
+                    `${noms(reforgees)} se reforge : vous n'avez pas de scientifique disponible (aucun ne sera dépensé)`,
+                reforgees.length > 0 && fragments.length < voulus &&
+                    `${noms(reforgees)} se reforge : il faut ${voulus} fragments spatiaux, vous en avez ${fragments.length} (seuls ceux-là seront dépensés)`,
             );
 
             apres = async () => [
+                // (Reforger : le scientifique est dépensé — Bio stimulant propose de l'user à la place —,
+                //  les fragments aussi, et les points sont marqués)
+                ...(!reforgees.length ? [] : [
+                    ...await depenserAgent({ aScript, moi, etat }, scientifique, `le scientifique (${noms(reforgees)} : Reforger)`),
+                    ...fragments.map(f => ({ type: "supprimer", c: f.id })),
+                    ...actionsPoints(etat, moi, reforgees.length * REFORGE_PORTAIL.points),
+                ]),
                 ...(!logisticien ? [] : (depense
                     // (dépensé : le script Bio stimulant propose de l'user à la place)
                     ? await depenserAgent({ aScript, moi, etat }, logisticien, "le logisticien (la planète porte déjà une structure)")

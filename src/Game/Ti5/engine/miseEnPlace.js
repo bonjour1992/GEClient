@@ -131,6 +131,11 @@ export const FRAGMENTS = {
 
 export const estFragment = c => !c?.ref && Object.values(FRAGMENTS).some(f => f[0] === c?.jeton);
 
+// Portail de repli (#155) : à la phase de construction il se reforge au lieu de se construire —
+// un scientifique dépensé et ces fragments, pour ces points (Interaction.jsx, payerProduction ;
+// script portail-de-repli-reforger)
+export const REFORGE_PORTAIL = { unite: 155, type: "spa", fragments: 2, points: 1 };
+
 // Marqueur libre : jeton portant un texte (marques.texte, 120 caractères au
 // plus) et une couleur (marques.couleur), posé où l'on veut
 export const LIBRE = "libre";

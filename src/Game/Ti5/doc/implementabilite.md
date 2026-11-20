@@ -23,13 +23,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
 | Habilités | 63 | 40 | 8 | 15 | 33 | 6 | 16 |
-| Unités | 113 | 73 | 40 | 0 | 26 | 3 | 42 |
+| Unités | 113 | 73 | 40 | 0 | 25 | 4 | 42 |
 | Planètes | 30 | 25 | 2 | 3 | 15 | 8 | 12 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **378** | **278** | **74** | **26** | **159** | **61** | **121** |
+| **Total** | **378** | **278** | **74** | **26** | **158** | **62** | **121** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -232,7 +232,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 152 | Raideur (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Conflit : raid (combat « Raid », 5 ×2), frappe en premier, furtif. | — |
 | 153 | Arche de l'ombre (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Conflit : raid (combat « Raid », 5 ×4), frappe en premier, furtif. | — |
 | 154 | Camp de travail (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Fiche de l'unité, production : « Camp de travail : +4 ressources » — le camp est usé, un esclave dépensé. Conflit, « Terminer le combat » : détruit, 2 esclaves de son propriétaire sont dépensés et le destructeur pose 2 de ses infanteries sur la planète. | Le choix des esclaves revient au destructeur : l'outil prend ceux des autres factions d'abord, à corriger à la main. |
-| 155 | Portail de repli (Kabal de l’ombre) | **partiel** | nouveau bouton | Fiche de l'unité posée, construction (Reforger au lieu de Construire) : « Reforger le portail » — un scientifique et 2 fragments spatiaux dépensés, +1 point, une seule fois par portail. | Ravitaillement automatique : replace ici les « Raideur » détruits au tour précédent. (moyenne) |
+| 155 | Portail de repli (Kabal de l’ombre) | **partiel** | bouton existant modifié | Phase de construction, case « Construction » : glisser le portail vers un système le reforge au lieu de le construire — aucun logisticien utilisé, un scientifique et 2 fragments spatiaux dépensés, +1 point. | Ravitaillement automatique : replace ici les « Raideur » détruits au tour précédent. (moyenne) |
 | 162 | Quetzalcoalt (Volée argentée) | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Point de fin de combat avec trois vaisseaux militaires engagés. |
 | 163 | Destroyeur (Volée argentée) | **oui** | nouveau bouton | Fiche de l'unité, combat spatial : « Deux attaques (1 influence) » — l'écran de combat lui donne deux fois plus de dés ce tour. | — |
 | 164 | Complexe de guerre (Volée argentée) | **partiel** | automatique | Ravitaillement automatique : un destroyeur de la faction est posé dans le système du complexe. Conflit, combat spatial : vos destroyers ont +1 (non cumulable) dans son système et les systèmes adjacents. | Contrôle du système non vérifié. |

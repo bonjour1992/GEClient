@@ -579,8 +579,12 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   une décision durable par faction, de la phase de mandat à la fin du vote
   (`agenda:<tour>:<ligne>:designe:<joueur>`) ; pastilles à la couleur de la faction à côté de la loi.
   Le vote et l'application de la loi restent à la main.
-- ☑ Portail de repli (2026-11-20) : bouton « Reforger le portail » sur la fiche de l'unité posée, à la
-  phase de construction (un scientifique et 2 fragments spatiaux dépensés, +1 point). Règle à clarifier
-  avec Loïc (Reforger au lieu de Construire).
+- ☑ Portail de repli et Reforger (2026-11-20, choix de Loïc) : le mot-clé Reforger vaut à la phase de
+  science sauf si la carte donne une autre phase, une seule fois par élément, et l'élément reforgé compte
+  comme une relique forgée. Le Portail de repli, structure spatiale (mots-clés struc + space), se reforge
+  à la phase de construction au lieu de se construire (`migrate-portail-reforger.mjs`). Outil : en mode
+  « Construction », glisser le portail vers un système dépense un scientifique et 2 fragments spatiaux
+  et donne 1 point, sans logisticien (`payerProduction`, `REFORGE_PORTAIL`). Relique et Canon ancien :
+  bouton masqué une fois reforgés. Non essayé à l'écran (le glisser n'a pas pu être simulé).
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
