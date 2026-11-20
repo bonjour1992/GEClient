@@ -1,8 +1,14 @@
 import { useSearch, useUser } from "./store"
 
 
-// Surchargeable en dev via VITE_API_URL (ex. .env.development.local)
-const server = import.meta.env.VITE_API_URL || "http://xorg-compagny.ddns.net:8500/"
+// Adresse de l'API. Surchargeable en dev via VITE_API_URL (ex. .env.development.local).
+// Une page servie en HTTPS n'a pas le droit d'appeler une API en HTTP : elle passe alors par
+// Apache, qui relaie /ge-api/ vers geserver sur la même adresse et avec le même certificat
+// (conf/extra/httpd-ge.conf de XAMPP). En HTTP, l'appel reste direct, sur le port 8500.
+const server = import.meta.env.VITE_API_URL ||
+    (typeof window !== "undefined" && window.location.protocol === "https:"
+        ? "/ge-api/"
+        : "http://xorg-compagny.ddns.net:8500/")
 
 
 export async function fetchAPI(url, method, body, content) {
