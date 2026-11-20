@@ -590,6 +590,8 @@ technologie ou mécanique ; une technologie sans ligne se fait comme le tableau 
   règle « Contrôle » #1033). `payerProduction` demande une confirmation si je n'ai rien sur place, ou si
   mon contrôle ne dépasse pas celui des unités militaires des autres camps (l'opposition se déclare :
   l'outil ne la connaît pas). Planète : les unités qui s'y trouvent, plus 2 pour sa possession (indiqué
-  par Loïc ; absent du texte de la règle #1033, à compléter). Système : vaisseaux et structures spatiales.
+  par Loïc ; ajouté à la règle #1033 et au mot-clé #con, `migrate-possession-controle.mjs`). Système :
+  vaisseaux et structures spatiales. Les conflits de contrôle (`Controle.jsx`) ne comptent pas encore
+  ces 2 de possession.
 - geserver à redémarrer : `etat.js` (réinitialisation des votes) et `miseEnPlace.js`
   (lancement : événement caché, planètes natales) tournent côté serveur.
