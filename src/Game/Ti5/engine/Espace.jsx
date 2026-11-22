@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useDeplacement } from "./Deplacement";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
-import { PlateauView, BandeView } from "../plateauVue";
+import { PlateauView, BandeView, centreCase, dimensionsPlateau } from "../plateauVue";
 import { systemSize } from "../systeme";
 import { nombreCases, anneauDeIndex, distanceIndex, COLONNES_BANDE } from "../hexSpirale";
 import { techType } from "../ti5Const";
@@ -312,6 +312,49 @@ export function Espace() {
         return resultat;
 
     }, [exploration, anneauxAffiches, signature, mesCases]);
+
+    // Cases sans système : affichées seulement en modifiant la carte, à la mise en place (tour 0,
+    // pour y glisser son système natal) et quand on peut les explorer. Sinon la carte ne montre que
+    // les systèmes posés, et son cadre est taillé sur eux.
+    const toutesLesCases = edition || etat.tour === 0;
+
+    const caseAffichee = i => toutesLesCases || !!tuiles[i] || explorables.has(i);
+
+    // Rectangle des cases affichées dans le plateau ({ x, y, largeur, hauteur }), ou null : tout le plateau
+    const DEMI_LARGEUR = 60;
+    const DEMI_HAUTEUR = Math.sqrt(3) * 30;
+    const MARGE = 6;
+
+    const cadrage = useMemo(() => {
+
+        if (toutesLesCases) {
+            return null;
+        }
+
+        const cases = [
+            ...(signature ? signature.split(";") : []).map(m => Number(m.split(":")[0])).filter(i => !estSecondaire(i)),
+            ...explorables,
+        ];
+
+        if (!cases.length) {
+            return null;
+        }
+
+        const centres = cases.map(i => centreCase(i, anneauxAffiches));
+        const x = Math.max(0, Math.min(...centres.map(c => c.x)) - DEMI_LARGEUR - MARGE);
+        const y = Math.max(0, Math.min(...centres.map(c => c.y)) - DEMI_HAUTEUR - MARGE);
+
+        // (pas au-delà du plateau)
+        const plateau = dimensionsPlateau(anneauxAffiches);
+
+        return {
+            x,
+            y,
+            largeur: Math.min(plateau.largeur, Math.max(...centres.map(c => c.x)) + DEMI_LARGEUR + MARGE) - x,
+            hauteur: Math.min(plateau.hauteur, Math.max(...centres.map(c => c.y)) + DEMI_HAUTEUR + MARGE) - y,
+        };
+
+    }, [toutesLesCases, signature, explorables, anneauxAffiches, DEMI_HAUTEUR]);
 
     // --------------------------------------------------------
     // MODIFICATION DE LA CARTE
@@ -715,6 +758,11 @@ export function Espace() {
             return { visibility: "hidden" };
         }
 
+        // Case sans système (hors modification de la carte, mise en place et exploration) : masquée
+        if (!caseAffichee(i)) {
+            return { visibility: "hidden" };
+        }
+
         return undefined;
     }
 
@@ -749,7 +797,7 @@ export function Espace() {
 
     // Cadre commun à la carte et à la bande des systèmes secondaires : clic, poignées du
     // déplacement assisté, emplacements des pions (vue : le plateau ; fleches : le trajet)
-    const cadreCarte = (vue, fleches) => (
+    const cadreCarte = (vue, fleches, recadrage = null) => (
         <div
             onClick={onClick}
             {...poigneesDeplacement}
@@ -758,9 +806,17 @@ export function Espace() {
             style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
         >
             <Emplacements stylePions={stylePions} extra={etendard} petit>
-                <div style={{ position: "relative", width: "max-content" }}>
-                    {vue}
-                    {fleches}
+                {/* (recadrage : seul le rectangle des cases affichées est montré) */}
+                <div
+                    data-cadrage={recadrage ? "systemes" : "plateau"}
+                    style={recadrage
+                        ? { position: "relative", width: recadrage.largeur, height: recadrage.hauteur, overflow: "hidden" }
+                        : { position: "relative", width: "max-content" }}
+                >
+                    <div style={{ position: "relative", width: "max-content", ...(recadrage ? { left: -recadrage.x, top: -recadrage.y } : {}) }}>
+                        {vue}
+                        {fleches}
+                    </div>
                 </div>
             </Emplacements>
         </div>
@@ -859,7 +915,8 @@ export function Espace() {
                         styleCase={styleCase}
                     />,
                     // Trajet du déplacement assisté, en flèches
-                    deplacement.fleches(false, anneauxAffiches)
+                    deplacement.fleches(false, anneauxAffiches),
+                    cadrage
                 )}
             </Defilable>
 

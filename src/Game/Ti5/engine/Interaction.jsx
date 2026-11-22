@@ -3039,6 +3039,17 @@ export function Plan({ children, style }) {
             return;
         }
 
+        // Plateau de vote : les agents (ou le cube d'un mercenaire) s'y posent à la phase de vote ;
+        // à une autre phase, c'est semi-bloqué. (Les cartes qui donnent des voix à une autre phase,
+        // comme Argumentation véhémente à la prévote, ont leur propre bouton dans l'onglet Vote.)
+        if (/^joueur:\d+:vote:/.test(zone) && etat.tour > 0 && !/phase de vote/i.test(etat.phase || "") &&
+            aDeplacer.some(id => etat.composants[id]?.ref?.type === "agent" ||
+                (!etat.composants[id]?.ref && etat.composants[id]?.jeton === CUBE_MERCENAIRE)) &&
+            !confirmerRegle("Poser un agent sur le plateau de vote",
+                ["ce n'est pas la phase de vote : les agents se posent sur le plateau à la phase de vote"])) {
+            return;
+        }
+
         // Infanterie infectée (#1014) : « ne peut jamais être déplacée » — une fois sur la carte,
         // elle n'en bouge plus (règle semi-bloquante : la confirmation laisse faire)
         if (aScript(moi, "infanterie-infectee") &&

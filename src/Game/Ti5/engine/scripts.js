@@ -1045,7 +1045,7 @@ export const SCRIPTS = [
     revenu("new-eden", "planet", 469, 1795190407285, "New eden", "ravit",
         "Produit 2 Letani sur la planète.", { cree: { unite: 423, n: 2, ou: "ici" } }),
 
-    revenu("asteroide-d-or", "planet", 31, 1795190407294, "Astéroïde d'or", "production",
+    revenu("asteroide-d-or", "planet", 31, 1795379384431, "Astéroïde d'or", "production",
         "Génère 3 commerce pour qui le possède.", { gains: { commerce: 3 } }),
 
     revenu("sr-42", "planet", 33, 1795379301954, "SR-42", "science",
@@ -1053,6 +1053,13 @@ export const SCRIPTS = [
 
     revenu("sr-124", "planet", 47, 1795379301960, "SR-124", "science",
         "Génère 2 de recherche sociale (doublée par sa spécialité) pour qui la possède.", { recherche: [["soc", 2]] }),
+
+    revenu("sr-217", "planet", 1263, 0, "SR-217", "science",
+        "Génère 2 de recherche génétique (doublée par sa spécialité) pour qui la possède.", { recherche: [["gen", 2]] }),
+
+    regle("sr-217-agent", "planet", 1263, 0, "SR-217 : agent usé au lieu d'être dépensé", "modifie",
+        "Tout bouton qui dépense un agent (trêve, déplacement depuis un système activé, relique, Ctrl + clic sur un agent…)",
+        "Quand vous possédez SR-217 et qu'elle n'est pas activée, un de vos agents (hors mercenaire) qui doit être dépensé peut être usé à la place : l'onglet Décision le propose ; la station est activée et 3 ressources payées."),
 
     // Stations scientifiques de Jol-Nar (une par technologie de base) et Centre d'espionnage industriel
     revenu("sr-301", "planet", 1252, 1795379301966, "SR-301", "science",
@@ -1071,7 +1078,7 @@ export const SCRIPTS = [
         "Génère 4 de recherche pour qui le possède, à cocher sur une technologie qu'une autre faction possède et que vous n'avez pas (le choix de la technologie est à vous).",
         { recherche: [["", 4]], note: "sur une technologie qu'une autre faction possède et que vous n'avez pas" }),
 
-    revenu("station-de-combat", "planet", 56, 1795349737887, "Station de combat", "science",
+    revenu("station-de-combat", "planet", 56, 1795379428234, "Station de combat", "science",
         "Génère 3 de recherche militaire pour qui la possède.", { recherche: [["mil", 3]] }),
 
     // --------------------------------------------------------
@@ -1357,7 +1364,7 @@ export const SCRIPTS = [
             libelle: "Restaurer le canon (dépense un scientifique et 2 fragments militaires) : +2 points",
         }),
 
-    action("station-de-combat-reparer", "planet", 56, 1795349737887, "Station de combat : réparer", "planete",
+    action("station-de-combat-reparer", "planet", 56, 1795379428234, "Station de combat : réparer", "planete",
         "Production : use un logisticien, vos unités du système sont réparées, 1 ressource par dégât.", {
             phase: "production",
             possede: true,

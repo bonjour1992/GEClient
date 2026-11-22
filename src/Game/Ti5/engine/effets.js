@@ -8,7 +8,7 @@
 // écran peut s'en servir.
 // ============================================================
 
-import { campDe } from "./miseEnPlace.js";
+import { campDe, ACTIVATION } from "./miseEnPlace.js";
 import { demander } from "./demande.js";
 
 // ------------------------------------------------------------
@@ -158,9 +158,42 @@ export function controleDe(contenu, possesseur, aScript) {
 export const estDeplacementFurtif = (contenu, possesseur, aScript) =>
     /#deplfurtif\b/i.test(contenu?.habilite || "") || !!aScript?.(possesseur, "camouflage");
 
-// Actions qui dépensent (détruisent) un de mes agents. Bio stimulant : une
-// décision (onglet Décision) propose de l'utiliser et de payer 2 ressources
-// à la place — la fonction est donc asynchrone.
+// SR-217 (station de recherche) : quand je la possède (sa carte dans mes éléments actifs) et
+// qu'elle n'est pas activée, un agent à dépenser peut être usé à la place — la station est
+// activée et 3 ressources payées. -> zone de la station sur la carte, ou null
+export const SR_217 = 1263;
+
+async function stationSR217({ aScript, moi, etat }) {
+
+    if (!aScript(moi, "sr-217-agent")) {
+        return null;
+    }
+
+    const composants = Object.values(etat.composants);
+
+    if (!composants.some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === SR_217 && c.zone === `joueur:${moi}:actif`)) {
+        return null;
+    }
+
+    // (import à la demande : les outils Node qui lisent ce fichier n'ont pas le cache des éléments)
+    const { contenuEnCache } = await import("./sync.js");
+    const rang = tuile => (contenuEnCache(tuile.ref.id)?.elems || []).findIndex(lien => Number(lien?.id) === SR_217);
+    const tuile = composants.find(c => c.ref?.type === "system" && /^hex:\d+$/.test(c.zone || "") && rang(c) >= 0);
+
+    if (!tuile) {
+        return null;
+    }
+
+    const zone = `${tuile.zone}:planete:${rang(tuile)}`;
+    const activee = composants.some(c => !c.ref && c.jeton === ACTIVATION && c.zone === zone && !c.marques?.ruine);
+
+    return activee ? null : zone;
+}
+
+// Actions qui dépensent (détruisent) un de mes agents. Bio stimulant et SR-217 : une
+// décision (onglet Décision) propose de l'utiliser à la place — 2 ressources (Bio
+// stimulant), ou la station activée et 3 ressources (SR-217) ; la fonction est donc
+// asynchrone.
 //   nom : celui de l'agent, pour la question
 export async function depenserAgent({ aScript, moi, etat }, agent, nom = "cet agent") {
 
@@ -169,23 +202,33 @@ export async function depenserAgent({ aScript, moi, etat }, agent, nom = "cet ag
     }
 
     const ressources = Number(etat.compteurs[`joueur:${moi}:res`]) || 0;
+    const estAgent = agent.ref?.type === "agent";
 
-    const epargne = agent.ref?.type === "agent" && aScript(moi, "bio-stimulant") && (await demander({
-        titre: "Bio stimulant",
+    const bio = estAgent && aScript(moi, "bio-stimulant");
+    const station = estAgent ? await stationSR217({ aScript, moi, etat }) : null;
+
+    const choix = (bio || station) ? await demander({
+        titre: bio && station ? "Agent à dépenser" : (bio ? "Bio stimulant" : "SR-217"),
         texte: `${nom} doit être détruit.`,
         choix: [
-            { valeur: 1, libelle: `L'utiliser et payer 2 ressources à la place (vous en avez ${ressources})` },
+            bio && { valeur: 1, libelle: `L'utiliser et payer 2 ressources à la place (Bio stimulant ; vous en avez ${ressources})` },
+            station && { valeur: 3, libelle: `L'utiliser : activer SR-217 et payer 3 ressources à la place (vous en avez ${ressources})` },
             { valeur: 2, libelle: "Le détruire" },
-        ],
+        ].filter(Boolean),
         renoncer: false,
-    })) === 1;
+    }) : 2;
 
-    return epargne
-        ? [
-            { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` },
-            { type: "compteur", id: `joueur:${moi}:res`, delta: -2 },
-        ]
-        : [{ type: "supprimer", c: agent.id }];
+    const user = { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` };
+
+    if (choix === 1) {
+        return [user, { type: "compteur", id: `joueur:${moi}:res`, delta: -2 }];
+    }
+
+    if (choix === 3 && station) {
+        return [user, { type: "compteur", id: `joueur:${moi}:res`, delta: -3 }, { type: "creer", jeton: ACTIVATION, zone: station }];
+    }
+
+    return [{ type: "supprimer", c: agent.id }];
 }
 
 // Bombe bactériologique : quand un de ses dégâts (affichés en vert) détruit
