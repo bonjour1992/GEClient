@@ -1002,8 +1002,20 @@ Poser un agent sur une colonne grisée est semi-bloqué (`Interaction.jsx`).
 révélés) : un mandat va aux éléments actifs de la faction élue (sans voix :
 `horsJeu`), un traité sur `general:table` si l'option en tête hors Contre a
 plus de voix que Contre (sinon `horsJeu`) ; une loi ou une directive appelle
-son script de résolution (`RESOLUTIONS`, vide pour l'instant), sans script le
-bouton est indisponible (« résolution manuelle nécessaire »). La résolution est
+son script de résolution (`RESOLUTIONS`, `engine/resolutionsAgendas.js`), sans
+script le bouton est indisponible (« résolution manuelle nécessaire »). Un
+script (id de l'agenda → `{ script, resoudre }`) rend `{ code, texte, actions,
+obstacles }` : ses actions (l'effet) partent au clic avec le compteur de
+résolution — une directive est retirée du jeu, une loi adoptée va sur la
+table ; une résolution par script n'a pas d'« annuler » (l'effet est déjà
+appliqué). Le script est déclaré dans `scripts.js` (sorte « regle », type
+`Agenda`, `resolution: true`) : désactivable dans l'outil « Scripts de règles ».
+Faits : Pardon, Sévérité, Mercenaire, Révocation, Artefact retrouvé, Révolution,
+Subvention, Ostracisme, Vote au conseil 1 à 5. Un traité ou une loi en jeu
+(`general:table`) a son effet par `aScript` (type `Agenda` : la carte est sur
+la table, ou dans les éléments actifs du joueur pour un mandat) : Impôt et
+Écologie punitive au ravitaillement automatique (`Entretien.jsx`), Sévérité au
+décompte. La résolution est
 notée dans le compteur `agenda:<tour>:<ligne>:resolution` (> 0 : joueur ; −1 :
 hors jeu ; −2 : table) et la carte n'est déplacée qu'en quittant la phase de
 vote (`changerPhase`, `Partie.jsx`) : le numéro d'une loi est son rang dans

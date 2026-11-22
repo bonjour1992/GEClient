@@ -559,6 +559,17 @@ export function Partie({ id }) {
                     (!!script.feuille && technologies[userId]?.connaissance?.[script.feuille] !== undefined);
             }
 
+            // Agenda : un script de résolution (resolutionsAgendas.js) est en service dès qu'il
+            // n'est pas désactivé ; l'effet d'une loi ou d'un traité vaut pour toutes les factions
+            // tant que la carte est sur la table, celui d'un mandat pour qui l'a (éléments actifs)
+            if (script.carte.type === "Agenda") {
+
+                const estElle = c => !c.cache && c.ref?.type === "Agenda" && [script.carte.id, ...(script.aussi || [])].includes(c.ref.id);
+
+                return !!script.resolution || (index.parZone.get("general:table") || []).some(estElle) ||
+                    (index.parZone.get(`joueur:${userId}:actif`) || []).some(estElle);
+            }
+
             // Mercenaire, promesse : le joueur a la carte (éléments actifs, promesse à durée)
             if (["mercenaire", "Promesse"].includes(script.carte.type)) {
 

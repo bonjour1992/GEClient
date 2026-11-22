@@ -7,8 +7,9 @@ import { COLONNES_VOTE, COULEURS_COLONNES, joueurDeColonne } from "./voteCouleur
 import { AnnexesDeLoi, useOptionsDesLois } from "./Agendas";
 import { contenuEnCache } from "./sync";
 import {
-    estValide, optionsDeLigne, resolutionAutomatique, RESOLUTIONS, cleResolution, VERS_TABLE,
+    estValide, optionsDeLigne, resolutionAutomatique, cleResolution, VERS_TABLE,
 } from "./optionsVote";
+import { RESOLUTIONS } from "./resolutionsAgendas";
 import { SOUTIEN_POLITIQUE } from "./Transaction";
 import { estPhaseDeVote } from "./etat";
 
@@ -145,7 +146,7 @@ const LIGNES_PLATEAU = 6;
 // ------------------------------------------------------------
 function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
 
-    const { etat, index, envoyer, joueur, search, nomDe } = useEngine();
+    const { etat, index, envoyer, joueur, search, nomDe, aScript, moi } = useEngine();
 
     if (!carte || carte.cache || !carte.ref) {
         return null;
@@ -156,13 +157,19 @@ function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
     const nomLoi = nomElement(search, carte.ref);
     const contenu = contenuEnCache(carte.ref.id);
 
-    // Déjà résolue : où ira la carte
+    // Script de résolution de la carte — une loi ou une directive (resolutionsAgendas.js) —, s'il est en service
+    const scriptCarte = RESOLUTIONS[carte.ref.id] && aScript(moi, RESOLUTIONS[carte.ref.id].script)
+        ? RESOLUTIONS[carte.ref.id]
+        : null;
+
+    // Déjà résolue : où ira la carte (résolue par son script : ses effets sont appliqués, rien à annuler ici)
     if (code) {
         return (
             <div data-resolution={loi} data-resolution-vers={code} style={{ fontSize: 12, color: "#1b5e20" }}>
-                ✔ Résolue : la carte va {code > 0 ? `dans les éléments actifs de ${nomDe(code)}` : (code === VERS_TABLE ? "sur la table" : "hors jeu")}
+                ✔ Résolue{scriptCarte ? " (effets appliqués)" : ""} :
+                {" "}la carte va {code > 0 ? `dans les éléments actifs de ${nomDe(code)}` : (code === VERS_TABLE ? "sur la table" : "hors jeu")}
                 {" "}à la fin de la phase de vote.
-                {joueur && (
+                {joueur && !scriptCarte && (
                     <button
                         type="button"
                         data-action="resolution-annuler"
@@ -181,7 +188,7 @@ function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
     }
 
     const auto = resolutionAutomatique({ contenu, options, votes, loi, joueurs });
-    const script = !auto && RESOLUTIONS[carte.ref.id];
+    const script = !auto && scriptCarte;
 
     if (!auto && !script) {
         return (
@@ -213,17 +220,20 @@ function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
         );
     }
 
-    const resultat = script({ etat, index, joueurs, votes, loi, carte });
+    // Script de résolution : l'effet tout de suite, la carte à sa place à la fin de la phase de vote
+    const resultat = script.resoudre({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom: ref => nomElement(search, ref) });
 
     return (
         <BoutonRegle
             data-action="resoudre-loi"
-            nom={resultat.message || `Loi ${loi} « ${nomLoi} » résolue`}
-            obstacles={resultat.obstacles || []}
-            faire={commentaire => envoyer(resultat.actions, commentaire)}
+            data-resolution-script={script.script}
+            nom={`Loi ${loi} « ${nomLoi} » : ${resultat.texte}`}
+            obstacles={(resultat.obstacles || []).filter(Boolean)}
+            faire={commentaire => envoyer([...resultat.actions, { type: "compteur", id: cle, valeur: resultat.code }], commentaire)}
+            title="L'effet est appliqué tout de suite ; la carte change de place à la fin de la phase de vote"
             style={{ alignSelf: "flex-start" }}
         >
-            Résoudre
+            Résoudre : {resultat.texte}
         </BoutonRegle>
     );
 }

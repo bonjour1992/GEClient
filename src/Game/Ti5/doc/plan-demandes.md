@@ -672,3 +672,9 @@ Station automatisée de défense, Centre d'espionnage industriel, stations scien
 livraison d'une flotte (`Achats.jsx`, `Livraison.jsx`) ; textes « Jeu en ligne » des 19 phases réécrits en
 listes d'actions (`demandes-ti5/migrate-enligne-listes.mjs`) et mode d'emploi de l'onglet Aide refait en sections
 courtes (`Aide.jsx`).
+
+Scripts d'agendas (2026-11-22) : implémentabilité des 58 agendas évaluée (tableau Agendas de
+`implementabilite.md`) ; « Résoudre » fait l'effet des directives Pardon, Mercenaire, Révocation, Artefact retrouvé,
+Révolution, Subvention, Ostracisme, Votes au conseil 1 à 5 et place la loi Sévérité (`resolutionsAgendas.js`) ;
+traités Impôt et Écologie punitive au ravitaillement automatique. Structures spatiales : déjà comptées au contrôle
+de l'espace (`test-controle-structure-spatiale.mjs`). À préciser : Construire un monument (quelles voix comptent).

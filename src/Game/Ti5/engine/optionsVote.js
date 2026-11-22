@@ -31,8 +31,8 @@ import { techType } from "../ti5Const.js";
 //              aucune voix, retiré du jeu
 //   traité  -> sur la table si l'option en tête (hors Contre) a plus de
 //              voix que Contre ; sinon retiré du jeu
-//   loi, directive -> leur script de résolution (RESOLUTIONS) ; sans
-//              script, résolution manuelle
+//   loi, directive -> leur script de résolution (RESOLUTIONS,
+//              resolutionsAgendas.js) ; sans script, résolution manuelle
 // ============================================================
 
 export const CONTRE = 0;
@@ -48,10 +48,7 @@ const NOMBRES = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6 }
 const texteDe = contenu => String(contenu?.usage || "")
     .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
 
-// Scripts de résolution des lois et directives : id de l'agenda ->
-//   ({ etat, index, joueurs, votes, loi, carte }) -> { actions, message }
-// (aucun pour l'instant : résolution manuelle)
-export const RESOLUTIONS = {};
+// (scripts de résolution des lois et directives : resolutionsAgendas.js)
 
 // Compteur de la résolution d'une loi : où va la carte à la fin de la phase de vote
 //   > 0 : éléments actifs de ce joueur ; -1 : retirée du jeu ; -2 : sur la table

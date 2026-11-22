@@ -3828,7 +3828,42 @@ export const SCRIPTS = [
             },
             libelle: "Vote du conclave : nombre de votes",
         }),
+
+    // ----- Agendas -----
+    // Lois et directives : script de résolution (resolutionsAgendas.js), bouton « Résoudre » de
+    // l'onglet Vote, sous le décompte de la loi (sans script : « résolution manuelle nécessaire »).
+    // Traités et lois en jeu : leur effet vaut tant que la carte est sur la table (aScript).
+    resolution("pardon", 305, 1795076851682, "Pardon",
+        "Pour l'emporte : le marqueur d'infamie de chaque faction revient à 0. La carte est retirée du jeu."),
+    resolution("severite", 306, 1795076851683, "Sévérité",
+        "Pour l'emporte : la loi va sur la table, sinon elle est retirée du jeu. En jeu, le décompte des points retire 1 point de plus par infamie."),
+    resolution("mercenaire-directive", 312, 1795076851688, "Mercenaire",
+        "La faction élue gagne le mercenaire révélé à côté de la loi (ses éléments actifs). La carte est retirée du jeu."),
+    resolution("revocation", 313, 1795076851689, "Révocation",
+        "La loi ou le traité élu (options 1 à N : les agendas de la table, dans leur ordre) est retiré du jeu ; Contre : rien. La carte est retirée du jeu."),
+    resolution("artefact-retrouve", 316, 1795076851691, "Artefact retrouvé",
+        "La faction élue gagne la relique révélée à côté de la loi (ses éléments actifs, sans les points de fabrication). La carte est retirée du jeu."),
+    resolution("revolution", 340, 1795076851710, "Révolution",
+        "Pour l'emporte : toutes les lois, traités et mandats en jeu sont retirés du jeu, y compris ceux résolus plus tôt dans le tour. La carte est retirée du jeu."),
+    resolution("subvention", 556, 1795076851743, "Subvention",
+        "Chaque faction gagne 1 commerce par voix reçue dans sa colonne. La carte est retirée du jeu."),
+    resolution("ostracisme", 748, 1795068635381, "Ostracisme",
+        "La faction élue gagne 1 infamie. La carte est retirée du jeu."),
+    resolution("vote-au-conseil", 798, 1793972765960, "Vote au conseil",
+        "Les factions qui ont le plus de voix gagnent des sièges : N à la première, N − 1 à la deuxième… (Vote au conseil N, de 1 à 5). La carte est retirée du jeu.",
+        [799, 800, 801, 802]),
+    regle("impot", "Agenda", 339, 1795076851709, "Impôt", "auto",
+        "Ravitaillement automatique (début de la phase)",
+        "Tant que le traité est sur la table, chaque faction dépense 2 commerce (ce qu'elle en a, au plus)."),
+    regle("ecologie-punitive", "Agenda", 310, 1795076851686, "Écologie punitive", "auto",
+        "Ravitaillement automatique (début de la phase)",
+        "Tant que le traité est sur la table, chaque planète rapporte 1 ressource de moins (3 pour une planète sauvage), sans descendre sous 0."),
 ];
+
+// Script de résolution d'une loi ou d'une directive (son code : resolutionsAgendas.js)
+function resolution(id, carte, ecritLe, nom, description, aussi = []) {
+    return { ...regle(id, "Agenda", carte, ecritLe, nom, "modifie", "Onglet Vote, sous le décompte de la loi : « Résoudre »", description, aussi), resolution: true };
+}
 
 // Bouton d'action d'une unité, d'une planète ou d'une habilité (ActionsScript.jsx)
 //   lieu : "unite", "planete", "systeme" ou "bandeau" ; spec : voir ActionsScript.jsx

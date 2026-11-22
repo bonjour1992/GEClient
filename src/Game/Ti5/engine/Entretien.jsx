@@ -95,7 +95,13 @@ export function useEntretien(u, idFaction) {
     const nom = ref => nomElement(search, ref);
     const sansInfluence = aScript(u, "sans-influence");
 
-    const valeur = (c, champ) => Number(contenuPlanetes[c.ref.id]?.[champ]) || 0;
+    // Traité Écologie punitive (#310) sur la table : chaque planète rapporte 1 ressource de moins,
+    // 3 pour une planète sauvage (jamais moins de 0)
+    const ecologie = aScript(u, "ecologie-punitive");
+    const valeurBrute = (c, champ) => Number(contenuPlanetes[c.ref.id]?.[champ]) || 0;
+    const valeur = (c, champ) => (champ === "res" && ecologie
+        ? Math.max(0, valeurBrute(c, champ) - (contenuPlanetes[c.ref.id]?.planetType === "sauv" ? 3 : 1))
+        : valeurBrute(c, champ));
     const somme = champ => planetes.reduce((total, c) => total + valeur(c, champ), 0);
 
     // Script Exploitation du vide : 1 ressource par système vide dominé (3 pour une
@@ -110,6 +116,9 @@ export function useEntretien(u, idFaction) {
 
     // Commerce produit par les planètes (champ « com », comme « res » et « inf »)
     const commerce = somme("com");
+
+    // Traité Impôt (#339) sur la table : chaque faction dépense 2 commerce (ce qu'elle en a, au plus)
+    const impot = aScript(u, "impot") ? Math.min(2, Math.max(0, (Number(etat.compteurs[base + ":commerce"]) || 0) + commerce)) : 0;
 
     // Scripts d'entretien. Diversité : +1 influence par planète. Culture
     // courtisane : +1 influence par alliance en jeu chez moi (promesse de
@@ -260,6 +269,8 @@ export function useEntretien(u, idFaction) {
             .map(c => ({ c, texte: [gain(valeur(c, "res"), "res"), sansInfluence ? "" : gain(valeur(c, "inf"), "inf"), gain(valeur(c, "com"), "com")].filter(Boolean).join(" ") }))
             .map(x => `${nom(x.c.ref)} : ${x.texte || "rien"}`),
         ...revenus.lignes.filter(l => !l.vide).map(l => `${l.nom}${l.ou ? " sur " + l.ou : ""} : ${l.texte}`),
+        ecologie && "Écologie punitive (traité) : chaque planète rapporte 1 ressource de moins (3 pour une sauvage)",
+        impot > 0 && `Impôt (traité) : −${impot} commerce`,
         vide.gain > 0 && `Exploitation du vide : +${vide.gain} res`,
         ...(sansInfluence ? ["Sans influence : aucune influence gagnée"] : bonusInfluence.map(([n, titre]) => `${titre} : +${n} inf`)),
         agentsRendus.length > 0 && `Agents récupérés : ${[...parNom].map(([n, k]) => `${k} ${n}`).join(", ")}`,
@@ -289,7 +300,7 @@ export function useEntretien(u, idFaction) {
         { type: "compteur", id: base + ":entretien", valeur: etat.tour, si: Number(etat.compteurs[base + ":entretien"]) || 0 },
         ressources && { type: "compteur", id: base + ":res", delta: ressources },
         influence && { type: "compteur", id: base + ":inf", delta: influence },
-        commerce && { type: "compteur", id: base + ":commerce", delta: commerce },
+        commerce - impot !== 0 && { type: "compteur", id: base + ":commerce", delta: commerce - impot },
         ...agentsRendus.map(c => ({ type: "deplacer", c: c.id, vers: base + ":agents" })),
         ...retourCubes,
         ...noblesUses.map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false })),
@@ -329,7 +340,7 @@ export function useEntretien(u, idFaction) {
         vide,
         lignes,
         resume: `Ravitaillement : +${ressources} res, +${influence} inf, ${commerce ? `+${commerce} com, ` : ""}${agentsRendus.length} agent(s)` +
-            (possedeNatale ? ", +1 faveur" : ""),
+            (possedeNatale ? ", +1 faveur" : "") + (impot > 0 ? `, −${impot} com (Impôt)` : ""),
         actions,
     };
 }

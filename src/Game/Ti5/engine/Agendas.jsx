@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, BoutonRegle, nomElement, nomCase } from "./Interaction";
 import { useElements, contenuEnCache } from "./sync";
-import { optionsDesLois } from "./optionsVote";
+import { optionsDesLois, cleResolution } from "./optionsVote";
 
 // ============================================================
 // AGENDAS DU TOUR : CARTES RÉVÉLÉES ET DÉSIGNATIONS
@@ -28,7 +28,7 @@ import { optionsDesLois } from "./optionsVote";
 //         agenda:<tour>:<ligne>:designe:<joueur> = id de la planète,
 //         ou numéro de case + 1 (système), ou −1 (rien)
 //
-// Rien d'autre n'est appliqué : le vote et la loi se règlent à la main.
+// La résolution (« Résoudre », onglet Vote) : optionsVote.js et resolutionsAgendas.js.
 // ============================================================
 
 const NOMBRES = { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5 };
@@ -290,7 +290,8 @@ export function AnnexesDeLoi({ carte, ligne }) {
                 </div>
             )}
 
-            {lecture.revele && !revelees.length && joueur && (
+            {/* (loi déjà résolue : la carte révélée a pu partir chez la faction élue) */}
+            {lecture.revele && !revelees.length && joueur && !Number(etat.compteurs[cleResolution(etat.tour, ligne)]) && (
                 <BoutonRegle
                     data-action="reveler-pour-loi"
                     nom={`Loi ${ligne} « ${nomLoi} » : révéler ${lecture.revele.n} ${lecture.revele.nom}`}
