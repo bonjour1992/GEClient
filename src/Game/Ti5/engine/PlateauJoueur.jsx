@@ -4,6 +4,7 @@ import {
     useEngine, Emplacements, Zone, Source, Defilable, IconeRessource,
 } from "./Interaction";
 import { useElement, useElements } from "./sync";
+import { nombreTours } from "./etat";
 import { LIMITES_UNITES, RESSOURCES, typeUnite } from "./miseEnPlace";
 import { ActionsTechnologies } from "./ActionsTechnologies";
 import { ReserveProductible } from "./Production";
@@ -285,6 +286,10 @@ export function PlateauJoueur({ vu }) {
         [vu.faction]
     );
 
+    // Cases de tour de la feuille : autant que de tours dans le déroulé de la partie
+    const tours = nombreTours(etat);
+    const contexteFeuille = useMemo(() => ({ tours }), [tours]);
+
 
     // Types d'agent qui ont une case sur la feuille
     const agentsDeLaFeuille = (faction?.agents || [])
@@ -402,7 +407,7 @@ export function PlateauJoueur({ vu }) {
 
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <Emplacements prefixe={base} stylePions={stylePions} style={{ width: "max-content" }}>
-                        <LoadAndDisplay link={lienFaction} />
+                        <LoadAndDisplay link={lienFaction} context={contexteFeuille} />
                     </Emplacements>
 
                     {/* L'autre face de la feuille : mise en place, système natal, histoire */}

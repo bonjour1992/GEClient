@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useEngine, BoutonRegle, agentDisponible, nomElement } from "./Interaction";
 import { useElement, useElements } from "./sync";
 import { MARQUEUR, DETTE, MOTIF_LOGISTICIEN } from "./miseEnPlace";
-import { turnNumber } from "../ti5Const";
+import { nombreTours } from "./etat";
 import { livrer } from "./Livraison";
 
 // ============================================================
@@ -274,7 +274,7 @@ function Dette({ script, nom, phase, nomPhase, titre }) {
                 type: "creer",
                 idLocal: idDette,
                 jeton: DETTE,
-                zone: `joueur:${cible}:tour:${Math.min(echeance, turnNumber)}`,
+                zone: `joueur:${cible}:tour:${Math.min(echeance, nombreTours(etat))}`,
                 marques: { montant: DETTE_REPARATION },
             },
             { type: "creer", jeton: MARQUEUR, sur: idDette, proprio: moi },
@@ -287,11 +287,11 @@ function Dette({ script, nom, phase, nomPhase, titre }) {
             <BoutonRegle
                 data-action={script}
                 disabled={!cible}
-                nom={`${nom} : ${cible ? nomDe(cible) : "une faction"} vous doit ${DETTE_REPARATION} (tour ${Math.min(echeance, turnNumber)})`}
+                nom={`${nom} : ${cible ? nomDe(cible) : "une faction"} vous doit ${DETTE_REPARATION} (tour ${Math.min(echeance, nombreTours(etat))})`}
                 obstacles={[
                     !phase.test(etat.phase) && `ce n'est pas ${nomPhase}`,
                     !diplomate && "vous n'avez pas de diplomate disponible (aucun ne sera usé)",
-                    echeance > turnNumber && `l'échéance (tour ${echeance}) dépasse le dernier tour : la dette est posée au tour ${turnNumber}`,
+                    echeance > nombreTours(etat) && `l'échéance (tour ${echeance}) dépasse le dernier tour : la dette est posée au tour ${nombreTours(etat)}`,
                 ]}
                 faire={endetter}
                 title={titre}
@@ -334,7 +334,7 @@ function Universite() {
                 obstacles={[
                     !/recrut/i.test(etat.phase) && "ce n'est pas la phase de recrutement",
                     utilisee && etat.compteurs[utilisee] && "la technologie est déjà utilisée ce tour",
-                    etat.tour >= turnNumber && "il n'y a pas de tour suivant",
+                    etat.tour >= nombreTours(etat) && "il n'y a pas de tour suivant",
                 ]}
                 faire={commentaire => envoyer([
                     utilisee && { type: "compteur", id: utilisee, valeur: 1 },
@@ -343,7 +343,7 @@ function Universite() {
                     {
                         type: "creer",
                         ref: { type: "agent", id: agent?.ref.id },
-                        zone: `joueur:${moi}:tour:${Math.min(etat.tour + 1, turnNumber)}`,
+                        zone: `joueur:${moi}:tour:${Math.min(etat.tour + 1, nombreTours(etat))}`,
                         proprio: moi,
                     },
                 ], commentaire)}

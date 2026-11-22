@@ -336,7 +336,16 @@ Chaque joueur reçoit une version filtrée d'un coup :
 9. Marqueurs (jeton `marqueur` : carré de la couleur du joueur avec le logo de
    sa faction) : un par joueur sur la case 0 des points, de l'infamie et des
    sièges au conseil.
-10. Cartes du déroulé, tirées des pioches pour chaque tour qui en prévoit :
+10. Déroulé : celui choisi à la création de la partie (`partie.deroule`, écran
+    des parties ; sans choix, le premier) — `references.deroule`. Sa durée (son
+    nombre de tours, « Table tour » de l'éditeur, champ `tourNum`) est celle de
+    la partie : `references.tours`, lue par `nombreTours(etat)` (`etat.js` ; 10
+    pour une partie lancée avant). Le moteur s'en sert pour le dernier tour (le
+    décompte, plus de « Nouveau tour »), les dettes et les transactions à un tour
+    à venir, les cartes posées aux tours suivants ; dans une partie, la feuille de
+    faction a une case par tour à venir (`context.tours`). Les lignes du déroulé
+    au-delà de sa durée sont ignorées.
+    Cartes du déroulé, tirées des pioches pour chaque tour qui en prévoit :
     objectifs militaires (`general:militaire:<tour>`), événements du type prévu,
     mineur ou majeur (`general:evenement:<tour>`), postes de ministre, soit des
     agendas de type mandat (`general:agenda:<tour>`). Pour les objectifs et les
@@ -903,6 +912,12 @@ Une unité qui n'est pas dans les unités de la faction de son joueur
 sur la carte comme dans l'onglet Conflit.
 
 ### pistes du déroulé
+
+Affichage (`deroule.jsx`) : 4 colonnes par page A4 — l'en-tête des lignes, une
+par tour, la fin de partie (10 tours : en-tête + tours 1-3, tours 4-7, tours
+8-10 + fin de partie). L'en-tête du plateau est réparti sur toutes les pages,
+même largeur de case partout : les cases 3 à 9 puis la légende (initiative, la
+place de 2 cases), et les pistes 0 à 25 (3 pages : 0-8, 9-17, 18-25).
 
 Les en-têtes « Points », « Infamie » et « Sièges au conseil » ont un « + »
 (`data-action`) qui avance le marqueur du joueur d'une case

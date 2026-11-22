@@ -167,6 +167,10 @@ export function joueurDeVote(zone) {
     return m ? Number(m[1]) : null;
 }
 
+// Durée de la partie : le nombre de tours de son déroulé (references.tours, posé à la mise en place) ;
+// 10 pour une partie lancée avant (turnNumber de ti5Const.js)
+export const nombreTours = etat => Number(etat?.references?.tours) || 10;
+
 // Phase de vote (pas la prévote) : les plateaux de vote n'y sont cachés que jusqu'à la révélation commune
 export const estPhaseDeVote = etat => /^(?!.*pr[ée]).*vote/i.test(etat?.phase || "");
 

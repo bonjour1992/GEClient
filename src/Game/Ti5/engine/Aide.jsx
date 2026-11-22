@@ -74,6 +74,7 @@ const MODE_EMPLOI = [
         "Plateau joueur : feuille de faction, réserve, faveurs, fragments, éléments actifs, compte rendu du ravitaillement. Les boutons de joueur montrent le plateau des autres.",
         "Technologie : clic sur une technologie : une case de plus ; Ctrl + clic : une de moins ; Maj + clic : utilisée ce tour. On peut y poser un agent.",
         "Plateau général : le déroulé (un « + » en tête des pistes avance votre marqueur), le recrutement, les réserves, les sacs et les pioches.",
+        "Durée de la partie : le nombre de tours du déroulé choisi à la création de la partie (écran des parties).",
         "Vote : votre plateau de vote, les lois du tour et le décompte (voir « Vote »). Au-dessus du plateau, la faction qui joue la couleur de chaque colonne.",
         "Transactions : proposer, valider, refuser. Une transaction s'applique quand les deux factions l'ont validée ; son coût en diplomates est affiché.",
         "Promesses de base : leur réserve est infinie — une transaction en crée une nouvelle carte, la réserve du Plateau général garde toujours la sienne.",

@@ -36,6 +36,8 @@ function Liste({ ouvrir }) {
     const [erreur, setErreur] = useState("");
     const [nom, setNom] = useState("");
     const [plateau, setPlateau] = useState("");
+    // Déroulé de la partie (sa durée est la sienne) ; vide : le premier
+    const [deroule, setDeroule] = useState("");
 
     useEffect(() => {
 
@@ -68,10 +70,11 @@ function Liste({ ouvrir }) {
     }, [jeu]);
 
     const plateaux = getFromType(search, ["plateau"]);
+    const deroules = getFromType(search, ["deroule"]);
 
     async function creer() {
 
-        const r = await fetchAPI("partie", "POST", { jeu, nom, plateau: Number(plateau) });
+        const r = await fetchAPI("partie", "POST", { jeu, nom, plateau: Number(plateau), deroule: deroule ? Number(deroule) : null });
 
         if (r?.partie) {
             ouvrir(r.partie.id);
@@ -142,6 +145,14 @@ function Liste({ ouvrir }) {
                 <select value={plateau} onChange={e => setPlateau(e.target.value)}>
                     <option value="">Plateau…</option>
                     {plateaux.map(e => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                </select>
+
+                {/* Déroulé : sa durée (nombre de tours) est celle de la partie */}
+                <select data-choix-deroule value={deroule} onChange={e => setDeroule(e.target.value)}>
+                    <option value="">Déroulé : par défaut{deroules[0] ? ` (${deroules[0].name})` : ""}</option>
+                    {deroules.map(e => (
                         <option key={e.id} value={e.id}>{e.name}</option>
                     ))}
                 </select>

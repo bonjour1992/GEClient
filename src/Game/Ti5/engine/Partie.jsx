@@ -25,7 +25,6 @@ import {
     ressourceDe,
     typeUnite,
 } from "./miseEnPlace";
-import { turnNumber } from "../ti5Const";
 import {
     Engine,
     useEngine,
@@ -89,7 +88,7 @@ import { ouvrirProduction, lireProduction } from "./Production";
 import { ChoixFouille, PiocherPlan } from "./Archeologie";
 import { EnvoyerVers, MontrerA } from "./Envoi";
 import { Notes } from "./Notes";
-import { quiVoit, dosDe } from "./etat";
+import { quiVoit, dosDe, nombreTours } from "./etat";
 
 // ============================================================
 // ÉCRAN D'UNE PARTIE
@@ -768,13 +767,13 @@ export function Partie({ id }) {
         },
     })))
         // Le décompte ne se joue qu'au dernier tour
-        .filter(ph => etat.tour >= turnNumber || !/d[ée]compte/i.test(ph.nom));
+        .filter(ph => etat.tour >= nombreTours(etat) || !/d[ée]compte/i.test(ph.nom));
 
     // « Nouveau tour » : à la dernière phase du tour seulement (ou au tour 0),
     // et jamais après le dernier tour
     const dernierePhase = etat.tour === 0 || iPhaseDe(phases, etat.phase) === -1 ||
         iPhaseDe(phases, etat.phase) === phases.length - 1;
-    const dernierTour = etat.tour >= turnNumber;
+    const dernierTour = etat.tour >= nombreTours(etat);
 
     const iPhase = iPhaseDe(phases, etat.phase);
 
@@ -1085,7 +1084,7 @@ export function Partie({ id }) {
             const politique = agentDisponible(ctx, "politique");
 
             // (pas de tour suivant : là, l'action est impossible)
-            if (etat.tour >= turnNumber) {
+            if (etat.tour >= nombreTours(etat)) {
                 p.setErreur("Il n'y a pas de tour suivant.");
                 return true;
             }
@@ -1522,7 +1521,7 @@ export function Partie({ id }) {
                                 ]}
                                 faire={nouveauTour}
                                 title={dernierTour
-                                    ? `Le tour ${turnNumber} est le dernier`
+                                    ? `Le tour ${nombreTours(etat)} est le dernier`
                                     : "Passe au tour suivant et revient à la première phase"}
                             >
                                 Nouveau tour

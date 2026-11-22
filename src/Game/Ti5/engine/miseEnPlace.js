@@ -709,20 +709,30 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
     // PLATEAU GÉNÉRAL
     // --------------------------------------------------------
 
+    // Déroulé choisi à la création de la partie (partie.deroule), sinon le premier.
+    // Sa durée (nombre de tours, « Table tour ») est celle de la partie :
+    // etat.references.tours (nombreTours, etat.js).
     const deroules = await lister("deroule");
+    const choisi = deroules.find(d => d.id === Number(partie.deroule)) || deroules[0];
 
-    if (deroules.length) {
+    if (choisi) {
 
-        etat.references.deroule = deroules[0].id;
+        etat.references.deroule = choisi.id;
 
-        const deroule = deroules[0].content || {};
+        const deroule = choisi.content || {};
+        const tours = Math.max(1, Number(deroule.tourNum) || 10);
+
+        etat.references.tours = tours;
+
+        // (les lignes du déroulé au-delà de sa durée sont ignorées)
+        const ligne = valeurs => (valeurs || []).slice(0, tours);
 
         // Objectifs militaires : un par tour qui en prévoit un, dans sa case du
         // déroulé. « Le prochain objectif militaire est toujours visible » :
         // le premier est face visible, les suivants face cachée.
         let premier = true;
 
-        for (const [tour, prevu] of (deroule.militaire || []).entries()) {
+        for (const [tour, prevu] of ligne(deroule.militaire).entries()) {
 
             const dessus = composantsDeZone(etat, "pioche:militaire").at(-1);
 
@@ -743,7 +753,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
             (await lister("evenement")).map(e => [e.id, e.content?.type || "min"])
         );
 
-        for (const [tour, type] of (deroule.evenement || []).entries()) {
+        for (const [tour, type] of ligne(deroule.evenement).entries()) {
 
             if (type !== "min" && type !== "maj") {
                 continue;
@@ -770,7 +780,7 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
             (await lister("Agenda")).map(e => [e.id, e.content?.type])
         );
 
-        for (const [tour, nombre] of (deroule.ministre || []).entries()) {
+        for (const [tour, nombre] of ligne(deroule.ministre).entries()) {
 
             for (let k = 0; k < (Number(nombre) || 0); k++) {
 
@@ -802,9 +812,9 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
             }
         }
 
-        for (const ligne of [deroule.siege, deroule.siege2]) {
+        for (const siege of [deroule.siege, deroule.siege2]) {
 
-            for (const [tour, nombre] of (ligne || []).entries()) {
+            for (const [tour, nombre] of ligne(siege).entries()) {
 
                 const id = votesConseil.get(Number(nombre) || 0);
 

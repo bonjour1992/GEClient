@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { createPortal } from "react-dom";
 import { getHandler } from "../../games";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
-import { PlayerColor, turnNumber } from "../ti5Const";
+import { PlayerColor } from "../ti5Const";
 import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
@@ -36,7 +36,7 @@ import {
     actionsPoints,
     REFORGE_PORTAIL,
 } from "./miseEnPlace";
-import { joueurDeMain, estPioche } from "./etat";
+import { joueurDeMain, estPioche, nombreTours } from "./etat";
 import { optionsDesLois, optionsDeLigne, estValide } from "./optionsVote";
 import { distanceIndex, distanceBande } from "../hexSpirale";
 import { ICONE_MERCENAIRE } from "../Component/Nom";
@@ -850,7 +850,7 @@ export async function choisirRemplacants(actions) {
 
             const retour = etat.tour + 2;
 
-            if (retour > turnNumber) {
+            if (retour > nombreTours(etat)) {
                 return [{ type: "supprimer", c: r.id }];
             }
 

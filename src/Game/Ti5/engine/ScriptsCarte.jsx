@@ -6,13 +6,12 @@ import { demanderBlocage } from "./BlocageAction";
 import { lieuDe } from "./regleBlocage";
 import { chargerContenu, useElement, useElements } from "./sync";
 import { normaliserPlateau, distanceBande, COLONNES_BANDE } from "../hexSpirale";
-import { turnNumber } from "../ti5Const";
 import { scriptsActifs, concerne } from "./scripts";
 import {
     RESERVE_TUILES, PIOCHE_TUILES, SAC_FRAGMENTS, exemplaires, LIBRE, COULEUR_LIBRE, MOTIF_LOGISTICIEN,
     systemesExplores, horsReserveCommune,
 } from "./miseEnPlace";
-import { premiereFace } from "./etat";
+import { premiereFace, nombreTours } from "./etat";
 import { lotsDeDes, desDeLaReponse } from "./effets";
 import { LivraisonCommerciale } from "./Livraison";
 import { BoutonsScripts } from "./ActionsScript";
@@ -398,7 +397,7 @@ function MettreEnPlaceEvenement({ c, script, fermer }) {
         const [rangee, k] = Object.entries(vers)[0];
         const t = tour + k;
 
-        return t <= turnNumber ? { zone: `general:${rangee}:${t}` } : { horsDeroule: t };
+        return t <= nombreTours(etat) ? { zone: `general:${rangee}:${t}` } : { horsDeroule: t };
     }
 
     // Unités neutres posées sur les anomalies du plateau

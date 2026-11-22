@@ -41,12 +41,26 @@ function Display({ content, explication, context }) {
     // PARAMÈTRES
     // ============================================================
 
-    const nombrePages = 3;
+    // Durée de la partie : le nombre de tours du déroulé (« Table tour » du formulaire)
+    const nombreTours = Math.max(1, Number(content.tourNum) || 10);
 
-    // Page 1 : tours 1-3
-    // Page 2 : tours 4-7
-    // Page 3 : tours 8-10
-    const toursParPage = [3, 4, 3];
+    // Colonnes du tableau : l'en-tête (libellés), une par tour, la fin de partie ;
+    // 4 par page. Avec 10 tours : page 1 = en-tête + tours 1-3, page 2 = tours
+    // 4-7, page 3 = tours 8-10 + fin de partie.
+    const COLONNES_PAR_PAGE = 4;
+    const nombrePages = Math.ceil((nombreTours + 2) / COLONNES_PAR_PAGE);
+
+    // Tours d'une page (la colonne c est le tour c : 0 est l'en-tête, nombreTours + 1 la fin)
+    const toursDePage = pageIndex => {
+        const premiere = pageIndex * COLONNES_PAR_PAGE;
+        const tours = [];
+
+        for (let c = Math.max(1, premiere); c <= Math.min(nombreTours, premiere + COLONNES_PAR_PAGE - 1); c++) {
+            tours.push(c);
+        }
+
+        return tours;
+    };
 
     const paddingPage = 0;
 
@@ -61,10 +75,37 @@ function Display({ content, explication, context }) {
     const hauteurBoites = "30mm";
     const espaceEntreBoites = 5;
 
-    // Une case sur les pages 1 et 2 occupe 1/3 de la largeur.
-    // La case 9 doit avoir exactement la même largeur.
-    const largeurBoite = 33.3333;
-    const largeurLegende = 66.6667;
+    // En-tête réparti sur les pages : les cases 3 à 9 puis la légende (la place
+    // de 2 cases), même largeur de case partout. Avec 3 pages : 3-5, 6-8,
+    // 9 + légende (une case occupe 1/3 de la largeur).
+    const PLACES_EN_TETE = boites.length + 2;
+    const placesParPage = Math.ceil(PLACES_EN_TETE / nombrePages);
+    const largeurPlace = 100 / placesParPage;
+
+    // -> [{ cases: [première, dernière] ou null, legende }] par page
+    const enTetes = (() => {
+        const pages = Array.from({ length: nombrePages }, () => ({ cases: null, legende: false, places: 0 }));
+        let page = 0;
+
+        for (const numero of boites) {
+            if (pages[page].places >= placesParPage) {
+                page++;
+            }
+
+            const p = pages[page];
+            p.cases = p.cases ? [p.cases[0], numero] : [numero, numero];
+            p.places++;
+        }
+
+        // (la légende ne se coupe pas : page suivante s'il n'y a plus la place de 2 cases)
+        if (pages[page].places > 0 && placesParPage - pages[page].places < 2 && page + 1 < nombrePages) {
+            page++;
+        }
+
+        pages[page].legende = true;
+
+        return pages;
+    })();
 
     // Cases d'initiative, sous la légende : une par joueur (6 hors partie).
     // La dernière est celle du chef du sénat.
@@ -87,8 +128,10 @@ function Display({ content, explication, context }) {
     const maxPoints = 25;
 
 
-    const compteurDebutParPage = [0, 9, 18];
-    const compteurFinParPage = [8, 17, 25];
+    // Pistes 0 à 25 réparties sur les pages (3 pages : 0-8, 9-17, 18-25)
+    const casesCompteurParPage = Math.ceil((maxPoints + 1) / nombrePages);
+    const compteurDebutParPage = Array.from({ length: nombrePages }, (_, k) => k * casesCompteurParPage);
+    const compteurFinParPage = compteurDebutParPage.map(debut => Math.min(maxPoints, debut + casesCompteurParPage - 1));
 
     // Compteurs légèrement agrandis
     const hauteurCompteur = 30;
@@ -208,7 +251,7 @@ function Display({ content, explication, context }) {
     // LÉGENDE
     // ============================================================
 
-    function Legend() {
+    function Legend({ width }) {
         const cubeStyle = (black) => ({
             width: 20,
             height: 20,
@@ -221,7 +264,7 @@ function Display({ content, explication, context }) {
         return (
             <div
                 style={{
-                    width: largeurLegende + "%",
+                    width: width + "%",
                     height: hauteurBoites,
                     display: "flex",
                     flexDirection: "column",
@@ -481,37 +524,19 @@ function Display({ content, explication, context }) {
                     flexShrink: 0,
                 }}
             >
-                {pageIndex === 0 && (
-                    <Boxes
-                        first={3}
-                        last={5}
-                        width={100}
-                    />
-                )}
-
-                {pageIndex === 1 && (
-                    <Boxes
-                        first={6}
-                        last={8}
-                        width={100}
-                    />
-                )}
-
-                {pageIndex === 2 && (
-                    <>
-                        {/* 
-                            Case 9 = exactement la largeur
-                            d'une case des pages précédentes.
-                        */}
+                {/* Cases et légende de cette page (même largeur de case partout) ;
+                    une page sans en-tête garde sa hauteur, pour l'alignement */}
+                <div style={{ height: hauteurBoites, overflow: "hidden" }}>
+                    {enTetes[pageIndex].cases && (
                         <Boxes
-                            first={9}
-                            last={9}
-                            width={largeurBoite}
+                            first={enTetes[pageIndex].cases[0]}
+                            last={enTetes[pageIndex].cases[1]}
+                            width={(enTetes[pageIndex].cases[1] - enTetes[pageIndex].cases[0] + 1) * largeurPlace}
                         />
+                    )}
 
-                        <Legend />
-                    </>
-                )}
+                    {enTetes[pageIndex].legende && <Legend width={Math.min(100, 2 * largeurPlace)} />}
+                </div>
 
                 <CountersPage pageIndex={pageIndex} />
             </div>
@@ -614,16 +639,13 @@ function Display({ content, explication, context }) {
     // ============================================================
 
     function TablePage({ pageIndex }) {
-        const debut = [0, 3, 7][pageIndex];
-        const nombreTours = toursParPage[pageIndex];
-
-        const tours = Array.from(
-            { length: nombreTours },
-            (_, i) => debut + i + 1
-        );
+        const tours = toursDePage(pageIndex);
 
         const labelColumn = pageIndex === 0;
-        const dernierePage = pageIndex === 2;
+        const dernierePage = pageIndex === nombrePages - 1;
+
+        // Dernière page : chaque colonne occupe 1/4 de la largeur (fin de partie comprise)
+        const largeurTours = (tours.length + (labelColumn ? 1 : 0)) * (100 / COLONNES_PAR_PAGE);
 
         // ============================================================
         // CELLULE DE LABEL
@@ -913,7 +935,7 @@ function Display({ content, explication, context }) {
         }
 
         // ============================================================
-        // PAGE 3 : TABLEAU + FIN DE PARTIE
+        // DERNIÈRE PAGE : TABLEAU + FIN DE PARTIE
         // ============================================================
 
         if (dernierePage) {
@@ -927,19 +949,21 @@ function Display({ content, explication, context }) {
                         boxSizing: "border-box",
                     }}
                 >
-                    <div
-                        style={{
-                            width: "75%",
-                            height: "100%",
-                            minWidth: 0,
-                        }}
-                    >
-                        <ToursTable />
-                    </div>
+                    {largeurTours > 0 && (
+                        <div
+                            style={{
+                                width: largeurTours + "%",
+                                height: "100%",
+                                minWidth: 0,
+                            }}
+                        >
+                            <ToursTable />
+                        </div>
+                    )}
 
                     <table
                         style={{
-                            width: "25%",
+                            width: (100 / COLONNES_PAR_PAGE) + "%",
                             height: "100%",
                             borderCollapse: "collapse",
                             tableLayout: "fixed",
@@ -989,7 +1013,7 @@ function Display({ content, explication, context }) {
         }
 
         // ============================================================
-        // PAGES 1 ET 2
+        // AUTRES PAGES
         // ============================================================
 
         return <ToursTable />;
@@ -997,7 +1021,7 @@ function Display({ content, explication, context }) {
 
 
     // ============================================================
-    // RENDU — 3 PAGES A4 PORTRAIT
+    // RENDU — PAGES A4 PORTRAIT (3 pour 10 tours)
     // ============================================================
 
     return (

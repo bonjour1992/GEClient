@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { turnNumber } from "../ti5Const";
 import { useEngine, nomElement, couleurJoueur, COULEUR_A_FAIRE, confirmerRegle, Modale } from "./Interaction";
 import { MARQUEUR, DETTE, estUniteMercenaire } from "./miseEnPlace";
 import { useElements } from "./sync";
-import { ERREUR_CARTE_ABSENTE } from "./etat";
+import { ERREUR_CARTE_ABSENTE, nombreTours } from "./etat";
 import { getFromType, nomDeListe } from "../../../lib/store";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 
@@ -455,7 +454,7 @@ export function Transaction({ fermer }) {
     const [f2, setF2] = useState(joueurs.find(j => j.userId !== moi)?.userId ?? moi);
 
     // Tours à venir (cases du haut de la feuille de faction)
-    const tours = Array.from({ length: turnNumber - 1 }, (_, i) => i + 2)
+    const tours = Array.from({ length: nombreTours(etat) - 1 }, (_, i) => i + 2)
         .filter(t => t > etat.tour);
 
     // Éléments de la transaction : { sorte, texte, ... }

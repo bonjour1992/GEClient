@@ -12,7 +12,7 @@ import { promessesTenues, actionsRendrePromesse, REDEVANCE_DE_PROTECTION } from 
 
 // Promesse Vassal : la carte est chez le suzerain, avec le marqueur du vassal
 const VASSAL = 224;
-import { turnNumber } from "../ti5Const";
+import { nombreTours } from "./etat";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
 import { Blocages } from "./Blocage";
@@ -1295,7 +1295,7 @@ function CombatSysteme({ lieu }) {
 
         return [
             ...sauver(v, "esclaveJet", { vers: `joueur:${commerce.kabal}:actif` }),
-            ...(echeance <= turnNumber ? [
+            ...(echeance <= nombreTours(etat) ? [
                 { type: "creer", idLocal: idDette, jeton: DETTE, zone: `joueur:${commerce.kabal}:tour:${echeance}`, marques: { montant: 1 } },
                 { type: "creer", jeton: MARQUEUR, sur: idDette, proprio: commerce.tueur },
             ] : []),

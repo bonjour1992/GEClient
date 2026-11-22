@@ -150,7 +150,8 @@ function GraphiqueForces({ content }) {
 }
 
 function Display({ content, style, context, explication }) {
-    let turn = Array.from(Array(turnNumber - 1)).map((e, i) => i + 2)
+    // Cases des tours 2 à N : dans une partie, N est la durée de son déroulé (context.tours)
+    let turn = Array.from(Array((Number(context?.tours) || turnNumber) - 1)).map((e, i) => i + 2)
 
     // (même référence d'un rendu à l'autre : les unités ne se rechargent pas)
     const couleurs = useMemo(() => couleursDe(content), [content.color, content.color2])
