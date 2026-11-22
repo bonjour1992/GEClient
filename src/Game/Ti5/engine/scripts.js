@@ -458,7 +458,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 179 },
-        ecritLe: 1795046895373,
+        ecritLe: 1795348043362,
         nom: "Mise en place de Jol-Nar",
         description: "Le dock sur Jol, le système de défense sur Nar.",
         placer: (unite, plan) => {
@@ -1978,6 +1978,25 @@ export const SCRIPTS = [
     regle("salai-sai-corian", "unit", 148, 1795046343782, "Salai Sai Corian", "auto",
         "Conflit, combat spatial",
         "+1 au combat par vaisseau adverse que visent ses engagements."),
+
+    // ----- Stock d'achat (Achats.jsx) : éléments qui vendent contre une livraison commerciale -----
+
+    regle("station-de-mercenaire-achat", "planet", 38, 1795348617509, "Station de mercenaire : achat", "nouveau",
+        "Fiche d'un système : « Achats — Station de mercenaire », « Acheter »",
+        "Une livraison commerciale peut être versée à votre stock d'achat sur la station (fiche de l'unité qui livre : destination « mon stock d'achat »). " +
+        "Diplomatie : « Acheter » dépense 3 de ce stock, la faction qui possède la station gagne 1 commerce ; le mercenaire acheté se prend à la main."),
+
+    regle("universite-polytechnique-achat", "planet", 508, 1795190407296, "Université polytechnique : achat", "nouveau",
+        "Fiche d'un système : « Achats — Université polytechnique », « Acheter »",
+        "Stock d'achat rempli par des livraisons. Diplomatie : « Acheter » dépense 3 de ce stock, la faction possédante gagne 1 commerce ; l'agent acheté se prend à la main."),
+
+    regle("centre-d-espionnage-industriel-achat", "planet", 1250, 1795348043309, "Centre d'espionnage industriel : achat", "nouveau",
+        "Fiche d'un système : « Achats — Centre d'espionnage industriel », « Acheter »",
+        "Stock d'achat rempli par des livraisons. Diplomatie : « Acheter » dépense 3 de ce stock et note 4 de recherche, à cocher sur une technologie qu'une autre faction possède et que vous n'avez pas."),
+
+    regle("vente-au-bazaar-achat", "habilite", 36, 1794335054750, "Vente au Bazaar : achat", "nouveau",
+        "Fiche d'un système où est posé un Bazaar : « Achats — Bazaar », « Acheter »",
+        "Stock d'achat rempli par des livraisons faites sur le Bazaar (le marqueur de stock est posé sur l'unité). Diplomatie : « Acheter » dépense 3 de ce stock ; l'objet acheté se prend à la main."),
 
     regle("stations-scientifiques", "habilite", 1260, 1795348043361, "Stations scientifiques", "auto",
         "Mise en place de la partie ; onglet Faveurs, à l'encaissement",

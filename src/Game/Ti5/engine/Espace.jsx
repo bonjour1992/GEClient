@@ -41,6 +41,7 @@ import {
 import { demanderBlocage } from "./BlocageAction";
 import { peutEtreBloque, estBloquee } from "./regleBlocage";
 import { ActiverSysteme } from "./SousPhases";
+import { AchatsDuSysteme } from "./Achats";
 import { obstacleSousPhase, BOMBARDEMENT } from "./regleSousPhases";
 import { pub } from "../../../lib/fetch";
 
@@ -1676,6 +1677,9 @@ function FicheSysteme({ numero, id, fermer }) {
                             </BoutonRegle>
                         </span>
                     )}
+
+                    {/* Éléments à système d'achat du système : stocks d'achat et « Acheter » (Achats.jsx) */}
+                    <AchatsDuSysteme numero={numero} />
 
                     {/* Boutons d'action des habilités qui visent un système (ActionsScript.jsx) */}
                     <span style={{ display: "inline-flex", gap: 6, marginLeft: 8 }}>

@@ -661,3 +661,11 @@ En attente des réponses de Loïc (questions posées le 2026-11-22) :
 - données : centre d'espionnage industriel, station automatisée de défense, stations scientifiques et
   habilité de Jol-Nar ;
 - réécriture des textes « Jeu en ligne » en listes d'actions.
+
+Suite du 2026-11-22 (réponses de Loïc aux questions sur `Update.md`), faite : test de blocage refait à chaque
+action ; vaisseaux civils ignorés au bombardement et au débarquement, option « ne pas bloquer les civils » au
+déplacement ; test raté = agents utilisés seulement ; phase « 07.Phase de bombardement et de débarquement »
+jouée système par système (`regleSousPhases.js`, `SousPhases.jsx`), phases suivantes renumérotées 08 à 19 ;
+Station automatisée de défense, Centre d'espionnage industriel, stations scientifiques et habilité de Jol-Nar
+(mise en place dans `miseEnPlace.js`, chargée par le serveur : geserver doit être redémarré) ; stock d'achat et
+livraison d'une flotte (`Achats.jsx`, `Livraison.jsx`). Reste : refaire l'aide et les textes « Jeu en ligne ».
