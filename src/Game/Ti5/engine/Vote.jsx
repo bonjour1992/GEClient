@@ -2,10 +2,11 @@ import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
 import { MARQUEUR, CUBES } from "./miseEnPlace";
-import { demander, confirmer } from "./demande";
+import { demander } from "./demande";
 import { COLONNES_VOTE, COULEURS_COLONNES, joueurDeColonne } from "./voteCouleurs";
 import { AnnexesDeLoi } from "./Agendas";
 import { SOUTIEN_POLITIQUE } from "./Transaction";
+import { estPhaseDeVote } from "./etat";
 
 // ============================================================
 // ONGLET VOTE
@@ -14,14 +15,16 @@ import { SOUTIEN_POLITIQUE } from "./Transaction";
 // dont chaque case (data-emplacement "vote:<ligne>:<colonne>")
 // reçoit des éléments : zones joueur:<u>:vote:<ligne>:<colonne>.
 //
-// Le plateau est caché aux autres joueurs tant que son joueur ne
-// l'a pas révélé (compteur joueur:<u>:voteRevele, voir etat.js) :
-// ils n'en reçoivent rien, pas même le nombre d'éléments posés.
+// Pendant la phase de vote, le plateau est caché aux autres joueurs
+// tant que son joueur ne l'a pas révélé (compteur joueur:<u>:voteRevele,
+// voir etat.js) : ils n'en reçoivent rien, pas même le nombre d'éléments
+// posés. Hors de la phase de vote, il est visible de tous.
 //
 //   Prêt à révéler  (décompte) tous les plateaux sont révélés ensemble
-//   Réinitialiser   les agents de la case (utilisés) vont dans les agents
+//   Fin de la phase de vote (changerPhase, Partie.jsx) : réinitialisation —
+//                   les agents de la case (utilisés) vont dans les agents
 //                   usés ; ceux du carré de droite (dépensés) et les autres
-//                   éléments sont retirés du jeu ; le plateau est caché
+//                   éléments sont retirés du jeu ; les plateaux sont cachés
 // ============================================================
 
 // Chaque case a deux emplacements : la case elle-même (pions en bas à
@@ -313,7 +316,9 @@ function Decompte({ lois }) {
     // RÉVÉLATION : tous les plateaux en même temps
     // --------------------------------------------------------
 
-    const estRevele = u => !!etat.compteurs[`joueur:${u}:voteRevele`];
+    // (hors de la phase de vote, aucun plateau n'est caché)
+    const enVote = estPhaseDeVote(etat);
+    const estRevele = u => !enVote || !!etat.compteurs[`joueur:${u}:voteRevele`];
     const estPret = u => !!etat.compteurs[`joueur:${u}:votePret`];
 
     const caches = joueurs.filter(j => !estRevele(j.userId));
@@ -360,8 +365,8 @@ function Decompte({ lois }) {
                     (un scientifique : 2 voix avec « Réseau d'ingérence »).
                 </span>
 
-                {/* Qui a révélé son plateau, qui est prêt */}
-                {joueurs.map(j => (
+                {/* Qui a révélé son plateau, qui est prêt (phase de vote seulement) */}
+                {enVote && joueurs.map(j => (
                     <span
                         key={j.userId}
                         style={{
@@ -404,24 +409,10 @@ function Decompte({ lois }) {
                     toutes les colonnes (pour ajuster)
                 </label>
 
-                {/* Remise à zéro du vote, pour tous (aussi faite à chaque nouveau tour) */}
-                {joueur && (
-                    <button
-                        type="button"
-                        data-action="reinitialiser-votes"
-                        title="Tous les plateaux de vote sont vidés et cachés (agents des cases : agents usés ; ceux des carrés de droite et le reste : retirés du jeu), les ajustements manuels effacés. Fait aussi à chaque nouveau tour."
-                        style={{ marginLeft: "auto" }}
-                        onClick={async () => (await confirmer(
-                            "Réinitialiser le décompte des votes pour tous les joueurs",
-                            "Tous les plateaux de vote sont vidés et cachés : les agents des cases " +
-                            "(utilisés) vont dans les agents usés, ceux des carrés de droite (dépensés) sont retirés du jeu. " +
-                            "Les ajustements manuels sont effacés.",
-                            "Réinitialiser le décompte"
-                        )) && envoyer([{ type: "reinitialiserVotes" }], "Vote : décompte réinitialisé")}
-                    >
-                        Réinitialiser le décompte
-                    </button>
-                )}
+                {/* Remise à zéro du vote : d'elle-même à la fin de la phase de vote (et à chaque nouveau tour) */}
+                <span data-reinitialisation-auto style={{ marginLeft: "auto", fontSize: 12, color: "#555" }}>
+                    Le vote est réinitialisé à la fin de la phase de vote.
+                </span>
             </div>
 
             {caches.length > 0 && (
@@ -663,7 +654,7 @@ function Decompte({ lois }) {
 
 export function Vote({ vu }) {
 
-    const { etat, index, jouer, envoyer, joueur, moi, search, ouvrirFiche, aScript, partie } = useEngine();
+    const { etat, index, envoyer, joueur, moi, search, ouvrirFiche, aScript, partie } = useEngine();
 
     // Script Argumentation véhémente : loi et colonne visées
     const [argument, setArgument] = useState({ loi: 1, col: 1 });
@@ -675,36 +666,8 @@ export function Vote({ vu }) {
     const lien = useMemo(() => ({ type: "vote", id: idVote }), [idVote]);
 
     const drapeau = base + ":voteRevele";
-    const revele = !!etat.compteurs[drapeau];
-
-    // Tout ce qui est posé sur le plateau
-    const poses = [...index.parZone.entries()]
-        .filter(([zone]) => zone.startsWith(base + ":vote:"))
-        .flatMap(([, liste]) => liste);
-
-    async function reinitialiser() {
-
-        // Retire du jeu les agents des carrés de droite (dépensés) et tout ce qui n'est pas un agent
-        if (poses.length && !await confirmer(
-            "Réinitialiser votre plateau de vote",
-            "Les agents des cases (1 voix, utilisés) vont " +
-            "dans vos agents usés ; ceux des carrés de droite (2 voix, dépensés) sont retirés du jeu.",
-            "Réinitialiser"
-        )) {
-            return;
-        }
-
-        jouer([
-            ...poses.filter(c => !c.cache).map(c => (
-                c.ref?.type === "agent" && !estPartieDroite(c.zone)
-                    ? { type: "deplacer", c: c.id, vers: base + ":agentsUses" }
-                    : { type: "supprimer", c: c.id }
-            )),
-            { type: "compteur", id: drapeau, valeur: 0 },
-            // Plus « prêt à révéler » non plus
-            etat.compteurs[base + ":votePret"] && { type: "compteur", id: base + ":votePret", valeur: 0 },
-        ]);
-    }
+    const enVote = estPhaseDeVote(etat);
+    const revele = !enVote || !!etat.compteurs[drapeau];
 
     if (!idVote) {
         return <div>Ce jeu n'a pas de plateau de vote.</div>;
@@ -818,24 +781,17 @@ export function Vote({ vu }) {
                 {/* État normal, donc sans couleur d'alerte. La révélation se
                     fait pour tous ensemble (« Prêt à révéler », dans le décompte). */}
                 <b style={{ color: revele ? "#1a5021" : "#555" }}>
-                    {revele
-                        ? "Plateau révélé : tout le monde le voit."
-                        : "Plateau caché : les autres joueurs n'en voient rien."}
+                    {!enVote
+                        ? "Plateau visible de tous (il n'est caché que pendant la phase de vote, jusqu'à la révélation)."
+                        : (revele
+                            ? "Plateau révélé : tout le monde le voit."
+                            : "Plateau caché : les autres joueurs n'en voient rien.")}
                 </b>
 
                 <span style={{ fontSize: 13, color: "#444" }}>
                     Case : politicien utilisé, 1 voix. Carré de droite : politicien dépensé, 2 voix.
                 </span>
 
-                {joueur && u === moi && (
-                    <button
-                        type="button"
-                        onClick={reinitialiser}
-                        title="Agents des cases : dans vos agents usés. Agents des carrés de droite et autres éléments : retirés du jeu. Le plateau est caché."
-                    >
-                        Réinitialiser
-                    </button>
-                )}
             </div>
 
             {/* Au-dessus du plateau : la faction qui joue la couleur de chaque colonne (une loi qui

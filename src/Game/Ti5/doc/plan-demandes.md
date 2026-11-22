@@ -15,6 +15,7 @@ Trois catégories (README) : **D** données en base · **P** outil de partie ·
   à gauche, à côté du verso de la feuille ; supprimer « autres agents »
 - ☑ Réserve : icône de faction pour les unités liées à une faction
 - ☑ Vote : bouton « réinitialiser le décompte » + remise à zéro au nouveau tour
+  (bouton remplacé depuis par la remise à zéro d'elle-même en quittant la phase de vote)
 - ☑ Espace : unités entourées de blanc
 - ☑ Espace : systèmes en combat entourés de rouge (jaune si le combat ne me concerne pas)
 - ☑ Trêve : bouton dans la fiche du système à la place du Ctrl + clic

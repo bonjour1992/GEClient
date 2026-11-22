@@ -190,7 +190,7 @@ Marques utilisées par l'interface : `degat` (nombre), `use` (usé), `rotation`
 | `creer` | `ref` ou `jeton`, `zone`, `proprio?`, `n?` | ajoute un composant (unité, jeton, tuile système) | oui |
 | `reveler` | `zone` | retourne face visible les cartes posées face cachée dans une zone publique (Ctrl + clic sur la carte) | oui |
 | `supprimer` | `c` | envoie un composant dans `horsJeu` | |
-| `reinitialiserVotes` | | vide et cache tous les plateaux de vote (agents des cases : agents usés ; ceux des carrés de droite et le reste : `horsJeu`), efface `voteRevele`, `votePret` et les compteurs `vote:<tour>:…` ; bouton « Réinitialiser le décompte » de l'onglet Vote, et à chaque « Nouveau tour » | oui |
+| `reinitialiserVotes` | | vide et cache tous les plateaux de vote (agents des cases : agents usés ; ceux des carrés de droite et le reste : `horsJeu`), efface `voteRevele`, `votePret` et les compteurs `vote:<tour>:…` ; envoyée par « Phase suivante » quand on quitte la phase de vote (après Trading et Harrugh, qui lisent le décompte), et à chaque « Nouveau tour » | oui |
 | `partie` | `tour?`, `phase?`, `joueurActif?`, `anneaux?` | change l'en-tête ou la taille de la carte | |
 
 Une action sur un composant que l'auteur ne voit pas est refusée, sauf `piocher`.
@@ -827,7 +827,8 @@ zone choisie) et « Montrer à… ».
 
 ### zone invisible
 
-Le plateau de vote caché d'un joueur est la seule zone invisible : les autres
+Le plateau de vote caché d'un joueur (pendant la phase de vote, avant sa
+révélation) est la seule zone invisible : les autres
 joueurs n'en reçoivent rien, ni dans l'état ni dans le journal (`zoneInvisible`
 dans `etat.js`). Une action qui y amène un composant n'est montrée qu'à son
 propriétaire ; une action qui l'en sort vers une zone publique est montrée sans
@@ -952,16 +953,20 @@ cube blanc est remplacé par la carte du dessus de `pioche:relique`.
 ### vote
 
 Onglet Vote : chaque joueur a son plateau (élément `vote`), zones
-`joueur:<u>:vote:<ligne>:<colonne>`. Il est visible de son joueur seul tant
+`joueur:<u>:vote:<ligne>:<colonne>`. Pendant la phase de vote (`estPhaseDeVote`,
+pas la prévote), il est visible de son joueur seul tant
 que le compteur `joueur:<u>:voteRevele` n'est pas à 1 (« Prêt à révéler » du
 décompte : quand tous sont prêts, chaque joueur révèle son plateau ; il n'y a
 pas de bouton pour révéler son plateau seul) :
 les autres n'en reçoivent rien, ni les pions, ni leur nombre, ni les coups qui
 y posent quelque chose. Chaque case a une partie droite (zone
 `…:vote:<ligne>:<colonne>:d`) : le carré. Un politicien dans la case est
-utilisé (1 voix) ; dans le carré, il est dépensé (2 voix). « Réinitialiser »
-renvoie donc les agents des cases dans les agents usés, retire du jeu ceux
-des carrés et le reste, et remet le compteur à 0. En haut de l'onglet : la liste numérotée des lois du tour
+utilisé (1 voix) ; dans le carré, il est dépensé (2 voix). Hors de la phase
+de vote, tous les plateaux sont visibles de tous. Quand on quitte la phase de
+vote (« Phase suivante »), le vote est réinitialisé (action
+`reinitialiserVotes`, plus de bouton) : les agents des cases vont dans les
+agents usés, ceux des carrés et le reste sont retirés du jeu, les compteurs
+sont remis à 0. En haut de l'onglet : la liste numérotée des lois du tour
 (cartes de `general:agenda:<tour>`).
 
 ### scripts d'unités, de planètes et d'habilités

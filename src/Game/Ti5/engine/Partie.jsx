@@ -809,9 +809,12 @@ export function Partie({ id }) {
     function changerPhase(pas, commentaire = "") {
         const phase = phases[iPhase + pas];
 
-        // Script Trading : on quitte la phase de vote, les prédictions justes sont payées
-        // (mercenaire Harrugh Gefhara : 1 commerce par loi résolue selon son vote majoritaire)
-        const finDeVote = pas > 0 && /^(?!.*pr[ée]).*vote/i.test(etat.phase)
+        // On quitte la phase de vote : script Trading, les prédictions justes sont payées
+        // (mercenaire Harrugh Gefhara : 1 commerce par loi résolue selon son vote majoritaire) ;
+        // puis le vote est réinitialisé (plateaux vidés et cachés, ajustements effacés)
+        const quitteVote = pas > 0 && /^(?!.*pr[ée]).*vote/i.test(etat.phase);
+
+        const finDeVote = quitteVote
             ? [tradingFinDeVote, harrughFinDeVote].map(f => f({ etat, index, joueurs, search, aScript: ctx.aScript, nomDe: ctx.nomDe }))
             : [];
 
@@ -822,8 +825,10 @@ export function Partie({ id }) {
 
         // Nouvelle phase : plus personne n'a passé, le premier de l'ordre joue
         if (phase) {
-            p.envoyer([commentaire, ...trading.messages].filter(Boolean).join(" — "), [
+            p.envoyer([commentaire, ...trading.messages, quitteVote && "vote réinitialisé"].filter(Boolean).join(" — "), [
                 ...trading.actions,
+                // (après Trading et Harrugh, qui lisent le décompte)
+                ...(quitteVote ? [{ type: "reinitialiserVotes" }] : []),
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),

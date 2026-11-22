@@ -167,14 +167,18 @@ export function joueurDeVote(zone) {
     return m ? Number(m[1]) : null;
 }
 
+// Phase de vote (pas la prévote) : les plateaux de vote n'y sont cachés que jusqu'à la révélation commune
+export const estPhaseDeVote = etat => /^(?!.*pr[ée]).*vote/i.test(etat?.phase || "");
+
 // Propriétaire d'une zone dont les autres joueurs ne reçoivent rien — un
-// plateau de vote que son joueur n'a pas révélé (compteur
-// joueur:<u>:voteRevele) — ou null si la zone n'est pas de cette sorte.
+// plateau de vote, pendant la phase de vote, que son joueur n'a pas encore
+// révélé (compteur joueur:<u>:voteRevele) — ou null si la zone n'est pas de
+// cette sorte. Hors de la phase de vote, les plateaux sont visibles de tous.
 export function zoneInvisible(zone, etat) {
 
     const votant = joueurDeVote(zone || "");
 
-    return votant !== null && !etat?.compteurs?.[`joueur:${votant}:voteRevele`]
+    return votant !== null && estPhaseDeVote(etat) && !etat?.compteurs?.[`joueur:${votant}:voteRevele`]
         ? votant
         : null;
 }
