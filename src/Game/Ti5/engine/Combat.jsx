@@ -8,7 +8,8 @@ import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceDe } from "./effets
 import { confirmer } from "./demande";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
-import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
+import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, RESSOURCES, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
+import { promessesTenues, actionsRendrePromesse, REDEVANCE_DE_PROTECTION } from "./effetsBlocage";
 import { turnNumber } from "../ti5Const";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
@@ -581,6 +582,28 @@ function CombatSysteme({ lieu }) {
         const aDesMilitaires = vaisseaux.some(x => x.camp === campVise && x.cible && x.militaire);
         const actions = [];
 
+        // Promesse Redevance de protection (#226) : « Le [Mentak] ne peut pas vous engager
+        // volontairement » (règle semi-bloquante pour le Mentak qui a fait la promesse) ; « si vous
+        // engagez ou bloquez le [Mentak] : #spend » (le détenteur qui l'engage perd la promesse).
+        const joueurVise = code.startsWith("@") ? parId[code.slice(1)]?.camp : campVise;
+
+        if (Number.isInteger(joueurVise) && joueurVise !== NEUTRE && joueurVise !== moi) {
+
+            if (aScript(moi, "redevance-de-protection-engagement") &&
+                promessesTenues(etat, REDEVANCE_DE_PROTECTION, joueurVise, moi).length > 0 &&
+                !confirmerRegle(`Engager ${nomCamp(joueurVise)}`,
+                    [`Redevance de protection : vous ne pouvez pas engager volontairement ${nomCamp(joueurVise)}, qui tient votre promesse`])) {
+                return;
+            }
+
+            const rompues = aScript(moi, "redevance-de-protection-rendre") ? promessesTenues(etat, REDEVANCE_DE_PROTECTION, moi, joueurVise) : [];
+
+            if (rompues.length) {
+                actions.push(...rompues.flatMap(carte => actionsRendrePromesse(etat, carte)));
+                aviser(`Redevance de protection : vous engagez ${nomCamp(joueurVise)}, la promesse est dépensée.`);
+            }
+        }
+
         for (const v of choisis) {
 
             const actuel = lireEngagement(v.c);
@@ -937,6 +960,7 @@ function CombatSysteme({ lieu }) {
             gains.push("2 commerce (Myru Vos)");
         }
 
+
         if (v.c.ref?.id === 850 && aScript(camp, "armageddon-capture")) {
             const local = "t" + (String(v.id).replace(/\D/g, "").slice(-11) || "1");
             const resistance = Number(armageddon?.PV) || 1;
@@ -1035,8 +1059,17 @@ function CombatSysteme({ lieu }) {
                 gains.push(`${recherche} de recherche (${pillage.recherche.map(([type, n]) => `${type} ${n}`).join(", ")})`);
             }
 
+            // « #pill(#com ici) » (Entrepôt d'aide) : le butin est le commerce posé sur l'unité
             if (pillage.aLaMain) {
-                gains.push("butin posé sur l'unité : à prendre à la main");
+
+                const jetons = Object.values(etat.composants).filter(x => x.sur === v.id && !x.ref && x.jeton === RESSOURCES.commerce[0]);
+                const total = jetons.reduce((somme, x) => somme + (Number(x.marques?.montant) || 1), 0);
+
+                if (total > 0) {
+                    actions.push({ type: "compteur", id: `joueur:${camp}:commerce`, delta: total }, ...jetons.map(x => ({ type: "supprimer", c: x.id })));
+                }
+
+                gains.push(total > 0 ? `${total} commerce posé sur l'unité` : "aucun commerce posé sur l'unité");
             }
         }
 
@@ -1783,6 +1816,16 @@ function CombatSysteme({ lieu }) {
     // domination « Récupération » s'ouvre (Controle.jsx) — chaque camp soutient
     // une des factions qui le demandent, s'engage contre toutes ou s'abstient ;
     // une seule à le demander : test de contrôle simple pour elle.
+    // Quetzalcoalt (#162, vaisseau amiral de la Volée argentée) : « si vous engagez au moins 3
+    // vaisseaux militaires à la phase de combat, marquez 1 point à la fin de celle-ci si ce vaisseau
+    // est encore en vie » — compté à la fin du combat spatial, une fois par tour
+    // (compteur joueur:<u>:quetzalcoalt = tour).
+    const quetzalcoalts = sorte !== "spatial" ? [] : campsJoueurs.filter(u =>
+        aScript(u, "quetzalcoalt") && Number(etat.compteurs[`joueur:${u}:quetzalcoalt`]) !== etat.tour &&
+        vaisseaux.filter(v => v.camp === u && v.militaire && (v.u.mot_cle || []).includes("ship") && lireEngagement(v.c).length > 0).length >= 3 &&
+        Object.values(etat.composants).some(c => !c.cache && c.ref?.type === "unit" && c.ref.id === 162 && campDe(c) === u &&
+            /^hex:\d+/.test(c.zone || "") && !aRetirer.some(v => v.id === c.id)));
+
     const DETRUITS = COMBAT + ":detruits";
     const RECUP = COMBAT + ":recup:";
 
@@ -1860,6 +1903,11 @@ function CombatSysteme({ lieu }) {
             // l'unité ne tire donc plus si ce bombardement est rouvert au même tour (issue #3)
             ...unites.filter(c => c.marques?.bombarde === CE_COMBAT)
                 .map(c => ({ type: "marquer", c: c.id, marque: "bombarde", valeur: "fini:" + CE_COMBAT })),
+            // Quetzalcoalt : 1 point pour la faction qui a engagé au moins 3 vaisseaux militaires
+            ...quetzalcoalts.flatMap(u => [
+                ...actionsPiste(etat, u, "points", 1),
+                { type: "compteur", id: `joueur:${u}:quetzalcoalt`, valeur: etat.tour },
+            ]),
             // Bombe bactériologique (#1016, « #spend : #bomb ») : elle est dépensée quand elle a bombardé
             ...unites.filter(c => c.ref.id === 1016 && c.marques?.bombarde === CE_COMBAT && !aRetirer.some(v => v.id === c.id))
                 .map(c => ({ type: "supprimer", c: c.id })),
@@ -1878,6 +1926,7 @@ function CombatSysteme({ lieu }) {
         ], [
             commentaire,
             detruites.length > 0 && `${detruites.length} unité(s) détruite(s) retirée(s)`,
+            quetzalcoalts.length > 0 && `Quetzalcoalt : +1 point pour ${quetzalcoalts.map(nomDe).join(", ")}`,
             transformees.length > 0 && `Contamination : ${transformees.length} unité(s) transformée(s) en Infanterie infectée de ${nomDe(contaminateur)}`,
             ...butins,
             gain && `Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}`,

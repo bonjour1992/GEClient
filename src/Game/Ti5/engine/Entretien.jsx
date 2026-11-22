@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useEngine, BoutonRegle, aMotCle, CUBE_MERCENAIRE, cubeDeMercenaire, nomElement } from "./Interaction";
 import { useElement, useElements } from "./sync";
-import { FAVEUR, actionsPoints } from "./miseEnPlace";
+import { FAVEUR, MARQUEUR, actionsPoints, actionsPiste, campDe } from "./miseEnPlace";
+import { infamieDe } from "./regleDecompte";
 import { useExploitationDuVide } from "./Controle";
 import { useRevenus } from "./Revenus";
 
@@ -81,7 +82,7 @@ const charges = (ids, contenus) => ids.every(id => !(id > 0) || id in contenus);
 //   actions   le coup à envoyer
 export function useEntretien(u, idFaction) {
 
-    const { etat, index, aScript, search } = useEngine();
+    const { etat, index, aScript, search, partie, nomDe, scriptsDesactives } = useEngine();
 
     const base = "joueur:" + u;
     const faction = useElement(idFaction);
@@ -123,7 +124,7 @@ export function useEntretien(u, idFaction) {
     ].filter(Boolean);
 
     // (habilité Sans influence : l'entretien ne rapporte pas d'influence)
-    const influence = sansInfluence
+    const influenceDeBase = sansInfluence
         ? 0
         : somme("inf") + bonusInfluence.reduce((total, [n]) => total + n, 0) + revenus.inf;
 
@@ -148,6 +149,41 @@ export function useEntretien(u, idFaction) {
     const systemesPoses = !aScript(u, "signal") ? [] : [...index.parZone]
         .filter(([zone, contenu]) => /^hex:\d{1,3}$/.test(zone) && contenu.some(c => c.ref?.type === "system"))
         .map(([zone]) => zone);
+
+    const surLaCarte = c => !c.cache && c.ref?.type === "unit" && /^hex:\d+/.test(c.zone || "");
+
+    // Gloire au juste (#151, vaisseau amiral des Winnu) tant qu'il est sur la carte : si le Winnu
+    // (son camp) possède Mecatol Rex (#34), chaque faction gagne 1 influence par faction qui a
+    // plus d'infamie qu'elle ; sinon, la faction qui possède Mecatol Rex gagne 1 infamie.
+    const gloire = aScript(u, "gloire-au-juste") ? Object.values(etat.composants).find(c => surLaCarte(c) && c.ref.id === 151) : null;
+    const possesseurMecatol = Number(/^joueur:(\d+):actif$/.exec(Object.values(etat.composants)
+        .find(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 34 && /^joueur:\d+:actif$/.test(c.zone || ""))?.zone || "")?.[1]) || null;
+    const winnuAMecatol = !!gloire && possesseurMecatol !== null && possesseurMecatol === campDe(gloire);
+    const plusInfames = winnuAMecatol && !sansInfluence
+        ? (partie?.joueurs || []).filter(j => j.userId !== u && infamieDe(etat, j.userId) > infamieDe(etat, u)).length
+        : 0;
+    const infamieGloire = !!gloire && !winnuAMecatol && possesseurMecatol === u;
+
+    // Promesse Vassal (#224) : la carte est chez le suzerain, avec le marqueur du vassal. Aux tours
+    // pairs, le vassal donne sa faveur au suzerain : celle qu'il gagne à ce ravitaillement y va.
+    // (la carte est chez le suzerain : le script se lit « en service », non « chez le joueur »)
+    const carteVassal = scriptsDesactives.includes("vassal-faveur") || etat.tour % 2 !== 0 ? null : Object.values(etat.composants).find(c =>
+        !c.cache && c.ref?.type === "Promesse" && c.ref.id === 224 && /^joueur:\d+:(actif|tour:\d+)$/.test(c.zone || "") &&
+        !c.zone.startsWith(base + ":") &&
+        Object.values(etat.composants).some(m => m.sur === c.id && !m.ref && m.jeton === MARQUEUR && m.proprio === u));
+    const suzerain = carteVassal ? Number(carteVassal.zone.split(":")[1]) : null;
+
+    // Portail de repli (#155) : les Raideurs (#152) du joueur détruits au tour précédent (marque
+    // « detruitA » : <lieu>:<tour>) sont replacés dans le système du portail.
+    const portail = aScript(u, "portail-de-repli-raideurs")
+        ? Object.values(etat.composants).find(c => surLaCarte(c) && c.ref.id === 155 && campDe(c) === u)
+        : null;
+    const raideurs = !portail ? [] : Object.values(etat.composants).filter(c =>
+        c.ref?.type === "unit" && c.ref.id === 152 && c.zone === "horsJeu" && c.proprio === u &&
+        new RegExp(`:${etat.tour - 1}$`).test(String(c.marques?.detruitA || "")));
+
+    // (influence du ravitaillement, Gloire au juste comprise)
+    const influence = influenceDeBase + plusInfames;
 
     const agentsUses = index.parZone.get(base + ":agentsUses") || [];
 
@@ -209,7 +245,12 @@ export function useEntretien(u, idFaction) {
         cubesUses.length > 0 && `Mercenaires : ${cubesUses.length} cube(s) de retour sur leur carte`,
         techsUtilisees.length > 0 && `Technologies de nouveau disponibles : ${techsUtilisees.length}`,
         noblesUses.length > 0 && "Noble cryogénisé : de nouveau disponible",
-        possedeNatale && `Planète natale : ${natales.map(id => nom({ type: "planet", id })).join(", ")} : 1 faveur`,
+        possedeNatale && `Planète natale : ${natales.map(id => nom({ type: "planet", id })).join(", ")} : 1 faveur` +
+            (suzerain ? ` — Vassal : elle est donnée à ${nomDe(suzerain)} (tour pair)` : ""),
+        !possedeNatale && suzerain && `Vassal : pas de faveur gagnée à donner à ${nomDe(suzerain)}`,
+        plusInfames > 0 && `Gloire au juste : +${plusInfames} inf (factions qui ont plus d'infamie que vous)`,
+        infamieGloire && "Gloire au juste : vous possédez Mecatol Rex, +1 infamie",
+        raideurs.length > 0 && `Portail de repli : ${raideurs.length} Raideur(s) détruit(s) au tour précédent replacé(s) dans son système`,
         !possedeNatale && idNatal > 0 && "Planète natale : aucune possédée, pas de faveur",
         bioBlessees.length > 0 && `Sève de vie : ${bioBlessees.length} unité(s) soignée(s)${soin > 1 ? ` (Vie fructifiante : ${soin} de résistance)` : ""}`,
         legendaires > 0 && `Destin légendaire : +${legendaires} point(s)`,
@@ -240,7 +281,14 @@ export function useEntretien(u, idFaction) {
             zone: systemesPoses[Math.floor(Math.random() * systemesPoses.length)],
             proprio: u,
         },
-        possedeNatale && { type: "creer", jeton: FAVEUR, zone: base + ":faveurs", proprio: u },
+        // (Vassal, tours pairs : la faveur gagnée va au suzerain)
+        possedeNatale && { type: "creer", jeton: FAVEUR, zone: suzerain ? `joueur:${suzerain}:faveurs` : base + ":faveurs", proprio: u },
+        ...(infamieGloire ? actionsPiste(etat, u, "infamie", 1) : []),
+        ...raideurs.flatMap(c => [
+            { type: "marquer", c: c.id, marque: "degat", valeur: 0 },
+            { type: "marquer", c: c.id, marque: "detruitA", valeur: null },
+            { type: "deplacer", c: c.id, vers: /^hex:\d+/.exec(portail.zone)[0] },
+        ]),
     ].filter(Boolean);
 
     return {

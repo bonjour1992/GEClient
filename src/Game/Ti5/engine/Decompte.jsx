@@ -75,6 +75,7 @@ export function Decompte({ apercu = false }) {
         feuillesDe,
         nomDe: ref => nomElement(search, ref),
         controleNatal,
+        aFierte: u => aScript(u, "fierte"),
     });
 
     const compteur = (u, cle) => Number(etat.compteurs[`joueur:${u}:${cle}`]) || 0;

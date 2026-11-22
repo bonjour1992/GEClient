@@ -209,12 +209,23 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const disponibles = motif => (index.parZone.get(`joueur:${moi}:agents`) || [])
         .filter(c => c.ref && new RegExp(motif, "i").test(nomElement(search, c.ref)));
 
+    // Étoile de la mort (#572) : « pour être déplacée nécessite #use #log, #amiral et #scien » —
+    // chacune use un logisticien, un amiral et un scientifique, hors des flottes.
+    const estEtoile = c => c.ref.id === 572 && aScript(moi, "etoile-de-la-mort-deplacement");
+    const etoiles = selection.filter(estEtoile).length;
+
     const besoins = Object.keys(AGENTS)
         .map(cle => {
-            const n = selection.filter(c => agentDe(contenus[c.ref.id], transport) === cle).length;
-            return { cle, ...AGENTS[cle], n, cout: coutEnAgents(n), dispo: disponibles(AGENTS[cle].motif) };
+            const n = selection.filter(c => !estEtoile(c) && agentDe(contenus[c.ref.id], transport) === cle).length;
+            const plus = ["amiral", "logisticien", "scientifique"].includes(cle) ? etoiles : 0;
+
+            return { cle, ...AGENTS[cle], n, plus, cout: coutEnAgents(n) + plus, dispo: disponibles(AGENTS[cle].motif) };
         })
-        .filter(b => b.n > 0);
+        .filter(b => b.cout > 0);
+
+    // Soleil d'or (#21) : le déplacer coûte 2 commerce en plus de l'agent
+    const soleilsDOr = aScript(moi, "soleil-d-or-deplacement") ? selection.filter(c => c.ref.id === 21).length : 0;
+    const monCommerce = Number(etat.compteurs[`joueur:${moi}:commerce`]) || 0;
 
     // --------------------------------------------------------
     // CHARGEMENT : les unités se glissent sur le pion du vaisseau (elles
@@ -354,6 +365,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         ...besoins.filter(b => b.dispo.length < b.cout)
             .map(b => `il faut ${b.cout} ${b.cout > 1 ? b.pluriel : b.nom}, ${b.dispo.length} disponible(s) : ` +
                 (b.dispo.length ? `seuls ceux-là seront ${depuisActive ? "dépensés" : "utilisés"}` : "aucun agent ne sera pris")),
+        soleilsDOr > 0 && monCommerce < 2 * soleilsDOr &&
+            `Soleil d'or : le déplacer coûte ${2 * soleilsDOr} commerce, vous en avez ${monCommerce} (seul ce commerce sera dépensé)`,
         sansPlace > 0 && `${sansPlace} unité(s) embarquée(s) au-delà de la capacité des vaisseaux`,
         avecGravite && scientifiquesGravite.length < coutEnAgents(selection.length) &&
             `Moteur à gravité : il faut ${coutEnAgents(selection.length)} scientifique(s), ${scientifiquesGravite.length} disponible(s)`,
@@ -403,6 +416,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         envoyer([
             ...actionsAgents,
             ...scientifiquesGravite.map(agent => ({ type: "deplacer", c: agent.id, vers: uses })),
+            // (Soleil d'or : 2 commerce par Soleil d'or déplacé)
+            soleilsDOr > 0 && monCommerce > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: -Math.min(monCommerce, 2 * soleilsDOr) },
             // (compte des vaisseaux déplacés : « Finir le déplacement »)
             { type: "compteur", id: compteurDeplaces(moi), delta: partent.length },
             ...partent.flatMap(v => [
@@ -677,11 +692,13 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                             <b>Agents {depuisActive ? "dépensés (■)" : "utilisés (□)"} :</b>{" "}
                             {besoins.map(b => (
                                 <span key={b.cle} style={{ marginRight: 12, color: b.dispo.length < b.cout ? "#b71c1c" : undefined }}>
-                                    {b.n} vaisseau{b.n > 1 ? "x" : ""} → {Math.floor(b.n / TAILLE_FLOTTE) > 0 && `${Math.floor(b.n / TAILLE_FLOTTE)} flotte(s) de ${TAILLE_FLOTTE}`}
+                                    {b.n > 0 && `${b.n} vaisseau${b.n > 1 ? "x" : ""} → `}{Math.floor(b.n / TAILLE_FLOTTE) > 0 && `${Math.floor(b.n / TAILLE_FLOTTE)} flotte(s) de ${TAILLE_FLOTTE}`}
                                     {Math.floor(b.n / TAILLE_FLOTTE) > 0 && b.n % TAILLE_FLOTTE > 0 && " + "}
-                                    {b.n % TAILLE_FLOTTE > 0 && `${b.n % TAILLE_FLOTTE} seul(s)`} = <b>{b.cout} {b.cout > 1 ? b.pluriel : b.nom}</b> ({b.dispo.length} disponible{b.dispo.length > 1 ? "s" : ""})
+                                    {b.n % TAILLE_FLOTTE > 0 && `${b.n % TAILLE_FLOTTE} seul(s)`}
+                                    {b.plus > 0 && `${b.n > 0 ? " + " : ""}${b.plus} pour l'Étoile de la mort`} = <b>{b.cout} {b.cout > 1 ? b.pluriel : b.nom}</b> ({b.dispo.length} disponible{b.dispo.length > 1 ? "s" : ""})
                                 </span>
                             ))}
+                            {soleilsDOr > 0 && <span data-soleil-d-or style={{ marginRight: 12 }}>Soleil d'or : <b>{2 * soleilsDOr} commerce</b></span>}
                         </div>
                     )}
 

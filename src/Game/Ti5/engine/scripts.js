@@ -1132,6 +1132,35 @@ export const SCRIPTS = [
         "Pour chaque faction : points de la piste, lignes du décompte (connaissance, sièges, infamie et Sévérité, Canon restauré, Colonie Ladaran, Armageddon conquis, Arbre de vie éternelle, Graine d'eden, Monument éternel, Spectre de l'empereur, Plan ancien), total et départage. Une unité rapporte à son camp ; une unité neutre ne rapporte rien. « Marquer mes points du décompte » déplace votre marqueur, une fois.",
         [30, 590, 490, 571, 470, 554, 387, 853]),
 
+    regle("gloire-au-juste", "unit", 151, 0, "Gloire au juste", "auto",
+        "Ravitaillement automatique (début de la phase)",
+        "Tant que Gloire au juste est sur la carte : si le Winnu possède Mecatol Rex, l'entretien de chaque faction rapporte 1 influence par faction qui a plus d'infamie qu'elle ; sinon, la faction qui possède Mecatol Rex gagne 1 infamie."),
+
+    regle("vassal-faveur", "Promesse", 224, 0, "Vassal : faveur au suzerain", "auto",
+        "Ravitaillement automatique (début de la phase), tours pairs",
+        "Aux tours pairs, la faveur que le vassal gagne à l'entretien (planète natale possédée) est posée chez le suzerain, qui tient sa promesse Vassal."),
+
+    regle("portail-de-repli-raideurs", "unit", 155, 0, "Portail de repli : Raideurs", "auto",
+        "Ravitaillement automatique (début de la phase)",
+        "Vos Raideurs détruits au tour précédent sont replacés dans le système de votre Portail de repli."),
+
+    regle("quetzalcoalt", "unit", 162, 0, "Quetzalcoalt", "auto",
+        "Conflit : « Terminer le combat » d'un combat spatial",
+        "Si vous avez engagé au moins 3 vaisseaux militaires dans le combat et que le Quetzalcoalt est encore en vie : 1 point, une fois par tour."),
+
+
+    regle("soleil-d-or-deplacement", "unit", 21, 0, "Soleil d'or : déplacement", "modifie",
+        "Espace : déplacement assisté",
+        "Déplacer le Soleil d'or coûte 2 commerce en plus de l'agent : ils sont dépensés au départ."),
+
+    regle("etoile-de-la-mort-deplacement", "unit", 572, 0, "Étoile de la mort : déplacement", "modifie",
+        "Espace : déplacement assisté",
+        "La déplacer use un logisticien, un amiral et un scientifique, comptés à part des flottes."),
+
+    regle("redevance-de-protection-engagement", "Promesse", 226, 0, "Redevance de protection : engagement", "modifie",
+        "Conflit : « Engager », « Cibler »",
+        "Le Mentak qui a fait la promesse ne peut pas engager volontairement la faction qui la tient (confirmation) ; la faction qui la tient et engage le Mentak perd la promesse."),
+
     regle("conclave-secret", "habilite", 160, 1795046343788, "Conclave secret", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main ; à partir du tour 4, le compte rendu rappelle d'évaluer l'objectif précédent, pour vous seul, et d'en marquer les points."),
@@ -1453,8 +1482,8 @@ export const SCRIPTS = [
         "Le portail se reforge au lieu de se construire : aucun logisticien n'est utilisé, un scientifique et 2 fragments spatiaux sont dépensés, et vous gagnez 1 point."),
 
     regle("fierte", "habilite", 167, 1794335054829, "Fierté", "modifie",
-        "Conflit : conflit d'accord (revendication)",
-        "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez."),
+        "Conflit : conflit d'accord (revendication) ; décompte des points",
+        "Vous ne pouvez pas accepter la revendication d'une planète que vous possédez. Au décompte, vos points négatifs d'infamie sont doublés. (Points d'objectifs militaires doublés : à la main.)"),
 
     action("fin-de-la-tempete", "habilite", 443, 1795046343837, "Fin de la tempête", "carte",
         "Phase d'événement : la Tempête spatiale est retirée de la table, les stations météorologiques ne génèrent plus de recherche tempête, chaque faction marque 2 points par niveau de connaissance de tempête, et celle qui en a le plus 3 de plus.", {

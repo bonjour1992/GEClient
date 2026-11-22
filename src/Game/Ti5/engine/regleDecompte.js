@@ -18,7 +18,8 @@ import { campDe, NEUTRE, RESSOURCES } from "./miseEnPlace.js";
 //                 connaissance que vous » — le bonus même à égalité)
 //   sièges        1 point par siège au sénat
 //   infamie       la case du marqueur dit les points retirés ; loi
-//                 Sévérité (#306) en jeu : 1 de plus par infamie
+//                 Sévérité (#306) en jeu : 1 de plus par infamie ;
+//                 habilité Fierté (#167) : ces points négatifs sont doublés
 //   éléments      Canon restauré (#30, à qui le possède), Colonie
 //                 Ladaran (#590), Armageddon conquis (#490, 2 de plus
 //                 reforgé), Arbre de vie éternelle (#571, sans dégât),
@@ -81,10 +82,11 @@ export function decompteDeFeuille(contenu) {
 //   feuillesDe       userId -> [{ id (de la feuille), type, niveau }]
 //   nomDe            ref -> nom d'un élément
 
+//   aFierte          userId -> la faction a l'habilité Fierté (points négatifs d'infamie doublés)
 //   controleNatal    userId -> "oui", "non", "dispute", "enCours" (contrôle d'une de ses planètes natales), ou null
 // -> { parJoueur : { [userId]: { piste, lignes : [{ libelle, points, note }], gains, total } },
 //      aLaMain : [texte] }
-export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, controleNatal }) {
+export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, controleNatal, aFierte = () => false }) {
 
     const lignes = Object.fromEntries(joueurs.map(u => [u, []]));
     const aLaMain = [];
@@ -144,6 +146,12 @@ export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, c
 
             if (severite) {
                 ajouter(u, "Sévérité (loi) : 1 de plus par infamie", -infamie);
+            }
+
+            // (Fierté : « doublez les points négatifs des points d'infamie »)
+            if (aFierte(u)) {
+                ajouter(u, "Fierté : points négatifs d'infamie doublés",
+                    -(INFAMIE_POINTS[Math.min(infamie, INFAMIE_POINTS.length - 1)] || 0) - (severite ? infamie : 0));
             }
         }
     }
