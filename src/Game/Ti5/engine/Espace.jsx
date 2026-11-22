@@ -32,7 +32,7 @@ import { ProductionEnCours, lireProduction, ouvrirProductionLieu } from "./Produ
 import { zoneFouille } from "./Archeologie";
 import { noter } from "./recherche";
 import { BoutonsScripts } from "./ActionsScript";
-import { choisirRemplacants } from "./Interaction";
+import { choisirRemplacants, mercenaireDisponible, actionsUserCarte } from "./Interaction";
 import {
     actionsPossession, cleControle, controlesEnCours, actionsSatellite, agentDeStation, AGENTS_STATION,
     cleAccord, accordsEnCours, campsAConsulter, possesseurActuel, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
@@ -914,7 +914,8 @@ function Natives({ contenu, titre }) {
     );
 }
 
-function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
+//   avec : nom du mercenaire qui mobilise à la place d'un logisticien (Gabriel Gibbs), s'il y en a un
+function Mobilisation({ max, cout, mobiliser, obstacles, clonage, avec }) {
 
     const [n, setN] = useState(max);
 
@@ -922,8 +923,8 @@ function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
 
     // On peut mobiliser moins que le maximum : − / + règlent le nombre
     return (
-        <span style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
-            Mobiliser
+        <span data-mobilisation={avec || "logisticien"} style={{ display: "inline-flex", alignItems: "center", flexWrap: "wrap", gap: 4 }}>
+            {avec ? `${avec} : mobiliser` : "Mobiliser"}
             <Pas
                 valeur={<>{nombre} / {max}</>}
                 styleValeur={{ minWidth: 34, textAlign: "center" }}
@@ -931,10 +932,10 @@ function Mobilisation({ max, cout, mobiliser, obstacles, clonage }) {
                 plus={{ disabled: nombre >= max, title: "Une infanterie de plus", onClick: () => setN(nombre + 1) }}
             />
             <BoutonRegle
-                nom={`Mobiliser ${nombre} infanterie${nombre > 1 ? "s" : ""}`}
+                nom={`${avec ? avec + " : mobiliser" : "Mobiliser"} ${nombre} infanterie${nombre > 1 ? "s" : ""}`}
                 obstacles={obstacles(nombre)}
                 faire={commentaire => mobiliser(nombre, commentaire)}
-                title={`Use un logisticien, dépense ${nombre * cout} ressource(s), pose ${nombre} infanterie(s) et active la planète`}
+                title={`Use ${avec || "un logisticien"}, dépense ${nombre * cout} ressource(s), pose ${nombre} infanterie(s) et active la planète`}
             >
                 infanterie{nombre > 1 ? "s" : ""} ({nombre * cout} res.)
             </BoutonRegle>
@@ -1255,13 +1256,23 @@ function FicheSysteme({ numero, id, fermer }) {
         !aLogisticien && manque("logisticien"),
     ];
 
+    // Mercenaire Gabriel Gibbs (#729), utilisable comme logisticien : quand c'est lui qui
+    // mobilise, jusqu'à la capacité logistique en infanteries (au lieu de la production de l'infanterie)
+    const gibbs = enProduction && aScript(moi, "gabriel-gibbs")
+        ? mercenaireDisponible({ index, moi, search }, 729, MOTIF_LOGISTICIEN)
+        : null;
+
     //   clonage : script Cuve de clonage — un scientifique est usé, une infanterie
     //   de plus est posée et toute la mobilisation est gratuite
+    //   mercenaire : carte du mercenaire qui mobilise à la place d'un logisticien (Gabriel Gibbs)
     //   Mobiliser demande la possession de la planète et son contrôle.
-    async function mobiliser(k, n, commentaire, clonage = false) {
+    async function mobiliser(k, n, commentaire, clonage = false, mercenaire = null) {
+
+        // (le mercenaire désigné est utilisé lui-même : la question « qui agit ? » n'est pas posée)
+        const logisticien = () => (mercenaire ? actionsUserCarte(index, moi, mercenaire) : [utiliser(MOTIF_LOGISTICIEN)]);
 
         if (!await controlePlanete(k, liensPlanetes.find(x => x.k === k)?.lien.id, "mobilisation", commentaire,
-            () => [utiliser(MOTIF_LOGISTICIEN), clonage && utiliser("scientifique")])) {
+            () => [...logisticien(), clonage && utiliser("scientifique")])) {
             return;
         }
 
@@ -1282,7 +1293,7 @@ function FicheSysteme({ numero, id, fermer }) {
 
         envoyer([
             // Un logisticien, ou le Généticien (Arborec) qui mobilise comme lui
-            utiliser(MOTIF_LOGISTICIEN),
+            ...logisticien(),
             clonage && utiliser("scientifique"),
             cout && { type: "compteur", id: `joueur:${moi}:res`, delta: -cout },
             ...Array.from({ length: n }, () => ({
@@ -1496,7 +1507,7 @@ function FicheSysteme({ numero, id, fermer }) {
     function produireAvec(k, idPlanete, planete, commentaire) {
 
         ouvrirProductionLieu(
-            { index, moi, search, envoyer, setProduction, capaciteLogistique },
+            { index, moi, search, envoyer, setProduction, capaciteLogistique, aScript, aviser },
             {
                 source: "planete:" + idPlanete,
                 nom: nomPlanete(planete),
@@ -1991,6 +2002,18 @@ function FicheSysteme({ numero, id, fermer }) {
                                                         !aScientifique && manque("scientifique"),
                                                     ],
                                                 }}
+                                            />
+                                        )}
+
+                                        {/* Mercenaire Gabriel Gibbs : il mobilise jusqu'à la capacité logistique */}
+                                        {joueur && enProduction && aMoi && !activee && idInfanterie && gibbs &&
+                                            planete?.type === "pla" && capaciteLogistique(moi) > 0 && (
+                                            <Mobilisation
+                                                avec="Gabriel Gibbs"
+                                                max={capaciteLogistique(moi)}
+                                                cout={coutInfanterie}
+                                                mobiliser={(n, commentaire) => mobiliser(k, n, commentaire, false, gibbs)}
+                                                obstacles={n => obstaclesMobilisation(n).slice(0, 1)}
                                             />
                                         )}
                                     </div>

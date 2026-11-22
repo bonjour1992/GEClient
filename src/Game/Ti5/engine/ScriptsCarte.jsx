@@ -55,11 +55,13 @@ export function ScriptsCarte({ c, fermer }) {
         // Boutons d'action d'une carte qui n'est pas une unité (habilité posée sur la table…)
         c.ref.type !== "unit" &&
             <BoutonsScripts key="actions-carte" lieu="carte" c={c} idElement={c.ref.id} apres={fermer} />,
-        // Boutons d'action de l'unité (scripts de sorte « action ») : une de mes unités de la carte
-        c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi && /^hex:\d+/.test(c.zone || "") &&
+        // Boutons d'action de l'unité (scripts de sorte « action ») : une de mes unités de la carte ;
+        // sur l'unité d'un autre camp, seulement les scripts qui le prévoient (« autrui » : Indigène)
+        c.ref.type === "unit" && /^hex:\d+/.test(c.zone || "") &&
             <BoutonsScripts
                 key="actions-unite"
                 lieu="unite"
+                autrui={(c.marques?.possession ?? c.proprio) !== moi}
                 c={c}
                 idElement={c.ref.id}
                 numero={Number(/^hex:(\d+)/.exec(c.zone)[1])}

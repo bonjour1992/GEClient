@@ -13,7 +13,7 @@ import { MARQUE_AGI, estBloquee } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
 import { obstacleSousPhase, DEBARQUEMENT } from "./regleSousPhases";
 import { estHyperlane } from "./hyperlane";
-import { estProductible } from "./Production";
+import { estProductible, effetsMercenaires } from "./Production";
 import { typeUnite } from "./miseEnPlace";
 import {
     MARQUEUR,
@@ -950,6 +950,35 @@ export async function choisirRemplacants(actions) {
     }
 
     return resultat;
+}
+
+// Mercenaires (identifiants de carte) qui agissent comme agent dans ces actions, une fois passées
+// par choisirRemplacants : leur cube part dans les agents usés (marque « carte »). Sert aux
+// mercenaires dont l'effet dépend de ce pour quoi on les utilise (Farran, Trillossa…).
+export function mercenairesQuiAgissent(actions) {
+
+    const composants = connexion?.etat?.composants;
+
+    if (!composants) {
+        return [];
+    }
+
+    return (Array.isArray(actions) ? actions : [actions]).filter(Boolean)
+        .map(a => (a.type === "marquer" && a.marque === "carte" ? a.valeur : (a.type === "creer" ? a.marques?.carte : null)))
+        .map(id => composants[id])
+        .filter(c => c?.ref?.type === "mercenaire")
+        .map(c => c.ref.id);
+}
+
+// Carte de ce mercenaire s'il est disponible comme remplaçant d'un agent de ce type (son cube
+// est sur sa carte, elle-même posée sur ce type d'agent) ; null sinon. motif : expression
+// régulière du nom de l'agent.
+export function mercenaireDisponible({ index, moi, search }, idMercenaire, motif) {
+
+    const test = new RegExp(motif, "i");
+
+    return remplacantsDisponibles({ index, moi, search }, nom => test.test(nom))
+        .find(c => c.ref.type === "mercenaire" && c.ref.id === idMercenaire) || null;
 }
 
 // Agent disponible (non usé) du joueur dont le nom contient `nom`, ou null. Faute
@@ -2305,13 +2334,17 @@ export function Plan({ children, style }) {
         // et la réduction d'IA industrielle vient en déduction du coût.
         const ouverte = production !== true ? production : null;
 
+        // Mercenaires qui ont ouvert cette production comme logisticien (Production.jsx) : remise
+        // sur un type d'unité, unité posée en plus, unité offerte qui ne compte pas
+        const mercenaires = effetsMercenaires(ouverte, ouverte ? unites : [], contenuEnCache);
+
         if (ouverte && unites.length) {
 
             const refusees = unites.filter(ref => !estProductible(contenuEnCache(ref.id), ouverte.types));
 
             obstacles.push(
                 refusees.length > 0 && `${ouverte.nom} ne produit pas : ${noms(refusees)}`,
-                ouverte.max !== null && ouverte.fait + unites.length > ouverte.max &&
+                ouverte.max !== null && ouverte.fait + unites.length - mercenaires.gratuites > ouverte.max &&
                     `${ouverte.nom} produit ${ouverte.max} unité(s) au plus (${ouverte.fait} déjà)`,
                 !new RegExp(`^hex:${ouverte.numero}(:|$)`).test(zone || "") &&
                     `${ouverte.nom} produit dans son système (${nomCase(ouverte.numero)}), pas ici`,
@@ -2384,6 +2417,12 @@ export function Plan({ children, style }) {
             const depense = surPlanete && presentes.length > 0;
             const logisticien = besoin ? agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN) : null;
 
+            // Mercenaire M'aban (#283), utilisable comme logisticien : il construit même s'il y a
+            // déjà une structure sur la planète — il est utilisé, aucun logisticien n'est dépensé
+            const maban = besoin && depense && aScript(moi, "m-aban")
+                ? mercenaireDisponible({ index, moi, search }, 283, MOTIF_LOGISTICIEN)
+                : null;
+
             // On construit sur une planète ou dans un système que l'on contrôle (phase de construction,
             // règle « Contrôle ») : sur une planète, les unités qui s'y trouvent comptent ; dans un
             // système, les vaisseaux et les structures spatiales. Mon contrôle doit dépasser celui des
@@ -2452,8 +2491,18 @@ export function Plan({ children, style }) {
                     ...actionsPoints(etat, moi, reforgees.length * REFORGE_PORTAIL.points),
                 ]),
                 ...(!logisticien ? [] : (depense
-                    // (dépensé : le script Bio stimulant propose de l'user à la place)
-                    ? await depenserAgent({ aScript, moi, etat }, logisticien, "le logisticien (la planète porte déjà une structure)")
+                    ? (maban && (await demander({
+                        titre: "M'aban",
+                        texte: "La planète porte déjà une structure : le logisticien qui construit est dépensé, sauf si c'est M'aban.",
+                        choix: [
+                            { valeur: 1, libelle: "M'aban construit : il est utilisé, aucun logisticien n'est dépensé" },
+                            { valeur: 2, libelle: "Dépenser un logisticien" },
+                        ],
+                        renoncer: false,
+                    })) === 1
+                        ? actionsUserCarte(index, moi, maban)
+                        // (dépensé : le script Bio stimulant propose de l'user à la place)
+                        : await depenserAgent({ aScript, moi, etat }, logisticien, "le logisticien (la planète porte déjà une structure)"))
                     : [{ type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` }])),
                 ...(besoin && surPlanete ? [{ type: "creer", jeton: ACTIVATION, zone }] : []),
             ];
@@ -2468,8 +2517,9 @@ export function Plan({ children, style }) {
         }
 
         const brut = unites.reduce((total, ref) => total + (Number(contenuEnCache(ref.id)?.cout) || 0), 0);
-        const reduction = Math.min(brut, ouverte?.reduction || 0);
-        const cout = brut - reduction;
+        const remise = Math.min(brut, mercenaires.remise);
+        const reduction = Math.min(brut - remise, ouverte?.reduction || 0);
+        const cout = brut - remise - reduction;
 
         const compteur = `joueur:${moi}:res`;
         const dispo = Number(etat.compteurs[compteur]) || 0;
@@ -2506,11 +2556,22 @@ export function Plan({ children, style }) {
         }
 
         if (ouverte && unites.length) {
-            setProduction({ ...ouverte, fait: ouverte.fait + unites.length, reduction: ouverte.reduction - reduction });
+            setProduction({
+                ...ouverte,
+                ...mercenaires.etat,
+                fait: ouverte.fait + unites.length - mercenaires.gratuites,
+                reduction: ouverte.reduction - reduction,
+            });
+
+            if (mercenaires.enPlus.length) {
+                aviser?.(`Production : ${noms(mercenaires.enPlus)} de plus, sans coût (mercenaire qui a ouvert la production).`);
+            }
         }
 
         return [
             ...(cout ? [{ type: "compteur", id: compteur, delta: -cout }] : []),
+            // (mercenaire Trillossa Aun Mirik : un destroyeur de plus, posé au même endroit)
+            ...mercenaires.enPlus.map(ref => ({ type: "creer", ref, zone, proprio: moi })),
             ...await apres(),
         ];
     }
@@ -2938,6 +2999,15 @@ export function Plan({ children, style }) {
                 signaler?.(`${a.nom || "Cette unité"} n'est pas une unité terrestre : elle ne peut pas être posée sur une planète.`);
                 return;
             }
+        }
+
+        // Infanterie infectée (#1014) : « ne peut jamais être déplacée » — une fois sur la carte,
+        // elle n'en bouge plus (règle semi-bloquante : la confirmation laisse faire)
+        if (aScript(moi, "infanterie-infectee") &&
+            aDeplacer.some(id => etat.composants[id]?.ref?.type === "unit" && etat.composants[id].ref.id === 1014 &&
+                /^hex:/.test(etat.composants[id].zone || "")) &&
+            !confirmerRegle("Déplacer une Infanterie infectée", ["l'Infanterie infectée ne peut jamais être déplacée"])) {
+            return;
         }
 
         // Capture (Production.jsx) : pendant une production, une unité capturée — celle

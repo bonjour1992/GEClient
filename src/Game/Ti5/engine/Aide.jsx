@@ -131,6 +131,7 @@ const MODE_EMPLOI = [
     ["Agents et mercenaires", [
         "Utiliser un agent : clic dans « Mes agents » (ou reprendre un agent usé) ; Ctrl + clic le supprime.",
         "Mercenaire « utilisable comme » : glissez son cube noir (ou sa carte) sur un type d'agent de « Mes agents ». Quand un agent de ce type sert, l'onglet Décision demande qui agit.",
+        "Mercenaire lié à une action : son effet vaut quand c'est lui qui agit — choisi comme logisticien à l'ouverture d'une production (coût réduit, unité en plus : le bandeau le rappelle), ou par son propre bouton (« Gabriel Gibbs : mobiliser », « Tirer avec Vasra Ivo »).",
         "Héritier des Winnu : proposé de lui-même (politique si vous possédez Mecatol Rex, amiral sinon).",
         "Cube noir : un mercenaire utilisé envoie son cube dans les agents usés ; sans cube sur sa carte il n'est plus utilisable. Le ravitaillement rend les cubes.",
         "Station : reprendre l'agent posé dessus vous fait perdre la station.",

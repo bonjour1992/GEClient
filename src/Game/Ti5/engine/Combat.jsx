@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-    useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible, carteUsee, actionsUserCarte,
+    useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible, carteUsee, actionsUserCarte, mercenaireDisponible,
     tuileDe, esclavesDe, nomDuCamp,
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
@@ -376,13 +376,19 @@ function CombatSysteme({ lieu }) {
     // Armageddon conquis (#490) reforgé — un scientifique est posé dessus : portée de son canon +1
     const armageddonReforge = c => c.ref.id === 490 && Object.values(etat.composants).some(x => x.sur === c.id && x.ref?.type === "agent");
 
+    // Mercenaire Vasra Ivo (#351), utilisable comme amiral : quand c'est lui qui fait tirer un
+    // canon, sa portée augmente de 1 (sa carte, s'il est disponible comme amiral ; null sinon)
+    const vasra = sorte === "canons" && aScript(moi, "vasra-ivo") ? mercenaireDisponible({ index, moi, search }, 351, "amiral") : null;
+
+    // -> "oui", "scientifique" (Laser longue portée), "vasra" (une case de plus avec Vasra Ivo) ou null
     const aPortee = c => {
         const camp = campDe(c);
         const portee = porteeEcrite(c) + (camp !== NEUTRE && aScript(camp, "canon-longue-portee") ? 1 : 0) + (armageddonReforge(c) ? 1 : 0);
         const d = distanceDe(c);
 
         return d <= portee ? "oui"
-            : (d === portee + 1 && camp !== NEUTRE && aScript(camp, "laser-longue-portee") ? "scientifique" : null);
+            : (d === portee + 1 && camp !== NEUTRE && aScript(camp, "laser-longue-portee") ? "scientifique"
+                : (d === portee + 1 && camp === moi && vasra ? "vasra" : null));
     };
 
     // Canon d'une unité : celui de son texte ; script Laser longue portée : le
@@ -1079,6 +1085,32 @@ function CombatSysteme({ lieu }) {
         { type: "supprimer", c: v.id },
     ].filter(Boolean));
 
+    // Habilité Contamination (Néo-peste, #920) : « vos bombardements ne détruisent pas les unités :
+    // ils les transforment en Infanterie infectée (#1014) ». Quand une seule faction bombarde et
+    // qu'elle a l'habilité, les unités détruites sur la planète deviennent ses Infanteries
+    // infectées, sur place, au lieu d'être retirées (pas de butin : rien n'est détruit).
+    const bombardiers = sorte !== "bombardement" ? []
+        : [...new Set(unites.filter(c => c.marques?.bombarde === CE_COMBAT).map(campDe))];
+
+    const contaminateur = bombardiers.length === 1 && bombardiers[0] !== NEUTRE && aScript(bombardiers[0], "contamination")
+        ? bombardiers[0]
+        : null;
+
+    const contaminee = v => contaminateur !== null && v.camp !== contaminateur && v.c.zone === zone && !v.c.sur;
+
+    const contamination = v => [
+        ...Object.values(M).filter(m => v.c.marques?.[m] !== undefined).map(m => marquer(v.id, m, [])),
+        { type: "marquer", c: v.id, marque: "degat", valeur: 0 },
+        ...["degatDe", "degatPar", "possession", "use"].filter(m => v.c.marques?.[m] !== undefined)
+            .map(m => ({ type: "marquer", c: v.id, marque: m, valeur: null })),
+        { type: "remplacer", c: v.id, ref: { type: "unit", id: 1014 } },
+        // (le serveur ne laisse prendre un composant qu'à son propre compte : si un autre joueur
+        //  termine le combat, l'unité passe au contaminateur par la marque « possession »)
+        moi === contaminateur
+            ? { type: "deplacer", c: v.id, vers: zone, proprio: contaminateur }
+            : { type: "marquer", c: v.id, marque: "possession", valeur: contaminateur },
+    ];
+
     // (Le retrait se fait à « Terminer le combat » : il n'y a plus de bouton « Terminer le combat ».)
 
     // Technologie Recomposition (Arborec) : le coût des unités biologiques détruites dans la
@@ -1771,7 +1803,10 @@ function CombatSysteme({ lieu }) {
 
         // Les unités indiquées détruites sont retirées (butin, capture), celles qu'un jet a
         // sauvées vont où le jet le dit
-        const butins = aRetirer.map(butinDe).filter(Boolean).map(b => b.texte);
+        // (Contamination : les unités transformées ne sont pas détruites — ni butin, ni Recomposition)
+        const transformees = aRetirer.filter(contaminee);
+        const detruites = aRetirer.filter(v => !contaminee(v));
+        const butins = detruites.map(butinDe).filter(Boolean).map(b => b.texte);
 
         const commentaire = obstacles.some(Boolean)
             ? confirmerRegle("Terminer le combat", obstacles)
@@ -1821,16 +1856,18 @@ function CombatSysteme({ lieu }) {
             ...effacerMarques(["epargne"]),
             // Destruction : les unités indiquées détruites quittent le jeu (après les
             // effacements de marques ci-dessus : une unité retirée ne se marque plus)
-            ...cumulRecomposition(aRetirer),
+            ...cumulRecomposition(detruites),
             ...aSauver.flatMap(sauvetage),
-            ...aRetirer.flatMap(retrait),
+            ...detruites.flatMap(retrait),
+            ...transformees.flatMap(contamination),
             // (Avar, Arcturus : la possession tombe si la dernière unité du possesseur est détruite)
             ...actionsPossessionPerdue({ etat, index, zone, partis: new Set(aRetirer.map(v => v.id)), aScript }).actions,
             // (2 : résolu — il reste dans l'onglet jusqu'à la fin de la phase, CombatResolu.jsx)
             { type: "compteur", id: COMBAT, valeur: 2 },
         ], [
             commentaire,
-            aRetirer.length > 0 && `${aRetirer.length} unité(s) détruite(s) retirée(s)`,
+            detruites.length > 0 && `${detruites.length} unité(s) détruite(s) retirée(s)`,
+            transformees.length > 0 && `Contamination : ${transformees.length} unité(s) transformée(s) en Infanterie infectée de ${nomDe(contaminateur)}`,
             ...butins,
             gain && `Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}`,
             testRecup && `Récupération (${epaves} ressource(s)) demandée par ${cochees.map(nomDe).join(", ")} : test de domination ouvert`,
@@ -2540,8 +2577,11 @@ function CombatSysteme({ lieu }) {
     const amiral = agentDisponible({ index, moi, search }, "amiral");
     const scientifique = agentDisponible({ index, moi, search }, "scientifique");
 
+    // (à une case de plus que sa portée, c'est Vasra Ivo qui fait tirer : il est utilisé lui-même)
     const tirerAvec = (c, commentaire) => envoyer([
-        amiral && { type: "deplacer", c: amiral.id, vers: `joueur:${moi}:agentsUses` },
+        ...(aPortee(c) === "vasra"
+            ? actionsUserCarte(index, moi, vasra)
+            : [amiral && { type: "deplacer", c: amiral.id, vers: `joueur:${moi}:agentsUses` }]),
         aPortee(c) === "scientifique" && scientifique && { type: "deplacer", c: scientifique.id, vers: `joueur:${moi}:agentsUses` },
         { type: "creer", jeton: ACTIVATION, sur: c.id },
         { type: "marquer", c: c.id, marque: "canon", valeur: 1 },
@@ -2735,7 +2775,7 @@ function CombatSysteme({ lieu }) {
                                     data-action="tirer-canon"
                                     nom={`Canon spatial : ${nomElement(search, c.ref)} tire (${nomLieu(c.zone)}, distance ${distanceDe(c)})`}
                                     obstacles={[
-                                        !amiral && "vous n'avez pas d'amiral disponible (aucun ne sera usé)",
+                                        aPortee(c) !== "vasra" && !amiral && "vous n'avez pas d'amiral disponible (aucun ne sera usé)",
                                         aPortee(c) === "scientifique" && !scientifique &&
                                             "Laser longue portée : il faut aussi un scientifique disponible pour tirer à cette distance",
                                     ]}
@@ -2743,7 +2783,9 @@ function CombatSysteme({ lieu }) {
                                     title="Use un amiral et pose un marqueur d'activation sur ce canon : il rejoint les tireurs"
                                     style={styleBouton}
                                 >
-                                    Tirer (use un amiral{aPortee(c) === "scientifique" ? " et un scientifique" : ""})
+                                    {aPortee(c) === "vasra"
+                                        ? "Tirer avec Vasra Ivo (portée +1)"
+                                        : `Tirer (use un amiral${aPortee(c) === "scientifique" ? " et un scientifique" : ""})`}
                                 </BoutonRegle>
                             </span>
                         ))}

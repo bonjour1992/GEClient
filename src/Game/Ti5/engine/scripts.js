@@ -2074,6 +2074,10 @@ export const SCRIPTS = [
         "Conflit : « Terminer le combat » d'un bombardement",
         "La bombe qui a bombardé est dépensée : elle est retirée à « Terminer le combat »."),
 
+    regle("contamination", "habilite", 920, 0, "Contamination", "auto",
+        "Conflit : « Terminer le combat » d'un bombardement",
+        "Quand vous êtes la seule faction à bombarder : les unités détruites sur la planète ne sont pas retirées, elles deviennent des Infanteries infectées à vous (sans butin)."),
+
     regle("armageddon-conquis-portee", "unit", 490, 1795072921262, "Armageddon conquis : portée", "auto",
         "Conflit : canons spatiaux (« Mes canons spatiaux à portée »)",
         "La portée écrite sur une unité est lue (« portée 0 » : son canon ne tire que dans son système). Armageddon conquis reforgé (un scientifique posé dessus) : portée +1."),
@@ -2155,6 +2159,51 @@ export const SCRIPTS = [
             libelle: "Se déplacer (3 ressources, unité usée)",
         }),
 
+    action("indigene", "unit", 568, 0, "Indigène : jet contre l'unité", "unite",
+        "Combat terrestre : use un diplomate, 4 dés à 3 sont lancés contre cette unité ; chaque réussite lui inflige 1 dégât, et elle est retirée si elle n'a plus de résistance.", {
+            phase: "combat terrestre",
+            nomPhase: "combat terrestre",
+            agent: DIPLOMATE,
+            // (unité neutre : le bouton est sur sa fiche pour toute faction)
+            autrui: true,
+            special: atelier => ({
+                actions: [],
+                tirages: [{
+                    c: atelier.c.id,
+                    n: 4,
+                    suite: jets => {
+
+                        const reussites = jets.filter(j => j <= 3).length;
+                        const degat = (Number(atelier.c.marques?.degat) || 0) + reussites;
+                        const detruite = reussites > 0 && degat >= (Number(atelier.contenu?.PV) || 1);
+
+                        return {
+                            texte: `Indigène, jet (3,4) : ${jets.join(", ")} — ${reussites} réussite(s)` +
+                                (detruite ? ", l'unité est détruite" : (reussites ? `, ${reussites} dégât(s)` : ", sans effet")),
+                            actions: !reussites ? [] : [detruite
+                                ? { type: "supprimer", c: atelier.c.id }
+                                : { type: "marquer", c: atelier.c.id, marque: "degat", valeur: degat }],
+                        };
+                    },
+                }],
+            }),
+            libelle: "Jet (3,4) contre cette unité (use un diplomate)",
+        }),
+
+    action("dynamo", "unit", 960, 0, "Dynamo : ignorer 2 dégâts", "unite",
+        "Combat spatial : l'unité et un diplomate sont usés, 2 dégâts de l'unité sont retirés (posez d'abord les dégâts sur elle).", {
+            phase: "combat spatial",
+            nomPhase: "combat spatial",
+            agent: DIPLOMATE,
+            use: true,
+            degat: -2,
+            libelle: "Ignorer 2 dégâts (unité usée, use un diplomate)",
+        }),
+
+    regle("infanterie-infectee", "unit", 1014, 0, "Infanterie infectée", "modifie",
+        "Espace : glisser l'unité hors de son lieu",
+        "« Ne peut jamais être déplacée » : une fois sur la carte, la glisser ailleurs demande une confirmation (règle semi-bloquante)."),
+
     action("vaisseau-relique-combat", "unit", 854, 1795074271178, "Vaisseau relique : +3 au combat", "unite",
         "Dépensez un fragment militaire : +3 au combat pour ce combat (ce tour).", {
             fragments: { mil: 1 },
@@ -2202,6 +2251,42 @@ export const SCRIPTS = [
     regle("noble-cryogenise", "relique", 396, 1795076851738, "Noble cryogénisé", "modifie",
         "Tout agent utilisé ou dépensé : fenêtre de choix",
         "Glissez la carte sur un type d'agent de votre réserve : elle s'utilise comme cet agent ; quand elle devrait être dépensée, elle est usée."),
+
+    // ---- mercenaires dont l'effet tient à ce pour quoi ils servent d'agent ----
+    // (production : Production.jsx, MERCENAIRES_PRODUCTION ; le mercenaire doit être choisi comme
+    //  logisticien à l'ouverture de la production — question « Qui agit ? » de l'onglet Décision)
+
+    regle("rear-admiral-farran", "mercenaire", 219, 0, "Rear Admiral Farran", "modifie",
+        "Production ouverte avec lui comme logisticien",
+        "Quand il est le logisticien qui ouvre une production (« Qui agit ? » : Rear Admiral Farran) : chaque cuirassé posé pendant cette production coûte 1 de moins."),
+
+    regle("suffi-an", "mercenaire", 220, 0, "Suffi An", "modifie",
+        "Production ouverte avec lui comme logisticien",
+        "Quand il est le logisticien qui ouvre une production : chaque croiseur posé pendant cette production coûte 1 de moins."),
+
+    regle("evelyne-delouis", "mercenaire", 280, 0, "Evelyne Delouis", "modifie",
+        "Production ouverte avec elle comme logisticien",
+        "Quand elle est le logisticien qui ouvre une production : chaque transporteur posé pendant cette production coûte 1 de moins. (Mouvement +1 du transporteur qu'elle déplace : à la main.)"),
+
+    regle("trillossa-aun-mirik", "mercenaire", 221, 0, "Trillossa Aun Mirik", "modifie",
+        "Production ouverte avec lui comme logisticien",
+        "Quand il est le logisticien qui ouvre une production : au premier destroyeur posé, un destroyeur de plus est créé au même endroit, sans coût et sans compter dans la quantité produite."),
+
+    regle("carth-de-sabledor", "mercenaire", 292, 0, "Carth de Sabledor", "modifie",
+        "Production ouverte avec lui comme logisticien",
+        "Quand il est le logisticien qui ouvre une production : après le premier vaisseau de commerce posé, le suivant est gratuit et ne compte pas dans la quantité produite (une fois)."),
+
+    regle("gabriel-gibbs", "mercenaire", 729, 0, "Gabriel Gibbs", "nouveau",
+        "Fiche d'un système, planète que vous possédez : « Gabriel Gibbs : mobiliser »",
+        "Phase de production, tant qu'il est disponible comme logisticien (son cube posé sur le type Logisticien) : il mobilise à la place d'un logisticien, jusqu'à votre capacité logistique en infanteries."),
+
+    regle("vasra-ivo", "mercenaire", 351, 0, "Vasra Ivo", "modifie",
+        "Conflit, canons spatiaux : « Mes canons spatiaux à portée »",
+        "Tant qu'il est disponible comme amiral (son cube posé sur le type Amiral) : vos canons à une case de plus que leur portée sont proposés, « Tirer avec Vasra Ivo (portée +1) » — c'est lui qui est utilisé."),
+
+    regle("m-aban", "mercenaire", 283, 0, "M'aban", "modifie",
+        "Phase de construction : structure glissée sur une planète qui en porte déjà une",
+        "Tant qu'il est disponible comme logisticien : l'onglet Décision propose que M'aban construise — il est utilisé, aucun logisticien n'est dépensé."),
 
     // ---- promesses : boutons de la fiche de la carte (chez moi) ----
 

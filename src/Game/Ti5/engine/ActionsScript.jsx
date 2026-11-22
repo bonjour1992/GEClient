@@ -53,6 +53,7 @@ import { decompteVotes } from "./Vote";
 //             du lieu : 1 ressource par dégât
 //   soigne    type d'unité (« pds ») : celles du lieu perdent leurs dégâts, sans rien payer
 //   degat     variation des dégâts de l'unité (+1, −1)
+//   autrui    le bouton est aussi sur la fiche d'une unité qui n'est pas à moi (unité neutre)
 //   use       l'unité ou la carte est usée (refusé si elle l'est déjà) ; pour un mercenaire,
 //             c'est son cube noir qui passe dans les agents usés (il revient à l'entretien),
 //             même quand le bouton est sur la fiche d'une unité ; pour une technologie, son
@@ -86,7 +87,9 @@ import { decompteVotes } from "./Vote";
 
 const NOMS = { res: "ressource", inf: "influence", commerce: "commerce", points: "point" };
 
-export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null, zone = null, possede = true, systeme = null, idSysteme = null, apres }) {
+//   autrui : la fiche est celle d'une unité qui n'est pas à moi (neutre, autre faction) — seuls
+//            les scripts qui le prévoient (spec « autrui ») y ont un bouton (Indigène)
+export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null, zone = null, possede = true, systeme = null, idSysteme = null, apres, autrui = false }) {
 
     const {
         etat, index, envoyer, moi, joueur, search, aScript, connaissance, nomDe, aviser, scriptsDesactives, partie,
@@ -298,6 +301,10 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
 
     // Le bouton est-il à montrer ici ?
     const concerne = s => {
+
+        if (autrui && !s.autrui) {
+            return false;
+        }
 
         // Mercenaire qui agit sur une de mes unités
         if (lieu === "unite" && s.cible) {

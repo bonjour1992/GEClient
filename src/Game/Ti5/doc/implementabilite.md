@@ -22,16 +22,16 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
-| Habilités | 64 | 42 | 8 | 14 | 34 | 6 | 17 |
-| Unités | 114 | 83 | 31 | 0 | 30 | 4 | 45 |
-| Planètes | 35 | 29 | 5 | 1 | 23 | 8 | 12 |
-| Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
+| Habilités | 64 | 43 | 8 | 13 | 34 | 6 | 18 |
+| Unités | 114 | 87 | 27 | 0 | 31 | 5 | 48 |
+| Planètes | 35 | 29 | 5 | 1 | 22 | 8 | 12 |
+| Mercenaires | 40 | 25 | 10 | 5 | 19 | 20 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **385** | **294** | **68** | **23** | **172** | **62** | **125** |
+| **Total** | **385** | **306** | **57** | **22** | **173** | **62** | **129** |
 
-Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
+Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
 ## Technologies
 
@@ -196,7 +196,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 916 | Pillage (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 917 | Cartographie du chaos (Clan de Saar WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 919 | Menace (Néo-peste WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
-| 920 | Contamination (Néo-peste WIP) | non | automatique (prévu) | — | Bombardement : les unités touchées deviennent des Infanteries infectées (#1014) au lieu d'être détruites — à brancher sur « Terminer le combat ». (moyenne) |
+| 920 | Contamination (Néo-peste WIP) | **oui** | automatique | Conflit, « Terminer le combat » d'un bombardement où vous êtes la seule faction à bombarder : les unités détruites sur la planète ne sont pas retirées, elles deviennent vos Infanteries infectées (#1014), sans butin. | — |
 | 922 | Recherche des alphas (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 923 | Menace (Sardakk N'orr WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 925 | Droit de passage (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
@@ -228,7 +228,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 22 | Mecha d'archéologie (Conglomérat mercantile d'Hacan) | **oui** | bouton existant modifié | « Fouiller la ruine » n'use pas de scientifique sur une planète où le joueur a un Mecha d'archéologie. | — |
 | 23 | Statue en or (Conglomérat mercantile d'Hacan) | **oui** | automatique | Ravitaillement automatique : +1 point par statue. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
 | 35 | Bazaar (Conglomérat mercantile d'Hacan) | partiel | à définir (prévu) | Caractéristiques de l'unité déjà utilisées. | Renvoie à « Vente au Bazaar » : marché et transactions non gérés. (difficile) |
-| 148 | Salai Sai Corian (Héritiers de Winnu) | **partiel** | automatique | Conflit, combat spatial : +1 par vaisseau adverse que visent ses engagements. | Production 1 non suivie. |
+| 148 | Salai Sai Corian (Héritiers de Winnu) | **oui** | automatique | Conflit, combat spatial : +1 par vaisseau adverse que visent ses engagements. Production : Ctrl + clic ouvre une production comptée (`#prod(1, Vaisseau)`), comme pour un dock. | — |
 | 151 | Gloire au juste (Héritiers de Winnu) | partiel | bouton existant modifié (prévu) | Caractéristiques de l'unité déjà utilisées. | Ravitaillement automatique selon le possesseur de Mecatol Rex ; texte à clarifier. (moyenne) |
 | 152 | Raideur (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Conflit : raid (combat « Raid », 5 ×2), frappe en premier, furtif. | — |
 | 153 | Arche de l'ombre (Kabal de l’ombre) | **oui** | nouveau bouton + automatique | Conflit : raid (combat « Raid », 5 ×4), frappe en premier, furtif. | — |
@@ -276,7 +276,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 527 | Soldat du Khan (Invasion du grand Khan) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 554 | Monument éternel | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer ; points par contributions. |
 | 557 | Rebelle (Rébellion interplanétaire) | **oui** | automatique | Conflit, combat terrestre : furtif — un engagement de groupe ne l'atteint pas, et il ne riposte qu'à qui le cible. | — |
-| 568 | Indigène | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : use un diplomate, lance 4 dés à 3 contre cette unité. (moyenne) |
+| 568 | Indigène | **oui** | nouveau bouton | Fiche de l'unité (pour toute faction : l'unité est neutre), combat terrestre : use un diplomate, 4 dés à 3 lancés par le serveur contre l'unité ; chaque réussite lui inflige 1 dégât, elle est retirée si elle n'a plus de résistance. | — |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
 | 570 | Cuve de Clonage | **oui** | nouveau bouton | Fiche de l'unité, production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète. | — |
 | 571 | Arbre de vie éternelle | **partiel** | nouveau bouton | Fiche de l'unité, phase de production : l'arbre est usé et prend 1 dégât, +4 commerce. | Soin en phase de science (coût « #regen(2) » à préciser) ; points du décompte. |
@@ -301,7 +301,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 747 | Combattant Voyageur | **partiel** | nouveau bouton | Fiche de l'unité, débarquement : l'unité est usée, 3 ressources. | Le déplacement (3 de distance au plus) : à la main. |
 | 766 | Memoria (Le Nomade) | **oui** | nouveau bouton | Fiche de l'unité, science : « Memoria : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | — |
 | 767 | Memoria B (Le Nomade) | **oui** | nouveau bouton | Fiche de l'unité, science : « Memoria B : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | — |
-| 768 | Memoria A (Le Nomade) | **partiel** | nouveau bouton + automatique (prévu) | Fiche de l'unité, science : « Memoria A : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | Furtivité et malus d'anomalie liés au déplacement. (difficile) |
+| 768 | Memoria A (Le Nomade) | **partiel** | nouveau bouton | Fiche de l'unité, science : « Memoria A : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | Furtivité et malus d'anomalie liés au déplacement. (difficile) |
 | 769 | Memoria D (Le Nomade) | **oui** | nouveau bouton | Conflit : une de vos infanteries détruites — « Memoria D : jet (6 ou moins) », puis « Poser sur Memoria D » (à bord). Science : « Memoria D : dépenser un signal » (4 de recherche de signal). | — |
 | 770 | Memoria C (Le Nomade) | **partiel** | automatique + nouveau bouton | Ravitaillement automatique : une frégate marchande est créée dans le système. Science : « Memoria C : dépenser un signal » (4 de recherche de signal). | Revendication. |
 | 786 | Centre de contrebande (Le Nomade) | **oui** | automatique | Ravitaillement automatique : 3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins. | — |
@@ -317,9 +317,9 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 856 | Lune noire (Pirate Mentak) | **oui** | automatique | Conflit : un engagement de groupe ne l'atteint jamais — elle doit être ciblée. | — |
 | 868 | Forge du vide (Fantômes de Creuss) | **oui** | automatique | Ravitaillement automatique : 1 ressource, 1 influence et 1 de recherche s'il y a un trou de ver delta dans son système. | — |
 | 893 | Usine (Virus de Nekro) | **partiel** | nouveau bouton + automatique | Ravitaillement automatique : +2 ressources (script de l'Usine) ; production comptée par `#prod(3, Drone)`. | Dévastation pour réduire un coût. |
-| 960 | Dynamo (Les Empyréens WIP) | partiel | — | Caractéristiques et #furtif déjà utilisés par l'outil (Conflit). | Ignorer 2 dégâts en usant l'unité et un diplomate : à la main. (moyenne) |
+| 960 | Dynamo (Les Empyréens WIP) | **oui** | nouveau bouton | Caractéristiques et #furtif déjà utilisés par l'outil (Conflit). Fiche de l'unité, combat spatial : « Ignorer 2 dégâts » — l'unité et un diplomate sont usés, 2 dégâts posés sur elle sont retirés. | — |
 | 1013 | Infanterie (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; sans le mot-clé « transportable », elle ne s'embarque pas. | — |
-| 1014 | Infanterie infectée (Néo-peste WIP) | partiel | — | Caractéristiques déjà utilisées ; non transportable. | « Ne peut jamais être déplacée » : non vérifié. (moyenne) |
+| 1014 | Infanterie infectée (Néo-peste WIP) | **oui** | bouton existant modifié | Caractéristiques déjà utilisées ; non transportable. Une fois sur la carte, la glisser ailleurs demande une confirmation (« ne peut jamais être déplacée », règle semi-bloquante). | — |
 | 1015 | Cuirassé (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; bombardement 5 à une seule attaque. | — |
 | 1016 | Bombe bactériologique (Néo-peste WIP) | **oui** | automatique | Caractéristiques et bombardement 5** déjà utilisés par l'outil. Elle est retirée à « Terminer le combat » du bombardement où elle a tiré. | — |
 | 1017 | Alpha (Sardakk N'orr WIP) | oui | — | Caractéristiques déjà utilisées (combat 6). | — |
@@ -375,13 +375,13 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
-| 219 | Rear Admiral Farran | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Coût des cuirassés −1 : à la main. |
-| 220 | Suffi An | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Coût des croiseurs −1 : à la main. |
-| 221 | Trillossa Aun Mirik | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Le destroyeur de plus : à la main. |
-| 280 | Evelyne Delouis | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Coût des transporteurs −1, vitesse +1 : à la main. |
+| 219 | Rear Admiral Farran | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Production : choisi comme logisticien à l'ouverture d'une production (« Qui agit ? »), chaque cuirassé posé pendant cette production coûte 1 de moins ; le bandeau de la production le rappelle. | — |
+| 220 | Suffi An | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Production : choisi comme logisticien à l'ouverture d'une production, chaque croiseur posé coûte 1 de moins. | — |
+| 221 | Trillossa Aun Mirik | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Production : choisi comme logisticien à l'ouverture d'une production, le premier destroyeur posé en fait créer un second au même endroit, sans coût et sans compter dans la quantité produite. | — |
+| 280 | Evelyne Delouis | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Production : choisie comme logisticien à l'ouverture d'une production, chaque transporteur posé coûte 1 de moins. | Mouvement +1 du transporteur qu'elle déplace : à la main. |
 | 281 | Claire Gibson | **oui** | nouveau bouton | Combat terrestre : « Claire Gibson : +1 à vos infanteries » — son cube part dans les agents usés, le bonus vaut pour ce combat. | — |
 | 282 | Ipswitch | non | — | — | Livraison envers n'importe quelle unité : hors du bouton de livraison actuel. (passé) |
-| 283 | M'aban | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Construire un second bâtiment : à la main. |
+| 283 | M'aban | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Construction sur une planète qui porte déjà une structure : l'onglet Décision propose que M'aban construise — il est utilisé, aucun logisticien n'est dépensé. | — |
 | 284 | So Ata | **partiel** | nouveau bouton | Combat spatial, deux boutons : « désigner un vaisseau » (début du combat : son cube part dans les agents usés, un rappel s'affiche) ; « capturer un vaisseau détruit » (avant « Terminer le combat » : le vaisseau adverse va dans vos éléments actifs, sans ses dégâts). | La restriction d'engagement du vaisseau désigné : à la main. |
 | 285 | Doctor Carrina | **partiel** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, 1 de recherche sociale, militaire, génétique et spatiale (journal de recherche). | Activer une planète ; ignorer un niveau de prérequis : à la main. |
 | 286 | Xuange | **oui** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, le joueur choisit X — 2X influence dépensée, X de recherche sociale. | — |
@@ -390,7 +390,7 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 289 | Oriane Tesh (astrophysicienne, ex-Sai Seravus) | **oui** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, 1 de recherche spatiale par système à anomalie où vous avez une unité. | — |
 | 290 | Taïk jedz | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Placer puis retirer l'unité liée au mercenaire : à la main. (passé) |
 | 291 | Ahk Ravin | **oui** | bouton existant modifié | « Fouiller la ruine » : quand Ahk Ravin est le scientifique de la fouille (son cube posé sur le type Scientifique, choisi dans la fenêtre ou d'office), une fenêtre propose de dépenser 3 ressources pour 2 fragments au lieu d'un. | — |
-| 292 | Carth de Sabledor | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Le vaisseau de commerce gratuit : à la main. |
+| 292 | Carth de Sabledor | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Production : choisi comme logisticien à l'ouverture d'une production, après le premier vaisseau de commerce posé le suivant est gratuit et ne compte pas dans la quantité produite (une fois). | — |
 | 293 | Elder Qanoj | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Ses 3 votes : non reliés au vote de l'outil. (passé) |
 | 294 | Z'eu | **oui** | nouveau bouton | Fiche du mercenaire, phase de vote : son cube est usé, X commerce (4 au plus) sont dépensés pour X voix sur la loi et le vote choisis dans l'onglet Décision ; elles s'ajoutent à votre colonne du décompte. | — |
 | 295 | Viscount Unlenn | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Déplacement hors des règles de blocage : à la main. (passé) |
@@ -404,7 +404,7 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 304 | George Nobin | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Livraison augmentée de X : à la main. (passé) |
 | 349 | Sal Gavda | **oui** | nouveau bouton | Fiche de la carte, diplomatie : son cube part dans les agents usés, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité. | — |
 | 350 | Skarvald | **oui** | bouton existant modifié + nouveau bouton | Bombardement : « Skarvald : voler du commerce » — son cube part dans les agents usés, 3 dés lancés par le serveur, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Le système doit être contrôlé (conflit de contrôle si d'autres peuvent s'y opposer). | — |
-| 351 | Vasra Ivo | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Portée des canons +1 : à la main. |
+| 351 | Vasra Ivo | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Canons spatiaux : tant qu'il est disponible comme amiral, vos canons à une case de plus que leur portée sont proposés — « Tirer avec Vasra Ivo (portée +1) », c'est lui qui est utilisé. | — |
 | 352 | Suldhan Wraeg | non | — | — | Marqueurs qui annulent une anomalie pour vos déplacements. (passé) |
 | 353 | Agnlan Oln | **partiel** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, un plan de relique est pioché dans votre main. | Fabriquer une relique en ignorant 2 fragments : à la main. |
 | 354 | Richtyrian | non | — | — | Bonus d'infanterie sur le monde où il est posé : le propriétaire d'une carte posée sur la carte du jeu n'est pas connu. (passé) |
@@ -413,7 +413,7 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 357 | Jace X | **oui** | bouton existant modifié + nouveau bouton | Combat terrestre : « Jace X : +1 à vos unités terrestres » — son cube part dans les agents usés, le bonus vaut pour ce combat. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | — |
 | 358 | Shipmonger Zsknck | **oui** | nouveau bouton | Fiche d'un de vos vaisseaux non biologiques endommagés, production : le cube du mercenaire part dans les agents usés, le vaisseau perd ses dégâts sans rien payer. | — |
 | 359 | Sai Seravus (cartographe de Creuss) | non | — | — | Trous de ver alpha et bêta adjacents : règle de déplacement. (passé) |
-| 729 | Gabriel Gibbs | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Mobilisation jusqu'à la capacité logistique : à la main. |
+| 729 | Gabriel Gibbs | **oui** | nouveau bouton | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Fiche d'un système, production : « Gabriel Gibbs : mobiliser » sur une planète que vous possédez — il mobilise à la place d'un logisticien, jusqu'à votre capacité logistique en infanteries. | — |
 | 910 | Ilyane Vorsk | **oui** | bouton existant modifié + automatique | Utilisable comme l'agent indiqué (cube noir ou carte glissé sur ce type d'agent). Onglet Vote : son cube ou sa carte posé sur une case de vote compte comme un politicien, et rapporte 1 voix de plus par autre faction dont c'est le vote majoritaire. | — |
 
 ## Promesses

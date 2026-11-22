@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useEngine, nomCase, nomElement, agentDisponible, tuileDe } from "./Interaction";
+import { useEngine, nomCase, nomElement, agentDisponible, tuileDe, choisirRemplacants, mercenairesQuiAgissent } from "./Interaction";
 import { contenuEnCache, chargerContenu } from "./sync";
 import { ACTIVATION, typeUnite, MOTIF_LOGISTICIEN } from "./miseEnPlace";
 import { demanderBlocage } from "./BlocageAction";
@@ -34,7 +34,8 @@ import { rangDePhase } from "./regleControle";
 //
 // État (contexte de la partie, `production`) : false, true (case
 // cochée, production libre), ou
-//   { source, nom, numero, max, types, fait, reduction }
+//   { source, nom, numero, max, types, fait, reduction, mercenaires, produits, enPlus, gratuit }
+//   (mercenaires : ceux qui ont servi de logisticien à cette production — effetsMercenaires)
 // Scripts : Logistique améliorée (un dock produit la capacité
 // logistique), IA industrielle (docks : +2 ; sur une planète
 // militaire, le coût total baisse de 2).
@@ -77,6 +78,73 @@ export function estProductible(contenu, types) {
         (/^infanteries?$/.test(type) && typeUnite(contenu) === "inf") ||
         (/^structures?$/.test(type) && mots.includes("struc")) ||
         nom.includes(type.replace(/s$/, "")));
+}
+
+// ------------------------------------------------------------
+// MERCENAIRES DE PRODUCTION
+//
+// Un mercenaire « utilisable comme logisticien » dont l'effet tient
+// à ce qu'il produit : il vaut pour la production qu'il a ouverte
+// (son cube est parti dans les agents usés à l'ouverture).
+//   identifiant de carte -> script, type d'unité (typeUnite), effet
+//     remise   chaque unité de ce type coûte 1 de moins
+//     enPlus   au premier de ce type, un de plus est posé au même endroit, sans coût
+//     gratuit  après le premier de ce type, un de plus est gratuit et ne compte pas
+// ------------------------------------------------------------
+
+export const MERCENAIRES_PRODUCTION = {
+    219: { script: "rear-admiral-farran", type: "dn", effet: "remise", texte: "cuirassés à 1 de moins" },
+    220: { script: "suffi-an", type: "cruiser", effet: "remise", texte: "croiseurs à 1 de moins" },
+    280: { script: "evelyne-delouis", type: "trans", effet: "remise", texte: "transporteurs à 1 de moins" },
+    221: { script: "trillossa-aun-mirik", type: "dest", effet: "enPlus", texte: "au premier destroyeur produit, un destroyeur de plus est posé" },
+    292: { script: "carth-de-sabledor", type: "com", effet: "gratuit", texte: "après le premier vaisseau de commerce, un de plus est gratuit" },
+};
+
+// Ce que les mercenaires de la production changent à la pose de ces unités (refs) :
+//   remise     ressources en moins
+//   enPlus     unités à poser en plus, sans coût ([ref])
+//   gratuites  nombre d'unités de la pose qui ne comptent pas dans la quantité produite
+//   etat       ce qui change dans l'état de la production, une fois la pose faite
+export function effetsMercenaires(production, refs, contenuDe) {
+
+    const cout = ref => Number(contenuDe(ref.id)?.cout) || 0;
+    const typeDe = ref => typeUnite(contenuDe(ref.id));
+
+    const produits = { ...(production?.produits || {}) };
+    const bilan = { remise: 0, enPlus: [], gratuites: 0, etat: { produits } };
+
+    for (const id of production?.mercenaires || []) {
+
+        const m = MERCENAIRES_PRODUCTION[id];
+        const unites = m ? refs.filter(ref => typeDe(ref) === m.type) : [];
+
+        if (!unites.length) {
+            continue;
+        }
+
+        if (m.effet === "remise") {
+            bilan.remise += unites.reduce((total, ref) => total + Math.min(1, cout(ref)), 0);
+        } else if (m.effet === "enPlus" && !production.enPlus?.[id]) {
+            bilan.enPlus.push(unites[0]);
+            bilan.etat.enPlus = { ...(production.enPlus || {}), ...(bilan.etat.enPlus || {}), [id]: true };
+        } else if (m.effet === "gratuit" && !production.gratuit?.[id]) {
+
+            // (le premier se paie ; le suivant — posé avec lui ou plus tard — est offert)
+            const offert = Number(produits[m.type]) > 0 ? unites[0] : unites[1];
+
+            if (offert) {
+                bilan.remise += cout(offert);
+                bilan.gratuites += 1;
+                bilan.etat.gratuit = { ...(production.gratuit || {}), ...(bilan.etat.gratuit || {}), [id]: true };
+            }
+        }
+    }
+
+    for (const ref of refs) {
+        produits[typeDe(ref)] = (Number(produits[typeDe(ref)]) || 0) + 1;
+    }
+
+    return bilan;
 }
 
 // Ouvre une production avec cette unité (Ctrl + clic, phase de production).
@@ -159,7 +227,7 @@ export async function ouvrirProduction(ctx, c, confirmer) {
     }
 
     ouvrirProductionLieu(
-        { index, moi, search, envoyer, setProduction, capaciteLogistique },
+        { index, moi, search, envoyer, setProduction, capaciteLogistique, aScript, aviser: ctx.aviser },
         {
             source: c.id, nom, numero, capacite, activation: { sur: c.id }, bonus: ia ? 2 : 0, reduction: militaire ? 2 : 0,
             // (l'unité qui a produit est engagée pour la phase : elle ne bloque plus)
@@ -176,20 +244,32 @@ export async function ouvrirProduction(ctx, c, confirmer) {
 //   lieu : { source, nom, numero, capacite (lireProduction), activation ({ sur } ou
 //            { zone } du marqueur), bonus (quantité en plus), reduction (coût en moins),
 //            extra (actions de plus, dans le même coup) }
-export function ouvrirProductionLieu(ctx, lieu, commentaire) {
+// (asynchrone : le choix du logisticien — agent de base ou remplaçant — est résolu ici, avant
+//  l'envoi, pour savoir quel mercenaire ouvre la production : MERCENAIRES_PRODUCTION)
+export async function ouvrirProductionLieu(ctx, lieu, commentaire) {
 
-    const { index, moi, search, envoyer, setProduction, capaciteLogistique } = ctx;
+    const { index, moi, search, envoyer, setProduction, capaciteLogistique, aScript, aviser } = ctx;
 
     const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
     const base = lieu.capacite.quantite === "clog" ? capaciteLogistique(moi) : lieu.capacite.quantite;
 
-    envoyer([
+    const actions = await choisirRemplacants([
         logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
         { type: "creer", jeton: ACTIVATION, ...lieu.activation },
         ...(lieu.extra || []),
-    ], commentaire);
+    ]);
+
+    const mercenaires = mercenairesQuiAgissent(actions)
+        .filter(id => MERCENAIRES_PRODUCTION[id] && (!aScript || aScript(moi, MERCENAIRES_PRODUCTION[id].script)));
+
+    envoyer(actions, commentaire);
+
+    if (mercenaires.length) {
+        aviser?.(mercenaires.map(id => `${nomElement(search, { type: "mercenaire", id })} : ${MERCENAIRES_PRODUCTION[id].texte}.`).join(" "));
+    }
 
     setProduction({
+        mercenaires,
         source: lieu.source,
         nom: lieu.nom,
         numero: lieu.numero,
@@ -206,7 +286,7 @@ export function ouvrirProductionLieu(ctx, lieu, commentaire) {
 
 export function ProductionEnCours() {
 
-    const { production, setProduction } = useEngine();
+    const { production, setProduction, search } = useEngine();
 
     if (!production || production === true) {
         return null;
@@ -244,6 +324,11 @@ export function ProductionEnCours() {
                 {production.reduction > 0 && `Coût réduit de ${production.reduction} (IA industrielle). `}
                 Glissez les unités depuis votre réserve.
             </span>
+            {(production.mercenaires || []).map(id => (
+                <span key={id} data-mercenaire-production={id} style={{ fontSize: 12, color: "#4a148c" }}>
+                    <b>{nomElement(search, { type: "mercenaire", id })}</b> : {MERCENAIRES_PRODUCTION[id].texte}.
+                </span>
+            ))}
             <button type="button" data-action="terminer-production" onClick={() => setProduction(false)} style={{ fontWeight: "bold" }}>
                 Terminer la production
             </button>
