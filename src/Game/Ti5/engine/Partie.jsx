@@ -1273,7 +1273,8 @@ export function Partie({ id }) {
     }
 
     // Attendre : utiliser un agent puis passer la main au joueur suivant.
-    // Un diplomate à toute phase, un amiral à la phase de déplacement.
+    // Un diplomate à toute phase, un amiral aux phases de déplacement, de
+    // bombardement et de débarquement (boutons de l'en-tête, FinDeTour).
     function attendre(nomAgent) {
 
         const agent = agentDisponible(ctx, nomAgent);
@@ -1412,11 +1413,8 @@ export function Partie({ id }) {
         </span>
     );
 
-    const boutonAttendreAmiral = (
-        <button type="button" data-action="attendre-amiral" onClick={() => attendre("amiral")}>
-            Attendre (use un amiral, joueur suivant)
-        </button>
-    );
+    // « Attendre » avec un amiral : phases de déplacement, de bombardement et de débarquement
+    const attenteAmiral = enDeplacement || /bombard|d[ée]barquement/i.test(etat.phase || "");
 
     return (
         <Engine value={ctx}>
@@ -1585,6 +1583,7 @@ export function Partie({ id }) {
                                 passer={passer}
                                 aPasse={aPasse(moi)}
                                 attendre={etat.tour > 0 ? () => attendre("diplomate") : null}
+                                attendreAmiral={etat.tour > 0 && attenteAmiral ? () => attendre("amiral") : null}
                             />
                         )}
 
@@ -1824,10 +1823,10 @@ export function Partie({ id }) {
                         {/* Actions de la phase de déplacement */}
                         {enDeplacement && estJoueur && (
                             <div style={{ ...styleBarre, marginTop: 4, marginBottom: 2 }}>
-                                {boutonAttendreAmiral}
                                 <span>
                                     Ctrl + clic sur un système : pose votre marqueur de faction dessus.
-                                    « Attendre » avec un diplomate est sur la troisième ligne de l'en-tête, à toute phase.
+                                    « Attendre » est sur la troisième ligne de l'en-tête : avec un diplomate à toute phase,
+                                    avec un amiral aux phases de déplacement, de bombardement et de débarquement.
                                 </span>
                             </div>
                         )}
@@ -1845,7 +1844,6 @@ export function Partie({ id }) {
                         {enDiplomatie && boutonTransaction}
                         {enScience && <PiocherPlan />}
                         {enProposition && piochePropositions}
-                        {enDeplacement && boutonAttendreAmiral}
                     </div>
                 )}
 
@@ -2226,7 +2224,7 @@ function FicheCachee({ zone, fermer }) {
 // de l'ordre du tour jusqu'à la fin de la phase.
 // ============================================================
 
-function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
+function FinDeTour({ p, suivantId, passer, aPasse, attendre, attendreAmiral }) {
 
     const ctx = useEngine();
 
@@ -2295,6 +2293,21 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                     data-action="attendre"
                 >
                     Attendre (use un diplomate)
+                </button>
+            )}
+
+            {/* Attendre avec un amiral : phases de déplacement, de bombardement et de débarquement */}
+            {attendreAmiral && (
+                <button
+                    type="button"
+                    disabled={p.envoi || aPasse || tourDunAutre}
+                    onClick={attendreAmiral}
+                    title={tourDunAutre
+                        ? "Possible à votre tour seulement"
+                        : "Use un de vos amiraux disponibles et passe la main au joueur suivant"}
+                    data-action="attendre-amiral"
+                >
+                    Attendre (use un amiral)
                 </button>
             )}
 

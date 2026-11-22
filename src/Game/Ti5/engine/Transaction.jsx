@@ -41,6 +41,11 @@ const nomFaveur = (jeton, nomDe, search) => (jeton.proprio === null || jeton.pro
 
 const INFINI = "infini";
 
+// Promesse Soutien politique : elle a une valeur, les voix que la faction qui la fait devra mettre
+// sur l'issue annoncée (marque « valeur » de la carte : « régler », scripts.js ; décompte, Vote.jsx)
+export const SOUTIEN_POLITIQUE = 227;
+const VALEUR_SOUTIEN_MAX = 10;
+
 // Cartes qu'une transaction peut faire donner : [type, titre du groupe]
 const TYPES_CARTES = [
     ["relique", "Reliques"],
@@ -129,12 +134,15 @@ export function Transactions({ nouvelle }) {
         if (m.sorte === "promesse") {
             const carte = etat.composants[m.carte];
 
+            const soutien = carte?.ref?.id === SOUTIEN_POLITIQUE;
+
             return {
-                texte: `Promesse « ${carte?.ref ? nomElement(search, carte.ref) : "?"} » chez ${nomDe(Number(m.chez))}` +
+                texte: `Promesse « ${carte?.ref ? nomElement(search, carte.ref) : "?"} »${soutien && m.valeur ? ` de valeur ${m.valeur}` : ""} chez ${nomDe(Number(m.chez))}` +
                     (m.duree === INFINI ? ", sans fin" : `, jusqu'au tour ${m.duree}`) +
                     `, marqueur de ${nomDe(Number(m.autre))}`,
                 // (la réserve des promesses de base est infinie : la carte de la réserve sert de modèle)
-                obstacle: carte?.ref ? null : "la promesse est introuvable",
+                obstacle: !carte?.ref ? "la promesse est introuvable"
+                    : (soutien && !(Number(m.valeur) > 0) ? "le Soutien politique n'a pas de valeur : refusez la transaction et proposez-la de nouveau" : null),
             };
         }
 
@@ -225,6 +233,8 @@ export function Transactions({ nouvelle }) {
                     ref: { ...etat.composants[m.carte].ref },
                     zone: m.duree === INFINI ? `joueur:${m.chez}:actif` : `joueur:${m.chez}:tour:${m.duree}`,
                     idLocal: local,
+                    // (Soutien politique : sa valeur)
+                    ...(Number(m.valeur) > 0 ? { marques: { valeur: Number(m.valeur) } } : {}),
                 });
                 actions.push({ type: "creer", jeton: MARQUEUR, sur: local, proprio: Number(m.autre) });
             }
@@ -465,6 +475,12 @@ export function Transaction({ fermer }) {
     const [promesse, setPromesse] = useState("");
     const [detenteur, setDetenteur] = useState(1);
     const [duree, setDuree] = useState(INFINI);
+    const [valeurSoutien, setValeurSoutien] = useState(1);
+
+    // Soutien politique : sa valeur est demandée (de 1 à VALEUR_SOUTIEN_MAX)
+    const estSoutien = Number(promesse) === SOUTIEN_POLITIQUE;
+    const valeur = Math.floor(Number(valeurSoutien));
+    const valeurValide = Number.isFinite(valeur) && valeur >= 1 && valeur <= VALEUR_SOUTIEN_MAX;
 
     function ajouterPromesse() {
 
@@ -477,13 +493,18 @@ export function Transaction({ fermer }) {
         const chez = detenteur === 1 ? f1 : f2;
         const autre = detenteur === 1 ? f2 : f1;
 
+        if (estSoutien && !valeurValide) {
+            return;
+        }
+
         setLignes(l => [...l, {
             sorte: "promesse",
             carte: carte.id,
             chez,
             autre,
             duree,
-            texte: `Promesse « ${nomElement(search, carte.ref)} » chez ${nomDe(chez)}` +
+            ...(estSoutien ? { valeur } : {}),
+            texte: `Promesse « ${nomElement(search, carte.ref)} »${estSoutien ? ` de valeur ${valeur}` : ""} chez ${nomDe(chez)}` +
                 (duree === INFINI ? ", sans fin" : `, jusqu'au tour ${duree}`) +
                 `, marqueur de ${nomDe(autre)}`,
         }]);
@@ -694,7 +715,21 @@ export function Transaction({ fermer }) {
                                     <option key={t} value={t}>jusqu'au tour {t}</option>
                                 ))}
                             </select>
-                            <button type="button" disabled={!promesse} onClick={ajouterPromesse}>Ajouter</button>
+                            {/* Soutien politique : sa valeur, en voix */}
+                            {estSoutien && (
+                                <label data-valeur-soutien title="Les voix que la faction au marqueur devra mettre sur l'issue annoncée">
+                                    valeur{" "}
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={VALEUR_SOUTIEN_MAX}
+                                        value={valeurSoutien}
+                                        onChange={e => setValeurSoutien(e.target.value)}
+                                        style={{ width: 50, borderColor: valeurValide ? undefined : "#c00" }}
+                                    />
+                                </label>
+                            )}
+                            <button type="button" disabled={!promesse || (estSoutien && !valeurValide)} onClick={ajouterPromesse}>Ajouter</button>
                         </div>
 
                         {/* DETTE */}

@@ -5,6 +5,7 @@ import { MARQUEUR, CUBES } from "./miseEnPlace";
 import { demander, confirmer } from "./demande";
 import { COLONNES_VOTE, COULEURS_COLONNES, joueurDeColonne } from "./voteCouleurs";
 import { AnnexesDeLoi } from "./Agendas";
+import { SOUTIEN_POLITIQUE } from "./Transaction";
 
 // ============================================================
 // ONGLET VOTE
@@ -325,6 +326,20 @@ function Decompte({ lois }) {
         envoyer([{ type: "compteur", id: `joueur:${moi}:votePret`, valeur: estPret(moi) ? 0 : 1 }], "");
     }
 
+    // Soutiens politiques engagés ce tour (issue annoncée à la prévote) : détenteur, faction au
+    // marqueur (celle qui doit voter), valeur, loi et colonne (de 0)
+    const soutiens = Object.values(etat.composants)
+        .filter(c => !c.cache && c.ref?.type === "Promesse" && c.ref.id === SOUTIEN_POLITIQUE && c.marques?.use &&
+            Number(c.marques.voteTour) === etat.tour && Number(c.marques.voteLoi) > 0 && /^joueur:\d+:(actif|tour:\d+)$/.test(c.zone || ""))
+        .map(c => ({
+            id: c.id,
+            detenteur: Number(/^joueur:(\d+):/.exec(c.zone)[1]),
+            donneur: Object.values(etat.composants).find(m => m.sur === c.id && !m.ref && m.jeton === MARQUEUR && m.proprio > 0)?.proprio ?? null,
+            valeur: Number(c.marques.valeur) || 0,
+            loi: Number(c.marques.voteLoi),
+            col: Number(c.marques.voteCol) - 1,
+        }));
+
     const numerosLois = Array.from({ length: nombreLois }, (_, k) => k + 1);
 
     return (
@@ -460,6 +475,36 @@ function Decompte({ lois }) {
                         <table key={loi} style={{ borderCollapse: "collapse", backgroundColor: "#fff", fontSize: 13 }}>
                             <caption style={{ textAlign: "left", fontWeight: "bold", padding: "2px 0" }}>
                                 {loi}. {carte && !carte.cache && carte.ref ? nomElement(search, carte.ref) : "loi " + loi}
+
+                                {soutiens.filter(s => s.loi === loi).map(s => {
+                                    const pourMoi = s.donneur === moi;
+                                    const mises = s.donneur ? voix(loi, s.col, s.donneur) : 0;
+
+                                    return (
+                                        <div
+                                            key={s.id}
+                                            data-soutien-politique={s.id}
+                                            data-soutien-pour-moi={pourMoi ? "oui" : "non"}
+                                            title={`Promesse Soutien politique de ${nomDe(s.detenteur)} : ${s.donneur ? nomDe(s.donneur) : "la faction au marqueur"} doit mettre ${s.valeur || "?"} voix sur cette issue, sinon 1 infamie`}
+                                            style={{
+                                                fontWeight: "normal",
+                                                fontSize: 12,
+                                                margin: "3px 0",
+                                                padding: pourMoi ? "4px 8px" : "1px 0",
+                                                border: pourMoi ? "2px solid #e65100" : undefined,
+                                                borderRadius: 6,
+                                                backgroundColor: pourMoi ? "#fff3e0" : undefined,
+                                                color: "#000",
+                                            }}
+                                        >
+                                            {pourMoi ? "⚠ Attention — " : "🤝 "}
+                                            <b>Soutien politique</b> de {nomDe(s.detenteur)} :{" "}
+                                            {pourMoi ? "vous devez" : `${s.donneur ? nomDe(s.donneur) : "?"} doit`} mettre{" "}
+                                            <b>{s.valeur || "?"} voix</b> sur <span style={styleVote(s.col)}>{COLONNES[s.col] ?? "?"}</span>
+                                            {" "}— {mises} comptée{mises > 1 ? "s" : ""}{pourMoi ? ", sinon vous gagnez 1 infamie" : ""}.
+                                        </div>
+                                    );
+                                })}
                             </caption>
                             <thead>
                                 <tr>
@@ -546,6 +591,17 @@ function Decompte({ lois }) {
                                                             {" "}({corrige > 0 ? "+" : ""}{corrige})
                                                         </span>
                                                     )}
+                                                    {/* Soutien politique engagé sur cette issue : les voix dues par cette faction */}
+                                                    {soutiens.filter(s => s.loi === loi && s.col === col && s.donneur === j.userId).map(s => (
+                                                        <span
+                                                            key={s.id}
+                                                            data-soutien-du={s.valeur}
+                                                            title={`Soutien politique de ${nomDe(s.detenteur)} : ${s.valeur || "?"} voix dues ici`}
+                                                            style={{ fontSize: 11, color: "#e65100", fontWeight: "bold" }}
+                                                        >
+                                                            {" "}(🤝 {s.valeur || "?"} dues)
+                                                        </span>
+                                                    ))}
                                                     {/* Bonus des scripts : Conspirer ensemble, Ilyane Vorsk */}
                                                     {bonus(loi, col, j.userId).map(([n, nom]) => (
                                                         <span
