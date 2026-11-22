@@ -523,6 +523,26 @@ export function Espace() {
         return noeud ? Number(noeud.dataset.case) : null;
     };
 
+    // Tracé glissé : seul le cœur de la case compte (les trois quarts de son rayon, autour de son
+    // centre). Près d'un bord, le pointeur passe sans cesse d'une case à sa voisine, et le trajet
+    // se couvrait d'allers-retours. (Un clic garde toute la case.)
+    const COEUR_DE_CASE = 0.72;
+
+    const caseAuCoeur = event => {
+
+        const noeud = event.target.closest?.("[data-case]");
+
+        if (!noeud) {
+            return null;
+        }
+
+        const cadre = noeud.getBoundingClientRect();
+        const rayon = (Math.min(cadre.width, cadre.height) / 2) * COEUR_DE_CASE;
+        const ecart = Math.hypot(event.clientX - (cadre.x + cadre.width / 2), event.clientY - (cadre.y + cadre.height / 2));
+
+        return ecart <= rayon ? Number(noeud.dataset.case) : null;
+    };
+
     const poigneesDeplacement = deplacement.mode ? {
         "data-sans-defilement": "",
         onPointerDownCapture: event => {
@@ -533,7 +553,8 @@ export function Espace() {
         },
         onPointerMoveCapture: event => {
 
-            const numero = caseSous(event);
+            // (au bord d'une case, rien ne s'ajoute : il faut entrer dans son cœur)
+            const numero = caseAuCoeur(event);
 
             if (event.buttons !== 1 || numero === null || debutTrace.current === null || numero === debutTrace.current) {
                 return;
