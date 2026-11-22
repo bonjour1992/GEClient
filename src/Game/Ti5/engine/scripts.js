@@ -1085,19 +1085,19 @@ export const SCRIPTS = [
         "Fiche d'un système : « Fouiller la ruine »",
         "Fouiller une ruine d'une planète où vous avez un Mecha d'archéologie n'use pas de scientifique."),
 
-    regle("wanno", "planet", 46, 1795190407300, "Wanno", "modifie",
+    regle("wanno", "planet", 46, 1795376185087, "Wanno", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
         "Prendre possession de Wanno rapporte 1 infamie."),
 
-    regle("perimeter", "planet", 60, 1795190407280, "Perimeter", "modifie",
+    regle("perimeter", "planet", 60, 1795376185096, "Perimeter", "modifie",
         "Fiche d'une unité : « Livraison commerciale »",
         "Vos livraisons valent 1 commerce de plus si vous possédez Perimeter."),
 
-    regle("avar", "planet", 61, 1795072921250, "Avar", "modifie",
+    regle("avar", "planet", 61, 1795376185097, "Avar", "modifie",
         "Fiche d'un système : « Revendiquer »",
         "Avar ne peut pas être en votre possession sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris, et la possession tombe d'elle-même quand votre dernière unité la quitte (glisser) ou y est détruite (« Terminer le combat »). Vaut aussi pour Arcturus.", [783]),
 
-    regle("cormund", "planet", 49, 1795073444389, "Cormund", "modifie",
+    regle("cormund", "planet", 49, 1795376185089, "Cormund", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",
         "Il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines."),
 
@@ -1127,11 +1127,11 @@ export const SCRIPTS = [
         "Conflit : « Terminer le combat » une unité détruite",
         "Détruire un vaisseau de commerce non militaire vous rapporte 1 infamie."),
 
-    regle("jeollr", "planet", 59, 1795190407298, "Jeollr", "auto",
+    regle("jeollr", "planet", 59, 1795376185095, "Jeollr", "auto",
         "Conflit : bombardement",
         "Les bombardements contre Jeollr ont −2."),
 
-    regle("loki", "planet", 62, 1795072921247, "Loki", "auto",
+    regle("loki", "planet", 62, 1795376185098, "Loki", "auto",
         "Conflit : combats sur la planète",
         "Sur Loki, les attaques contre la faction qui possède la planète ont −1."),
 
@@ -1240,7 +1240,7 @@ export const SCRIPTS = [
     // BOUTONS D'ACTION (ActionsScript.jsx)
     // --------------------------------------------------------
 
-    action("hopeld", "planet", 72, 1795190407267, "Hopeld : produire un Mech géant", "planete",
+    action("hopeld", "planet", 72, 1795376185102, "Hopeld : produire un Mech géant", "planete",
         "Production : dépensez un logisticien, un Mech géant est posé sur Hopeld (que vous possédez).", {
             phase: "production",
             possede: true,
@@ -1374,7 +1374,7 @@ export const SCRIPTS = [
             libelle: "Dissoudre la Garde impériale (12 influence)",
         }),
 
-    action("starpoint", "planet", 71, 1795046343686, "Starpoint : faveur neutre", "planete",
+    action("starpoint", "planet", 71, 1795376185101, "Starpoint : faveur neutre", "planete",
         "Diplomatie : use un diplomate et dépensez 3 influence, vous obtenez une faveur neutre.", {
             phase: "diplomatie",
             possede: true,
@@ -1397,7 +1397,7 @@ export const SCRIPTS = [
             libelle: "Forger la relique (dépense un scientifique, 3 fragments et 1 fragment ancien)",
         }),
 
-    action("elysium-scientifique", "planet", 75, 1795072921285, "Elysium : poser un scientifique", "planete",
+    action("elysium-scientifique", "planet", 75, 1795376185105, "Elysium : poser un scientifique", "planete",
         "Science : la planète est activée et un de vos scientifiques y est posé ; il y reste (il n'est jamais récupéré).", {
             phase: "science",
             possede: true,
@@ -1406,7 +1406,7 @@ export const SCRIPTS = [
             libelle: "Poser un scientifique sur Elysium (il y reste)",
         }),
 
-    revenu("elysium", "planet", 75, 1795072921285, "Elysium", "ravit",
+    revenu("elysium", "planet", 75, 1795376185105, "Elysium", "ravit",
         "1 de recherche militaire, spatiale, génétique et sociale par scientifique posé sur Elysium.", {
             recherche: [["mil", 1], ["spa", 1], ["gen", 1], ["soc", 1]],
             calcul: (source, outils) => {
@@ -1497,7 +1497,7 @@ export const SCRIPTS = [
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
         "Prendre possession de Mecatol Rex vous donne aussi la carte Mecatol Rex spéciale (#229)."),
 
-    regle("haven", "planet", 1041, 1795190407276, "Haven", "auto",
+    regle("haven", "planet", 1041, 1795376185105, "Haven", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Posséder Haven compte comme posséder une planète natale : elle donne la faveur du ravitaillement, même sans planète de votre système natal."),
 
@@ -1509,7 +1509,7 @@ export const SCRIPTS = [
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), un Ravageur neutre est ajouté sur Atlas."),
 
-    regle("cormund-attaque", "planet", 49, 1795073444389, "Cormund : attaque", "auto",
+    regle("cormund-attaque", "planet", 49, 1795376185089, "Cormund : attaque", "auto",
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), chaque unité présente sur Cormund subit une attaque de force 4 : un dé à 10 faces par unité, 1 dégât sur 4 ou moins."),
 
