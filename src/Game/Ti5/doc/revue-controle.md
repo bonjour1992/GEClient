@@ -1,5 +1,11 @@
 # Revue du système de contrôle et de domination (20 novembre 2026)
 
+Depuis le 22 novembre, les phases de bombardement et de débarquement n'en font qu'une (07) et les
+suivantes sont renumérotées : les numéros de phase cités plus bas (10 revendication, 11 science,
+12 production, 13 construction) sont ceux d'avant — ôter 1. Le test de blocage est refait à chaque
+action (plus de « une fois par lieu et par phase »), un test raté n'use que les agents, et la
+coalition n'existe plus : voir `plan-demandes.md`.
+
 Revue demandée par Loïc : cohérence du code, scripts des cartes qui parlent de contrôle,
 actions de phase, règles peu claires. Les textes cités sont ceux de la base à cette date.
 

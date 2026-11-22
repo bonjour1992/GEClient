@@ -668,4 +668,6 @@ déplacement ; test raté = agents utilisés seulement ; phase « 07.Phase de bo
 jouée système par système (`regleSousPhases.js`, `SousPhases.jsx`), phases suivantes renumérotées 08 à 19 ;
 Station automatisée de défense, Centre d'espionnage industriel, stations scientifiques et habilité de Jol-Nar
 (mise en place dans `miseEnPlace.js`, chargée par le serveur : geserver doit être redémarré) ; stock d'achat et
-livraison d'une flotte (`Achats.jsx`, `Livraison.jsx`). Reste : refaire l'aide et les textes « Jeu en ligne ».
+livraison d'une flotte (`Achats.jsx`, `Livraison.jsx`) ; textes « Jeu en ligne » des 19 phases réécrits en
+listes d'actions (`demandes-ti5/migrate-enligne-listes.mjs`) et mode d'emploi de l'onglet Aide refait en sections
+courtes (`Aide.jsx`).

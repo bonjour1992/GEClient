@@ -63,31 +63,94 @@ const MODE_EMPLOI = [
         "Aussi : votre main, vos marqueurs, vos fragments de relique, vos éléments actifs, les derniers coups (trois actions par coup ; le détail est dans l'onglet Journal).",
     ]],
     ["Onglets", [
-        "Espace : la carte. Clic sur un système : ses unités par emplacement, prendre possession d'une planète ou la revendiquer, réparer (1 ressource par dégât), ouvrir un combat, et les actions de la phase.",
-        "Conflit : un sous-onglet par combat (spatial, canons, terrestre, bombardement). Cocher ses unités, « Engager » ou « Cibler », « Prêt au combat » ; glisser chaque dégât rouge sur l'unité touchée. Une unité qui a pris assez de dégâts est cochée « détruit » (case décochable, après confirmation) : « Terminer le combat » retire les unités détruites, avec leur butin. Au-dessus, les déplacements en cours arrêtés sur une case à risque : chaque camp qui y a des unités militaires encore libres choisit, unité par unité, de bloquer ou d'aider ; le joueur qui se déplace égalise le surplus avec ses propres unités (un vaisseau en route engagé s'arrête là), et toute unité qui a servi est engagée pour la phase. Conflits de contrôle : quand une action demande le contrôle d'une planète ou d'un système (prendre possession, construire, rechercher, fouiller, mobiliser, produire un vaisseau avec un dock, effet d'une carte) et que d'autres peuvent s'y opposer — unités militaires d'une autre faction, possession de la planète (2 de contrôle), ou neutres que vous ne dépassez pas —, un conflit s'ouvre ici en disant pour quelle action ; sans opposant possible, le test réussit toujours. Seuls participent les camps qui ont une unité militaire sur place ou la possession. Chaque camp s'abstient, soutient ou s'oppose ; le demandeur conclut : l'action se fait aussitôt, ou il renonce et rien ne se passe. Test de domination : un seul par sujet (la carte qui le demande) ; la faction qui domine fait l'action, personne à égalité. Tests de blocage (bombardement, raid, débarquement, canons spatiaux, production, réparation, livraison commerciale) : à votre première action là où est l'unité qui agit — l'espace de son système, ou sa planète —, si d'autres factions y ont des unités militaires libres, chaque camp choisit unité par unité de bloquer ou d'aider ; vous égalisez le surplus en cochant vos propres unités, qui sont alors bloquées, puis « Conclure le blocage ». Les unités qui ont servi sont engagées pour la phase ; vos unités restées libres agissent ensuite sans nouveau test au même endroit.",
-        "Décision : toute question qu'une action pose (un montant, une unité, une faction, l'agent de base ou un mercenaire, une confirmation, les propositions piochées, une carte face cachée à révéler ou à consulter) s'ouvre ici, et l'onglet s'affiche tout seul ; le coup n'est envoyé qu'une fois la décision prise, et « Renoncer » l'abandonne. Les décisions qui durent (Recomposition : le jet, puis les vaisseaux produits jusqu'au nombre de réussites) y restent tant qu'elles ne sont pas réglées. Tant qu'une décision vous attend, « Joueur suivant » et « Passer » sont rouge gris : ils restent utilisables après confirmation. Seule cette confirmation des boutons rouge gris (« Normalement impossible… ») est encore une fenêtre.",
-        "Plateau joueur : feuille de faction, réserve, faveurs, fragments, éléments actifs ; compte rendu du ravitaillement du tour (il se fait tout seul au début de la phase). Les boutons de joueur montrent le plateau des autres.",
-        "Technologie : clic sur une technologie = une case de recherche de plus, Ctrl + clic = une de moins, Maj + clic = utilisée ce tour. On peut y poser un agent.",
+        "Espace : la carte. Clic sur un système : sa fiche — unités par emplacement, actions de la phase, combats, achats.",
+        "Conflit : les combats, et au-dessus les déplacements en cours, les conflits de contrôle, les tests de domination et les tests de blocage.",
+        "Décision : toute question qu'une action pose s'ouvre ici, et l'onglet s'affiche tout seul. Le coup n'est envoyé qu'une fois la décision prise ; « Renoncer » l'abandonne.",
+        "Décisions qui durent : elles restent dans l'onglet tant qu'elles ne sont pas réglées (Recomposition, désignation d'une loi). Tant qu'une décision vous attend, « Joueur suivant » et « Passer » sont rouge gris.",
+        "Plateau joueur : feuille de faction, réserve, faveurs, fragments, éléments actifs, compte rendu du ravitaillement. Les boutons de joueur montrent le plateau des autres.",
+        "Technologie : clic sur une technologie : une case de plus ; Ctrl + clic : une de moins ; Maj + clic : utilisée ce tour. On peut y poser un agent.",
         "Plateau général : le déroulé (un « + » en tête des pistes avance votre marqueur), le recrutement, les réserves, les sacs et les pioches.",
-        "Vote : votre plateau de vote, les lois du tour et le décompte. Un politicien dans la case est utilisé (1 voix) ; dans le carré de droite, il est dépensé (2 voix). Pendant la phase de vote, ce que vous posez sur votre plateau et vos ajustements de voix restent sur votre appareil, sans rien au journal. « Prêt à révéler » : quand tous les joueurs sont prêts, chacun envoie ses votes et révèle son plateau (la page doit être ouverte). « Réinitialiser » : les agents des cases vont dans vos agents usés, ceux des carrés de droite sont retirés du jeu. Un clic sur une loi du tour ouvre sa fiche (la prendre en main, la mettre en jeu). À l'arrivée en phase de mandat, une loi du tour dont le texte commence par « Révélez… » (objectifs militaires, mercenaire, relique) fait piocher ces cartes, posées à côté d'elle ; un clic sur l'une d'elles ouvre sa fiche. Une loi qui demande d'élire une planète ou un système donne à chaque faction une décision (onglet Décision) : la planète ou le système désigné s'affiche à côté de la loi, à la couleur de la faction (« changer » pour revenir dessus). Dans le décompte, chaque vote est écrit sur la couleur de sa colonne du plateau. Quand le Conclave secret est sur la table, une colonne « Conclave » montre ses voix (jet « Vote du conclave » du bandeau « À faire »), ajustables à la main. Les voix dues à une carte (Conspirer ensemble, Ilyane Vorsk) sont notées à côté du total du joueur.",
-        "Transactions : proposer, valider, refuser. Une transaction est appliquée quand les deux factions l'ont validée. Elle use alors autant de diplomates de celui qui l'a proposée que le plus grand nombre d'éléments reçus par une faction ; ce coût est affiché. Catégorie « Cartes » : une faction donne à l'autre une relique, une promesse, un agenda ou un mercenaire ; ce n'est vérifié qu'à l'application : si elle ne l'a ni en main ni en jeu, la transaction est annulée et aucun diplomate n'est utilisé.",
-        "Faveurs : à la phase d'événement des tours concernés, choisir en secret les faveurs à encaisser et valider. Vos faveurs ne bougent pas avant le décompte : les autres ne voient ni combien ni lesquelles vous dépensez. Les points sont comptés quand tous les joueurs ont validé.",
+        "Vote : votre plateau de vote, les lois du tour et le décompte (voir « Vote »).",
+        "Transactions : proposer, valider, refuser. Une transaction s'applique quand les deux factions l'ont validée ; son coût en diplomates est affiché.",
+        "Cartes dans une transaction : relique, promesse, agenda ou mercenaire. Ce n'est vérifié qu'à l'application : si la faction ne l'a pas, la transaction est annulée sans user de diplomate.",
+        "Faveurs : à la phase d'événement des tours concernés, choisir en secret les faveurs à encaisser et valider. Les points sont comptés quand tous ont validé.",
         "Chat : « Général » et une conversation privée par joueur. Journal : tous les coups.",
+        "Bouton rouge gris : la règle dit non, l'outil laisse faire après une confirmation (« Normalement impossible… »). C'est la seule fenêtre qui reste.",
     ]],
-    ["Raccourcis par phase", [
-        "Ravitaillement : automatique au début de la phase (revenus, agents usés et technologies de nouveau disponibles, une de vos faveurs si vous possédez une planète de votre système natal), avec un compte rendu détaillé en haut de l'écran, gardé sur le Plateau joueur. Un test de domination en attente (Exploitation du vide, Extraction de la faille) le retient ; s'il a été manqué, un bouton rouge gris du Plateau joueur le rattrape. Le recrutement du tour est mis en place tout seul à « Nouveau tour ».",
-        "Recrutement : Ctrl + clic sur un agent, un mercenaire ou un plan de relique d'une case de recrutement pour l'acheter avec votre influence (le numéro de la case ; un mercenaire coûte 2 de plus, et le surcoût du tour en plus).",
-        "Déplacement : Ctrl + clic sur le système où vous allez pour y poser votre marqueur ; « Déplacement assisté » : système de départ, vaisseaux (leur pion montre dégâts et unités embarquées ; glissez dessus les unités à embarquer, rangées par planète), trajet (dessiné en flèches sur la carte), « Déplacer » ; « Annuler l'activation » tant qu'aucun vaisseau n'a été déplacé ; un déplacement à la fois (activer un autre système est signalé tant que le premier n'est pas fini) ; « Finir le déplacement » clôt les systèmes activés (leur marqueur reste) et passe la main ; boutons « Attendre ».",
-        "Diplomatie : « Transaction… », puis l'onglet Transactions.",
-        "Mercenaire « utilisable comme » un agent : glissez son cube noir (ou sa carte, ou la relique Noble cryogénisé) sur un type d'agent de « Mes agents » — les types à 0 y restent affichés. Dès qu'un agent de ce type est utilisé ou dépensé, l'onglet Décision demande qui agit : l'agent de base ou le remplaçant. L'Héritier des Winnu est proposé de lui-même (politique si vous possédez Mecatol Rex, amiral sinon). Les mercenaires de combat ont un bouton sous le combat. Un Dock (réparation illimitée) : en production, la fiche de chacune de vos unités endommagées du système a « Réparer ». Les transporteurs se déplacent avec un amiral ou un logisticien (choix dans le déplacement assisté). Un mercenaire utilisé envoie son cube noir dans les agents usés : sans cube sur sa carte, il n'est plus utilisable ; le ravitaillement rend les cubes aux cartes.",
-        "Combats : fiche d'un système, « Combat spatial », « Canons spatiaux », « Combat terrestre », « Bombardement », « Raid » si une unité à raid est dans l'espace (rouge gris si vous n'avez aucune unité dans le système).",
-        "Revendication : fiche d'un système, à côté de la planète. « Prendre possession » demande une de vos unités militaires sur la planète et son contrôle (conflit de contrôle si un autre camp y a des unités militaires ou la possède) ; « Revendiquer » demande une de vos unités — ou votre drapeau — dans le système et use un diplomate (si d'autres camps y ont des unités militaires, ou si un autre camp possède la planète, leur accord est demandé dans l'onglet Conflit : la revendication se fait dès que tous ont accepté). Station : « Prendre possession » y pose l'agent adapté à son type (conflit de contrôle spatial si un autre camp a des unités militaires dans l'espace du système) ; « Revendiquer » use en plus un diplomate (accord des camps présents, comme pour une planète). Reprendre l'agent posé sur une station vous la fait perdre, comme Avar et Arcturus quand votre dernière unité les quitte. « Abandonner », sur une planète ou une station que vous possédez, retire votre drapeau : la carte quitte vos éléments actifs, et l'agent posé sur une station revient, usé, dans vos agents. Un bouton rouge gris signale que la condition manque, ou que ce n'est pas la phase de revendication ; il reste utilisable.",
-        "Science : Ctrl + clic sur un emplacement vert pour explorer, à côté d'un système où vous avez une unité (use un logisticien et un scientifique — un seul des deux, au choix, avec la technologie Exploration efficace ; les unités natives du système découvert sont posées) ; fiche d'un système pour « Rechercher » et « Fouiller la ruine », si vous y avez une unité ou votre drapeau ; onglet Technologie : le cadre « Recherche du tour » tient le journal de vos recherches, phase par phase (recherche gagnée, cases cochées, technologie finie), jusqu'à la fin du tour ; un clic sur la grille « Connaissance » d'une feuille y ajoute un point de recherche (Ctrl + clic : un de moins) ; une technologie à prérequis demande autant de niveaux de connaissance (sinon une confirmation) ; fiche d'une relique de votre main pour « Construire ».",
-        "Production : Ctrl + clic sur une unité à production (un dock…), ou « Produire ici » dans la fiche du système pour une station : un logisticien est utilisé, puis les unités se glissent depuis la réserve dans ce système ; case « Production » de la réserve pour produire librement ; fiche d'un système pour « Mobiliser » (sur une planète, pas une station ; un logisticien, ou le Généticien ; − / + règlent le nombre d'infanteries, jusqu'au maximum) et « Réparer » (1 ressource par dégât, pas les unités biologiques).",
-        "Construction : case « Construction » de la réserve, puis glisser la structure vers la planète ou le système : son coût est payé, la planète activée et un logisticien utilisé (dépensé si la planète porte déjà une structure) ; pas deux fois la même structure au même endroit.",
-        "Proposition : « Piocher N propositions », une seule fois par tour (les cartes piochées s'ouvrent dans l'onglet Décision : en prendre une en main) ; Ctrl + clic sur un agenda de votre main pour le proposer au tour suivant.",
-        "Trêve : clic sur un système, puis « Déclarer une trêve » dans sa fiche : un marqueur de trêve (la colombe) y est posé et un diplomate retiré. Hors de la phase de trêve ou sans diplomate, le bouton est rouge gris mais reste utilisable après confirmation.",
+    ["Combats", [
+        "Ouvrir : fiche d'un système — « Combat spatial », « Canons spatiaux », « Combat terrestre », « Bombardement », « Raid » si une unité à raid est dans l'espace.",
+        "Engager : cocher ses unités, « Engager » une faction ou « Cibler » une unité (−2 pour toucher), puis « Prêt au combat ».",
+        "Dégâts : glisser chaque dégât rouge sur l'unité touchée ; une unité qui a pris assez de dégâts est cochée « détruit » (décochable, après confirmation).",
+        "Finir : « Terminer le combat » retire les unités détruites, avec leur butin. Le combat résolu reste affiché jusqu'à la fin de la phase.",
+        "Mercenaires de combat : un bouton par mercenaire sous le combat.",
+        "Phase : elle ne se quitte pas tant qu'un combat est ouvert.",
+    ]],
+    ["Contrôle et domination", [
+        "Quand : une action qui demande le contrôle — prendre possession, construire, rechercher, fouiller, mobiliser, produire un vaisseau avec un dock, effet d'une carte.",
+        "Sans opposant : si personne d'autre ne peut participer, ou seulement des neutres que vous dépassez, le test réussit tout de suite, même à 0 contre 0.",
+        "Conflit de contrôle : sinon il s'ouvre dans l'onglet Conflit et dit pour quelle action. Chaque camp soutient, s'oppose ou s'abstient, avec tout son contrôle.",
+        "Qui participe : les camps qui ont une unité militaire sur place, ou la possession de la planète (2 de contrôle, même sans unité ; une planète donnée aux Réfugiés est aux neutres).",
+        "Conclure : « Contrôle acquis : faire l'action » — l'action part aussitôt. « Renoncer » : le test est raté.",
+        "Test raté : l'action n'a pas lieu. Ses agents sont utilisés (jamais dépensés), rien d'autre n'est payé, la planète ou la ruine n'est pas activée.",
+        "Page rechargée pendant le conflit : l'action n'attend plus ; une fois le contrôle acquis, refaites-la.",
+        "Contrôle comme état : une carte qui lit « sous votre contrôle » fait un test par système concerné (Complexe de guerre, Vassalisation forcée, Chemin du vide) ; son résultat vaut pour la phase.",
+        "Domination : un seul test par sujet (la carte qui le demande). La faction qui réunit seule le plus de contrôle fait l'action ; à égalité, personne. Il ne se rouvre pas.",
+        "Domination d'une planète : bouton « Domination de la planète » de la fiche du système ; la possession y vaut 2.",
+        "Rapport de force : dans tout conflit, use un diplomate pour +2 à votre contrôle (si vous participez).",
+    ]],
+    ["Blocage", [
+        "Quand : une action qui demande une unité non bloquée — déplacement, canons, bombardement, raid, débarquement, production, réparation, livraison.",
+        "Où : là où est l'unité qui agit — l'espace de son système, ou sa planète. Un système de défense compte aussi dans l'espace.",
+        "Test : il s'ouvre dans l'onglet Conflit tant qu'il reste en face des unités militaires libres ; il est refait à chaque action.",
+        "Les autres camps : chacun choisit, unité par unité, de bloquer ou d'aider. Les neutres bloquent d'office.",
+        "Vous : vous égalisez le surplus avec vos propres unités, qui sont alors bloquées — militaires, puis transports, puis les autres. « Conclure le blocage ».",
+        "Engagée pour la phase : toute unité qui a bloqué, aidé, égalisé ou agi (un vaisseau qui s'est déplacé, par exemple) ne sert plus à cette phase.",
+        "Vaisseaux civils : ignorés au bombardement et au débarquement. Au déplacement, un camp qui bloque peut cocher « ne pas bloquer les vaisseaux civils ».",
+        "Blocage raté : l'agent de l'action est utilisé, rien d'autre n'est payé.",
+        "Effets : Redevance de protection dépensée d'office ; Frontière ouverte et fin des dettes proposées dans l'onglet Décision (déplacement).",
+    ]],
+    ["Livraisons et achats", [
+        "Livrer : fiche d'un vaisseau à livraison — « Livraison commerciale ». Le négociant est utilisé et l'unité dépensée ou usée, selon son texte.",
+        "Flotte : « Livrer avec la flotte » — 2 négociants font livrer tous vos vaisseaux à livraison du même espace.",
+        "Destination : une faction qui a un comptoir dans le système (elle gagne le commerce, vos dettes envers elle baissent), ou « mon stock d'achat ».",
+        "Stock d'achat : sur une station commerciale ou un Bazaar, la livraison est gardée à votre nom (un marqueur de faction porte le montant) ; rien ne va au possesseur.",
+        "Acheter : fiche du système, cadre « Achats », à la diplomatie — « Acheter » dépense le prix de votre stock. Ce qui est acheté se prend à la main.",
+        "Quand livrer : à la diplomatie ; au déplacement, pour un vaisseau de commerce déplacé à ce tour et non bloqué ; à la sous-phase de débarquement.",
+    ]],
+    ["Vote", [
+        "Voter : un politicien dans la case est utilisé (1 voix) ; dans le carré de droite, il est dépensé (2 voix).",
+        "Secret : pendant la phase de vote, ce que vous posez et vos ajustements restent sur votre appareil, sans rien au journal.",
+        "Révéler : « Prêt à révéler » ; quand tous sont prêts, chacun envoie ses votes et révèle son plateau (la page doit être ouverte).",
+        "Réinitialiser : les agents des cases vont dans vos agents usés, ceux des carrés de droite sont retirés du jeu.",
+        "Lois du tour : un clic ouvre la fiche (la prendre en main, la mettre en jeu).",
+        "Loi « Révélez… » : à l'arrivée en phase de mandat, les cartes sont piochées et posées à côté de la loi.",
+        "Loi qui élit : une planète ou un système — chaque faction le désigne dans l'onglet Décision ; il s'affiche à côté de la loi, à sa couleur (« changer » pour y revenir).",
+        "Décompte : chaque vote est écrit sur la couleur de sa colonne. Les voix dues à une carte sont notées à côté du total du joueur.",
+        "Conclave secret : une colonne « Conclave » montre ses voix (jet « Vote du conclave » du bandeau « À faire »), ajustables à la main.",
+    ]],
+    ["Agents et mercenaires", [
+        "Utiliser un agent : clic dans « Mes agents » (ou reprendre un agent usé) ; Ctrl + clic le supprime.",
+        "Mercenaire « utilisable comme » : glissez son cube noir (ou sa carte) sur un type d'agent de « Mes agents ». Quand un agent de ce type sert, l'onglet Décision demande qui agit.",
+        "Héritier des Winnu : proposé de lui-même (politique si vous possédez Mecatol Rex, amiral sinon).",
+        "Cube noir : un mercenaire utilisé envoie son cube dans les agents usés ; sans cube sur sa carte il n'est plus utilisable. Le ravitaillement rend les cubes.",
+        "Station : reprendre l'agent posé dessus vous fait perdre la station.",
+    ]],
+    ["Phase par phase", [
+        "Ravitaillement : automatique ; compte rendu en haut de l'écran. Un test en attente le retient.",
+        "Recrutement : Ctrl + clic sur un agent, un mercenaire ou un plan d'une case de recrutement.",
+        "Déplacement : Ctrl + clic sur le système visé, « Déplacement assisté », « Finir le déplacement ».",
+        "Diplomatie : « Transaction… » ; livraisons et achats.",
+        "Canons, combats : fiche du système, puis l'onglet Conflit.",
+        "Bombardement et débarquement : « Activer ce système », puis les deux sous-phases ; le bandeau dit où l'on en est.",
+        "Revendication : fiche du système — « Prendre possession », « Revendiquer », « Abandonner ».",
+        "Science : « Rechercher », « Fouiller la ruine », Ctrl + clic sur un emplacement vert pour explorer, onglet Technologie.",
+        "Production : Ctrl + clic sur une unité à production, « Mobiliser », « Réparer ».",
+        "Construction : case « Construction » de la réserve, puis glisser la structure.",
+        "Mandat, vote : onglet Vote ; les désignations sont dans l'onglet Décision.",
+        "Proposition : « proposition(s) » du bandeau, puis Ctrl + clic sur un agenda de votre main.",
+        "Trêve : Ctrl + clic sur un système, ou « Déclarer une trêve » dans sa fiche.",
         "Événement : révéler l'événement du tour ; onglet Faveurs.",
+        "Détail : la consigne de la phase en cours est en haut de cet onglet, action par action.",
     ]],
 ];
 
@@ -117,7 +180,7 @@ function ModeEmploi() {
 
                             return (
                                 <li key={ligne} style={{ marginBottom: 2 }}>
-                                    {coupe > 0 && coupe < 28
+                                    {coupe > 0 && coupe < 40
                                         ? <><b>{ligne.slice(0, coupe)}</b>{ligne.slice(coupe)}</>
                                         : ligne}
                                 </li>
@@ -163,8 +226,15 @@ export function Aide() {
 
     const { etat, search } = useEngine();
 
-    const phase = getFromType(search, ["phase"])
-        .find(e => e.name === etat.phase);
+    // (une partie commencée avant une renumérotation des phases porte un ancien nom : on la
+    //  retrouve par son nom sans numéro ; les anciennes phases de bombardement et de débarquement
+    //  mènent à la phase qui les a fusionnées)
+    const sansNumero = nom => String(nom || "").replace(/^\s*\d+\s*\./, "").trim().toLowerCase();
+    const phases = getFromType(search, ["phase"]);
+
+    const phase = phases.find(e => e.name === etat.phase) ||
+        phases.find(e => sansNumero(e.name) === sansNumero(etat.phase)) ||
+        (/bombardement|d[ée]barquement/i.test(etat.phase || "") ? phases.find(e => /bombardement/i.test(e.name)) : undefined);
 
     const idPhase = phase?.id ?? null;
 
