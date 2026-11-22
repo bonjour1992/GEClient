@@ -9,7 +9,7 @@ import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
 import { demander } from "./demande";
 import { possesseurAuControle, actionsPossessionPerdue, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
-import { MARQUE_AGI } from "./regleBlocage";
+import { MARQUE_AGI, estBloquee } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
@@ -2295,6 +2295,9 @@ export function Plan({ children, style }) {
         // Construction là où d'autres peuvent s'opposer : () => promesse du contrôle (vrai : acquis)
         let controleRequis = null;
 
+        // Agents de l'action, utilisés quand même si le test de contrôle est raté (jamais dépensés)
+        let agentsSiRate = () => [];
+
         // Production ouverte avec une unité ou une station (Production.jsx) : ce
         // qu'elle ne peut pas produire, une unité de trop ou posée hors de son
         // système demande une confirmation ; la quantité produite est comptée,
@@ -2436,6 +2439,9 @@ export function Plan({ children, style }) {
                     `${noms(reforgees)} se reforge : il faut ${voulus} fragments spatiaux, vous en avez ${fragments.length} (seuls ceux-là seront dépensés)`,
             );
 
+            agentsSiRate = () => [logisticien, scientifique].filter(Boolean)
+                .map(agent => ({ type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` }));
+
             apres = async () => [
                 // (Reforger : le scientifique est dépensé — Bio stimulant propose de l'user à la place —,
                 //  les fragments aussi, et les points sont marqués)
@@ -2475,8 +2481,27 @@ export function Plan({ children, style }) {
 
         // Conflit de contrôle, s'il en faut un : la construction attend sa conclusion ; sans le
         // contrôle (conflit perdu ou abandonné), elle n'a pas lieu et rien n'est dépensé
-        if (controleRequis && !(await controleRequis())) {
-            return null;
+        if (controleRequis) {
+
+            const acquis = await controleRequis();
+
+            if (!acquis) {
+
+                // Test raté (conflit perdu ou abandonné) : les agents sont utilisés, jamais
+                // dépensés ; le coût n'est pas payé, la planète n'est pas activée
+                if (acquis === false) {
+
+                    const uses = agentsSiRate();
+
+                    if (uses.length) {
+                        envoyer(uses, `${construction ? "Construction" : "Production"} — contrôle non obtenu : agent utilisé, rien n'est payé`);
+                    }
+
+                    aviser?.("Contrôle non obtenu : rien n'est posé ni payé. Les agents de l'action sont utilisés, la planète n'est pas activée.");
+                }
+
+                return null;
+            }
         }
 
         if (ouverte && unites.length) {
@@ -2981,8 +3006,14 @@ export function Plan({ children, style }) {
 
         if (porteurs.length && !monDock) {
 
-            const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
-                { numero: Number(/^hex:(\d+)/.exec(zone)[1]), action: "debarquement", libelle: "Débarquement" });
+            // (le test est celui de l'activation du vaisseau : un vaisseau qui a déjà débarqué à
+            //  cette phase continue de débarquer sans nouveau test)
+            const dejaActifs = porteurs.every(id => Number(etat.composants[id]?.marques?.[MARQUE_AGI]) === rangDePhase(etat));
+
+            const blocage = dejaActifs
+                ? { engagees: porteurs.filter(id => estBloquee(etat, etat.composants[id])) }
+                : await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
+                    { numero: Number(/^hex:(\d+)/.exec(zone)[1]), action: "debarquement", libelle: "Débarquement" });
 
             if (!blocage) {
                 return;

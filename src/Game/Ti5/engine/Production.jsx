@@ -132,14 +132,30 @@ export async function ouvrirProduction(ctx, c, confirmer) {
     // La production s'ouvre à sa conclusion ; une unité engagée dans le test est bloquée.
     const blocage = await demanderBlocage(ctx, { ...lieuDe(c), action: "production", libelle: `Production avec ${nom}` });
 
-    if (!blocage) {
+    // Blocage raté (test abandonné, ou l'unité y a été engagée) : le logisticien est utilisé
+    // quand même, l'unité n'est pas activée et rien n'est produit
+    const rate = () => {
+
+        const logisticien = agentDisponible({ index, moi, search }, MOTIF_LOGISTICIEN);
+
+        if (logisticien) {
+            envoyer([{ type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` }],
+                `Production avec ${nom} — bloquée : le logisticien est utilisé, l'unité n'est pas activée`);
+        }
+
+        ctx.aviser?.(`Production avec ${nom} : bloquée. Le logisticien est utilisé, l'unité n'est pas activée.`);
+
         return true;
+    };
+
+    if (!blocage) {
+        return rate();
     }
 
     if (blocage.engagees.includes(c.id) && !confirmer(`Produire avec ${nom} (${nomCase(numero)})`, [
         "cette unité est bloquée pour cette phase (engagée dans le test de blocage)",
     ])) {
-        return true;
+        return rate();
     }
 
     ouvrirProductionLieu(

@@ -106,13 +106,27 @@ function ReparationImprovisee({ c, fermer }) {
                 const blocage = !lieu ? { engagees: [] }
                     : await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA }, { ...lieu, action: "reparation", libelle: "Réparation improvisée" });
 
+                // Blocage raté (test abandonné, ou le vaisseau y a été engagé) : le logisticien est
+                // utilisé quand même, rien n'est payé ni réparé
+                const rate = () => {
+
+                    if (logisticien) {
+                        envoyer([{ type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` }],
+                            "Réparation improvisée — bloquée : le logisticien est utilisé, rien n'est réparé");
+                    }
+
+                    aviser("Réparation improvisée : bloquée. " + (logisticien ? "Le logisticien est utilisé, rien n'est payé ni réparé." : "Rien n'est réparé."));
+                };
+
                 if (!blocage) {
+                    rate();
                     return;
                 }
 
                 if (blocage.engagees.includes(c.id) && confirmerRegle("Réparation improvisée", [
                     "ce vaisseau est bloqué pour cette phase (engagé dans le test de blocage)",
                 ]) === null) {
+                    rate();
                     return;
                 }
 

@@ -39,7 +39,7 @@ import {
     demanderControle, actionsOuvrirDomination, resultatDomination, SUJETS_DOMINATION, cleDomination, possesseurAuControle,
 } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
-import { peutEtreBloque, blocageSubi, estBloquee } from "./regleBlocage";
+import { peutEtreBloque, estBloquee } from "./regleBlocage";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -1114,7 +1114,10 @@ function FicheSysteme({ numero, id, fermer }) {
     // générale (demanderControle, Controle.jsx). Si d'autres peuvent s'opposer, un conflit de
     // contrôle « pour <cette action> » s'ouvre et l'action attend sa conclusion ; faux : elle n'a
     // pas lieu. Tant qu'un conflit est en cours sur la planète, personne d'autre n'y tente d'action.
-    async function controlePlanete(k, idPlanete, action, libelle) {
+    //   agents : () => actions qui utilisent les agents de l'action. Test raté (conflit perdu ou
+    //   abandonné) : ils sont utilisés quand même — jamais dépensés —, rien d'autre n'est payé et
+    //   la planète ou la ruine n'est pas activée.
+    async function controlePlanete(k, idPlanete, action, libelle, agents = () => []) {
 
         const lieu = { numero, k, unites: unitesDuControle(index, numero, k), possesseur: possesseurAuControle(etat, index, zonePlanete(k), idPlanete) };
 
@@ -1122,7 +1125,20 @@ function FicheSysteme({ numero, id, fermer }) {
             fermer();
         }
 
-        return demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, { ...lieu, motif: { action }, libelle });
+        const acquis = await demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, { ...lieu, motif: { action }, libelle });
+
+        if (acquis === false) {
+
+            const uses = agents().filter(Boolean);
+
+            if (uses.length) {
+                envoyer(uses, `${libelle} — contrôle non obtenu : agent utilisé, rien n'est activé`);
+            }
+
+            aviser("Contrôle non obtenu : l'action n'a pas lieu. Ses agents sont utilisés, rien d'autre n'est payé et rien n'est activé.");
+        }
+
+        return acquis;
     }
 
     // La recherche est notée au journal de recherche du tour (onglet Technologie).
@@ -1130,7 +1146,7 @@ function FicheSysteme({ numero, id, fermer }) {
     // « Activer une planète que vous contrôlez » : le contrôle de la planète est demandé.
     async function rechercher(k, idPlanete, commentaire) {
 
-        if (!await controlePlanete(k, idPlanete, "recherche", commentaire)) {
+        if (!await controlePlanete(k, idPlanete, "recherche", commentaire, () => [utiliser("scientifique")])) {
             return;
         }
 
@@ -1179,7 +1195,7 @@ function FicheSysteme({ numero, id, fermer }) {
             return;
         }
 
-        if (!await controlePlanete(k, idPlanete, "fouille", commentaire)) {
+        if (!await controlePlanete(k, idPlanete, "fouille", commentaire, () => [!mechaSur(k) && utiliser("scientifique")])) {
             return;
         }
 
@@ -1241,7 +1257,8 @@ function FicheSysteme({ numero, id, fermer }) {
     //   Mobiliser demande la possession de la planète et son contrôle.
     async function mobiliser(k, n, commentaire, clonage = false) {
 
-        if (!await controlePlanete(k, liensPlanetes.find(x => x.k === k)?.lien.id, "mobilisation", commentaire)) {
+        if (!await controlePlanete(k, liensPlanetes.find(x => x.k === k)?.lien.id, "mobilisation", commentaire,
+            () => [utiliser(MOTIF_LOGISTICIEN), clonage && utiliser("scientifique")])) {
             return;
         }
 
@@ -1292,8 +1309,7 @@ function FicheSysteme({ numero, id, fermer }) {
     // d'autres factions peuvent bloquer (BlocageAction.jsx) ; les unités bloquées ne sont pas réparées.
     async function reparer(commentaire) {
 
-        if (peutEtreBloque({ etat, unites: unitesDuControle(index, numero, ESPACE_CONTROLE), contenuDe: contenuEnCache, acteur: moi }) &&
-            !blocageSubi(etat, numero, moi)) {
+        if (peutEtreBloque({ etat, unites: unitesDuControle(index, numero, ESPACE_CONTROLE), contenuDe: contenuEnCache, acteur: moi })) {
             fermer();
         }
 

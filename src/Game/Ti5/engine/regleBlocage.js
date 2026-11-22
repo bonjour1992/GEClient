@@ -25,8 +25,11 @@ import { rangDePhase, estMilitaire, ESPACE_CONTROLE } from "./regleControle.js";
 //     ses unités sont bloquées.
 //   - Toute unité qui a servi (bloquer, aider, égaliser) ou qui a
 //     fait son action est engagée pour la phase : elle ne sert plus.
-//   - Une faction ne subit le test qu'une fois par lieu et par
-//     phase : ensuite ses unités non engagées y agissent librement.
+//   - Le test est refait à chaque action, tant qu'il reste en face
+//     des unités militaires libres en mesure de bloquer.
+//   - Bombardement, raid, débarquement : les vaisseaux civils (non
+//     militaires, sans capacité de transport) ne sont pas pris en
+//     compte — ils n'aident pas et n'égalisent pas.
 //
 // Marques d'une unité :
 //   bloc       rang de la phase : engagée dans un test de blocage
@@ -39,7 +42,7 @@ import { rangDePhase, estMilitaire, ESPACE_CONTROLE } from "./regleControle.js";
 // Compteurs :
 //   bloc:<lieu>:<acteur>               test en cours : code de l'action
 //   bloc:<lieu>:<acteur>:<camp>:plus   Rapport de force (+2) d'un camp
-//   blocSubi:<lieu>:<acteur>           rang de la phase : test déjà subi
+
 //   (<lieu> : « 12 » l'espace de la case 12, « 12p0 » sa planète 0)
 // ============================================================
 
@@ -61,8 +64,10 @@ export const ACTIONS_BLOQUABLES = {
 // Lieu d'un test : l'espace de la case (k = ESPACE_CONTROLE), ou sa planète k
 const codeLieu = (numero, k = ESPACE_CONTROLE) => (k === ESPACE_CONTROLE ? String(numero) : `${numero}p${k}`);
 
+// Actions pour lesquelles les vaisseaux civils ne sont pas pris en compte
+export const ACTIONS_SANS_CIVILS = ["bombardement", "raid", "debarquement"];
+
 export const cleBlocage = (numero, acteur, k = ESPACE_CONTROLE) => `bloc:${codeLieu(numero, k)}:${acteur}`;
-export const cleSubi = (numero, acteur, k = ESPACE_CONTROLE) => `blocSubi:${codeLieu(numero, k)}:${acteur}`;
 
 // Lieu où se trouve une unité de la carte : { numero, k } (k : sa planète, ou l'espace), ou null
 export function lieuDe(c) {
@@ -83,8 +88,6 @@ export const aAgi = (etat, c) =>
 // Engagée pour la phase : elle ne peut plus ni bloquer, ni aider, ni égaliser
 export const estEngagee = (etat, c) => estBloquee(etat, c) || aAgi(etat, c);
 
-export const blocageSubi = (etat, numero, acteur, k = ESPACE_CONTROLE) =>
-    rangDePhase(etat) > 0 && Number(etat.compteurs[cleSubi(numero, acteur, k)]) === rangDePhase(etat);
 
 // Tests de blocage en cours : [{ cle, numero, k, acteur, action }]
 export function blocagesActionEnCours(etat) {
@@ -132,13 +135,14 @@ export const peutEtreBloque = ({ etat, unites, contenuDe, acteur }) =>
 // bloquent, aident, egalisent, blocage, aide, net (à égaliser), egalise (contrôle engagé par
 // l'acteur), disponible, impossible (il ne peut pas égaliser), ordre (une unité non militaire
 // égalise alors qu'il reste une militaire libre), engagees (unités engagées à la conclusion)
-export function bilanBlocage({ etat, unites, contenuDe, aScript, acteur, plus = () => 0 }) {
+//   sansCivils   les unités civiles (ni militaires ni transports) sont ignorées (ACTIONS_SANS_CIVILS)
+export function bilanBlocage({ etat, unites, contenuDe, aScript, acteur, plus = () => 0, sansCivils = false }) {
 
     const controle = c => controleDe(contenuDe(c.ref.id), campDe(c), aScript);
     const militaire = c => estMilitaire(contenuDe, c);
     const somme = liste => liste.reduce((total, c) => total + controle(c), 0);
 
-    const libres = unites.filter(c => !estEngagee(etat, c));
+    const libres = unites.filter(c => !estEngagee(etat, c) && !(sansCivils && rangEngagement(contenuDe, c) === 2));
     const autres = libres.filter(c => campDe(c) !== acteur);
     const miennes = libres.filter(c => campDe(c) === acteur);
 

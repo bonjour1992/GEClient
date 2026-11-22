@@ -1647,10 +1647,9 @@ function CombatSysteme({ lieu }) {
         }
 
         // Bombardement, raid, canons spatiaux : « activer une unité non bloquée » — là où sont mes
-        // unités qui tirent (l'espace de leur système, ou leur planète), si d'autres factions
-        // peuvent me bloquer et que je n'y ai pas encore subi le test à cette phase, le test de
-        // blocage s'ouvre (onglet Conflit) ; une fois conclu, je me redis prêt : mes unités
-        // bloquées ne tirent pas.
+        // unités qui tirent (l'espace de leur système, ou leur planète), tant qu'il reste en face
+        // des unités militaires libres, le test de blocage s'ouvre (onglet Conflit) ; une fois
+        // conclu, je me redis prêt : mes unités bloquées ne tirent pas.
         if (soumisAuBlocage) {
 
             const lieux = new Map(tireurs.filter(v => v.camp === moi).map(v => lieuDe(v.c)).filter(Boolean)
@@ -1659,7 +1658,13 @@ function CombatSysteme({ lieu }) {
             for (const lieu of lieux.values()) {
 
                 const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
-                    { ...lieu, action: sorte === "canons" ? "canons" : (sorte === "raid" ? "raid" : "bombardement"), libelle: SORTES[sorte] });
+                    {
+                        ...lieu,
+                        action: sorte === "canons" ? "canons" : (sorte === "raid" ? "raid" : "bombardement"),
+                        libelle: SORTES[sorte],
+                        // (le test est refait à chaque action : celle-ci est la salve de cette étape du combat)
+                        instance: `${CE_COMBAT}:${etape}`,
+                    });
 
                 if (!blocage) {
                     return;
@@ -1859,8 +1864,15 @@ function CombatSysteme({ lieu }) {
         const carte = carteMerc(350);
 
         // « dans un système que vous contrôlez » : conflit de contrôle si d'autres peuvent s'y
-        // opposer ; sans le contrôle, le mercenaire n'est pas utilisé
-        if (!await demanderControleSysteme({ etat, index, moi, envoyer, aviser, allerA, aScript }, numero, "skarvald", "Skarvald")) {
+        // opposer ; test raté : le mercenaire est utilisé quand même, sans effet
+        const acquis = await demanderControleSysteme({ etat, index, moi, envoyer, aviser, allerA, aScript }, numero, "skarvald", "Skarvald");
+
+        if (!acquis) {
+
+            if (acquis === false) {
+                envoyer(userMerc(350), "Skarvald — contrôle non obtenu : le mercenaire est utilisé, sans effet");
+            }
+
             return;
         }
 

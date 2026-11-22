@@ -3,7 +3,7 @@ import { useElement, useElements, contenuEnCache } from "./sync";
 import { NEUTRE, campDe } from "./miseEnPlace";
 import { unitesDuLieu, rangDePhase, ESPACE_CONTROLE } from "./regleControle";
 import {
-    MARQUE_BLOQUEE, MARQUE_CHOIX, ACTIONS_BLOQUABLES, cleBlocage, cleSubi, estBloquee, blocageSubi,
+    MARQUE_BLOQUEE, MARQUE_CHOIX, ACTIONS_BLOQUABLES, ACTIONS_SANS_CIVILS, cleBlocage, estBloquee,
     blocagesActionEnCours, choixDe, peutEtreBloque, bilanBlocage,
 } from "./regleBlocage";
 import { RapportDeForce } from "./Controle";
@@ -23,8 +23,8 @@ import { redevancesRompues } from "./effetsBlocage";
 //   - la faction qui agit égalise le surplus de blocage avec ses
 //     propres unités (les militaires d'abord), qui sont alors bloquées ;
 //   - à la conclusion, toutes les unités qui ont servi sont engagées
-//     pour la phase ; la faction a « subi le blocage » dans ce système :
-//     ses unités restées libres y agissent sans nouveau test.
+//     pour la phase. Le test est refait à chaque action, tant qu'il
+//     reste en face des unités militaires libres.
 //
 // demanderBlocage (appelée par l'action) rend une promesse :
 //   null                     l'action n'a pas lieu (test abandonné) ;
@@ -50,18 +50,23 @@ const mesBloquees = (etat, index, numero, k, moi) =>
 //   ctx     { etat, index, moi, envoyer, aviser, allerA } (contexte de l'engine)
 //   numero, k  le lieu de l'unité qui agit : l'espace de la case (k absent), ou sa planète k
 //   action  clé d'ACTIONS_BLOQUABLES ; libelle : l'action, pour le journal
-export async function demanderBlocage(ctx, { numero, k = ESPACE_CONTROLE, action, libelle }) {
+//   instance  (facultatif) ce qui identifie cette action : quand son test vient d'être conclu,
+//             redemander avec la même instance ne rouvre pas de test (« Prêt au combat » recliqué)
+const testsFaits = new Map();   // clé du test -> instance de la dernière action testée
+
+export async function demanderBlocage(ctx, { numero, k = ESPACE_CONTROLE, action, libelle, instance = null }) {
 
     const { etat, index, moi, envoyer, aviser, allerA } = ctx;
 
     const unites = unitesIci(index, numero, k);
+    const cle = cleBlocage(numero, moi, k);
 
-    // Test déjà subi ici à cette phase, ou personne pour bloquer : les unités libres agissent
-    if (blocageSubi(etat, numero, moi, k) || !peutEtreBloque({ etat, unites, contenuDe: contenuEnCache, acteur: moi })) {
+    // Personne pour bloquer (plus d'unité militaire libre en face), ou test de cette action déjà
+    // conclu : les unités libres agissent
+    if (!peutEtreBloque({ etat, unites, contenuDe: contenuEnCache, acteur: moi }) ||
+        (instance !== null && testsFaits.get(cle) === instance)) {
         return { engagees: mesBloquees(etat, index, numero, k, moi), attendu: false };
     }
-
-    const cle = cleBlocage(numero, moi, k);
 
     if (!etat.compteurs[cle]) {
         await envoyer([
@@ -78,10 +83,16 @@ export async function demanderBlocage(ctx, { numero, k = ESPACE_CONTROLE, action
         "Concluez-le pour savoir lesquelles de vos unités restent libres d'agir.");
     allerA?.("combat");
 
-    return new Promise(resolve => {
+    const resultat = await new Promise(resolve => {
         conclureAttente(cle, null);    // (une attente précédente au même endroit est abandonnée)
         attentes.set(cle, resolve);
     });
+
+    if (resultat && instance !== null) {
+        testsFaits.set(cle, instance);
+    }
+
+    return resultat;
 }
 
 // ------------------------------------------------------------
@@ -129,7 +140,8 @@ function BlocageAction({ test }) {
     const clePlus = camp => `${cle}:${camp}:plus`;
     const plus = camp => Number(etat.compteurs[clePlus(camp)]) || 0;
 
-    const bilan = bilanBlocage({ etat, unites, contenuDe, aScript, acteur, plus });
+    // (bombardement, raid, débarquement : les vaisseaux civils ne sont pas pris en compte)
+    const bilan = bilanBlocage({ etat, unites, contenuDe, aScript, acteur, plus, sansCivils: ACTIONS_SANS_CIVILS.includes(action) });
     const { autres, miennes, net, egalise, impossible } = bilan;
 
     const nomCamp = camp => nomDuCamp(nomDe, camp);
@@ -169,7 +181,6 @@ function BlocageAction({ test }) {
         await envoyer([
             ...engagees.map(c => ({ type: "marquer", c: c.id, marque: MARQUE_BLOQUEE, valeur: rang })),
             ...effacement(),
-            { type: "compteur", id: cleSubi(numero, acteur, k), valeur: rang },
             ...redevances.flatMap(r => r.actions),
         ], [
             commentaire,
@@ -182,7 +193,7 @@ function BlocageAction({ test }) {
 
         aviser(impossible
             ? "Blocage : vous ne pouvez pas égaliser, toutes vos unités de ce lieu sont bloquées pour cette phase."
-            : `Blocage résolu : ${miennesEngagees.length} de vos unités sont bloquées ; les autres peuvent agir ici, sans nouveau test à cette phase.`);
+            : `Blocage résolu : ${miennesEngagees.length} de vos unités sont bloquées ; les autres peuvent agir.`);
     }
 
     return (
@@ -204,6 +215,7 @@ function BlocageAction({ test }) {
                 <b>{nomCamp(acteur)}</b> veut faire <b>{nomAction}</b> {nomLieu} : <b>test de blocage</b>.
                 {" "}Les autres camps engagent leurs unités militaires pour bloquer, ou des unités pour aider ; {nomCamp(acteur)}{" "}
                 égalise le surplus avec ses propres unités, qui sont alors bloquées. Toute unité qui sert est engagée pour la phase.
+                {ACTIONS_SANS_CIVILS.includes(action) && " Les vaisseaux civils (ni militaires ni transports) ne sont pas pris en compte."}
             </div>
 
             <ChoixDesCamps bilan={bilan} acteur={acteur} numero={numero} clePlus={clePlus} plus={plus} />
@@ -284,7 +296,9 @@ function BlocageAction({ test }) {
 //   clePlus  camp -> compteur du Rapport de force ; plus : camp -> son bonus
 // ------------------------------------------------------------
 
-export function ChoixDesCamps({ bilan, acteur, numero, clePlus, plus }) {
+//   civils   (déplacement) { cle: camp -> compteur, epargne: camp -> vrai } : option de chaque camp
+//            qui bloque de ne pas bloquer les vaisseaux civils
+export function ChoixDesCamps({ bilan, acteur, numero, clePlus, plus, civils = null }) {
 
     const { envoyer, moi, joueur, search, nomDe, couleurDe } = useEngine();
 
@@ -336,6 +350,21 @@ export function ChoixDesCamps({ bilan, acteur, numero, clePlus, plus }) {
                     {bilan.autres.filter(c => campDe(c) === camp).map(ligneUnite)}
                     {camp === moi && <RapportDeForce clePlus={clePlus(camp)} numero={numero} />}
                     {plus(camp) > 0 && <i> Rapport de force : +{plus(camp)}</i>}
+                    {/* Déplacement : ce camp peut bloquer sans arrêter les vaisseaux civils */}
+                    {civils && bilan.bloquent.some(c => campDe(c) === camp) && (
+                        <label data-epargne-civils={camp} style={{ marginLeft: 8 }}>
+                            <input
+                                type="checkbox"
+                                checked={civils.epargne(camp)}
+                                disabled={!joueur || !(camp === moi || camp === NEUTRE)}
+                                onChange={() => envoyer(
+                                    [{ type: "compteur", id: civils.cle(camp), valeur: civils.epargne(camp) ? 0 : 1 }],
+                                    `Blocage ${nomCase(numero)} (${nomCamp(acteur)}) : ${nomCamp(camp)} ${civils.epargne(camp) ? "bloque aussi les vaisseaux civils" : "ne bloque pas les vaisseaux civils"}`
+                                )}
+                            />{" "}
+                            ne pas bloquer les vaisseaux civils
+                        </label>
+                    )}
                 </div>
             ))}
 

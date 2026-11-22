@@ -79,16 +79,27 @@ export function CombatResolu({ lieu, compteur, titre }) {
                             nom={`Grappin de capture : ${nomElement(search, c.ref)} de ${campDe(c) ? nomDe(campDe(c)) : "neutres"}`}
                             obstacles={[!logisticien && "vous n'avez pas de logisticien disponible (aucun ne sera usé)"]}
                             // « si vous avez le contrôle du système à la fin du combat » : conflit de
-                            // contrôle si d'autres peuvent s'y opposer ; sans le contrôle, rien ne se passe
-                            faire={async commentaire => (Number.isFinite(numero) && !await demanderControleSysteme(
-                                { etat, index, moi, envoyer, aviser, allerA, aScript }, numero, "grappin-de-capture", "Grappin de capture")
-                                ? null
-                                : envoyer([
+                            // contrôle si d'autres peuvent s'y opposer ; test raté : le logisticien est utilisé, sans capture
+                            faire={async commentaire => {
+
+                                const acquis = !Number.isFinite(numero) || await demanderControleSysteme(
+                                    { etat, index, moi, envoyer, aviser, allerA, aScript }, numero, "grappin-de-capture", "Grappin de capture");
+
+                                // (test raté : le logisticien est utilisé quand même, rien n'est capturé)
+                                if (!acquis) {
+                                    return acquis === false && logisticien
+                                        ? envoyer([{ type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` }],
+                                            "Grappin de capture — contrôle non obtenu : le logisticien est utilisé, rien n'est capturé")
+                                        : null;
+                                }
+
+                                return envoyer([
                                     logisticien && { type: "deplacer", c: logisticien.id, vers: `joueur:${moi}:agentsUses` },
                                     { type: "marquer", c: c.id, marque: "degat", valeur: 0 },
                                     { type: "marquer", c: c.id, marque: "detruitA", valeur: null },
                                     { type: "deplacer", c: c.id, vers: `joueur:${moi}:actif` },
-                                ], commentaire))}
+                                ], commentaire);
+                            }}
                             title="Si vous contrôlez le système à la fin du combat (conflit de contrôle si d'autres peuvent s'y opposer) : use un logisticien, le vaisseau détruit arrive capturé dans vos éléments actifs"
                         >
                             Capturer {nomElement(search, c.ref)} ({campDe(c) ? nomDe(campDe(c)) : "neutre"})

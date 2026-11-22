@@ -8,7 +8,7 @@ import { contenuEnCache } from "./sync";
 import { redevancesRompues, frontieresOuvertes, dettesAnnulables, estCommerceNonMilitaire } from "./effetsBlocage";
 import { demander } from "./demande";
 import { unitesDuLieu, rangDePhase, ESPACE_CONTROLE } from "./regleControle";
-import { MARQUE_BLOQUEE, MARQUE_CHOIX, cleSubi, estEngagee, blocageSubi, bilanBlocage, choixDe as choixBlocage } from "./regleBlocage";
+import { MARQUE_BLOQUEE, MARQUE_CHOIX, estEngagee, bilanBlocage, choixDe as choixBlocage } from "./regleBlocage";
 import { ChoixDesCamps } from "./BlocageAction";
 
 // ============================================================
@@ -167,8 +167,6 @@ export function useCarte(cases, mover) {
         unites: duLieu,
         militaires,
         libres: i => militaires(i).filter(c => !estEngagee(etat, c)),
-        // Ce joueur a déjà subi le test de blocage sur cette case à cette phase
-        subi: (i, joueur) => blocageSubi(etat, i, joueur),
     };
 }
 
@@ -197,13 +195,13 @@ export function sorteJet(carte, de, a) {
 }
 
 // Camps qui peuvent bloquer sur la case : ceux qui y ont des unités militaires encore libres à
-// cette phase, hors celui qui se déplace — aucun s'il y a déjà subi le test à cette phase
+// cette phase, hors celui qui se déplace (le test est refait à chaque passage tant qu'il en reste)
 //   [{ camp, unites, controle }] — contrôle : celui de chaque unité (1 par défaut)
 export function campsAdverses(carte, numero, mover) {
 
     const parCamp = new Map();
 
-    for (const c of (carte.subi(numero, mover) ? [] : carte.libres(numero))) {
+    for (const c of carte.libres(numero)) {
 
         const camp = campDe(c);
 
@@ -388,12 +386,28 @@ export function Passage({ passage }) {
     const continuent = vaisseaux.filter(v => !arretes.includes(v));
 
     // Blocage par des unités : j'égalise avec les vaisseaux que j'arrête et les unités restées
-    // sur la case que j'engage ; si je ne peux pas égaliser, tout s'arrête
+    // sur la case que j'engage — mes unités militaires et mes transports d'abord, autant qu'il
+    // en faut (tous, si je ne peux pas égaliser). Mes vaisseaux civils ne viennent qu'ensuite,
+    // et seulement jusqu'au blocage des camps qui bloquent aussi les civils (option « épargner
+    // les vaisseaux civils » de chaque camp qui bloque : compteur …:<camp>:civils).
+    const cleCivils = camp => cleChoix(camp) + ":civils";
+    const epargne = camp => !!etat.compteurs[cleCivils(camp)];
+
+    const blocageCivils = controleDes(bilan.bloquent.filter(c => !epargne(campDe(c)))) +
+        [...new Set(bilan.bloquent.map(campDe))].filter(camp => !epargne(camp)).reduce((s, camp) => s + plus(camp), 0);
+
+    const estCivil = c => rangEngagement(c) === 2;
     const idsArretes = new Set(arretes.map(v => v.id));
     const utilisees = [...engageesSurPlace, ...arretes];
+    const mesUnites = [...surPlace, ...exposes];
+
+    const capaciteMT = controleDes(mesUnites.filter(c => !estCivil(c)));
+    const requisMT = Math.min(aBloquer, capaciteMT);
+    const requisCivils = Math.min(Math.max(0, Math.min(aBloquer - capaciteMT, blocageCivils)), controleDes(mesUnites.filter(estCivil)));
+    const engageMT = controleDes(utilisees.filter(c => !estCivil(c)));
+    const engageCivils = controleDes(utilisees.filter(estCivil));
+
     const egalise = controleDes(utilisees);
-    const disponible = controleDes([...surPlace, ...vaisseaux]);
-    const impossible = aBloquer > 0 && disponible < aBloquer;
     const libres = [...surPlace.filter(c => !engageesSurPlace.includes(c)), ...exposes.filter(v => !idsArretes.has(v.id))];
     const horsOrdre = aBloquer > 0 && utilisees.some(u => libres.some(l => rangEngagement(l) < rangEngagement(u)));
 
@@ -408,11 +422,11 @@ export function Passage({ passage }) {
         ...draineurs.filter(camp => !choixDrain(camp)).map(camp => `${nomCamp(camp)} n'a pas encore dit s'il exige le Drain spatial (compté comme un passage libre)`),
         coutDrain > mesRessources && `Drain spatial : ${coutDrain} ressource(s) à payer, ${nomCamp(mover)} en a ${mesRessources}`,
     ] : stade === "unites" ? [
-        !impossible && egalise < aBloquer &&
-            `le surplus de blocage est de ${aBloquer}, vous engagez ${egalise} : arrêtez des vaisseaux ou engagez des unités restées sur place`,
-        impossible && exposes.some(v => !idsArretes.has(v.id)) &&
-            `vous ne pouvez pas égaliser le blocage (${aBloquer}, vous disposez de ${disponible}) : tous vos vaisseaux s'arrêtent ici`,
-        horsOrdre && "vos unités militaires s'engagent d'abord, puis vos transports, puis les autres",
+        engageMT < requisMT &&
+            `blocage de ${aBloquer} : engagez encore ${requisMT - engageMT} de contrôle avec vos unités militaires et vos transports (vaisseaux arrêtés, unités restées sur place)`,
+        engageCivils < requisCivils &&
+            `il reste ${requisCivils - engageCivils} de blocage opposable à vos vaisseaux civils : arrêtez-en`,
+        horsOrdre && "vos unités militaires s'engagent d'abord, puis vos transports, puis vos vaisseaux civils",
     ] : [];
 
     // Retire les marques de déplacement d'un vaisseau
@@ -488,7 +502,8 @@ export function Passage({ passage }) {
         // (dettes : seulement si un vaisseau de commerce non militaire est arrêté)
         if (arretes.some(v => estCommerceNonMilitaire(carte.contenus[v.ref.id]))) {
 
-            for (const d of dettesAnnulables({ etat, bloqueurs, bloque: mover })) {
+            // (seuls les camps qui bloquent aussi les civils ont bloqué ce vaisseau de commerce)
+            for (const d of dettesAnnulables({ etat, bloqueurs: bloqueurs.filter(camp => !epargne(camp)), bloque: mover })) {
 
                 if (await demander({
                     titre: "Vaisseau de commerce bloqué",
@@ -519,7 +534,7 @@ export function Passage({ passage }) {
         envoyer([
             ...arretes.flatMap(liberer),
             ...activation(),
-            ...[...new Set([...bilan.autres.map(campDe), ...adverses.map(a => a.camp), mover])].flatMap(camp => [cleChoix(camp), clePlus(camp)])
+            ...[...new Set([...bilan.autres.map(campDe), ...adverses.map(a => a.camp), mover])].flatMap(camp => [cleChoix(camp), clePlus(camp), cleCivils(camp)])
                 .filter(id => etat.compteurs[id])
                 .map(id => ({ type: "compteur", id, valeur: 0 })),
             // Blocage par des unités conclu : les unités qui ont bloqué, aidé ou égalisé sont engagées
@@ -528,13 +543,12 @@ export function Passage({ passage }) {
             ...(stade !== "unites" ? [] : [
                 ...[
                     ...bilan.bloquent, ...bilan.aident,
-                    ...(impossible ? surPlace : engageesSurPlace),
+                    ...engageesSurPlace,
                     ...(aBloquer > 0 ? arretes : []),
                 ].map(c => ({ type: "marquer", c: c.id, marque: MARQUE_BLOQUEE, valeur: rangDePhase(etat) })),
                 ...carte.unites(numero)
                     .filter(c => new RegExp(`^[bapn]${mover}$`).test(String(c.marques?.[MARQUE_CHOIX] || "")))
                     .map(c => ({ type: "marquer", c: c.id, marque: MARQUE_CHOIX, valeur: null })),
-                { type: "compteur", id: cleSubi(numero, mover), valeur: rangDePhase(etat) },
             ]),
             ...continuent.filter(touche).map(v => ({
                 type: "marquer",
@@ -568,21 +582,23 @@ export function Passage({ passage }) {
         );
     }
 
-    // Coche d'office ce qu'il faut arrêter : les militaires d'abord, puis les transports, puis
-    // les autres, jusqu'à égaliser (tout, si c'est impossible)
+    // Coche d'office ce qu'il faut arrêter : les militaires d'abord, puis les transports, autant
+    // qu'il en faut ; puis les vaisseaux civils, jusqu'au blocage qui leur est opposable
     function proposer() {
 
         const choisis = [];
-        let reste = aBloquer - controleDes(engageesSurPlace);
+        let resteMT = requisMT - controleDes(engageesSurPlace.filter(c => !estCivil(c)));
+        let resteCivils = requisCivils - controleDes(engageesSurPlace.filter(estCivil));
 
         for (const v of [...exposes].sort((a, b) => rangEngagement(a) - rangEngagement(b))) {
 
-            if (reste <= 0 && !impossible) {
-                break;
+            if (!estCivil(v) && resteMT > 0) {
+                choisis.push(v.id);
+                resteMT -= bilan.controle(v);
+            } else if (estCivil(v) && resteMT <= 0 && resteCivils > 0) {
+                choisis.push(v.id);
+                resteCivils -= bilan.controle(v);
             }
-
-            choisis.push(v.id);
-            reste -= bilan.controle(v);
         }
 
         setStoppes(choisis);
@@ -628,7 +644,7 @@ export function Passage({ passage }) {
             {/* BLOCAGE PAR DES UNITÉS : chaque camp choisit unité par unité (ChoixDesCamps, BlocageAction.jsx) */}
             {stade === "unites" && (
                 <div data-blocage-unites style={{ marginTop: 4 }}>
-                    <ChoixDesCamps bilan={bilan} acteur={mover} numero={numero} clePlus={clePlus} plus={plus} />
+                    <ChoixDesCamps bilan={bilan} acteur={mover} numero={numero} clePlus={clePlus} plus={plus} civils={{ cle: cleCivils, epargne }} />
 
                     {/* Mes unités restées sur la case : je peux les engager pour égaliser */}
                     {surPlace.length > 0 && (
@@ -663,9 +679,9 @@ export function Passage({ passage }) {
                         Surplus de blocage : {bilan.blocage} (bloquent) − {bilan.aide} (aident) = <b>{surplus}</b>.{" "}
                         {aBloquer > 0
                             ? <b style={{ color: "#b71c1c" }}>
-                                {impossible
-                                    ? `${nomCamp(mover)} ne peut pas égaliser (${disponible} disponible) : tous ses vaisseaux s'arrêtent.`
-                                    : `${aBloquer} de contrôle à égaliser, ${egalise} engagé : les militaires d'abord, puis les transports, puis les autres.`}
+                                {aBloquer} de contrôle à égaliser, {egalise} engagé : {requisMT} avec les unités militaires et les transports
+                                {capaciteMT < aBloquer ? " (tous)" : ""}
+                                {capaciteMT < aBloquer ? `, puis ${requisCivils} avec les vaisseaux civils (blocage qui leur est opposable : ${blocageCivils})` : ""}.
                             </b>
                             : <b style={{ color: "#1b5e20" }}>Personne n'est arrêté.</b>}
                         {" "}Les unités qui bloquent, aident ou égalisent sont engagées pour la phase.

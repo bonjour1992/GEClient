@@ -140,13 +140,27 @@ export function LivraisonCommerciale({ c, fermer }) {
         const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA },
             { ...lieuDe(c), action: "livraison", libelle: `Livraison commerciale par ${nomElement(search, c.ref)}` });
 
+        // Blocage raté (test abandonné, ou l'unité y a été engagée) : le négociant est utilisé
+        // quand même, rien n'est livré et l'unité reste telle quelle
+        const rate = () => {
+
+            if (negociant) {
+                envoyer([{ type: "deplacer", c: negociant.id, vers: `joueur:${moi}:agentsUses` }],
+                    "Livraison commerciale — bloquée : le négociant est utilisé, rien n'est livré");
+            }
+
+            aviser("Livraison commerciale : bloquée. " + (negociant ? "Le négociant est utilisé, rien n'est livré." : "Rien n'est livré."));
+        };
+
         if (!blocage) {
+            rate();
             return;
         }
 
         if (blocage.engagees.includes(c.id) && confirmerRegle("Livraison commerciale", [
             "cette unité est bloquée pour cette phase (engagée dans le test de blocage)",
         ]) === null) {
+            rate();
             return;
         }
 

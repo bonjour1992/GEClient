@@ -147,7 +147,10 @@ export function RapportDeForce({ clePlus, numero }) {
 // Toute action qui exige le contrôle (construire, effet d'une carte…) passe par
 // demanderControle, qui rend une promesse :
 //   vrai   le contrôle est acquis — l'action s'exécute ;
-//   faux   il ne l'est pas (contrôle nul, conflit perdu ou abandonné) — rien ne se passe.
+//   faux   le test est raté (conflit perdu ou abandonné) — l'action n'a pas lieu : les agents
+//          qu'elle demandait sont quand même utilisés (jamais dépensés), rien d'autre n'est payé
+//          et la planète ou la ruine visée n'est pas activée (c'est l'appelant qui les use) ;
+//   null   pas de test : un autre conflit de contrôle est en cours ici — rien ne se passe.
 // Si un conflit doit trancher, il s'ouvre dans l'onglet Conflit en disant pour quelle
 // action (motif), et la promesse attend sa conclusion par le demandeur : l'action part
 // dès qu'il clique « Contrôle acquis ». Si la page a été rechargée entre-temps, la
@@ -193,7 +196,7 @@ export async function demanderControle(ctx, { numero, k, unites, possesseur = nu
     // Tant qu'un conflit de contrôle est en cours ici, personne d'autre ne tente d'action sur ce lieu
     if (enCours && enCours.demandeur !== moi) {
         aviser?.("Un conflit de contrôle est déjà en cours ici : attendez qu'il soit clos (onglet Conflit).");
-        return false;
+        return null;
     }
 
     // Conflit gagné alors que l'action n'attendait plus : ce contrôle sert une fois, pour cette action

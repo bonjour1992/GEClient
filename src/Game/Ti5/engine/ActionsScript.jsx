@@ -516,7 +516,7 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             }
 
             // Contrôle disputé : le conflit de contrôle s'ouvre en disant pour quel effet, et
-            // l'action attend sa conclusion. Sans le contrôle, elle n'a pas lieu : rien n'est dépensé.
+            // l'action attend sa conclusion. Sans le contrôle, elle n'a pas lieu : seuls ses agents sont utilisés.
             // (Sans opposant possible le test réussit ; un contrôle acquis au conflit est consommé ici.)
             if (lieuControle) {
 
@@ -524,8 +524,24 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
                     apres?.();
                 }
 
-                if (!await demanderControle({ etat, moi, envoyer, aviser, allerA, aScript },
-                    { ...lieuControle, motif: { script: s.id }, libelle: s.nom })) {
+                const acquis = await demanderControle({ etat, moi, envoyer, aviser, allerA, aScript },
+                    { ...lieuControle, motif: { script: s.id }, libelle: s.nom });
+
+                if (!acquis) {
+
+                    // Test raté : les agents de l'effet sont utilisés (jamais dépensés), rien d'autre
+                    const uses = acquis === false
+                        ? [agent, choisi.agentDepense].filter(Boolean).map(x => ({ type: "deplacer", c: x.id, vers: `joueur:${moi}:agentsUses` }))
+                        : [];
+
+                    if (uses.length) {
+                        envoyer(uses, `${s.nom} — contrôle non obtenu : agent utilisé, sans effet`);
+                    }
+
+                    if (acquis === false) {
+                        aviser(`${s.nom} : contrôle non obtenu, l'effet n'a pas lieu. Ses agents sont utilisés, rien d'autre n'est payé.`);
+                    }
+
                     return;
                 }
             }
