@@ -5,7 +5,6 @@ import {
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceDe } from "./effets";
-import { confirmer } from "./demande";
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, RESSOURCES, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
@@ -1940,11 +1939,11 @@ function CombatSysteme({ lieu }) {
         const detruites = aRetirer.filter(v => !contaminee(v));
         const butins = detruites.map(butinDe).filter(Boolean).map(b => b.texte);
 
+        // (pas de décision à confirmer : « Terminer le combat » le termine ; seule une règle qui s'y
+        //  oppose demande la confirmation des éléments semi-bloqués)
         const commentaire = obstacles.some(Boolean)
             ? confirmerRegle("Terminer le combat", obstacles)
-            : ((await confirmer("Terminer ce combat", "Les engagements et les dés seront effacés pour tout le monde.", "Terminer le combat"))
-                ? "Combat terminé"
-                : null);
+            : "Combat terminé";
 
         if (!commentaire) {
             return;

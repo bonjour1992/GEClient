@@ -1,4 +1,5 @@
 import { Decompte } from "./Decompte";
+import { VersionOutil } from "./VersionOutil";
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useSearch, getFromType } from "../../../lib/store";
@@ -263,9 +264,10 @@ export function Partie({ id }) {
     const messagesNonLus = p.chat.filter(m =>
         m.auteur !== p.moi && m.n > (chatLu[conversationDe(m, p.moi)] || 0)).length;
 
-    // Les noms des éléments viennent de la recherche du jeu
+    // Les noms des éléments viennent de la recherche du jeu. Elle est rechargée à l'ouverture d'une
+    // partie : une page restée ouverte garderait sinon les anciens noms (phases renommées…).
     useEffect(() => {
-        useSearch.getState().update(jeu);
+        useSearch.getState().update(jeu, true);
     }, [jeu]);
 
     const index = useMemo(() => indexer(p.etat), [p.etat]);
@@ -1519,6 +1521,9 @@ export function Partie({ id }) {
                 {estJoueur && etat.tour > 0 && <EntretienAuto auto />}
 
                 {/* Phase de bombardement et de débarquement : système activé, sous-phase, qui a passé */}
+                {/* Page restée ouverte après un déploiement : proposer de la recharger */}
+                <VersionOutil />
+
                 <SousPhases />
 
                 {/* Phase de décompte : points de chaque faction, ligne par ligne (Decompte.jsx) */}

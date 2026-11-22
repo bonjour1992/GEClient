@@ -977,7 +977,43 @@ function FicheSysteme({ numero, id, fermer }) {
     //   "<i>p<k>" combat terrestre, "<i>p<k>b" bombardement
     const combats = combatsActifs(etat);
 
-    function envoyerAuCombat(lieu, commentaire = "") {
+    async function envoyerAuCombat(lieu, commentaire = "") {
+
+        // Bombardement, raid : « activer une unité non bloquée » — le test de blocage s'ouvre dès le
+        // lancement, pour mes unités de l'espace du système qui peuvent tirer, tant qu'il reste en
+        // face des unités militaires libres (BlocageAction.jsx). Abandonné : le bombardement n'est
+        // pas ouvert. (Même instance que la première salve du combat : « Prêt au combat » ne
+        // rouvre pas ce test — Combat.jsx, basculerPret.)
+        const bombe = /^\d+p\d+([br])$/.exec(lieu);
+
+        if (bombe && !combats.includes(lieu)) {
+
+            const motif = bombe[1] === "r" ? /#raid\b/i : /#bomb\b/i;
+
+            const mesTireurs = (index.parZone.get("hex:" + numero) || []).filter(c =>
+                !c.cache && c.ref?.type === "unit" && !c.sur && campDe(c) === moi &&
+                (motif.test(contenuEnCache(c.ref.id)?.habilite || "") || (bombe[1] === "r" && [152, 153].includes(c.ref.id))));
+
+            if (mesTireurs.length) {
+
+                fermer();
+
+                const blocage = await demanderBlocage({ etat, index, moi, envoyer, aviser, allerA }, {
+                    numero,
+                    action: bombe[1] === "r" ? "raid" : "bombardement",
+                    libelle: bombe[1] === "r" ? "Raid" : "Bombardement",
+                    instance: `${lieu}:${etat.tour}:0`,
+                });
+
+                if (!blocage) {
+                    return;
+                }
+
+                if (blocage.attendu) {
+                    aviser("Blocage résolu : vos unités bloquées ne tireront pas.");
+                }
+            }
+        }
 
         if (!combats.includes(lieu)) {
 
@@ -1018,8 +1054,37 @@ function FicheSysteme({ numero, id, fermer }) {
     const pasUnePlanete = planete => ["sat", "spe"].includes(planete?.type) &&
         `${planete.type === "sat" ? "un satellite" : "une planète spéciale"} n'a ni bombardement ni combat terrestre`;
 
-    // (autres : obstacles en plus, ex. une planète qui n'en est pas vraiment une)
-    const boutonCombat = (lieu, libelle, titre, autres = []) => (combats.includes(lieu)
+    // Combat spatial : y a-t-il un vaisseau militaire dans l'espace du système (une unité capable de tirer) ?
+    const vaisseauMilitaireIci = (index.parZone.get("hex:" + numero) || []).some(c =>
+        !c.cache && c.ref?.type === "unit" && !c.sur &&
+        ["ship", "mil"].every(mot => (contenuEnCache(c.ref.id)?.mot_cle || []).includes(mot)));
+
+    // Canons spatiaux : y a-t-il une unité à canon à portée de ce système ? (portée écrite, ou 1 ;
+    // une case de plus est admise : Canon longue portée, Laser longue portée, Vasra Ivo)
+    const canonAPortee = Object.values(etat.composants).some(c => {
+
+        const m = /^hex:(\d+)/.exec(c.zone || "");
+        const texte = String(contenuEnCache(c.ref?.id)?.habilite || "").replace(/<[^>]+>/g, " ");
+        const canon = /#can\([^)]*\)(?:\s*port[ée]e\s*(\d+))?/i.exec(texte);
+
+        return !c.cache && c.ref?.type === "unit" && !!m && !!canon &&
+            distanceCases(numero, Number(m[1])) <= (canon[1] !== undefined ? Number(canon[1]) : 1) + 1;
+    });
+
+    // Obstacles propres au combat spatial et aux canons spatiaux : la phase, et une unité qui puisse tirer
+    const obstaclesSpatial = [
+        !/combat spatial/i.test(etat.phase) && "ce n'est pas la phase de combat spatial",
+        !vaisseauMilitaireIci && "aucun vaisseau militaire dans ce système : aucune unité ne peut tirer",
+    ];
+
+    const obstaclesCanons = [
+        !/canon/i.test(etat.phase) && "ce n'est pas la phase de canons spatiaux",
+        !canonAPortee && "aucune unité à canon spatial à portée de ce système : aucune unité ne peut tirer",
+    ];
+
+    // (autres : obstacles en plus, ex. une planète qui n'en est pas vraiment une ;
+    //  phasePropre : le bouton donne lui-même l'obstacle de phase, à la place de « phase de combat »)
+    const boutonCombat = (lieu, libelle, titre, autres = [], phasePropre = false) => (combats.includes(lieu)
         ? (
             <button
                 key={lieu}
@@ -1036,7 +1101,7 @@ function FicheSysteme({ numero, id, fermer }) {
                 key={lieu}
                 nom={`${libelle} (${nomCase(numero)})`}
                 obstacles={[
-                    !enCombatPhase && "ce n'est pas une phase de combat",
+                    !phasePropre && !enCombatPhase && "ce n'est pas une phase de combat",
                     !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
                     ...autres,
                 ]}
@@ -1634,9 +1699,9 @@ function FicheSysteme({ numero, id, fermer }) {
                             <ActiverSysteme numero={numero} fermer={fermer} />
 
                             {boutonCombat(String(numero), "Combat spatial",
-                                "Ouvre un combat entre les vaisseaux de ce système, pour toute la table")}
+                                "Ouvre un combat entre les vaisseaux de ce système, pour toute la table", obstaclesSpatial, true)}
                             {boutonCombat(numero + "c", "Canons spatiaux",
-                                "Les unités à canon spatial du système et des systèmes voisins tirent sur ses vaisseaux")}
+                                "Les unités à canon spatial du système et des systèmes voisins tirent sur ses vaisseaux", obstaclesCanons, true)}
 
                             {/* Test de domination (Controle.jsx) : qui domine ce système ce tour — Racket,
                                 Extraction de la faille, Cache, Péage aux frontières, Exploitation du vide */}
