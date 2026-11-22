@@ -679,6 +679,16 @@ de science). Une technologie acquise est encadrée de vert (`tech.jsx`,
 `context.unlocked`). La zone « Éléments posés sur les technologies » n'est
 plus affichée.
 
+Les cases cochées (`t`, `c`) ne sont pas affichées en lignes : elles barrent les
+points gagnés (`p`, `g`, `a`). `repartir` (`recherche.js`) recalcule la
+répartition à chaque affichage — rien n'est stocké — dans l'ordre : gain du type
+précis, gain au choix de la bonne spécialité, gain sans spécialité, gain d'une
+autre spécialité. Un point d'une spécialité compte double pour ce type : à moitié
+barré à la première case, barré à la seconde. Cadre jaune (il reste des points),
+vert (tout est dépensé), rouge (plus de cases que de points). Cocher une case
+sans point disponible est semi-bloqué (`pointDisponible`, `Technologie.jsx`) ;
+une case cochée dans les règles porte « ✔ » au journal.
+
 Connaissance : la grille de droite d'une feuille (`data-connaissance`,
 `techSheet.jsx`) compte 2 points par technologie obtenue, plus les points
 recherchés (`content.connaissancePlus`, compteur

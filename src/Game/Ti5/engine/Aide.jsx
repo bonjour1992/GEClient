@@ -153,6 +153,7 @@ const MODE_EMPLOI = [
         "Bombardement et débarquement : « Activer ce système », puis les deux sous-phases ; le bandeau dit où l'on en est.",
         "Revendication : fiche du système — « Prendre possession », « Revendiquer », « Abandonner ».",
         "Science : « Rechercher », « Fouiller la ruine », Ctrl + clic sur un emplacement vert pour explorer, onglet Technologie.",
+        "Recherche du tour : cadre en haut de l'onglet Technologie. Il liste les points gagnés ; chaque case cochée en barre un, dans l'ordre : gain de ce type précis, gain d'une planète de la bonne spécialité (il compte double : à moitié barré, puis barré), gain sans spécialité, gain d'une autre spécialité. Jaune : il reste des points ; vert : tout est dépensé ; rouge : trop de cases cochées. Cocher sans point disponible est rouge gris.",
         "Production : Ctrl + clic sur une unité à production, « Mobiliser », « Réparer ».",
         "Construction : case « Construction » de la réserve, puis glisser la structure.",
         "Mandat, vote : onglet Vote ; les désignations sont dans l'onglet Décision.",

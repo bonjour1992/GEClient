@@ -6,8 +6,10 @@ import { Text } from "../../../Component/Text";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
 import { getFromType } from "../../../lib/store";
-import { lireJournal, noter, noterFinie } from "./recherche";
-import { useElement, useElements, chargerContenu } from "./sync";
+import { lireJournal, noter, noterFinie, repartir } from "./recherche";
+import { useElement, useElements, chargerContenu, contenuEnCache } from "./sync";
+import { techIcon, techType } from "../ti5Const";
+import { pub } from "../../../lib/fetch";
 import { SCRIPTS, rechercheDeSource } from "./scripts";
 
 // ============================================================
@@ -60,15 +62,17 @@ const estFeuille = c => c.ref?.type === "techsheet";
 //
 //   Ravitaillement
 //     Forge du vide génère [rech]
-//     Apprentissage + [gen]
 //   Science
-//     Recherche sur Hercant [rech](2)
-//     Recherche sur Antarès [rech](2) spé mil
-//     Récupération + [mil](4) fini ✓
+//     Recherche sur Hercant [rech] [rech]
+//     Recherche sur Antarès [rech] [rech] spécialité [mil]
 //
-// « Rechercher » (fiche d'un système) y note la recherche gagnée ; une
-// case cochée sur une technologie ou sur la connaissance d'une feuille
-// s'y ajoute ; une autre source se note à la main. Effacé à « Nouveau tour ».
+// « Rechercher » (fiche d'un système) y note la recherche gagnée ; une autre
+// source se note à la main. Une case cochée sur une technologie ou sur la
+// connaissance d'une feuille n'ajoute pas de ligne : elle barre un point gagné
+// (recherche.js, repartir) — à moitié seulement si le point vient d'une
+// spécialité de ce type, qui compte double. Le cadre est jaune tant qu'il
+// reste des points à dépenser, vert quand tout est dépensé, rouge si plus de
+// cases ont été cochées que de points gagnés. Effacé à « Nouveau tour ».
 // ------------------------------------------------------------
 
 const styleMacro = { display: "inline-block", verticalAlign: "middle" };
@@ -101,23 +105,17 @@ function RechercheDuTour({ base }) {
     }));
 
     const nom = l => contenus[l.element]?.name || nomElement(search, { id: l.element }) || "…";
+    const nomDe = id => contenus[id]?.name || nomElement(search, { id }) || "…";
     const macro = (type, n) => `#re${type}${n > 1 ? `(${n})` : ""}`;
 
-    // Recherche générée par une source : typée si son script le dit (SR-42 : spatiale)
-    const genere = l => {
-        const typee = rechercheDeSource(l.element, l.sorte);
-        const total = (typee || []).reduce((s, [, n]) => s + n, 0);
-        const fois = total ? l.n / total : 0;
+    // Les cases cochées barrent les points gagnés (recherche.js)
+    const repartition = repartir(journal, id => contenus[id], rechercheDeSource);
+    const gainsDe = new Map(repartition.gains.map(g => [g.ligne.id, g]));
 
-        return Number.isInteger(fois) && fois >= 1
-            ? typee.map(([type, n]) => macro(type || "ch", n * fois)).join(" ")
-            : macro("ch", l.n);
-    };
-
-    // Lignes groupées par phase, dans l'ordre d'arrivée
+    // Lignes de gain groupées par phase, dans l'ordre d'arrivée
     const groupes = [];
 
-    for (const ligne of journal.lignes) {
+    for (const ligne of journal.lignes.filter(l => gainsDe.has(l.id))) {
         if (groupes.at(-1)?.phase !== ligne.phase) {
             groupes.push({ phase: ligne.phase, lignes: [] });
         }
@@ -127,14 +125,25 @@ function RechercheDuTour({ base }) {
 
     const ajuster = (ligne, delta) => jouer({ type: "compteur", id: ligne.id, valeur: Math.max(0, ligne.n + delta) });
 
+    // Cadre : rouge si trop de cases cochées, jaune s'il reste des points, vert si tout est dépensé
+    const manque = repartition.manque.reduce((s, m) => s + m.n, 0);
+    const etatCadre = manque ? "trop" : (repartition.reste ? "reste" : (journal.lignes.length ? "fini" : "vide"));
+
+    const [bordure, fond] = {
+        trop: ["#c62828", "#fdecea"],
+        reste: ["#f9a825", "#fff8e1"],
+        fini: ["#2e7d32", "#edf7ee"],
+        vide: ["#1565c0", "#e3f2fd"],
+    }[etatCadre];
+
     return (
         <div
-            data-recherche-du-tour
+            data-recherche-du-tour={etatCadre}
             style={{
                 padding: "6px 10px",
-                border: "2px solid #1565c0",
+                border: "2px solid " + bordure,
                 borderRadius: 8,
-                backgroundColor: "#e3f2fd",
+                backgroundColor: fond,
                 color: "#000",
                 fontSize: 13,
             }}
@@ -143,6 +152,10 @@ function RechercheDuTour({ base }) {
                 <b>Recherche du tour</b>
 
                 {journal.lignes.length === 0 && <i>rien pour l'instant (fiche d'un système, « Rechercher » ; puis cochez les cases).</i>}
+
+                {etatCadre === "reste" && <span data-bilan-recherche>{repartition.reste} point{repartition.reste > 1 ? "s" : ""} à dépenser : cochez des cases.</span>}
+                {etatCadre === "fini" && <b data-bilan-recherche style={{ color: "#1b5e20" }}>tout est dépensé ✓</b>}
+                {etatCadre === "trop" && <b data-bilan-recherche style={{ color: "#b71c1c" }}>{manque} case{manque > 1 ? "s" : ""} cochée{manque > 1 ? "s" : ""} sans point disponible</b>}
 
                 {/* Une source que l'outil ne connaît pas : notée à la main */}
                 {joueur && (
@@ -162,44 +175,92 @@ function RechercheDuTour({ base }) {
                 <div key={g} data-phase-recherche={groupe.phase} style={{ marginTop: 3 }}>
                     <b style={{ color: "#0d47a1" }}>{phases.get(groupe.phase) || "Hors phase"}</b>
 
-                    {groupe.lignes.map(l => (
-                        <div key={l.id} data-ligne-recherche={l.sorte + ":" + l.element} style={{ paddingLeft: 14 }}>
-                            {l.sorte === "p" && (<>
-                                Recherche sur {nom(l)} <Text text={`#rech(${l.n})`} style={styleMacro} />
-                                {(contenus[l.element]?.techSpe || []).length > 0 && ` spé ${contenus[l.element].techSpe.join(", ")}`}
-                            </>)}
+                    {groupe.lignes.map(l => {
 
-                            {(l.sorte === "g" || l.sorte === "a") && (<>
-                                {nom(l)} génère <Text text={genere(l)} style={styleMacro} />
-                            </>)}
+                        const gain = gainsDe.get(l.id);
 
-                            {l.sorte === "t" && (<>
-                                {nom(l)} + <Text text={macro(contenus[l.element]?.techType || "ch", l.n)} style={styleMacro} />
-                                {/* (finie : dit sur sa dernière ligne, celle où elle l'a été) */}
-                                {journal.finies.has(l.element) &&
-                                    journal.lignes.findLast(x => x.sorte === "t" && x.element === l.element) === l &&
-                                    <b style={{ color: "#1b5e20" }}> fini ✓</b>}
-                            </>)}
+                        return (
+                            <div key={l.id} data-ligne-recherche={l.sorte + ":" + l.element} style={{ paddingLeft: 14 }}>
+                                {l.sorte === "p" ? <>Recherche sur {nom(l)} </> : <>{nom(l)} génère </>}
 
-                            {l.sorte === "c" && (<>
-                                Connaissance ({nom(l)}) + <Text text={macro(contenus[l.element]?.techType || "ch", l.n)} style={styleMacro} />
-                            </>)}
+                                {/* Un point par icône : barré une fois dépensé, à moitié si sa spécialité le fait compter double */}
+                                {gain.unites.map((u, k) => (
+                                    <span
+                                        key={k}
+                                        data-point-recherche={u.utilise >= 2 ? "depense" : (u.utilise ? "moitie" : "libre")}
+                                        title={u.pour.length
+                                            ? (u.utilise >= 2 ? "Dépensé : " : "À moitié dépensé (spécialité : compte double) : ") + u.pour.map(nomDe).join(", ")
+                                            : "À dépenser"}
+                                        style={{ position: "relative", display: "inline-block", verticalAlign: "middle", marginRight: 3 }}
+                                    >
+                                        <Text text={macro(u.type || "ch", 1)} style={{ ...styleMacro, opacity: u.utilise >= 2 ? 0.45 : 1 }} />
+                                        {u.utilise > 0 && (
+                                            <span aria-hidden="true" style={{ position: "absolute", inset: -1, pointerEvents: "none", background: u.utilise >= 2 ? BARRE_ENTIERE : BARRE_MOITIE }} />
+                                        )}
+                                    </span>
+                                ))}
 
-                            {/* Recherche gagnée : la quantité se corrige ici */}
-                            {joueur && (l.sorte === "p" || l.sorte === "g" || l.sorte === "a") && (
-                                <span style={{ marginLeft: 6 }}>
-                                    <button type="button" title="Un point de moins" style={styleMini} onClick={() => ajuster(l, -1)}>−</button>{" "}
-                                    <button type="button" title="Un point de plus" style={styleMini} onClick={() => ajuster(l, 1)}>+</button>{" "}
-                                    <button type="button" title="Retirer cette ligne" style={styleMini} onClick={() => ajuster(l, -l.n)}>✕</button>
-                                </span>
-                            )}
-                        </div>
-                    ))}
+                                {/* Spécialité de la planète ou de la station : son icône (le point compte double pour ce type) */}
+                                {gain.spe.length > 0 && (
+                                    <span data-specialite={gain.spe.join(",")} style={{ marginLeft: 4 }}>
+                                        spécialité{" "}
+                                        {gain.spe.map(s => (techIcon.get(s)
+                                            ? (
+                                                <img
+                                                    key={s}
+                                                    src={pub + techIcon.get(s)}
+                                                    alt={techType[s] || s}
+                                                    title={`Spécialité ${(techType[s] || s).toLowerCase()} : chaque point compte double pour ce type`}
+                                                    width={18}
+                                                    height={18}
+                                                    style={{ verticalAlign: "middle", marginRight: 2 }}
+                                                />
+                                            )
+                                            : <b key={s} style={{ marginRight: 4 }}>{techType[s] || s}</b>))}
+                                    </span>
+                                )}
+
+                                {/* Recherche gagnée : la quantité se corrige ici */}
+                                {joueur && (
+                                    <span style={{ marginLeft: 6 }}>
+                                        <button type="button" title="Un point de moins" style={styleMini} onClick={() => ajuster(l, -1)}>−</button>{" "}
+                                        <button type="button" title="Un point de plus" style={styleMini} onClick={() => ajuster(l, 1)}>+</button>{" "}
+                                        <button type="button" title="Retirer cette ligne" style={styleMini} onClick={() => ajuster(l, -l.n)}>✕</button>
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             ))}
+
+            {/* Cases cochées sans point pour les payer */}
+            {repartition.manque.length > 0 && (
+                <div data-recherche-en-trop style={{ marginTop: 3, color: "#b71c1c" }}>
+                    <b>Sans point disponible :</b>{" "}
+                    {repartition.manque.map((m, k) => (
+                        <span key={m.ligne.id} style={{ marginRight: 8 }}>
+                            {k > 0 ? " " : ""}{m.ligne.sorte === "c" ? `Connaissance (${nom(m.ligne)})` : nom(m.ligne)}{" "}
+                            <Text text={macro(m.type || "ch", m.n)} style={styleMacro} />
+                        </span>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
+
+// Traits rouges d'un point dépensé : une diagonale (à moitié), deux (entièrement)
+const TRAIT = sens => `linear-gradient(to top ${sens}, transparent calc(50% - 1.5px), #c62828 calc(50% - 1.5px), #c62828 calc(50% + 1.5px), transparent calc(50% + 1.5px))`;
+const BARRE_MOITIE = TRAIT("right");
+const BARRE_ENTIERE = `${TRAIT("right")}, ${TRAIT("left")}`;
+
+// Un point de recherche gagné peut-il payer une case de ce type ? (journal du tour : recherche.js)
+// (les contenus des sources sont en cache : le cadre « Recherche du tour » les a chargés)
+const pointDisponible = (etat, chercheur, type) =>
+    repartir(lireJournal(etat, chercheur), contenuEnCache, rechercheDeSource).libre(type || "");
+
+const SANS_POINT = "aucun point de recherche disponible pour ce type (cadre « Recherche du tour »)";
 
 // Mercenaire Doctor Carrina (#285) : « lorsque vous recherchez une technologie : #use, ignorez
 // un niveau de prérequis ». Quand il manque un seul niveau au joueur qui recherche pour lui-même
@@ -361,10 +422,21 @@ function Feuille({ composant, base }) {
             const delta = event.ctrlKey ? -1 : 1;
 
             if (connaissancePlus + delta >= 0) {
-                jouer([
+
+                // Un point de plus dépense un point de recherche gagné : semi-bloqué s'il n'y en a pas ;
+                // sinon c'est un effet du jeu (ligne verte du journal). Un point de moins : une correction.
+                const commentaire = delta > 0
+                    ? confirmerRegle(`Connaissance (${contenu.name})`, [!pointDisponible(etat, chercheur, contenu.techType) && SANS_POINT])
+                    : "";
+
+                if (commentaire === null) {
+                    return;
+                }
+
+                envoyer([
                     { type: "compteur", id: idConnaissance, valeur: connaissancePlus + delta },
                     noter(etat, chercheur, "c", composant.ref.id, delta),
-                ]);
+                ], commentaire);
             }
 
             return;
@@ -403,11 +475,14 @@ function Feuille({ composant, base }) {
             ? await avecCarrina({ etat, index, moi, aScript, search }, chercheur, idTech, prerequis - niveau)
             : null;
 
-        const commentaire = plus && niveau < prerequis && !carrina
-            ? confirmerRegle(`Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
+        // Une case de plus est un effet du jeu (ligne verte du journal) ; elle est semi-bloquée s'il
+        // manque un prérequis ou s'il n'y a pas de point de recherche pour la payer. Une case de
+        // moins est une correction, sans commentaire.
+        const commentaire = !plus ? "" : confirmerRegle(carrina?.texte || `Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
+            niveau < prerequis && !carrina &&
                 `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
-            ])
-            : (carrina?.texte || "");
+            !pointDisponible(etat, chercheur, techs[idTech]?.techType) && SANS_POINT,
+        ]);
 
         if (commentaire === null) {
             return;
@@ -597,11 +672,12 @@ function TechIsolee({ composant, base }) {
         // (Doctor Carrina peut faire ignorer un niveau de prérequis : avecCarrina)
         const carrina = plus && niveau < prerequis ? await avecCarrina(ctx, chercheur, idTech, prerequis - niveau) : null;
 
-        const commentaire = plus && niveau < prerequis && !carrina
-            ? confirmerRegle(`Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
+        // (comme sur une feuille : effet du jeu, semi-bloqué sans prérequis ou sans point de recherche)
+        const commentaire = !plus ? "" : confirmerRegle(carrina?.texte || `Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
+            niveau < prerequis && !carrina &&
                 `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
-            ])
-            : (carrina?.texte || "");
+            !pointDisponible(etat, chercheur, tech?.techType) && SANS_POINT,
+        ]);
 
         if (commentaire === null) {
             return;
