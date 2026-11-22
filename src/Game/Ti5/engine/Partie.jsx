@@ -1360,6 +1360,54 @@ export function Partie({ id }) {
         }
     }
 
+    // --------------------------------------------------------
+    // Boutons d'action du cadre « À faire » : ils restent affichés, sans le texte, quand le cadre
+    // est masqué (case « Ne pas afficher À faire »).
+    // --------------------------------------------------------
+
+    const boutonTransaction = (
+        <button
+            type="button"
+            data-action="transaction"
+            onClick={() => setTransaction(true)}
+            style={{ fontWeight: "bold" }}
+        >
+            Transaction…
+        </button>
+    );
+
+    const piochePropositions = (
+        <span>
+            Piocher{" "}
+            <input
+                type="number"
+                min={ctx.aScript(moi, "ecole-politique-lois") ? 0 : 1}
+                max={10}
+                value={nbPropositions}
+                onChange={e => setNbPropositions(e.target.value)}
+                style={{ width: 48 }}
+            />{" "}
+            <button
+                type="button"
+                disabled={dejaPioche}
+                onClick={piocherPropositions}
+                title={dejaPioche ? "Une seule pioche de propositions par tour" : undefined}
+                style={{ fontWeight: "bold" }}
+            >
+                {dejaPioche
+                    ? "✔ propositions piochées ce tour"
+                    : "proposition(s) (coûte autant d'influence)" +
+                        (ctx.aScript(moi, "ecole-politique-lois") ? " + 2 gratuites (École politique)" : "")}
+            </button>
+        </span>
+    );
+
+    const boutonAttendreAmiral = (
+        <button type="button" data-action="attendre-amiral" onClick={() => attendre("amiral")}>
+            Attendre (use un amiral, joueur suivant)
+        </button>
+    );
+
     return (
         <Engine value={ctx}>
             <div style={styleCadre}>
@@ -1391,7 +1439,7 @@ export function Partie({ id }) {
                         {/* Le cadre « À faire » de la phase peut être masqué (sa croix coche cette case) */}
                         <label
                             data-sans-a-faire={sansAFaire ? 1 : 0}
-                            title="Cochée : le cadre « À faire » de la phase n'est plus affiché (ses boutons d'action non plus)"
+                            title="Cochée : le cadre « À faire » de la phase n'est plus affiché ; ses boutons d'action restent, sans le texte"
                             style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, cursor: "pointer" }}
                         >
                             <input type="checkbox" checked={sansAFaire} onChange={basculerSansAFaire} />
@@ -1695,13 +1743,7 @@ export function Partie({ id }) {
                         {/* Phase de diplomatie : transaction entre deux factions */}
                         {enDiplomatie && estJoueur && (
                             <div style={{ ...styleBarre, marginTop: 4, marginBottom: 2 }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setTransaction(true)}
-                                    style={{ fontWeight: "bold" }}
-                                >
-                                    Transaction…
-                                </button>
+                                {boutonTransaction}
                                 <span>Promesses, dettes et faveurs entre deux factions.</span>
                             </div>
                         )}
@@ -1761,29 +1803,7 @@ export function Partie({ id }) {
                         {/* Phase de proposition */}
                         {enProposition && estJoueur && (
                             <div style={{ ...styleBarre, marginTop: 4, marginBottom: 2 }}>
-                                <span>
-                                    Piocher{" "}
-                                    <input
-                                        type="number"
-                                        min={ctx.aScript(moi, "ecole-politique-lois") ? 0 : 1}
-                                        max={10}
-                                        value={nbPropositions}
-                                        onChange={e => setNbPropositions(e.target.value)}
-                                        style={{ width: 48 }}
-                                    />{" "}
-                                    <button
-                                        type="button"
-                                        disabled={dejaPioche}
-                                        onClick={piocherPropositions}
-                                        title={dejaPioche ? "Une seule pioche de propositions par tour" : undefined}
-                                        style={{ fontWeight: "bold" }}
-                                    >
-                                        {dejaPioche
-                                            ? "✔ propositions piochées ce tour"
-                                            : "proposition(s) (coûte autant d'influence)" +
-                                                (ctx.aScript(moi, "ecole-politique-lois") ? " + 2 gratuites (École politique)" : "")}
-                                    </button>
-                                </span>
+                                {piochePropositions}
                                 <span>
                                     Ctrl + clic sur un agenda de votre main : l'ajoute au tour
                                     suivant (use un politique, une fois par tour).
@@ -1794,9 +1814,7 @@ export function Partie({ id }) {
                         {/* Actions de la phase de déplacement */}
                         {enDeplacement && estJoueur && (
                             <div style={{ ...styleBarre, marginTop: 4, marginBottom: 2 }}>
-                                <button type="button" onClick={() => attendre("amiral")}>
-                                    Attendre (use un amiral, joueur suivant)
-                                </button>
+                                {boutonAttendreAmiral}
                                 <span>
                                     Ctrl + clic sur un système : pose votre marqueur de faction dessus.
                                     « Attendre » avec un diplomate est sur la troisième ligne de l'en-tête, à toute phase.
@@ -1805,6 +1823,19 @@ export function Partie({ id }) {
                         )}
 
                         </>)}
+                    </div>
+                )}
+
+                {/* « À faire » masqué : ses boutons d'action restent, sans le texte (rien si la phase n'en a pas) */}
+                {etat.tour > 0 && sansAFaire && estJoueur && (
+                    <div data-actions-phase style={{ ...styleBarre, padding: "2px 10px" }}>
+                        <style>{"[data-actions-phase]:not(:has(button)) { display: none !important; }"}</style>
+                        <RevenusDePhase />
+                        <BoutonsScripts lieu="bandeau" />
+                        {enDiplomatie && boutonTransaction}
+                        {enScience && <PiocherPlan />}
+                        {enProposition && piochePropositions}
+                        {enDeplacement && boutonAttendreAmiral}
                     </div>
                 )}
 

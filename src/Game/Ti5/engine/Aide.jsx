@@ -34,7 +34,7 @@ const MODE_EMPLOI = [
     ["Tour, phases et ordre de jeu", [
         "En-tête : le tour, la phase, et les joueurs dans l'ordre de jeu (son tour, a passé, joue encore). Le ▾ à gauche le réduit à une ligne ; les corrections manuelles (tour − / +, ◀, « Doit jouer ») sont alors masquées.",
         "Ordre de jeu : il est figé pendant toute la phase. Un marqueur d'initiative déplacé (en passant au recrutement) ne change l'ordre qu'à la phase suivante ; le nouvel ordre est annoncé dans l'en-tête.",
-        "À faire : le cadre bleu de la phase, sous l'en-tête. Sa croix le ferme ; « Ne pas afficher À faire », à côté d'« Infos de la partie », le masque ou le remet (ses boutons d'action disparaissent avec lui).",
+        "À faire : le cadre bleu de la phase, sous l'en-tête. Sa croix le ferme ; « Ne pas afficher À faire », à côté d'« Infos de la partie », le masque ou le remet (ses boutons d'action restent affichés, sans le texte).",
         "Finir mon tour : bouton de la troisième ligne de l'en-tête, jaune quand c'est à vous : la main passe au joueur suivant. Il n'est utilisable qu'à votre tour ; pour corriger, « Doit jouer » est dans l'en-tête déplié.",
         "Attendre : sur la troisième ligne de l'en-tête, use un diplomate et passe la main (à toute phase). À la phase de déplacement, le bandeau propose aussi d'attendre avec un amiral.",
         "Passer : bouton de la troisième ligne de l'en-tête ; vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase. Quand le dernier joueur passe, la phase suivante commence toute seule (le tour suivant après la dernière phase), sauf si un combat est ouvert, des faveurs restent à encaisser ou un système est activé : « Phase suivante » reste alors à cliquer.",
