@@ -1006,31 +1006,31 @@ export const SCRIPTS = [
     revenu("asteroide-d-or", "planet", 31, 1795190407294, "Astéroïde d'or", "production",
         "Génère 3 commerce pour qui le possède.", { gains: { commerce: 3 } }),
 
-    revenu("sr-42", "planet", 33, 1795190407291, "SR-42", "science",
-        "Génère 2 de recherche spatiale pour qui la possède.", { recherche: [["spa", 2]] }),
+    revenu("sr-42", "planet", 33, 1795349737875, "SR-42", "science",
+        "Génère 3 de recherche spatiale pour qui la possède.", { recherche: [["spa", 3]] }),
 
-    revenu("sr-124", "planet", 47, 1795190407282, "SR-124", "science",
-        "Génère 2 de recherche sociale pour qui la possède.", { recherche: [["soc", 2]] }),
+    revenu("sr-124", "planet", 47, 1795349737881, "SR-124", "science",
+        "Génère 3 de recherche sociale pour qui la possède.", { recherche: [["soc", 3]] }),
 
     // Stations scientifiques de Jol-Nar (une par technologie de base) et Centre d'espionnage industriel
-    revenu("sr-301", "planet", 1252, 1795348043315, "SR-301", "science",
-        "Génère 2 de recherche génétique pour qui la possède.", { recherche: [["gen", 2]] }),
+    revenu("sr-301", "planet", 1252, 1795349737894, "SR-301", "science",
+        "Génère 4 de recherche génétique pour qui la possède.", { recherche: [["gen", 4]] }),
 
-    revenu("sr-302", "planet", 1254, 1795348043319, "SR-302", "science",
-        "Génère 2 de recherche spatiale pour qui la possède.", { recherche: [["spa", 2]] }),
+    revenu("sr-302", "planet", 1254, 1795349737899, "SR-302", "science",
+        "Génère 4 de recherche spatiale pour qui la possède.", { recherche: [["spa", 4]] }),
 
-    revenu("sr-303", "planet", 1256, 1795348043323, "SR-303", "science",
-        "Génère 2 de recherche militaire pour qui la possède.", { recherche: [["mil", 2]] }),
+    revenu("sr-303", "planet", 1256, 1795349737904, "SR-303", "science",
+        "Génère 4 de recherche militaire pour qui la possède.", { recherche: [["mil", 4]] }),
 
-    revenu("sr-304", "planet", 1258, 1795348043326, "SR-304", "science",
-        "Génère 2 de recherche sociale pour qui la possède.", { recherche: [["soc", 2]] }),
+    revenu("sr-304", "planet", 1258, 1795349737908, "SR-304", "science",
+        "Génère 4 de recherche sociale pour qui la possède.", { recherche: [["soc", 4]] }),
 
     revenu("centre-d-espionnage-industriel", "planet", 1250, 1795348043309, "Centre d'espionnage industriel", "science",
         "Génère 4 de recherche pour qui le possède, à cocher sur une technologie qu'une autre faction possède et que vous n'avez pas (le choix de la technologie est à vous).",
         { recherche: [["", 4]], note: "sur une technologie qu'une autre faction possède et que vous n'avez pas" }),
 
-    revenu("station-de-combat", "planet", 56, 1795190407278, "Station de combat", "science",
-        "Génère 2 de recherche militaire pour qui la possède.", { recherche: [["mil", 2]] }),
+    revenu("station-de-combat", "planet", 56, 1795349737887, "Station de combat", "science",
+        "Génère 3 de recherche militaire pour qui la possède.", { recherche: [["mil", 3]] }),
 
     // --------------------------------------------------------
     // RÈGLES D'UNITÉS ET DE PLANÈTES, codées là où elles agissent
@@ -1227,7 +1227,7 @@ export const SCRIPTS = [
             libelle: "Restaurer le canon (dépense un scientifique et 2 fragments militaires) : +2 points",
         }),
 
-    action("station-de-combat-reparer", "planet", 56, 1795190407278, "Station de combat : réparer", "planete",
+    action("station-de-combat-reparer", "planet", 56, 1795349737887, "Station de combat : réparer", "planete",
         "Production : use un logisticien, vos unités du système sont réparées, 1 ressource par dégât.", {
             phase: "production",
             possede: true,
@@ -1289,7 +1289,7 @@ export const SCRIPTS = [
             },
         }),
 
-    action("sr-42-recherche", "planet", 33, 1795190407291, "SR-42 : recherche", "planete",
+    action("sr-42-recherche", "planet", 33, 1795349737875, "SR-42 : recherche", "planete",
         "La station est activée (une fois) : dépensez 3 ressources, 1 de recherche militaire, génétique et sociale.", {
             possede: true,
             activer: true,
