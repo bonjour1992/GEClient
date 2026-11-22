@@ -396,6 +396,8 @@ même pion (précondition `de`).
 - un agent rejoint les agents du joueur ;
 - une carte mercenaire coûte 2 de plus et va dans ses éléments actifs (avec
   le cube posé dessus ; on peut cliquer la carte ou le cube) ;
+- une unité mercenaire coûte 2 de plus et va dans la réserve du joueur, à
+  placer à cette phase (voir « unités mercenaires ») ;
 - un plan de relique (carte relique) va dans sa main, au coût normal.
 
 ### fin de phase, nouveau tour
@@ -1559,11 +1561,61 @@ Une unité dont le type de lien est « Lié à un mercenaire » et « Lié à »
   s'affiche en carte au format mercenaire (affichage `merc` de l'unité,
   `estMercenaire`, `Interaction.jsx`) ; sur la carte, c'est un pion ;
 - recrutement : elle s'achète comme une carte mercenaire (2 de plus et le
-  surcoût du tour), va dans les éléments actifs et devient la propriété de
-  l'acheteur (`deplacer` avec `proprio` = l'auteur, seule valeur admise) ;
+  surcoût du tour), va dans la réserve de l'acheteur avec la marque `aPlacer`
+  (rang de la phase, `rangDePhase`) et devient sa propriété (`deplacer` avec
+  `proprio` = l'auteur, seule valeur admise) — script
+  `unite-mercenaire-placement` ; désactivé, elle va dans les éléments actifs
+  comme avant ;
 - transactions : elle est proposée dans le groupe « Mercenaires » de
   « Cartes » (ligne `carteType: "unit"`) ;
 - retirée, elle sort du jeu (elle n'est dans la réserve d'aucun joueur).
+
+Placement d'une unité mercenaire gagnée (22 novembre, `Interaction.jsx`) :
+
+- `A_PLACER` (`aPlacer`) marque ce qui est à placer à cette phase,
+  `PLACEMENT_LIBRE` (`placementLibre`) une unité qui se place n'importe où ;
+  `unitesAPlacer(etat, u)` liste les unités marquées de la réserve d'un joueur ;
+- glissée de la réserve sur la carte (`placerMercenaires`, appelé par `Plan`
+  avant le paiement d'une production, chemin général et chemin d'un porteur) :
+  elle se pose sans rien payer ; sans unité à production à vous dans le
+  système (unité ou planète possédée dont l'habilité a `#prod`,
+  `lireProduction`), c'est semi-bloqué (`confirmerRegle`) ; une unité à
+  placement libre demande le contrôle du lieu (`demanderControle`, motif
+  `s-ula-mentarion-placement`) — raté, rien ne se passe, elle reste dans la
+  réserve. Posée, ses marques `aPlacer` et `placementLibre` sont retirées ;
+- tant qu'une unité marquée reste dans une réserve : bandeau orange en haut
+  (`data-mercenaires-a-placer`, `Partie.jsx`), ligne « Unités mercenaires à
+  placer » des blocages de la phase, « Passer » et « Finir mon tour »
+  semi-bloqués ;
+- « Phase suivante » et « Nouveau tour » envoient hors jeu tout ce qui porte
+  encore `aPlacer` (`actionsFinPlacement`).
+
+Mercenaires du même lot :
+
+- S'Ula Mentarion (carte 301, `SULA_CARTE`) : recrutée, la carte va dans les
+  éléments actifs avec `aPlacer`, et l'unité S'Ula Mentarion (732,
+  `SULA_UNITE`) est créée dans la réserve avec `aPlacer` et `placementLibre`.
+  À la fin de la phase, la carte part hors jeu (l'unité aussi si elle n'a pas
+  été placée) ;
+- Richtyrian (354, `RICHTYRIAN`) : sa carte glissée sur une planète que le
+  joueur ne possède pas (`possesseurActuel`) est semi-bloquée ; sur une des
+  siennes, un `MARQUEUR` du joueur est créé sur la carte. `Combat.jsx`
+  (`gardeRichtyrian`) : +2 aux infanteries du camp dont le marqueur est sur
+  la carte posée sur la planète du combat terrestre ;
+- Suldhan Wraeg (352) : action de science sur la fiche d'un système à
+  anomalie, qui crée le jeton `REPERE_SULDHAN` (#1265, image
+  `/ti/token/cartographe.svg`) dans `hex:<i>` avec `proprio` (3 au plus, le
+  plus ancien est supprimé). `useCarte` (`Blocage.jsx`) : `repere(i)`, et
+  `anomalie(i)` vide pour le joueur qui a un repère dans la case ;
+- Sai Seravus (359) : `trous(i)` (`useCarte`) ajoute alpha et bêta dès que
+  l'un des deux est présent, pour le joueur qui a le script
+  `sai-seravus-trous-de-ver` (l'identifiant `sai-seravus` est celui d'Oriane
+  Tesh) ;
+- Ipswitch (282, `IPSWITCH`, `LivraisonIpswitch` de `Livraison.jsx`) :
+  bouton de diplomatie sur le plateau d'une autre faction
+  (`PlateauJoueur.jsx`) et sur la fiche d'une unité à `#comp` d'une autre
+  faction (`ScriptsCarte.jsx`) : le cube de la carte est usé et `livrer(ctx,
+  cible, 2)` fait la livraison.
 
 ### retour en réserve
 

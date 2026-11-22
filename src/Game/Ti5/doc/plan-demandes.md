@@ -678,3 +678,13 @@ Scripts d'agendas (2026-11-22) : implémentabilité des 58 agendas évaluée (ta
 Révolution, Construire un monument (seulement Pour), Subvention, Ostracisme, Votes au conseil 1 à 5 et place la loi Sévérité (`resolutionsAgendas.js`) ;
 traités Impôt et Écologie punitive au ravitaillement automatique. Structures spatiales : déjà comptées au contrôle
 de l'espace (`test-controle-structure-spatiale.mjs`).
+
+Mercenaires (2026-11-22, soir) : une unité mercenaire recrutée va dans la réserve et se place à cette phase par
+glisser-déposer dans un système où l'on a une unité à production (ailleurs : semi-bloqué) ; non placée, un bandeau
+le dit, « Passer » et « Phase suivante » sont semi-bloqués et elle est retirée du jeu à la phase suivante.
+S'Ula Mentarion : unité dans la réserve, placement libre avec demande de contrôle (raté : rien, on réessaie), carte
+retirée à la fin de la phase. Richtyrian : semi-bloqué sur une planète non possédée, marqueur de faction sur la
+carte sinon, +2 aux infanteries au combat terrestre. Sai Seravus : trous de ver alpha et bêta équivalents.
+Suldhan Wraeg : jeton « Repère de Suldhan Wraeg » (#1265, `migrate-suldhan.mjs`, image `cartographe.svg` dans
+`server/public/ti/token`) posé à la science, anomalie sans effet sur les déplacements. Ipswitch : bouton de
+livraison de 2 sur le plateau d'une autre faction et sur la fiche de ses unités à comptoir.

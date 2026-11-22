@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
     useEngine, nomElement, nomCase, distanceCases, DORE, confirmerRegle, BoutonRegle, agentDisponible, carteUsee, actionsUserCarte, mercenaireDisponible,
-    tuileDe, esclavesDe, nomDuCamp,
+    tuileDe, esclavesDe, nomDuCamp, RICHTYRIAN,
 } from "./Interaction";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceDe } from "./effets";
@@ -270,7 +270,7 @@ function CombatSysteme({ lieu }) {
 
     const {
         etat, index, jouer, envoyer, joueur, moi, partie, search, nomDe, couleurDe, signaler, aScript, aviser, decider,
-        connaissance, capaciteLogistique, factionDe, allerA,
+        connaissance, capaciteLogistique, factionDe, allerA, scriptsDesactives,
     } = useEngine();
 
     // zone : celle des cibles (espace du système, ou planète)
@@ -834,6 +834,11 @@ function CombatSysteme({ lieu }) {
         return !!m && c.ref?.type === "unit" && c.ref.id === 164 && campDe(c) === camp && distanceCases(numero, Number(m[1])) <= 1;
     });
 
+    // Mercenaire Richtyrian : sa carte est posée sur cette planète avec le marqueur de faction du camp
+    const gardeRichtyrian = camp => planete !== null && camp !== NEUTRE && !scriptsDesactives?.includes("richtyrian") &&
+        (index.parZone.get(zone) || []).some(c => !c.cache && c.ref?.type === "mercenaire" && c.ref.id === RICHTYRIAN &&
+            (index.parPorteur.get(c.id) || []).some(m => !m.ref && m.jeton === MARQUEUR && m.proprio === camp));
+
     // Choix faits sur l'écran de ce combat, pour ce tour (Olivier Dubois, Stratégie d'évitement)
     const CE_COMBAT = `${lieu}:${etat.tour}`;
     const evitant = x => x.c.marques?.evitement === CE_COMBAT;
@@ -901,6 +906,7 @@ function CombatSysteme({ lieu }) {
             sorte === "terrestre" && v.u.type === "inf" && etat.compteurs[MERC(281) + v.camp] && [1, "Claire Gibson"],
             sorte === "terrestre" && etat.compteurs[MERC(357) + v.camp] && [1, "Jace X"],
             sorte === "spatial" && rangDansCamp(v) < (Number(etat.compteurs[MERC(299) + v.camp]) || 0) && [1, "Sharsiss"],
+            sorte === "terrestre" && v.u.type === "inf" && gardeRichtyrian(v.camp) && [2, "Richtyrian"],
             // Mirik Aun Sissiri : +1 au combat spatial dans le système désigné à la phase de mandat
             sorte === "spatial" && v.camp !== NEUTRE &&
                 Number(etat.compteurs[`joueur:${v.camp}:mirik`]) === numero + 1 && [1, "Mirik Aun Sissiri"],

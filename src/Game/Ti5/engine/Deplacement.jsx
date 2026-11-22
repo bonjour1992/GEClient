@@ -757,6 +757,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                                 <span key={k} style={{ color: e.sorte === "saut" ? "#b71c1c" : undefined }}>
                                     {e.sorte === "bord" ? " → " : (e.sorte === "saut" ? " ⇢ (saut) " : ` ⇝ (trou de ver ${NOMS_TROU[e.sorte.slice(5)] || e.sorte.slice(5)}) `)}
                                     {nomCase(e.a)}{ANOMALIES[anomalie(e.a)] ? ` [${ANOMALIES[anomalie(e.a)]}]` : ""}
+                                    {carte.repere(e.a) ? " [repère de Suldhan Wraeg : anomalie sans effet]" : ""}
                                 </span>
                             ))}
                             {trajet.length > 0 && <b> — {cout} case{cout > 1 ? "s" : ""}{cout < trajet.length ? " (hyperlanes non comptées)" : ""}</b>}

@@ -4,7 +4,7 @@ import {
 } from "./Interaction";
 import { demanderBlocage } from "./BlocageAction";
 import { lieuDe } from "./regleBlocage";
-import { chargerContenu, useElement, useElements } from "./sync";
+import { chargerContenu, useElement, useElements, contenuEnCache } from "./sync";
 import { normaliserPlateau, distanceBande, COLONNES_BANDE } from "../hexSpirale";
 import { scriptsActifs, concerne } from "./scripts";
 import {
@@ -13,7 +13,7 @@ import {
 } from "./miseEnPlace";
 import { premiereFace, nombreTours } from "./etat";
 import { lotsDeDes, desDeLaReponse } from "./effets";
-import { LivraisonCommerciale } from "./Livraison";
+import { LivraisonCommerciale, LivraisonIpswitch } from "./Livraison";
 import { BoutonsScripts } from "./ActionsScript";
 
 // ============================================================
@@ -51,6 +51,9 @@ export function ScriptsCarte({ c, fermer }) {
         // Livraison commerciale : une de mes unités de la carte dont le texte porte #livr(n)
         c.ref.type === "unit" && (c.marques?.possession ?? c.proprio) === moi &&
             <LivraisonCommerciale key="livraison-commerciale" c={c} fermer={fermer} />,
+        // Mercenaire Ipswitch : l'unité à comptoir (#comp) d'une autre faction
+        c.ref.type === "unit" && aScript(moi, "ipswitch") && /#comp\b/i.test(contenuEnCache(c.ref.id)?.habilite || "") &&
+            <LivraisonIpswitch key="livraison-ipswitch" cible={c.marques?.possession ?? c.proprio} fermer={fermer} />,
         // Boutons d'action d'une carte qui n'est pas une unité (habilité posée sur la table…)
         c.ref.type !== "unit" &&
             <BoutonsScripts key="actions-carte" lieu="carte" c={c} idElement={c.ref.id} apres={fermer} />,

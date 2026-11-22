@@ -7,13 +7,13 @@ import { pub } from "../../../lib/fetch";
 import { useElement, useElements, contenuEnCache } from "./sync";
 import { capaciteDe, victimesBombe, depenserAgent, placePrise } from "./effets";
 import { demander } from "./demande";
-import { possesseurAuControle, actionsPossessionPerdue, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
+import { possesseurAuControle, possesseurActuel, actionsPossessionPerdue, demanderControle, unitesDuControle, ESPACE_CONTROLE } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
 import { MARQUE_AGI, estBloquee } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
 import { obstacleSousPhase, DEBARQUEMENT } from "./regleSousPhases";
 import { estHyperlane } from "./hyperlane";
-import { estProductible, effetsMercenaires } from "./Production";
+import { estProductible, effetsMercenaires, lireProduction } from "./Production";
 import { typeUnite } from "./miseEnPlace";
 import {
     MARQUEUR,
@@ -2207,11 +2207,33 @@ const estLibre = c => !!c && !c.ref && c.jeton === LIBRE;
 const estCarteCible = c => !!c?.ref && !c.cache && c.ref.type !== "agent" && c.ref.type !== "token" &&
     (c.ref.type !== "unit" || estMercenaire(c));
 
+// Mercenaire Richtyrian : sa carte se pose sur une planète (+2 aux infanteries de son marqueur)
+export const RICHTYRIAN = 354;
+
+// Unité mercenaire gagnée (recrutement, Partie.jsx) : elle arrive dans la réserve du joueur avec
+// la marque A_PLACER (rang de la phase), et doit être posée à cette phase dans un système où il a
+// une unité à production — sinon elle est retirée du jeu à la fin de la phase. PLACEMENT_LIBRE :
+// S'Ula Mentarion (carte #301), qui se pose dans n'importe quel système dont il obtient le contrôle.
+// (La carte S'Ula Mentarion porte aussi A_PLACER : elle est retirée du jeu à la fin de la phase.)
+export const A_PLACER = "aPlacer";
+export const PLACEMENT_LIBRE = "placementLibre";
+export const SULA_CARTE = 301;
+export const SULA_UNITE = 732;
+
+// Mes unités mercenaires encore à placer (dans ma réserve, marque A_PLACER)
+export const unitesAPlacer = (etat, u) => Object.values(etat.composants).filter(c =>
+    !c.cache && c.ref?.type === "unit" && c.zone === `joueur:${u}:reserve` && !!c.marques?.[A_PLACER]);
+
+// Fin de la phase : ce qui porte encore A_PLACER (unités non placées, carte S'Ula) sort du jeu
+export const actionsFinPlacement = etat => Object.values(etat.composants)
+    .filter(c => !!c.marques?.[A_PLACER] && c.zone !== "horsJeu")
+    .map(c => ({ type: "deplacer", c: c.id, vers: "horsJeu" }));
+
 export function Plan({ children, style }) {
 
     const {
         etat, index, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
-        search, aScript, factionDe, connaissance, aviser, allerA, partie,
+        search, aScript, factionDe, connaissance, aviser, allerA, partie, scriptsDesactives,
     } = useEngine();
 
     const appui = useRef(null);
@@ -2314,6 +2336,74 @@ export function Plan({ children, style }) {
             position?.setAttribute("data-actif", "");
             s.position = position;
         }
+    }
+
+    // Unités mercenaires gagnées à placer (marque A_PLACER) qui quittent ma réserve vers `zone`
+    // (celle du vaisseau qui les embarque) : elles se posent sans rien payer, dans un système où
+    // j'ai une unité à production (#prod) — ailleurs, c'est semi-bloqué. S'Ula Mentarion (marque
+    // PLACEMENT_LIBRE) se pose dans n'importe quel système : le contrôle du lieu est demandé
+    // (règle générale, Controle.jsx) — raté, rien ne se passe : il reste dans la réserve et peut
+    // être posé ailleurs. Retourne les actions qui effacent leurs marques ([] : aucune à placer),
+    // ou null si la pose n'a pas lieu.
+    async function placerMercenaires(composants, zone) {
+
+        const reserve = `joueur:${moi}:reserve`;
+        const aPlacer = composants.filter(c => c?.zone === reserve && c.ref?.type === "unit" && c.marques?.[A_PLACER]);
+        const m = /^hex:(\d+)(?::planete:(\d+))?/.exec(zone || "");
+
+        if (!aPlacer.length || !m) {
+            return [];
+        }
+
+        const numero = Number(m[1]);
+        const libres = aPlacer.filter(c => c.marques?.[PLACEMENT_LIBRE]);
+
+        if (libres.length < aPlacer.length) {
+
+            // (une planète ou une station que je possède dans le système et qui produit — « Produire
+            // ici » — compte comme une unité à production : Anneau Arcturus…)
+            const planetesProductrices = (contenuEnCache(tuileDe(index, numero)?.ref.id)?.elems || [])
+                .map(lien => Number(lien?.id) || -1)
+                .filter(id => id > 0 && possesseurActuel(etat, id) === moi && !!lireProduction(contenuEnCache(id)));
+
+            const production = planetesProductrices.length > 0 || Object.values(etat.composants).some(c => !c.cache && c.ref?.type === "unit" && campDe(c) === moi &&
+                (c.zone === "hex:" + numero || c.zone?.startsWith(`hex:${numero}:`)) && !!lireProduction(contenuEnCache(c.ref.id)));
+
+            if (!production && !confirmerRegle("Placer une unité mercenaire",
+                ["une unité mercenaire gagnée se place dans un système où vous avez une unité à production"])) {
+                return null;
+            }
+        }
+
+        if (libres.length) {
+
+            const k = m[2] === undefined ? ESPACE_CONTROLE : Number(m[2]);
+            const idPlanete = m[2] === undefined ? -1 : Number(contenuEnCache(tuileDe(index, numero)?.ref.id)?.elems?.[k]?.id) || -1;
+            const libelle = `Placement de ${libres.map(c => nomElement(search, c.ref)).join(", ")}`;
+
+            const acquis = await demanderControle({ etat, moi, envoyer, aviser, allerA, aScript }, {
+                numero,
+                k,
+                unites: unitesDuControle(index, numero, k),
+                possesseur: idPlanete > 0 ? possesseurAuControle(etat, index, `hex:${numero}:planete:${k}`, idPlanete) : null,
+                motif: { script: "s-ula-mentarion-placement" },
+                libelle,
+            });
+
+            if (!acquis) {
+
+                if (acquis === false) {
+                    aviser?.(`${libelle} : contrôle non obtenu, rien ne se passe. L'unité reste dans votre réserve : essayez un autre système.`);
+                }
+
+                return null;
+            }
+        }
+
+        return aPlacer.flatMap(c => [
+            { type: "marquer", c: c.id, marque: A_PLACER, valeur: null },
+            c.marques?.[PLACEMENT_LIBRE] && { type: "marquer", c: c.id, marque: PLACEMENT_LIBRE, valeur: null },
+        ]).filter(Boolean);
     }
 
     // Case « Production » (ou « Construction ») cochée : poser ces unités coûte
@@ -2961,18 +3051,27 @@ export function Plan({ children, style }) {
                 // Production : une unité de ma réserve embarquée se paie aussi
                 const reserveDepart = `joueur:${moi}:reserve`;
 
+                // (une unité mercenaire gagnée à placer ne se paie pas : placerMercenaires)
+                const placement = etat.composants[porteur.dataset.composant]?.zone === reserveDepart
+                    ? []
+                    : await placerMercenaires(ids.map(id => etat.composants[id]), etat.composants[porteur.dataset.composant]?.zone);
+
+                if (!placement) {
+                    return;
+                }
+
                 const paiement = etat.composants[porteur.dataset.composant]?.zone === reserveDepart
                     ? []
                     : await payerProduction(ids
                         .map(id => etat.composants[id])
-                        .filter(c => c?.zone === reserveDepart)
+                        .filter(c => c?.zone === reserveDepart && !c.marques?.[A_PLACER])
                         .map(c => c.ref), etat.composants[porteur.dataset.composant]?.zone);
 
                 if (!paiement) {
                     return;
                 }
 
-                jouer([...paiement, ...ids.map(c => ({ type: "deplacer", c, sur: porteur.dataset.composant }))]);
+                jouer([...paiement, ...placement, ...ids.map(c => ({ type: "deplacer", c, sur: porteur.dataset.composant }))]);
 
                 // Prévient, sans rien empêcher, si le vaisseau dépasse sa capacité
                 signalerCapacite(porteur.dataset.composant, ids);
@@ -3073,6 +3172,31 @@ export function Plan({ children, style }) {
             return;
         }
 
+        // Mercenaire Richtyrian (#354) : « placer ce mercenaire sur une planète en votre possession ».
+        // Sur une planète que je ne possède pas, c'est semi-bloqué ; sur une des miennes, mon marqueur
+        // de faction s'y pose (s'il n'y est pas déjà) — c'est lui qui donne +2 à mes infanteries de
+        // ce monde (Combat.jsx).
+        const richtyrian = /^hex:(\d+):planete:(\d+)$/.exec(zone) && !scriptsDesactives?.includes("richtyrian")
+            ? aDeplacer.map(id => etat.composants[id]).find(c => c?.ref?.type === "mercenaire" && c.ref.id === RICHTYRIAN)
+            : null;
+
+        let marqueRichtyrian = [];
+
+        if (richtyrian) {
+
+            const [, numero, k] = /^hex:(\d+):planete:(\d+)$/.exec(zone);
+            const idPlanete = Number(contenuEnCache(tuileDe(index, Number(numero))?.ref.id)?.elems?.[Number(k)]?.id) || -1;
+
+            if (possesseurActuel(etat, idPlanete) !== moi) {
+
+                if (!confirmerRegle("Richtyrian", ["Richtyrian se place sur une planète en votre possession"])) {
+                    return;
+                }
+            } else if (!(index.parPorteur.get(richtyrian.id) || []).some(m => !m.ref && m.jeton === MARQUEUR && m.proprio === moi)) {
+                marqueRichtyrian = [{ type: "creer", jeton: MARQUEUR, proprio: moi, sur: richtyrian.id }];
+            }
+        }
+
         // Capture (Production.jsx) : pendant une production, une unité capturée — celle
         // d'un autre joueur, dans mes éléments actifs — glissée sur la carte me donne
         // mon unité du même type, sans coût, et retourne dans la réserve de son joueur
@@ -3112,11 +3236,18 @@ export function Plan({ children, style }) {
         // (lu avant le paiement, qui peut attendre une décision)
         const position = cible.closest("[data-position]")?.dataset.position;
 
+        // Unités mercenaires gagnées à placer : sans paiement, là où le permet placerMercenaires
+        const placement = zone === reserve ? [] : await placerMercenaires(aDeplacer.map(id => etat.composants[id]), zone);
+
+        if (!placement) {
+            return;
+        }
+
         const paiement = zone === reserve
             ? []
             : await payerProduction(aDeplacer
                 .map(id => etat.composants[id])
-                .filter(c => c.zone === reserve)
+                .filter(c => c.zone === reserve && !c.marques?.[A_PLACER])
                 .map(c => c.ref), zone);
 
         if (!paiement) {
@@ -3209,6 +3340,8 @@ export function Plan({ children, style }) {
                 ...(repere ? { [cote]: repere.dataset.composant } : {}),
             })),
             ...(position === "melanger" && aDeplacer.length ? [{ type: "melanger", zone }] : []),
+            ...marqueRichtyrian,
+            ...placement,
         ]);
 
         avertirArcturus(zone, aDeplacer

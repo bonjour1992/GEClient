@@ -1808,6 +1808,71 @@ export const SCRIPTS = [
             libelle: "Mirik Aun Sissiri : +1 au combat spatial dans ce système",
         }),
 
+    // ---- mercenaires du lot du 22 novembre ----
+
+    // (l'identifiant « sai-seravus » est déjà pris par Oriane Tesh, ex-Sai Seravus)
+    regle("sai-seravus-trous-de-ver", "mercenaire", 359, 1795046343752, "Sai Seravus", "auto",
+        "Déplacement : étapes par un trou de ver",
+        "Les trous de ver alpha et bêta sont équivalents pour vous : un système à trou de ver alpha est relié aux systèmes à trou de ver bêta (et l'inverse), pour le trajet comme pour le blocage."),
+
+    // Repère : token « Repère de Suldhan Wraeg » (#1265, REPERE_SULDHAN de Blocage.jsx)
+    action("suldhan-wraeg", "mercenaire", 352, 1795076851720, "Suldhan Wraeg", "systeme",
+        "Science, sur la fiche d'un système à anomalie où vous avez une unité ou adjacent à une de vos unités : son cube part dans les agents usés, votre repère est posé dans l'anomalie (3 au plus : un quatrième retire le plus ancien). Adjacence par trou de ver : non comptée (confirmation).", {
+            phase: "science",
+            use: true,
+            visible: outils => !!outils.systeme?.anomaly && !/^hpl/.test(outils.systeme.anomaly),
+            special: atelier => {
+
+                const numeroDe = x => Number(/^hex:(\d+)/.exec(x.zone || "")?.[1] ?? -1);
+                const rang = x => Number(String(x.id).replace(/\D/g, "")) || 0;
+
+                const mesReperes = Object.values(atelier.etat.composants)
+                    .filter(x => x.ref?.type === "token" && x.ref.id === 1265 && x.proprio === atelier.moi && /^hex:\d+$/.test(x.zone || ""))
+                    .sort((a, b) => rang(a) - rang(b));
+
+                const deja = mesReperes.some(x => numeroDe(x) === atelier.numero);
+
+                const voisine = Object.values(atelier.etat.composants).some(x => !x.cache && x.ref?.type === "unit" &&
+                    atelier.campDe(x) === atelier.moi && numeroDe(x) >= 0 && atelier.distance(numeroDe(x), atelier.numero) <= 1);
+
+                const retire = !deja && mesReperes.length >= 3 ? mesReperes[0] : null;
+
+                return {
+                    actions: deja ? [] : [
+                        retire && { type: "supprimer", c: retire.id },
+                        { type: "creer", ref: { type: "token", id: 1265 }, zone: "hex:" + atelier.numero, proprio: atelier.moi },
+                    ].filter(Boolean),
+                    sans: deja
+                        ? "votre repère est déjà posé dans ce système"
+                        : (!voisine ? "aucune de vos unités n'est dans ce système ni dans un système adjacent" : null),
+                    avis: deja ? "" : `Suldhan Wraeg : repère posé, cette anomalie n'affecte plus vos déplacements.${retire ? ` Votre plus ancien repère (${atelier.nomCase(numeroDe(retire))}) est retiré.` : ""}`,
+                };
+            },
+            libelle: "Suldhan Wraeg : poser un repère dans cette anomalie",
+        }),
+
+    regle("suldhan-wraeg-reperes", "mercenaire", 352, 1795076851720, "Suldhan Wraeg : repères", "auto",
+        "Déplacement assisté : cases du trajet",
+        "Une anomalie qui porte votre repère n'affecte plus vos déplacements : ni supernova, ni champ d'astéroïdes, ni nébuleuse, ni jet de la rupture gravitationnelle. Le trajet l'indique « repère de Suldhan Wraeg »."),
+
+    regle("ipswitch", "mercenaire", 282, 1795076851663, "Ipswitch", "nouveau",
+        "Plateau joueur d'une autre faction ; fiche d'une unité à comptoir (#comp) d'une autre faction : « Ipswitch : livraison de 2 »",
+        "Diplomatie : son cube part dans les agents usés, la faction reçoit une livraison commerciale de 2 (Perimeter, Commerce profitable, vos dettes envers elle baissent d'autant). Aucune de vos unités ne livre : ni comptoir dans le système, ni test de blocage."),
+
+    // Règle commune des unités mercenaires (marque « aPlacer », Interaction.jsx)
+    regle("unite-mercenaire-placement", "unit", 582, 0, "Unité mercenaire gagnée : placement", "modifie",
+        "Recrutement (Ctrl + clic) ; réserve glissée sur la carte ; en-tête : « Passer », « Phase suivante »",
+        "Une unité mercenaire recrutée va dans votre réserve (et non plus dans vos éléments actifs). Glissée à cette phase dans un système où vous avez une unité à production, elle se pose sans rien payer — ailleurs, c'est semi-bloqué. Tant qu'elle n'est pas placée, un message le dit en haut, « Passer » et « Phase suivante » sont semi-bloqués ; à la phase suivante, elle est retirée du jeu.",
+        [590, 597, 598, 599, 600, 601, 745, 746, 747]),
+
+    regle("s-ula-mentarion-placement", "mercenaire", 301, 1795076851679, "S'Ula Mentarion : placement", "modifie",
+        "Recrutement de la carte ; réserve glissée sur la carte",
+        "Recruter la carte met l'unité S'Ula Mentarion dans votre réserve, à placer à cette phase comme une unité mercenaire, mais dans n'importe quel système : le contrôle du lieu est demandé (règle générale) — raté, rien ne se passe et vous pouvez réessayer ailleurs. À la fin de la phase, la carte est retirée du jeu (l'unité aussi si elle n'a pas été placée)."),
+
+    regle("richtyrian", "mercenaire", 354, 1795076851722, "Richtyrian", "modifie",
+        "Carte du mercenaire glissée sur une planète ; Conflit : combat terrestre",
+        "Glisser sa carte sur une planète que vous ne possédez pas demande une confirmation ; sur une des vôtres, votre marqueur de faction se pose sur la carte. Tant que la carte est sur la planète avec votre marqueur, vos infanteries y ont +2 au combat terrestre."),
+
     // --------------------------------------------------------
     // LOT « FACILES ET MOYENS » (11 novembre) : technologies, habilités des
     // événements et des neutres, unités

@@ -114,6 +114,54 @@ const livreParMarqueur = c => RE_MARQUEUR.test(texteDe(c));
 const marqueurDeLivraison = (etat, c) => Object.values(etat.composants)
     .find(x => x.sur === c.id && !x.ref && x.jeton === MARQUEUR && x.marques?.livraison) || null;
 
+// ------------------------------------------------------------
+// IPSWITCH (mercenaire #282) : « #Pdiplo: #use: #livr(2) envers n'importe quelle unité »
+//
+// Bouton sur le plateau d'une autre faction, et sur la fiche d'une unité à comptoir (#comp)
+// d'une autre faction : son cube part dans les agents usés, la faction reçoit une livraison
+// de 2 (livrer : Perimeter, Commerce profitable, dettes, Science intégrée). Ni comptoir dans le
+// système ni test de blocage : aucune de mes unités ne livre.
+// ------------------------------------------------------------
+
+export const IPSWITCH = 282;
+
+export function LivraisonIpswitch({ cible, fermer }) {
+
+    const ctx = useEngine();
+    const { etat, index, envoyer, moi, joueur, nomDe, aviser, aScript } = ctx;
+
+    if (!joueur || !(cible > 0) || cible === moi || !aScript(moi, "ipswitch")) {
+        return null;
+    }
+
+    const carte = (index.parZone.get(`joueur:${moi}:actif`) || [])
+        .find(x => !x.cache && x.ref?.type === "mercenaire" && x.ref.id === IPSWITCH) || null;
+
+    return (
+        <BoutonRegle
+            data-action="livraison-ipswitch"
+            nom={`Ipswitch : livraison de 2 à ${nomDe(cible)}`}
+            obstacles={[
+                !/diplomatie/i.test(etat.phase || "") && "ce n'est pas la phase de diplomatie",
+                carte && carteUsee(index, carte) && "le cube d'Ipswitch n'est pas sur sa carte : il est déjà utilisé (son cube revient à l'entretien)",
+            ]}
+            faire={async commentaire => {
+
+                const livraison = await livrer(ctx, cible, 2);
+
+                envoyer([...(carte ? actionsUserCarte(index, moi, carte) : []), ...livraison.actions],
+                    [commentaire || `Ipswitch : livraison à ${nomDe(cible)}`, ...livraison.messages].join(" — ").slice(0, 300));
+
+                aviser(livraison.messages.join(" "));
+                fermer?.();
+            }}
+            title={`Son cube part dans les agents usés : ${nomDe(cible)} reçoit une livraison commerciale de 2 (vos dettes envers elle baissent d'autant).`}
+        >
+            Ipswitch : livraison de 2 à {nomDe(cible)}
+        </BoutonRegle>
+    );
+}
+
 // Bouton de livraison, sur la fiche d'une de mes unités à « #livr(n) ».
 // Destination : une faction qui a un comptoir dans le système (elle gagne le commerce, mes
 // dettes envers elle baissent), ou le stock d'achat d'un élément à achat du système (Achats.jsx :

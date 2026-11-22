@@ -55,7 +55,14 @@ import {
     cubeDeMercenaire,
     Modale,
     Pas,
+    A_PLACER,
+    PLACEMENT_LIBRE,
+    SULA_CARTE,
+    SULA_UNITE,
+    unitesAPlacer,
+    actionsFinPlacement,
 } from "./Interaction";
+import { rangDePhase } from "./regleControle";
 import { ReserveAgents } from "./Remplacants";
 import { Preparation } from "./Preparation";
 import { Espace } from "./Espace";
@@ -673,6 +680,9 @@ export function Partie({ id }) {
 
     const nonPasses = joueurs.filter(j => !etat.compteurs[`joueur:${j.userId}:passe`]);
 
+    // Unités mercenaires gagnées encore dans une réserve (Interaction.jsx) : [[joueur, unités]]
+    const mercenairesAPlacer = joueurs.map(j => [j.userId, unitesAPlacer(etat, j.userId)]).filter(([, liste]) => liste.length);
+
     // blocage : la phase ne peut pas être quittée (combat ouvert, faveurs à
     // encaisser). attente : des joueurs n'ont pas encore passé — le bouton
     // est alors rouge gris mais reste utilisable, après confirmation (un
@@ -685,6 +695,10 @@ export function Partie({ id }) {
             blocage = `${combats.length} combat(s) encore en cours : les terminer (onglet Conflit)`;
         } else if (faveurs.attendu) {
             blocage = "Les faveurs de ce tour ne sont pas encaissées (onglet Faveurs)";
+        } else if (mercenairesAPlacer.length) {
+            blocage = "Unités mercenaires à placer : " + mercenairesAPlacer
+                .map(([u, liste]) => `${liste.map(c => nomElement(search, c.ref)).join(", ")} (${ctx.nomDe(u)})`).join(" ; ") +
+                " — sinon elles sont retirées du jeu en passant à la phase suivante";
         }
 
         if (nonPasses.length) {
@@ -855,6 +869,8 @@ export function Partie({ id }) {
                 // (après Trading et Harrugh, qui lisent le décompte)
                 ...(quitteVote ? [{ type: "reinitialiserVotes" }] : []),
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
+                // Unités mercenaires gagnées et non placées, carte S'Ula Mentarion : hors jeu (Interaction.jsx)
+                ...(pas > 0 ? actionsFinPlacement(etat) : []),
                 // On arrive à la phase de trêve : les marqueurs de trêve sont retirés
                 ...(pas > 0 && /tr[eê]ve/i.test(phase.nom) ? retraitTreves : []),
                 // On arrive à la phase de mandat : le système désigné par Mirik Aun Sissiri ne l'est plus
@@ -1020,6 +1036,8 @@ export function Partie({ id }) {
             ...tirages.map((t, k) => ({ type: "des", n: 1, faces: t.faces, c: t.c, marque: "jetTour" + k })),
             ...retraitMarqueurs,
             ...retraitUse,
+            // Unités mercenaires gagnées et non placées, carte S'Ula Mentarion : hors jeu (Interaction.jsx)
+            ...actionsFinPlacement(etat),
             ...remiseDesPasses,
             ...figerOrdre,
             // Le journal de recherche du tour qui s'achève est effacé (recherche.js)
@@ -1195,8 +1213,23 @@ export function Partie({ id }) {
                 return;
             }
 
+            // Une unité mercenaire va dans ma réserve, à placer à cette phase (marque A_PLACER :
+            // Interaction.jsx) ; la carte S'Ula Mentarion y met son unité, à placer librement, et
+            // sort du jeu à la fin de la phase
+            const rang = rangDePhase(etat);
+            const uniteAPlacer = achete.ref.type === "unit" && !scriptsDesactives.includes("unite-mercenaire-placement");
+            const sula = achete.ref.type === "mercenaire" && achete.ref.id === SULA_CARTE && !scriptsDesactives.includes("s-ula-mentarion-placement");
+
+            const placer = [
+                uniteAPlacer && "elle est dans votre réserve : glissez-la à cette phase dans un système où vous avez une unité à production (sinon elle est retirée du jeu à la fin de la phase)",
+                sula && "S'Ula Mentarion est dans votre réserve : glissez-le à cette phase dans n'importe quel système (contrôle demandé) ; la carte est retirée du jeu à la fin de la phase",
+            ].filter(Boolean);
+
             // Un script a modifié l'action : on le dit, en orange
-            setAvis(messages.length ? `${messages.join(" ; ")} (coût : ${cout} → ${prix}).` : "");
+            setAvis([
+                messages.length ? `${messages.join(" ; ")} (coût : ${cout} → ${prix}).` : "",
+                placer.length ? `${nom} : ${placer.join(" ; ")}.` : "",
+            ].filter(Boolean).join(" "));
 
             p.envoyer(commentaire, [
                 { type: "compteur", id: compteur, delta: -prix },
@@ -1205,9 +1238,17 @@ export function Partie({ id }) {
                 {
                     type: "deplacer",
                     c: achete.id,
-                    vers: achat[1],
+                    vers: uniteAPlacer ? `joueur:${moi}:reserve` : achat[1],
                     de: achete.zone,
                     ...(achete.ref.type === "unit" ? { proprio: moi } : {}),
+                },
+                (uniteAPlacer || sula) && { type: "marquer", c: achete.id, marque: A_PLACER, valeur: rang },
+                sula && {
+                    type: "creer",
+                    ref: { type: "unit", id: SULA_UNITE },
+                    zone: `joueur:${moi}:reserve`,
+                    proprio: moi,
+                    marques: { [A_PLACER]: rang, [PLACEMENT_LIBRE]: 1 },
                 },
                 // Agent de base : il devient celui de ma faction
                 devient && { type: "remplacer", c: achete.id, ref: { type: "agent", id: devient } },
@@ -1748,6 +1789,17 @@ export function Partie({ id }) {
                 {/* Phase de décompte : points de chaque faction, ligne par ligne (Decompte.jsx) */}
                 <Decompte />
 
+                {/* Mes unités mercenaires gagnées à placer à cette phase (Interaction.jsx, placerMercenaires) */}
+                {estJoueur && unitesAPlacer(etat, moi).length > 0 && (
+                    <div data-mercenaires-a-placer style={{ ...styleAide, backgroundColor: "#fff3e0", border: "1px solid #e65100" }}>
+                        <b>Unités mercenaires à placer :</b>{" "}
+                        {unitesAPlacer(etat, moi).map(c => nomElement(search, c.ref) +
+                            (c.marques?.[PLACEMENT_LIBRE] ? " (n'importe quel système : contrôle demandé)" : "")).join(", ")}.{" "}
+                        Glissez-les de votre réserve (onglet Plateau joueur) vers un système où vous avez une unité à
+                        production — rien n'est payé. Non placées à la fin de la phase, elles sont retirées du jeu.
+                    </div>
+                )}
+
                 {etat.tour > 0 && !sansAFaire && (!aideVide ||
                     ((enDeplacement || enDiplomatie || enScience || enProduction || enConstruction || enProposition || enTreve || enRecrutement) && estJoueur)) && (
                     <div data-a-faire style={{ ...styleAide, position: "relative" }}>
@@ -1807,7 +1859,9 @@ export function Partie({ id }) {
                                 acheté (le coût de la case est retiré de votre influence ; un mercenaire
                                 coûte 2 de plus{Number(deroule?.surCout?.[etat.tour - 1]) > 0
                                     ? `, et ${Number(deroule.surCout[etat.tour - 1])} de plus ce tour,`
-                                    : ""} et va dans vos éléments actifs ; un plan va dans votre main).
+                                    : ""} et va dans vos éléments actifs — une unité mercenaire va dans votre
+                                réserve, à placer à cette phase dans un système où vous avez une unité à
+                                production ; un plan va dans votre main).
                             </>],
 
                             // Phase de déclaration de trêve
@@ -2271,15 +2325,20 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre, attendreAmiral }) {
     // (sans les décisions facultatives : proposer une planète ou un système pour une loi)
     const enAttente = ctx.decisions.length + decisionsDurables(ctx, false);
 
-    const obstacles = [enAttente > 0 &&
-        `${enAttente} décision${enAttente > 1 ? "s vous attendent" : " vous attend"} dans l'onglet Décision`];
+    // (et mes unités mercenaires gagnées pas encore placées : elles sortiront du jeu à la fin de la phase)
+    const aPlacer = unitesAPlacer(ctx.etat, ctx.moi);
 
-    const semiBloque = enAttente > 0 ? { ...STYLE_INDISPONIBLE, fontWeight: "bold" } : {};
-    const titreBloque = enAttente > 0 ? ` — ${obstacles[0]} (reste utilisable, après confirmation)` : "";
+    const obstacles = [
+        enAttente > 0 && `${enAttente} décision${enAttente > 1 ? "s vous attendent" : " vous attend"} dans l'onglet Décision`,
+        aPlacer.length > 0 && `${aPlacer.length} unité${aPlacer.length > 1 ? "s" : ""} mercenaire${aPlacer.length > 1 ? "s" : ""} à placer depuis votre réserve (sinon retirée${aPlacer.length > 1 ? "s" : ""} du jeu à la fin de la phase)`,
+    ].filter(Boolean);
+
+    const semiBloque = obstacles.length > 0 ? { ...STYLE_INDISPONIBLE, fontWeight: "bold" } : {};
+    const titreBloque = obstacles.length > 0 ? ` — ${obstacles.join(" ; ")} (reste utilisable, après confirmation)` : "";
 
     return (
         <div
-            data-fin-de-tour={enAttente > 0 ? "semi-bloque" : "libre"}
+            data-fin-de-tour={obstacles.length > 0 ? "semi-bloque" : "libre"}
             style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}
         >
             <button

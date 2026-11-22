@@ -57,6 +57,10 @@ const DRAIN = "drainOk";            // « c13 » : le Drain spatial de la case s
 // Catégorie d'un trou de ver, d'après son image (/ti/icon/wormhole/alpha.png)
 const typeTrou = image => /wormhole\/(\w+)\./.exec(image || "")?.[1] || null;
 
+// Token « Repère de Suldhan Wraeg » (mercenaire #352) : posé dans une anomalie, elle n'affecte
+// plus les déplacements de son propriétaire
+export const REPERE_SULDHAN = 1265;
+
 // ------------------------------------------------------------
 // Déplacements en cours : les vaisseaux en route, groupés par
 // joueur, case et trajet restant
@@ -137,20 +141,35 @@ export function useCarte(cases, mover) {
 
     const charge = (liste, table) => liste.every(id => id in table);
 
+    // Mercenaire Suldhan Wraeg : un repère de celui qui se déplace est posé dans l'anomalie, elle
+    // n'affecte plus ses déplacements (supernova, astéroïdes, nébuleuse, jet de la rupture)
+    const repere = i => !!mover && tokens(i).some(c => c.ref.id === REPERE_SULDHAN && c.proprio === mover) &&
+        aScript(mover, "suldhan-wraeg-reperes");
+
     return {
         // Tout est chargé : les risques peuvent être évalués
         pret: charge(idsSystemes, systemes) && charge(idsPlanetes, planetes) &&
             charge(idsTokens, contenusTokens) && charge(idsUnites, contenus),
         contenus,
-        anomalie: i => systemes[tuile(i)?.ref.id]?.anomaly || "",
+        anomalie: i => (repere(i) ? "" : systemes[tuile(i)?.ref.id]?.anomaly || ""),
+        repere,
         // Hyperlane (hyperlane.js) : on la traverse sans s'y arrêter, le long de ses lignes
         hyperlane: i => estHyperlane(systemes[tuile(i)?.ref.id]?.anomaly),
         relie: (i, de, vers) => hyperlaneRelie(systemes[tuile(i)?.ref.id]?.anomaly, tuile(i)?.marques?.rotation, i, de, vers),
-        trous: i => new Set([
-            ...(systemes[tuile(i)?.ref.id]?.elems || []).map(lien => typeTrou(planetes[lien?.id]?.img)),
-            ...tokens(i).map(c => typeTrou(contenusTokens[c.ref.id]?.img)),
-            mover && aScript(mover, "stargate") && aUnDock(i) && "alpha",
-        ].filter(Boolean)),
+        trous: i => {
+            const trous = new Set([
+                ...(systemes[tuile(i)?.ref.id]?.elems || []).map(lien => typeTrou(planetes[lien?.id]?.img)),
+                ...tokens(i).map(c => typeTrou(contenusTokens[c.ref.id]?.img)),
+                mover && aScript(mover, "stargate") && aUnDock(i) && "alpha",
+            ].filter(Boolean));
+            // Mercenaire Sai Seravus : les trous de ver alpha et bêta sont équivalents pour lui
+            // (l'identifiant « sai-seravus » est celui d'Oriane Tesh, ex-Sai Seravus : scripts.js)
+            if (mover && (trous.has("alpha") || trous.has("beta")) && aScript(mover, "sai-seravus-trous-de-ver")) {
+                trous.add("alpha");
+                trous.add("beta");
+            }
+            return trous;
+        },
         // Script Drain spatial : joueurs qui l'ont, autres que celui qui se déplace, et
         // qui ont un vaisseau amiral, un soleil de guerre ou un système de défense
         // dans le système (espace ou planètes)

@@ -11,6 +11,7 @@ import { ReserveProductible } from "./Production";
 import { useExploitationDuVide } from "./Controle";
 import { EntretienAuto } from "./Entretien";
 import { BoutonsScripts } from "./ActionsScript";
+import { LivraisonIpswitch } from "./Livraison";
 
 // ============================================================
 // ONGLET PLATEAU JOUEUR
@@ -336,6 +337,9 @@ export function PlateauJoueur({ vu }) {
 
             {/* Nouveaux boutons des scripts de mes technologies */}
             {joueur && u === moi && <ActionsTechnologies />}
+
+            {/* Mercenaire Ipswitch : livraison de 2 à cette autre faction (Livraison.jsx) */}
+            {joueur && u !== moi && <LivraisonIpswitch cible={u} />}
 
             {/* Boutons d'action des habilités utilisables depuis le plateau (ActionsScript.jsx) */}
             {joueur && u === moi && (
