@@ -1427,6 +1427,23 @@ export const SCRIPTS = [
             libelle: "SR-42 : 3 ressources → recherche militaire, génétique et sociale",
         }),
 
+    action("sr-124-votes", "planet", 47, 0, "SR-124 : votes", "planete",
+        "Prévote : la station est activée et un politique utilisé ; vous gagnez 1 voix sur chaque loi du tour, dans la colonne de votre choix (une question par loi, onglet Décision). Il faut l'accord de la faction qui possède la station : l'outil ne le vérifie pas.", {
+            phase: "prevote",
+            nomPhase: "prévote",
+            activer: true,
+            agent: { motif: "politique", nom: "politique", depense: false },
+            // (une question par loi du tour : dans quelle colonne va la voix ?)
+            demandes: outils => (outils.lois().length ? outils.lois() : ["loi 1"])
+                .map((nom, k) => ({ question: o => questionColonne(`SR-124 — loi ${k + 1}. ${nom}`, o), max: () => 1 })),
+            calcul: (outils, xs) => (!xs ? {} : {
+                // (ajustement de mes voix : compteur vote:<tour>:<loi>:<colonne>:<joueur>)
+                actions: xs.map((col, k) => ({ type: "compteur", id: `vote:${outils.etat.tour}:${k + 1}:${col - 1}:${outils.moi}`, delta: 1 })),
+                avis: "SR-124 : " + xs.map((col, k) => `loi ${k + 1}, « ${COLONNES_VOTE[col - 1]} »`).join(" ; ") + " — 1 voix chacune, ajoutée à votre colonne du décompte.",
+            }),
+            libelle: "SR-124 : 1 voix sur chaque loi du tour (active la station, use un politique)",
+        }),
+
     action("anneau-arcturus-recherche", "planet", 784, 1795372845144, "Anneau Arcturus : recherche", "planete",
         "Science : la station est activée (une fois par tour) et un scientifique est utilisé : 1 de recherche sociale, 1 spatiale et 1 libre.", {
             phase: "science",
@@ -1617,13 +1634,34 @@ export const SCRIPTS = [
     //      carte est usée jusqu'au nouveau tour ----
 
     action("doctor-carrina", "mercenaire", 285, 1795076851665, "Doctor Carrina", "carte",
-        "Science : son cube part dans les agents usés, 1 de recherche sociale, militaire, génétique et spatiale (la planète à activer : à la main).", {
+        "Science : son cube part dans les agents usés, une de vos planètes non activées est activée (choix dans l'onglet Décision), 1 de recherche sociale, militaire, génétique et spatiale.", {
             phase: "science",
             use: true,
             recherche: [["soc", 1], ["mil", 1], ["gen", 1], ["spa", 1]],
-            avis: "Doctor Carrina : activez une planète à la main.",
-            libelle: "Doctor Carrina : recherche sociale, militaire, génétique et spatiale",
+            // (« #use, activez une planète » : laquelle ?)
+            demande: {
+                question: outils => "Doctor Carrina : quelle planète activer ?\n" +
+                    outils.planetesActivables().map((p, k) => `${k + 1} = ${p.nom}`).join("\n"),
+                max: outils => Math.max(1, outils.planetesActivables().length),
+            },
+            calcul: (outils, x) => {
+
+                const planetes = outils.planetesActivables();
+
+                if (x === undefined) {
+                    return planetes.length ? {} : { sans: "aucune de vos planètes posées sur la carte n'est activable (toutes activées, ou aucune possédée)" };
+                }
+
+                return planetes[x - 1]
+                    ? { actions: [planetes[x - 1].action], avis: `Doctor Carrina : ${planetes[x - 1].nom} est activée.` }
+                    : { sans: "planète introuvable" };
+            },
+            libelle: "Doctor Carrina : activer une planète → recherche sociale, militaire, génétique et spatiale",
         }),
+
+    regle("doctor-carrina-prerequis", "mercenaire", 285, 1795076851665, "Doctor Carrina : prérequis", "modifie",
+        "Onglet Technologie : une case de recherche cochée sans le niveau de connaissance voulu",
+        "Quand il vous manque un seul niveau de connaissance pour rechercher une technologie et que son cube est sur sa carte : l'onglet Décision propose de l'utiliser pour ignorer ce niveau — son cube part dans les agents usés, et la recherche de cette technologie n'est plus arrêtée à ce tour."),
 
     action("xuange", "mercenaire", 286, 1795076851666, "Xuange", "carte",
         "Science : son cube part dans les agents usés, dépensez 2X influence, X de recherche sociale.", {
@@ -1709,6 +1747,10 @@ export const SCRIPTS = [
             pioche: { de: "pioche:relique", vers: "main" },
             libelle: "Agnlan Oln : piocher un plan de relique",
         }),
+
+    regle("agnlan-oln-relique", "mercenaire", 353, 1795076851721, "Agnlan Oln : fabriquer une relique", "nouveau",
+        "Fiche d'une relique de votre main, science : « Construire avec Agnlan Oln »",
+        "Agnlan Oln est dépensé (sa carte est retirée du jeu) : la relique se fabrique en ignorant 2 fragments — ceux qui vous manquent d'abord, sinon 2 de ceux qu'elle demande sont gardés. Le scientifique est dépensé comme d'habitude."),
 
     action("shipmonger-zsknck", "mercenaire", 358, 1795076851725, "Shipmonger Zsknck", "unite",
         "Production : le cube du mercenaire part dans les agents usés, un de vos vaisseaux non biologiques est réparé gratuitement (bouton de la fiche du vaisseau).", {
@@ -2378,7 +2420,7 @@ export const SCRIPTS = [
 
     regle("evelyne-delouis", "mercenaire", 280, 0, "Evelyne Delouis", "modifie",
         "Production ouverte avec elle comme logisticien",
-        "Quand elle est le logisticien qui ouvre une production : chaque transporteur posé pendant cette production coûte 1 de moins. (Mouvement +1 du transporteur qu'elle déplace : à la main.)"),
+        "Quand elle est le logisticien qui ouvre une production : chaque transporteur posé pendant cette production coûte 1 de moins. Déplacement assisté : tant qu'elle est disponible comme logisticien, une case à cocher lui fait déplacer les transports choisis — leur mouvement augmente de 1 et c'est elle qui est utilisée."),
 
     regle("trillossa-aun-mirik", "mercenaire", 221, 0, "Trillossa Aun Mirik", "modifie",
         "Production ouverte avec lui comme logisticien",

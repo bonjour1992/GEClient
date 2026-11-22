@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, nomCase, nomElement, Pions, styleMini } from "./Interaction";
+import { useEngine, BoutonRegle, nomCase, nomElement, Pions, styleMini, mercenaireDisponible, actionsUserCarte } from "./Interaction";
 import { useElements, contenuEnCache } from "./sync";
 import { MARQUEUR, campDe, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace";
 import { etatDuControle, actionsOuvrirControleEtat, ESPACE_CONTROLE } from "./Controle";
@@ -129,6 +129,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const [trajet, setTrajet] = useState([]);       // cases traversées, après le départ
     const [gravite, setGravite] = useState(false);  // script Moteur à gravité : +1 mouvement
     const [transport, setTransport] = useState("amiral"); // agent des transports : amiral ou logisticien
+    const [evelyne, setEvelyne] = useState(false);        // Evelyne Delouis déplace les transports (+1 mouvement)
 
     const actif = joueur && ouvert && (enPhase || depart !== null);
 
@@ -214,14 +215,28 @@ export function useDeplacement({ tuiles, systemes = {} }) {
     const estEtoile = c => c.ref.id === 572 && aScript(moi, "etoile-de-la-mort-deplacement");
     const etoiles = selection.filter(estEtoile).length;
 
+    // Mercenaire Evelyne Delouis (#280), utilisable comme logisticien : « si vous l'utilisez pour
+    // déplacer un transporteur, son mouvement est augmenté de 1 ». Tant qu'elle est disponible
+    // comme logisticien et que les transports choisis sont déplacés par un logisticien, une case
+    // à cocher la fait agir : elle est utilisée à la place d'un logisticien, les transports ont +1.
+    const transportsChoisis = selection.filter(c => estTransport(contenus[c.ref.id]));
+
+    const carteEvelyne = transport === "logisticien" && transportsChoisis.length > 0 && aScript(moi, "evelyne-delouis")
+        ? mercenaireDisponible({ index, moi, search }, 280, MOTIF_LOGISTICIEN)
+        : null;
+
+    const parEvelyne = !!carteEvelyne && evelyne;
+
     const besoins = Object.keys(AGENTS)
         .map(cle => {
             const n = selection.filter(c => !estEtoile(c) && agentDe(contenus[c.ref.id], transport) === cle).length;
             const plus = ["amiral", "logisticien", "scientifique"].includes(cle) ? etoiles : 0;
+            // (Evelyne Delouis tient lieu d'un des logisticiens)
+            const moins = cle === "logisticien" && parEvelyne ? 1 : 0;
 
-            return { cle, ...AGENTS[cle], n, plus, cout: coutEnAgents(n) + plus, dispo: disponibles(AGENTS[cle].motif) };
+            return { cle, ...AGENTS[cle], n, plus, moins, cout: Math.max(0, coutEnAgents(n) + plus - moins), dispo: disponibles(AGENTS[cle].motif) };
         })
-        .filter(b => b.cout > 0);
+        .filter(b => b.cout > 0 || b.moins > 0);
 
     // Soleil d'or (#21) : le déplacer coûte 2 commerce en plus de l'agent
     const soleilsDOr = aScript(moi, "soleil-d-or-deplacement") ? selection.filter(c => c.ref.id === 21).length : 0;
@@ -283,6 +298,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         (aScript(moi, "moteur-ftl") ? 1 : 0) + (avecGravite ? 1 : 0) +
         // Vaisseau relique : un fragment spatial dépensé ce tour, +3 mouvement
         (Number(v.marques?.reliqueSpa) === etat.tour ? 3 : 0) +
+        // Evelyne Delouis déplace les transports : +1 pour eux
+        (parEvelyne && estTransport(contenus[v.ref.id]) ? 1 : 0) +
         // Réacteurs solaires (forge d'arme de Muaat) : +1 pour les soleils de guerre
         (estSoleilDeGuerre(contenus[v.ref.id]) && aScript(moi, "reacteurs-solaires") ? 1 : 0) -
         // Habilité Tempête spatiale : −1 au mouvement (ignoré avec Adaptation des réacteurs)
@@ -383,6 +400,7 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         setTrajet([]);
         setGravite(false);
         setTransport("amiral");
+        setEvelyne(false);
         setMode(nouveauDepart === null ? null : "trajet");
     }
 
@@ -416,6 +434,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
         envoyer([
             ...actionsAgents,
             ...scientifiquesGravite.map(agent => ({ type: "deplacer", c: agent.id, vers: uses })),
+            // (Evelyne Delouis déplace les transports : son cube part dans les agents usés)
+            ...(parEvelyne ? actionsUserCarte(index, moi, carteEvelyne) : []),
             // (Soleil d'or : 2 commerce par Soleil d'or déplacé)
             soleilsDOr > 0 && monCommerce > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: -Math.min(monCommerce, 2 * soleilsDOr) },
             // (compte des vaisseaux déplacés : « Finir le déplacement »)
@@ -687,6 +707,13 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                             </select>
                         </label>
                     )}
+                    {/* Evelyne Delouis : elle déplace les transports, qui ont +1 de mouvement */}
+                    {carteEvelyne && (
+                        <label data-evelyne-delouis style={{ display: "block" }}>
+                            <input type="checkbox" checked={evelyne} onChange={e => setEvelyne(e.target.checked)} />{" "}
+                            Evelyne Delouis déplace les transports : +1 de mouvement (elle est utilisée à la place d'un logisticien)
+                        </label>
+                    )}
                     {besoins.length > 0 && (
                         <div data-besoins-agents>
                             <b>Agents {depuisActive ? "dépensés (■)" : "utilisés (□)"} :</b>{" "}
@@ -695,7 +722,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                                     {b.n > 0 && `${b.n} vaisseau${b.n > 1 ? "x" : ""} → `}{Math.floor(b.n / TAILLE_FLOTTE) > 0 && `${Math.floor(b.n / TAILLE_FLOTTE)} flotte(s) de ${TAILLE_FLOTTE}`}
                                     {Math.floor(b.n / TAILLE_FLOTTE) > 0 && b.n % TAILLE_FLOTTE > 0 && " + "}
                                     {b.n % TAILLE_FLOTTE > 0 && `${b.n % TAILLE_FLOTTE} seul(s)`}
-                                    {b.plus > 0 && `${b.n > 0 ? " + " : ""}${b.plus} pour l'Étoile de la mort`} = <b>{b.cout} {b.cout > 1 ? b.pluriel : b.nom}</b> ({b.dispo.length} disponible{b.dispo.length > 1 ? "s" : ""})
+                                    {b.plus > 0 && `${b.n > 0 ? " + " : ""}${b.plus} pour l'Étoile de la mort`}
+                                    {b.moins > 0 && " − 1 (Evelyne Delouis)"} = <b>{b.cout} {b.cout > 1 ? b.pluriel : b.nom}</b> ({b.dispo.length} disponible{b.dispo.length > 1 ? "s" : ""})
                                 </span>
                             ))}
                             {soleilsDOr > 0 && <span data-soleil-d-or style={{ marginRight: 12 }}>Soleil d'or : <b>{2 * soleilsDOr} commerce</b></span>}

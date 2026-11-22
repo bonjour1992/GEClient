@@ -235,6 +235,11 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         compte: cle => compte(cle),
         // Planètes que je possède ; alliances en cours chez moi (promesses de type alliance)
         planetesPossedees: () => mesActifs.filter(x => !x.cache && x.ref?.type === "planet").length,
+        // Mes planètes posées sur la carte et pas encore activées : [{ nom, action (qui l'active) }]
+        planetesActivables: () => mesActifs.filter(x => !x.cache && x.ref?.type === "planet")
+            .flatMap(x => zonesDePlanete(x.ref.id).map(z => ({ nom: nomElement(search, x.ref), zone: z })))
+            .filter(p => !(index.parZone.get(p.zone) || []).some(x => !x.ref && x.jeton === ACTIVATION && !x.marques?.ruine))
+            .map(p => ({ nom: p.nom, action: { type: "creer", jeton: ACTIVATION, zone: p.zone } })),
         alliances: () => mesPromesses.filter(x => contenuPromesses[x.ref.id]?.type === "alli").length,
         // Systèmes à anomalie (hors hyperlane) où j'ai une unité
         anomalies: () => mesCases().filter(n => systemeDe(n)?.anomaly && !/^hpl/.test(systemeDe(n).anomaly)).length,
@@ -490,7 +495,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
             // `demandes` : plusieurs décisions à la suite (un montant, puis une loi, puis une
             // colonne…) ; le script reçoit alors le tableau des réponses, et chaque question
             // les réponses déjà données.
-            const questions = s.demandes || (s.demande ? [s.demande] : []);
+            // (`demandes` peut être une fonction des outils : une question par loi du tour — SR-124)
+            const questions = (typeof s.demandes === "function" ? s.demandes(outils) : s.demandes) || (s.demande ? [s.demande] : []);
             const reponses = [];
 
             // (la fiche d'où part l'action se ferme : la décision se prend dans son onglet)

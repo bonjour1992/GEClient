@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
-import { useEngine, Emplacements, Pions, nomElement, confirmerRegle } from "./Interaction";
+import { useEngine, Emplacements, Pions, nomElement, confirmerRegle, carteUsee, actionsUserCarte } from "./Interaction";
+import { demander } from "./demande";
 import { Text } from "../../../Component/Text";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { ModalPickerInput } from "../../../Input/ModalPickerInput";
@@ -200,6 +201,49 @@ function RechercheDuTour({ base }) {
     );
 }
 
+// Mercenaire Doctor Carrina (#285) : « lorsque vous recherchez une technologie : #use, ignorez
+// un niveau de prérequis ». Quand il manque un seul niveau au joueur qui recherche pour lui-même
+// et que le cube de Carrina est sur sa carte, une décision lui propose de l'utiliser.
+//   -> null (rien : le prérequis manque toujours), ou { actions, texte } : le prérequis est
+//      ignoré — avec le cube de Carrina dans ce coup, ou sans rien de plus si elle a déjà servi
+//      pour cette technologie à ce tour (compteur joueur:<u>:carrina = tour × 10000 + technologie)
+async function avecCarrina({ etat, index, moi, aScript, search }, chercheur, idTech, manque) {
+
+    if (manque !== 1 || chercheur !== moi) {
+        return null;
+    }
+
+    const cle = `joueur:${moi}:carrina`;
+    const marque = etat.tour * 10000 + idTech;
+
+    if (Number(etat.compteurs[cle]) === marque) {
+        return { actions: [], texte: "" };
+    }
+
+    const carte = aScript(moi, "doctor-carrina-prerequis")
+        ? (index.parZone.get(`joueur:${moi}:actif`) || []).find(c => !c.cache && c.ref?.type === "mercenaire" && c.ref.id === 285 && !carteUsee(index, c))
+        : null;
+
+    const nom = nomElement(search, { type: "tech", id: idTech });
+
+    if (!carte || (await demander({
+        titre: "Doctor Carrina",
+        texte: `Il vous manque un niveau de connaissance pour rechercher ${nom}.`,
+        choix: [
+            { valeur: 1, libelle: "Utiliser Doctor Carrina : ce niveau de prérequis est ignoré" },
+            { valeur: 2, libelle: "Ne pas l'utiliser" },
+        ],
+        renoncer: false,
+    })) !== 1) {
+        return null;
+    }
+
+    return {
+        actions: [...actionsUserCarte(index, moi, carte), { type: "compteur", id: cle, valeur: marque }],
+        texte: `Rechercher ${nom} — Doctor Carrina : un niveau de prérequis ignoré`,
+    };
+}
+
 // Feuille « small » (ex. Signal, Tempête) : seules les cases 8 à 15 sont
 // utilisées. Retourne l'affichage à utiliser pour cette feuille.
 export function affichageFeuille(jeu, contenu) {
@@ -214,7 +258,7 @@ export function affichageFeuille(jeu, contenu) {
 function Feuille({ composant, base }) {
 
     const {
-        etat, index, jouer, envoyer, joueur, jeu, ouvrirFiche, partie, factionDe, nomDe, aviser,
+        etat, index, jouer, envoyer, joueur, moi, jeu, ouvrirFiche, partie, factionDe, nomDe, aviser,
         aScript, aTechnologie, scriptsDesactives, search,
     } = useEngine();
 
@@ -303,7 +347,8 @@ function Feuille({ composant, base }) {
         connaissancePlus,
     };
 
-    function onClick(event) {
+    // (asynchrone : Doctor Carrina peut poser une question, onglet Décision)
+    async function onClick(event) {
 
         // Un clic sur un pion posé sur la technologie ouvre sa fiche
         if (event.target.closest("[data-composant]")) {
@@ -353,11 +398,16 @@ function Feuille({ composant, base }) {
         // de cette feuille. S'il manque, la case cochée demande une confirmation.
         const prerequis = Math.max(0, (Number(techs[idTech]?.tier) || 1) - 1);
 
-        const commentaire = plus && niveau < prerequis
+        // (Doctor Carrina peut faire ignorer un niveau de prérequis : avecCarrina)
+        const carrina = plus && niveau < prerequis
+            ? await avecCarrina({ etat, index, moi, aScript, search }, chercheur, idTech, prerequis - niveau)
+            : null;
+
+        const commentaire = plus && niveau < prerequis && !carrina
             ? confirmerRegle(`Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
                 `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
             ])
-            : "";
+            : (carrina?.texte || "");
 
         if (commentaire === null) {
             return;
@@ -365,6 +415,7 @@ function Feuille({ composant, base }) {
 
         // La case cochée (ou décochée) est notée au journal de recherche du tour
         const avance = [
+            ...(carrina?.actions || []),
             { type: "compteur", id: idProgres(k), valeur },
             noter(etat, chercheur, "t", idTech, plus ? 1 : -1),
             noterFinie(etat, chercheur, idTech, valeur >= cout(k)),
@@ -518,7 +569,8 @@ function TechIsolee({ composant, base }) {
     const progres = Number(etat.compteurs[idProgres]) || 0;
     const utilisee = !!etat.compteurs[idUtilisee];
 
-    function onClick(event) {
+    // (asynchrone : Doctor Carrina peut poser une question, onglet Décision)
+    async function onClick(event) {
 
         // Un clic sur un pion posé sur la technologie, ou sur le bouton de sa fiche
         if (!joueur || event.target.closest("[data-composant]") || event.target.closest("button")) {
@@ -542,17 +594,21 @@ function TechIsolee({ composant, base }) {
         const prerequis = Math.max(0, (Number(tech?.tier) || 1) - 1);
         const niveau = connaissance(chercheur, tech?.techType);
 
-        const commentaire = plus && niveau < prerequis
+        // (Doctor Carrina peut faire ignorer un niveau de prérequis : avecCarrina)
+        const carrina = plus && niveau < prerequis ? await avecCarrina(ctx, chercheur, idTech, prerequis - niveau) : null;
+
+        const commentaire = plus && niveau < prerequis && !carrina
             ? confirmerRegle(`Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
                 `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
             ])
-            : "";
+            : (carrina?.texte || "");
 
         if (commentaire === null) {
             return;
         }
 
         const avance = [
+            ...(carrina?.actions || []),
             { type: "compteur", id: idProgres, valeur },
             noter(etat, chercheur, "t", idTech, plus ? 1 : -1),
             noterFinie(etat, chercheur, idTech, valeur >= cout),

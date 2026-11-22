@@ -50,6 +50,8 @@ import {
     reglerConnexion,
     payerConnexion,
     choisirRemplacants,
+    carteUsee,
+    cubeDeMercenaire,
     Modale,
     Pas,
 } from "./Interaction";
@@ -2347,25 +2349,52 @@ function Fiche({ id, fermer }) {
 
     const pointsRelique = Number(contenu?.point) || 0;
 
-    async function construire() {
+    // Mercenaire Agnlan Oln (#353) : « #spend : fabriquer une relique en ignorant 2 fragments » —
+    // sa carte, dans mes éléments actifs, tant que son cube est dessus
+    const agnlan = !aScript(moi, "agnlan-oln-relique") ? null : ((index.parZone.get(`joueur:${moi}:actif`) || [])
+        .find(x => !x.cache && x.ref?.type === "mercenaire" && x.ref.id === 353 && !carteUsee(index, x)) || null);
+
+    //   avecAgnlan : Agnlan Oln est dépensé, 2 fragments sont ignorés — ceux qui manquent d'abord,
+    //   sinon 2 de ceux que la relique demande sont gardés (les derniers de la liste)
+    async function construire(avecAgnlan = false) {
 
         const mesFragments = index.parZone.get(`joueur:${moi}:fragments`) || [];
         const aRetirer = [];
         const manques = [];
+        let ignores = avecAgnlan === true ? 2 : 0;
+        let manquants = 0;
 
-        for (const [jeton, nombre] of besoins) {
+        // (d'abord ce qui manque : chaque fragment manquant est un fragment ignoré)
+        const lots = besoins.map(([jeton, nombre]) => {
             const dispo = mesFragments.filter(f => !f.ref && f.jeton === jeton);
+            const manque = Math.max(0, nombre - dispo.length);
 
-            if (dispo.length < nombre) {
-                manques.push(`${nombre - dispo.length} ${jeton.toLowerCase()}`);
+            manquants += manque;
+
+            if (manque) {
+                manques.push(`${manque} ${jeton.toLowerCase()}`);
             }
 
-            aRetirer.push(...dispo.slice(0, nombre));
+            return { dispo, pris: Math.min(nombre, dispo.length) };
+        });
+
+        if (manquants > ignores) {
+            signaler(`Construire ${nom} : il vous manque ${manques.join(", ")}` + (ignores ? ` (Agnlan Oln n'en ignore que ${ignores})` : "") + ".");
+            return;
         }
 
-        if (manques.length) {
-            signaler(`Construire ${nom} : il vous manque ${manques.join(", ")}.`);
-            return;
+        ignores -= manquants;
+
+        // (le reste des fragments ignorés : autant de fragments demandés qui sont gardés)
+        for (const lot of [...lots].reverse()) {
+            const gardes = Math.min(ignores, lot.pris);
+
+            lot.pris -= gardes;
+            ignores -= gardes;
+        }
+
+        for (const lot of lots) {
+            aRetirer.push(...lot.dispo.slice(0, lot.pris));
         }
 
         const scientifique = agentDisponible({ index, moi, search }, "scientifique");
@@ -2379,6 +2408,10 @@ function Fiche({ id, fermer }) {
             // (le scientifique est dépensé : Bio stimulant propose de l'user à la place)
             ...await depenserAgent({ aScript, moi, etat }, scientifique, "le scientifique"),
             ...aRetirer.map(f => ({ type: "supprimer", c: f.id })),
+            // (Agnlan Oln est dépensé : sa carte et son cube sont retirés du jeu)
+            ...(avecAgnlan === true && agnlan
+                ? [cubeDeMercenaire(index, agnlan) && { type: "supprimer", c: cubeDeMercenaire(index, agnlan).id }, { type: "supprimer", c: agnlan.id }].filter(Boolean)
+                : []),
             { type: "deplacer", c: c.id, vers: `joueur:${moi}:actif` },
             // Mon marqueur avance sur la piste des points du déroulé
             ...actionsPoints(etat, moi, pointsRelique),
@@ -2406,7 +2439,7 @@ function Fiche({ id, fermer }) {
                         {constructible && (
                             <button
                                 type="button"
-                                onClick={construire}
+                                onClick={() => construire()}
                                 title="Supprime un scientifique et les fragments demandés, place la relique dans vos éléments actifs et vous donne ses points"
                                 style={{ fontWeight: "bold", padding: "4px 12px", backgroundColor: COULEUR_A_FAIRE }}
                             >
@@ -2415,6 +2448,19 @@ function Fiche({ id, fermer }) {
                                     ? besoins.map(b => `${b[1]} ${b[0].replace(/^Fragment /, "")}`).join(", ")
                                     : "sans fragment"}
                                 {pointsRelique ? ` → ${pointsRelique} point${pointsRelique > 1 ? "s" : ""}` : ""})
+                            </button>
+                        )}
+
+                        {/* Agnlan Oln : la même construction, 2 fragments ignorés, le mercenaire dépensé */}
+                        {constructible && agnlan && (
+                            <button
+                                type="button"
+                                data-action="construire-agnlan-oln"
+                                onClick={() => construire(true)}
+                                title="Agnlan Oln est dépensé (sa carte est retirée du jeu) : la relique est fabriquée en ignorant 2 fragments — ceux qui vous manquent d'abord, sinon 2 de ceux qu'elle demande sont gardés"
+                                style={{ fontWeight: "bold", padding: "4px 12px", backgroundColor: COULEUR_A_FAIRE }}
+                            >
+                                Construire avec Agnlan Oln (2 fragments ignorés, il est dépensé)
                             </button>
                         )}
 
