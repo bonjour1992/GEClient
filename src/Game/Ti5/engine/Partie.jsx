@@ -989,8 +989,11 @@ export function Partie({ id }) {
 
         // Phase de production : Ctrl + clic sur une de mes unités de la carte qui a
         // une capacité de production ouvre une production (Production.jsx)
+        // (technologie Forge stellaire : un soleil de guerre dans une supernova produit aussi —
+        //  ouvrirProduction vérifie la supernova)
         if (estJoueur && c && event.ctrlKey && enProduction && c.ref?.type === "unit" &&
-            /^hex:/.test(c.zone || "") && lireProduction(contenuEnCache(c.ref.id))) {
+            /^hex:/.test(c.zone || "") && (lireProduction(contenuEnCache(c.ref.id)) ||
+                (contenuEnCache(c.ref.id)?.type === "sun" && ctx.aScript(moi, "forge-stellaire")))) {
             ouvrirProduction({ ...ctx, setProduction }, c, confirmerRegle);
             return true;
         }

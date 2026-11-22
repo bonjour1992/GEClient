@@ -1166,6 +1166,22 @@ export const SCRIPTS = [
         "Ravitaillement automatique (début de la phase)",
         "Sa résistance n'a pas de limite : la Sève de vie continue de la soigner sans dégât (résistance en plus, affichée en vert). À 6 de résistance ou plus au ravitaillement, New eden est posé sur sa planète."),
 
+    regle("george-nobin", "mercenaire", 304, 0, "George Nobin", "modifie",
+        "Fiche d'un vaisseau de commerce : « Livraison commerciale »",
+        "Tant que son cube est sur sa carte : un choix « George Nobin : + X » (4 au plus) — X commerce sont dépensés, la livraison de ce vaisseau est augmentée de X, et son cube part dans les agents usés."),
+
+    regle("sphere-de-dyson-pose", "unit", 178, 0, "Sphère de Dyson : pose", "modifie",
+        "Phase de construction : la sphère glissée vers un système",
+        "Elle se place dans une nébuleuse, ou dans un système vide adjacent à une supernova : ailleurs, la construction demande une confirmation."),
+
+    regle("vassal-fin", "Promesse", 224, 0, "Vassal : fin de la promesse", "auto",
+        "Conflit : « Engager », « Cibler » ; « Terminer le combat »",
+        "La promesse est dépensée (retour à la réserve, sans infamie) quand le suzerain engage son vassal, ou quand le vassal détruit le vaisseau amiral du suzerain. (Planète prise au suzerain : à la main.)"),
+
+    regle("memoria-c-revendiquer", "unit", 770, 0, "Memoria C : revendiquer", "modifie",
+        "Fiche d'un système : « Revendiquer »",
+        "Une Memoria C à vous dans le système, pas encore usée, revendique à la place d'un diplomate : elle est usée. (Si l'accord d'autres camps est demandé, la revendication se conclut dans l'onglet Conflit avec un diplomate.)"),
+
     regle("gloire-au-juste", "unit", 151, 0, "Gloire au juste", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Tant que Gloire au juste est sur la carte : si le Winnu possède Mecatol Rex, l'entretien de chaque faction rapporte 1 influence par faction qui a plus d'infamie qu'elle ; sinon, la faction qui possède Mecatol Rex gagne 1 infamie."),
@@ -2512,6 +2528,14 @@ export const SCRIPTS = [
         "Sève de vie rend 2 de résistance au lieu d'une."),
 
     // ----- Tempête spatiale, Rupture de l'espace-temps -----
+
+    effet("canon-solaire", 1029, 0, "Canon solaire", "auto",
+        "Conflit : canons spatiaux",
+        "Un de vos soleils de guerre qui se trouve dans une supernova a un canon spatial (5, 3 dés) de portée 2 : il est proposé dans « Mes canons spatiaux à portée »."),
+
+    effet("forge-stellaire", 1028, 0, "Forge stellaire", "modifie",
+        "Phase de production : Ctrl + clic sur un soleil de guerre",
+        "Un de vos soleils de guerre qui se trouve dans une supernova ouvre une production comptée de 3 vaisseaux ou mechs."),
 
     effet("adaptation-des-reacteurs", 399, 1794343420992, "Adaptation des réacteurs", "auto",
         "Espace : déplacement assisté",

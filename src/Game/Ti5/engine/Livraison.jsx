@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useEngine, BoutonRegle, agentDisponible, nomElement, tuileDe } from "./Interaction";
+import { useEngine, BoutonRegle, agentDisponible, nomElement, tuileDe, carteUsee, actionsUserCarte } from "./Interaction";
 import { demanderBlocage } from "./BlocageAction";
 import { lieuDe } from "./regleBlocage";
 import { elementsAchat, actionsVersStock, stockDe } from "./Achats";
 import { possesseurActuel } from "./Controle";
 import { useElement, contenuEnCache } from "./sync";
-import { DETTE, MARQUEUR, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
+import { DETTE, MARQUEUR, campDe, MOTIF_NEGOCIANT, typeUnite } from "./miseEnPlace";
 import { demander } from "./demande";
 
 // ============================================================
@@ -127,6 +127,18 @@ export function LivraisonCommerciale({ c, fermer }) {
     const contenu = useElement(c.ref.id);
     const [choisie, setChoisie] = useState("");
 
+    // Mercenaire George Nobin (#304) : « #use lors d'une livraison effectuée par un vaisseau de
+    // commerce, #spend X commerce (4 au plus) : la livraison est augmentée de X ». Sa carte, s'il
+    // est disponible (cube sur la carte), et le montant choisi (0 : il ne sert pas).
+    const [nobinX, setNobinX] = useState(0);
+    const monCommerce = Number(etat.compteurs[`joueur:${moi}:commerce`]) || 0;
+
+    const carteNobin = ctx.aScript(moi, "george-nobin") && typeUnite(contenu) === "com"
+        ? (index.parZone.get(`joueur:${moi}:actif`) || []).find(x => !x.cache && x.ref?.type === "mercenaire" && x.ref.id === 304 && !carteUsee(index, x)) || null
+        : null;
+
+    const nobin = carteNobin ? Math.max(0, Math.min(4, monCommerce, nobinX)) : 0;
+
     const texte = contenu?.habilite || "";
     const valeur = Number(/#livr\((\d+)\)/i.exec(texte)?.[1]) || 0;
     const m = /^hex:(\d+)/.exec(c.zone || "");
@@ -220,7 +232,8 @@ export function LivraisonCommerciale({ c, fermer }) {
         for (const navire of libres) {
 
             if (cible) {
-                const livraison = await livrer(ctx, cible, valeurDe(navire));
+                // (George Nobin : la livraison du vaisseau de la fiche est augmentée de X)
+                const livraison = await livrer(ctx, cible, valeurDe(navire) + (navire.id === c.id ? nobin : 0));
 
                 actions.push(...livraison.actions);
                 messages.push(...livraison.messages);
@@ -236,10 +249,16 @@ export function LivraisonCommerciale({ c, fermer }) {
 
         // Au stock d'achat : une seule écriture, la somme des livraisons
         if (stock) {
-            const total = libres.reduce((s, navire) => s + valeurAuStock(ctx, valeurDe(navire)), 0);
+            const total = libres.reduce((s, navire) => s + valeurAuStock(ctx, valeurDe(navire) + (navire.id === c.id ? nobin : 0)), 0);
 
             actions.push(...actionsVersStock(etat, stock, moi, total));
             messages.push(`Livraison commerciale : ${total} versé à votre stock d'achat sur ${stock.nom} (${stockDe(etat, stock, moi) + total} en tout).`);
+        }
+
+        // George Nobin : son cube part dans les agents usés, X commerce sont dépensés
+        if (nobin > 0 && libres.some(navire => navire.id === c.id)) {
+            actions.push({ type: "compteur", id: `joueur:${moi}:commerce`, delta: -nobin }, ...actionsUserCarte(index, moi, carteNobin));
+            messages.push(`George Nobin : ${nobin} commerce dépensé, la livraison est augmentée de ${nobin}.`);
         }
 
         envoyer([...usage, ...actions], [commentaire, ...messages].join(" — ").slice(0, 300));
@@ -259,6 +278,16 @@ export function LivraisonCommerciale({ c, fermer }) {
                 </select>
             )}
 
+            {/* George Nobin : X commerce dépensés (4 au plus), la livraison augmentée d'autant */}
+            {carteNobin && (
+                <label data-george-nobin title="George Nobin : dépensez X commerce (4 au plus), la livraison de ce vaisseau est augmentée de X ; son cube part dans les agents usés">
+                    George Nobin : +
+                    <select value={nobin} onChange={e => setNobinX(Number(e.target.value))}>
+                        {[0, 1, 2, 3, 4].filter(x => x <= monCommerce).map(x => <option key={x} value={x}>{x}</option>)}
+                    </select>
+                </label>
+            )}
+
             <BoutonRegle
                 data-action="livraison-commerciale"
                 disabled={destinations.length > 1 && !choix}
@@ -273,7 +302,7 @@ export function LivraisonCommerciale({ c, fermer }) {
                     : aviser("Livraison commerciale : " + sansDestination + "."))}
                 title={`Livre ${valeur} à une faction qui a un comptoir dans ce système, ou à votre stock d'achat sur un élément à achat${avecNegociant ? " ; use un négociant" : ""}${depensee ? " ; l'unité est dépensée" : ""}. Un test de blocage s'ouvre d'abord si d'autres factions peuvent bloquer l'unité.`}
             >
-                Livraison commerciale ({valeur}{depensee ? ", l'unité est dépensée" : ""}{parMarqueur ? ", dépense son marqueur" : ""})
+                Livraison commerciale ({valeur + nobin}{depensee ? ", l'unité est dépensée" : ""}{parMarqueur ? ", dépense son marqueur" : ""})
             </BoutonRegle>
 
             {/* Flotte : 2 négociants font livrer tous mes vaisseaux à livraison de cet espace */}

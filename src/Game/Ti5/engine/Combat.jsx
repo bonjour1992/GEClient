@@ -9,6 +9,9 @@ import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, RESSOURCES, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
 import { promessesTenues, actionsRendrePromesse, REDEVANCE_DE_PROTECTION } from "./effetsBlocage";
+
+// Promesse Vassal : la carte est chez le suzerain, avec le marqueur du vassal
+const VASSAL = 224;
 import { turnNumber } from "../ti5Const";
 import { lirePillage, auteurDesDegats } from "./effets";
 import { noter } from "./recherche";
@@ -366,8 +369,23 @@ function CombatSysteme({ lieu }) {
     // portée, au prix d'un scientifique. -> "oui", "scientifique" ou null
     const distanceDe = c => distanceCases(numero, Number(/^hex:(\d+)/.exec(c.zone || "")?.[1]));
 
+    // Technologie Canon solaire (Braises de Muaat) : un soleil de guerre qui se trouve dans une
+    // supernova gagne un canon (5, 3 dés) de portée 2
+    const dansUneSupernova = c => {
+        const m = /^hex:(\d+)/.exec(c.zone || "");
+        return !!m && contenuEnCache(tuileDe(index, Number(m[1]))?.ref?.id)?.anomaly === "sup";
+    };
+
+    const canonSolaire = c => contenus[c.ref.id]?.type === "sun" && campDe(c) !== NEUTRE &&
+        aScript(campDe(c), "canon-solaire") && !capacite(contenus[c.ref.id], "can") && dansUneSupernova(c);
+
     // Portée écrite sur l'unité (« #can(6,4) portée 0 », « #can(6,2) portée 1 »), 1 sinon
     const porteeEcrite = c => {
+
+        if (canonSolaire(c)) {
+            return 2;
+        }
+
         const m = /#can\([^)]*\)\s*port[ée]e\s*(\d+)/i.exec(String(contenus[c.ref.id]?.habilite || "").replace(/<[^>]+>/g, " "));
 
         return m ? Number(m[1]) : 1;
@@ -393,7 +411,9 @@ function CombatSysteme({ lieu }) {
 
     // Canon d'une unité : celui de son texte ; script Laser longue portée : le
     // vaisseau amiral en gagne un (6, 3 dés)
+    // (Canon solaire : un soleil de guerre dans une supernova en gagne un — 5, 3 dés)
     const canonDe = c => capacite(contenus[c.ref.id], "can") ||
+        (canonSolaire(c) ? [5, 3] : null) ||
         (contenus[c.ref.id]?.type === "fs" && campDe(c) !== NEUTRE && aScript(campDe(c), "laser-longue-portee") ? [6, 3] : null);
 
     // Mes canons à portée qui n'ont pas encore été choisis pour tirer
@@ -600,6 +620,15 @@ function CombatSysteme({ lieu }) {
             if (rompues.length) {
                 actions.push(...rompues.flatMap(carte => actionsRendrePromesse(etat, carte)));
                 aviser(`Redevance de protection : vous engagez ${nomCamp(joueurVise)}, la promesse est dépensée.`);
+            }
+
+            // Promesse Vassal (#224) : « si [le suzerain] effectue un engagement contre vous : #spend »
+            // — le suzerain (qui tient la promesse) engage son vassal : la promesse est dépensée
+            const vassaux = aScript(moi, "vassal-fin") ? promessesTenues(etat, VASSAL, moi, joueurVise) : [];
+
+            if (vassaux.length) {
+                actions.push(...vassaux.flatMap(carte => actionsRendrePromesse(etat, carte)));
+                aviser(`Vassal : vous engagez votre vassal ${nomCamp(joueurVise)}, la promesse est dépensée.`);
             }
         }
 
@@ -970,6 +999,17 @@ function CombatSysteme({ lieu }) {
             aRetirer.find(w => (w.u.mot_cle || []).includes("com") && w.c.marques?.degatPar === sula.id)?.id === v.id) {
             actions.push({ type: "creer", jeton: MARQUEUR, sur: sula.id, proprio: camp, marques: { livraison: 1 } });
             gains.push("un marqueur posé sur S'Ula Mentarion (livraison de 5 à la diplomatie)");
+        }
+
+        // Promesse Vassal (#224) : « si vous détruisez le vaisseau amiral [du suzerain] : #spend » —
+        // le vaisseau amiral du suzerain détruit par son vassal : la promesse est dépensée
+        const vassalite = v.u.type === "fs" && v.camp !== NEUTRE && aScript(v.camp, "vassal-fin")
+            ? promessesTenues(etat, VASSAL, v.camp, camp)
+            : [];
+
+        if (vassalite.length) {
+            actions.push(...vassalite.flatMap(carte => actionsRendrePromesse(etat, carte)));
+            gains.push("la promesse Vassal est dépensée (vaisseau amiral du suzerain détruit par son vassal)");
         }
 
         if (v.c.ref?.id === 850 && aScript(camp, "armageddon-capture")) {

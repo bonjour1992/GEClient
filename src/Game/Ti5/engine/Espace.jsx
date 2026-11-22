@@ -1124,7 +1124,8 @@ function FicheSysteme({ numero, id, fermer }) {
                 nom={`${libelle} (${nomCase(numero)})`}
                 obstacles={[
                     !phasePropre && !enCombatPhase && "ce n'est pas une phase de combat",
-                    !mesUnitesReelles && "vous n'avez aucune unité dans ce système",
+                    // (canons spatiaux : ils tirent à distance, aucune unité n'est demandée sur place)
+                    !mesUnitesReelles && !lieu.endsWith("c") && "vous n'avez aucune unité dans ce système",
                     ...autres,
                 ]}
                 faire={commentaire => envoyerAuCombat(lieu, commentaire)}
@@ -1460,6 +1461,12 @@ function FicheSysteme({ numero, id, fermer }) {
     const agentRetenu = (station, cle) =>
         station?.stationType === "spe" ? [{ type: "compteur", id: cle + ":agent", valeur: agentStation }] : [];
 
+    // Memoria C (#770, Le Nomade) : une des miennes dans ce système, pas encore usée — elle peut
+    // revendiquer à la place d'un diplomate (script memoria-c-revendiquer)
+    const memoriaC = !aScript(moi, "memoria-c-revendiquer") ? null : (Object.values(etat.composants).find(c =>
+        !c.cache && c.ref?.type === "unit" && c.ref.id === 770 && campDe(c) === moi && !c.marques?.use &&
+        (c.zone === zoneEspace || c.zone?.startsWith(zoneEspace + ":"))) || null);
+
     function revendiquer(idPlanete, k, commentaire, station = null) {
 
         // D'autres camps ont des unités militaires dans le système (espace, planète) :
@@ -1478,10 +1485,13 @@ function FicheSysteme({ numero, id, fermer }) {
             return;
         }
 
-        const diplomate = agentDisponible({ index, moi, search }, "diplomate");
+        // Memoria C (« #Prev : #use : revendiquer ») : dans ce système et pas encore usée, c'est
+        // elle qui revendique — elle est usée, aucun diplomate ne l'est
+        const diplomate = memoriaC ? null : agentDisponible({ index, moi, search }, "diplomate");
 
         // (sans diplomate disponible, le bouton l'a dit : aucun n'est usé)
         prendre(idPlanete, k, commentaire, [
+            ...(memoriaC ? [{ type: "marquer", c: memoriaC.id, marque: "use", valeur: true }] : []),
             ...(diplomate ? [{ type: "deplacer", c: diplomate.id, vers: uses, de: diplomate.zone }] : []),
             ...(station ? poseSurStation(k, station, idPlanete).actions : []),
         ], false, !!station);
@@ -1630,7 +1640,8 @@ function FicheSysteme({ numero, id, fermer }) {
     }
 
     const aDiplomate = !!agentDisponible({ index, moi, search }, "diplomate");
-    const sansDiplomate = !aDiplomate && manque("diplomate");
+    // (Memoria C revendique à la place d'un diplomate : voir revendiquer)
+    const sansDiplomate = !aDiplomate && !memoriaC && manque("diplomate");
 
     // Script Manipulation mentale : use un diplomate, pose une de mes infanteries
     // sur une planète de ce système — une de mes unités doit être ici ou à côté
@@ -1938,7 +1949,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     faire={commentaire => revendiquer(lien.id, k, commentaire)}
                                                     title="Vous avez une unité dans le système : use un diplomate, la carte va dans vos éléments actifs. Si d'autres camps y ont des unités militaires, leur accord est d'abord demandé (onglet Conflit)"
                                                 >
-                                                    Revendiquer (use un diplomate)
+                                                    Revendiquer ({memoriaC ? "use Memoria C" : "use un diplomate"})
                                                 </BoutonRegle>
                                             </span>
                                         )}

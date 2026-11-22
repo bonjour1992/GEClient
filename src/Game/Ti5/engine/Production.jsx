@@ -161,7 +161,14 @@ export async function ouvrirProduction(ctx, c, confirmer) {
     }
 
     const contenu = await chargerContenu(c.ref.id);
-    const capacite = lireProduction(contenu);
+
+    // Technologie Forge stellaire (Braises de Muaat) : un soleil de guerre qui se trouve dans
+    // une supernova a #prod(3, Vaisseau/Mech)
+    const tuileIci = tuileDe(index, Number(m[1]));
+    const forge = !lireProduction(contenu) && typeUnite(contenu) === "sun" && aScript(moi, "forge-stellaire") &&
+        (tuileIci && await chargerContenu(tuileIci.ref.id))?.anomaly === "sup";
+
+    const capacite = lireProduction(contenu) || (forge ? { quantite: 3, types: ["vaisseau", "mech"] } : null);
 
     if (!capacite) {
         return false;

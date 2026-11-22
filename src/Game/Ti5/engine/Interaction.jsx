@@ -2476,7 +2476,20 @@ export function Plan({ children, style }) {
                 });
             }
 
+            // Sphère de Dyson (#178) : « doit être placée dans une nébuleuse, ou adjacente à une
+            // supernova dans un système vide » (sans planète)
+            const dyson = construites.some(ref => ref.id === 178) && aScript(moi, "sphere-de-dyson-pose");
+            const anomalieDe = n => contenuEnCache(tuileDe(index, n)?.ref?.id)?.anomaly || "";
+            const systemeVide = !elemsDuSysteme.some(lien => lien?.id > 0);
+
+            const presDUneSupernova = dyson && [...index.parZone.keys()].some(z => {
+                const autre = /^hex:(\d+)$/.exec(z);
+                return !!autre && distanceCases(Number(caseDuLieu), Number(autre[1])) === 1 && anomalieDe(Number(autre[1])) === "sup";
+            });
+
             obstacles.push(
+                dyson && anomalieDe(Number(caseDuLieu)) !== "neb" && !(systemeVide && presDUneSupernova) &&
+                    "la Sphère de Dyson se place dans une nébuleuse, ou dans un système vide adjacent à une supernova",
                 construites.length > 0 && !present &&
                     (surPlanete
                         ? "vous n'avez ni unité sur cette planète ni sa possession : vous ne la contrôlez pas"

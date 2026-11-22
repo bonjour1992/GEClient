@@ -21,15 +21,15 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
+| Technologies | 101 | 96 | 4 | 1 | 43 | 20 | 46 |
 | Habilités | 64 | 44 | 7 | 13 | 35 | 6 | 18 |
-| Unités | 114 | 103 | 11 | 0 | 32 | 9 | 54 |
+| Unités | 114 | 105 | 9 | 0 | 32 | 11 | 54 |
 | Planètes | 35 | 30 | 4 | 1 | 22 | 8 | 14 |
-| Mercenaires | 40 | 25 | 10 | 5 | 19 | 20 | 2 |
+| Mercenaires | 40 | 26 | 9 | 5 | 19 | 20 | 2 |
 | Promesses | 19 | 17 | 2 | 0 | 14 | 3 | 5 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **385** | **325** | **38** | **22** | **175** | **67** | **138** |
+| **Total** | **385** | **330** | **35** | **20** | **175** | **70** | **139** |
 
 Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
@@ -135,8 +135,8 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 1025 | Réacteurs solaires (Braises de Muaat WIP) | **oui** | automatique | Déplacement assisté : +1 au mouvement de vos soleils de guerre. | — |
 | 1026 | Coque stellaire (Braises de Muaat WIP) | **oui** | automatique | Résistance de vos soleils de guerre : +1 (Conflit, fiche de l'unité). | — |
 | 1027 | Armement solaire (Braises de Muaat WIP) | **oui** | automatique | Conflit, combat spatial : +2 pour vos soleils de guerre. | — |
-| 1028 | Forge stellaire (Braises de Muaat WIP) | non | nouveau bouton (prévu) | — | Production de 3 vaisseaux ou mechs par un soleil de guerre dans une supernova. (moyenne) |
-| 1029 | Canon solaire (Braises de Muaat WIP) | non | automatique (prévu) | — | Canon 5*** portée 2 dans une supernova : la portée au-delà de 1 n'est pas gérée. (moyenne) |
+| 1028 | Forge stellaire (Braises de Muaat WIP) | **oui** | bouton existant modifié | Phase de production : Ctrl + clic sur un de vos soleils de guerre qui se trouve dans une supernova ouvre une production comptée de 3 vaisseaux ou mechs. | — |
+| 1029 | Canon solaire (Braises de Muaat WIP) | **oui** | automatique | Conflit, canons spatiaux : un de vos soleils de guerre qui se trouve dans une supernova a un canon (5, 3 dés) de portée 2 ; il est proposé dans « Mes canons spatiaux à portée ». | — |
 | 1030 | Cœur instable (Braises de Muaat WIP) | non | nouveau bouton (prévu) | — | Marqueur « Instable », explosion au bombardement suivant, système remplacé par une supernova. (difficile) |
 
 ## Habilités
@@ -245,7 +245,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 175 | Bouclier mobile (Université de Jol-Nar) | **oui** | nouveau bouton | Conflit, combat terrestre : « Annuler 1 (1 ressource) » sur une autre de vos unités de la planète qui doit encaisser — le dégât est annulé. | — |
 | 176 | Laboratoire (Université de Jol-Nar) | **oui** | bouton existant modifié | « Rechercher » rapporte 1 de recherche de plus sur une planète où le joueur a un Laboratoire. | — |
 | 177 | Système de défense (Université de Jol-Nar) | **oui** | nouveau bouton | Conflit, bombardement et raid : « Annuler 1 (1 ressource) » sur une autre de vos unités de la planète qui doit encaisser — le dégât est annulé. | — |
-| 178 | Sphère de dyson (Université de Jol-Nar) | **partiel** | nouveau bouton | Fiche de l'unité, phase de science : use un scientifique, +2 ressources par niveau de connaissance spatiale. | Règle de pose (nébuleuse, supernova) non vérifiée. |
+| 178 | Sphère de dyson (Université de Jol-Nar) | **oui** | nouveau bouton + bouton existant modifié | Fiche de l'unité, phase de science : use un scientifique, +2 ressources par niveau de connaissance spatiale. Construction : hors d'une nébuleuse ou d'un système vide adjacent à une supernova, la pose demande une confirmation. | — |
 | 199 | Soleil de guerre (Université de Jol-Nar) | **oui** | automatique | Confirmation à la production sans la technologie ; valeur de contrôle lue par `#con`. | — |
 | 243 | Infanterie (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 407 | Vaisseau pirate (Pirate) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Ses dés qui font 0 touchent d'abord un vaisseau de commerce du camp visé ; furtif dans un système à anomalie. | — |
@@ -303,7 +303,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 767 | Memoria B (Le Nomade) | **oui** | nouveau bouton | Fiche de l'unité, science : « Memoria B : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | — |
 | 768 | Memoria A (Le Nomade) | **partiel** | nouveau bouton | Fiche de l'unité, science : « Memoria A : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | Furtivité et malus d'anomalie liés au déplacement. (difficile) |
 | 769 | Memoria D (Le Nomade) | **oui** | nouveau bouton | Conflit : une de vos infanteries détruites — « Memoria D : jet (6 ou moins) », puis « Poser sur Memoria D » (à bord). Science : « Memoria D : dépenser un signal » (4 de recherche de signal). | — |
-| 770 | Memoria C (Le Nomade) | **partiel** | automatique + nouveau bouton | Ravitaillement automatique : une frégate marchande est créée dans le système. Science : « Memoria C : dépenser un signal » (4 de recherche de signal). | Revendication. |
+| 770 | Memoria C (Le Nomade) | **oui** | automatique + nouveau bouton + bouton existant modifié | Ravitaillement automatique : une frégate marchande est créée dans le système. Science : « Memoria C : dépenser un signal » (4 de recherche de signal). Revendication : une Memoria C à vous dans le système, pas encore usée, revendique à la place d'un diplomate (elle est usée). | — (si l'accord d'autres camps est demandé, la revendication se conclut avec un diplomate) |
 | 786 | Centre de contrebande (Le Nomade) | **oui** | automatique | Ravitaillement automatique : 3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins. | — |
 | 810 | Nef de la rupture (Rupture de l'espace-temps) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Déplacement, trou de ver oméga : son jet ne l'arrête pas et ne la touche pas (elle n'ignore que ce blocage-là). | — |
 | 835 | Milice (Réfugiés) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -401,7 +401,7 @@ Cartes mercenaire (dans les éléments actifs de qui les a recrutées). Le cube 
 | 301 | S'Ula Mentarion | non | — | — | Pose d'une unité liée dans un système non contrôlé. (passé) |
 | 302 | Ta Zern | **oui** | nouveau bouton | Fiche de la carte, science : son cube part dans les agents usés, 1 de recherche génétique par planète que vous possédez. | — |
 | 303 | Baggil Wildpaw | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Mercenaire posé sur la planète d'une autre faction, revenu détourné : à la main. (passé) |
-| 304 | George Nobin | **partiel** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. | Livraison augmentée de X : à la main. (passé) |
+| 304 | George Nobin | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Fiche d'un vaisseau de commerce, « Livraison commerciale » : choix « George Nobin : + X » (4 au plus) — X commerce dépensés, la livraison augmentée de X, son cube dans les agents usés. | — |
 | 349 | Sal Gavda | **oui** | nouveau bouton | Fiche de la carte, diplomatie : son cube part dans les agents usés, 1 commerce par faction (vous comprise) qui possède une planète dans un système où vous avez une unité. | — |
 | 350 | Skarvald | **oui** | bouton existant modifié + nouveau bouton | Bombardement : « Skarvald : voler du commerce » — son cube part dans les agents usés, 3 dés lancés par le serveur, chaque 5 ou moins vole 1 commerce à la faction qui possède la planète. Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Le système doit être contrôlé (conflit de contrôle si d'autres peuvent s'y opposer). | — |
 | 351 | Vasra Ivo | **oui** | bouton existant modifié | Utilisable comme l'agent indiqué : glisser son cube noir (ou sa carte) sur ce type d'agent de « Mes agents » ; quand un agent de ce type est utilisé ou dépensé, une fenêtre propose le mercenaire à sa place. Canons spatiaux : tant qu'il est disponible comme amiral, vos canons à une case de plus que leur portée sont proposés — « Tirer avec Vasra Ivo (portée +1) », c'est lui qui est utilisé. | — |
@@ -422,7 +422,7 @@ Cartes de la réserve de promesses, chez la faction qui les garde (éléments ac
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
-| 224 | Vassal | **partiel** | bouton existant modifié + nouveau bouton + automatique | Conflit d'accord : « Accepter » est grisé pour le camp qui possède la planète revendiquée. Fiche de la carte : « Promesse rompue » (monde natal perdu) — retour à la réserve, la faction du marqueur gagne 1 infamie. Ravitaillement des tours pairs : la faveur que le vassal gagne est posée chez le suzerain. | Fins de promesse sans infamie : à la main. |
+| 224 | Vassal | **partiel** | bouton existant modifié + nouveau bouton + automatique | Conflit d'accord : « Accepter » est grisé pour le camp qui possède la planète revendiquée. Fiche de la carte : « Promesse rompue » (monde natal perdu) — retour à la réserve, la faction du marqueur gagne 1 infamie. Ravitaillement des tours pairs : la faveur que le vassal gagne est posée chez le suzerain. Fin sans infamie : la promesse est dépensée quand le suzerain engage son vassal, ou quand le vassal détruit le vaisseau amiral du suzerain. | Planète prise au suzerain : la promesse se dépense à la main. |
 | 225 | Pacte de non-agression | **oui** | nouveau bouton | Fiche de la carte : « Promesse rompue » — la carte retourne à la réserve, son marqueur est retiré, la faction qui l'a faite gagne 1 infamie. | — |
 | 226 | Redevance de protection | **oui** | nouveau bouton + bouton existant modifié | Fiche de la promesse, chez la faction qui la détient : « payer 2 commerce au Mentak » (ravitaillement, une fois par tour), « dépenser la promesse » (sans payer), « le Mentak y met fin » (retour à la réserve, il gagne 1 infamie). Dépensée d'office quand le détenteur bloque les Mentaks et que le blocage porte, ou quand il les engage (« Engager », « Cibler »). Le Mentak qui engage le détenteur doit confirmer (règle semi-bloquante). | — |
 | 227 | Soutien politique | **oui** | nouveau bouton | Fiche de la promesse : prévote, « engager la promesse » — la loi et le vote annoncés se choisissent dans l'onglet Décision. Après le vote, « régler d'après le décompte » compare les voix de la faction à la valeur de la promesse : tenue, elle retourne à la réserve ; sinon la faction gagne 1 infamie. « respecté » et « non respecté » restent pour régler à la main. | — |
