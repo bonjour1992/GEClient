@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useEngine, nomElement } from "./Interaction";
-import { useElement } from "./sync";
-import { FAVEUR, emetteurFaveur } from "./miseEnPlace";
+import { useElement, useElements } from "./sync";
+import { FAVEUR, emetteurFaveur, actionsPoints } from "./miseEnPlace";
 
 // ============================================================
 // ONGLET FAVEURS : encaisser les faveurs (phase d'événement)
@@ -40,7 +40,13 @@ export function faveursDuTour(etat, deroule) {
 
 export function Faveurs() {
 
-    const { etat, index, envoyer, joueur, moi, partie, nomDe, couleurDe, search } = useEngine();
+    const { etat, index, envoyer, joueur, moi, partie, nomDe, couleurDe, search, aScript } = useEngine();
+
+    // Stations scientifiques possédées par un joueur (cartes de ses éléments actifs dont le
+    // type de station est « scien ») : habilité « Stations scientifiques » de Jol-Nar
+    const cartesPlanetes = Object.values(etat.composants).filter(c => !c.cache && c.ref?.type === "planet" && /^joueur:\d+:actif$/.test(c.zone || ""));
+    const contenusPlanetes = useElements([...new Set(cartesPlanetes.map(c => c.ref.id))].sort((a, b) => a - b));
+    const stationsDe = u => cartesPlanetes.filter(c => c.zone === `joueur:${u}:actif` && contenusPlanetes[c.ref.id]?.stationType === "scien").length;
 
     const deroule = useElement(etat.references?.deroule);
     const { prevus, faits, attendu } = faveursDuTour(etat, deroule);
@@ -80,11 +86,20 @@ export function Faveurs() {
 
         const dernier = joueurs.every(j => j.userId === moi || aValide(j.userId));
 
+        // Habilité « Stations scientifiques » (Jol-Nar) : à chaque encaissement résolu, 1 point
+        // par station scientifique possédée — marqué avant l'encaissement, que le serveur compte
+        // ensuite à partir de la piste ainsi avancée
+        const stations = dernier ? joueurs.map(j => ({ u: j.userId, n: aScript(j.userId, "stations-scientifiques") ? stationsDe(j.userId) : 0 }))
+            .filter(x => x.n > 0) : [];
+
         envoyer([
             { type: "engager", faveurs },
+            ...stations.flatMap(x => actionsPoints(etat, x.u, x.n)),
             // Je suis le dernier attendu : le serveur compte tout de suite
             dernier && { type: "encaisser" },
-        ].filter(Boolean), dernier ? "Encaissement des faveurs" : "");
+        ].filter(Boolean), dernier
+            ? ["Encaissement des faveurs", ...stations.map(x => `Stations scientifiques : ${nomDe(x.u)} +${x.n} point(s)`)].join(" — ")
+            : "");
 
         setChoix([]);
     }

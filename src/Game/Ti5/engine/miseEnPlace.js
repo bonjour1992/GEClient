@@ -228,6 +228,11 @@ const estCommun = contenu => (contenu?.lienType ?? "commun") === "commun";
 export const estUniteMercenaire = contenu => contenu?.lienType === "mercenaire" &&
     !(Number(contenu.lienElement?.id) > 0);
 
+// Factions dont les systèmes liés (hors système natal) se mélangent dans les tuiles du haut de
+// la pioche quand elles jouent : { faction : nombre de tuiles du haut } — Jol-Nar, habilité
+// « Stations scientifiques » (#1260)
+const TUILES_DE_FACTION_EN_PIOCHE = { 179: 16 };
+
 // Système hors du tirage au hasard (mise en place, « Générer » de l'éditeur,
 // tirage d'un système du plateau) : type de lien autre que « commun ».
 export const horsReserveCommune = contenu => !estCommun(contenu);
@@ -351,6 +356,15 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
     {
         const reserve = [];       // tuiles non spéciales
         const speciales = [];     // tuiles spéciales
+        const dansLaPioche = [];  // tuiles d'une faction en jeu, à mélanger dans le haut de la pioche
+
+        // Habilité « Stations scientifiques » de Jol-Nar (#179) : quand la faction joue, ses
+        // stations scientifiques (systèmes liés à la faction) sont mélangées dans les 16 tuiles
+        // du haut de la pioche. { faction : nombre de tuiles du haut }
+        const factionsEnJeu = new Set(partie.joueurs.map(j => Number(j.faction)));
+        const hautDePioche = systeme => (systeme.content?.lienType === "faction" && factionsEnJeu.has(Number(systeme.content.lienElement?.id))
+            ? TUILES_DE_FACTION_EN_PIOCHE[Number(systeme.content.lienElement.id)] || 0
+            : 0);
 
         // Le système natal d'une faction n'est jamais tiré au hasard
         const natauxDesFactions = new Set(
@@ -362,6 +376,11 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
             // (sauf une tuile en plusieurs exemplaires, comme « vide », le
             // système natal de Winnu : elle reste dans la pioche)
             if (natauxDesFactions.has(systeme.id) && exemplaires(systeme.content) === 1) {
+                continue;
+            }
+
+            if (hautDePioche(systeme) > 0) {
+                dansLaPioche.push({ id: systeme.id, haut: hautDePioche(systeme) });
                 continue;
             }
 
@@ -396,6 +415,21 @@ export async function miseEnPlace({ partie, charger, lister, alea }) {
 
         if (reserve.length) {
             appliquer(etat, { type: "melanger", zone: PIOCHE_TUILES }, { alea });
+        }
+
+        // Tuiles d'une faction en jeu : mélangées avec les tuiles du haut de la pioche (le
+        // dessus d'une pile est son composant d'ordre le plus grand)
+        if (dansLaPioche.length) {
+
+            const haut = Math.max(...dansLaPioche.map(t => t.haut));
+            const dessus = composantsDeZone(etat, PIOCHE_TUILES).slice(-haut);
+            const ajoutees = dansLaPioche.map(t => ajouter(etat, { ref: { type: "system", id: t.id }, zone: PIOCHE_TUILES }));
+            const lot = [...dessus, ...ajoutees];
+            const ordres = lot.map(c => c.ordre).sort((a, b) => a - b);
+
+            melangerListe(lot, alea).forEach((c, i) => {
+                c.ordre = ordres[i];
+            });
         }
 
         // Réserve de tuiles spéciales, visible de tous

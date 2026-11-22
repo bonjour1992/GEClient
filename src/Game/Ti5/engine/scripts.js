@@ -1012,6 +1012,23 @@ export const SCRIPTS = [
     revenu("sr-124", "planet", 47, 1795190407282, "SR-124", "science",
         "Génère 2 de recherche sociale pour qui la possède.", { recherche: [["soc", 2]] }),
 
+    // Stations scientifiques de Jol-Nar (une par technologie de base) et Centre d'espionnage industriel
+    revenu("sr-301", "planet", 1252, 1795348043315, "SR-301", "science",
+        "Génère 2 de recherche génétique pour qui la possède.", { recherche: [["gen", 2]] }),
+
+    revenu("sr-302", "planet", 1254, 1795348043319, "SR-302", "science",
+        "Génère 2 de recherche spatiale pour qui la possède.", { recherche: [["spa", 2]] }),
+
+    revenu("sr-303", "planet", 1256, 1795348043323, "SR-303", "science",
+        "Génère 2 de recherche militaire pour qui la possède.", { recherche: [["mil", 2]] }),
+
+    revenu("sr-304", "planet", 1258, 1795348043326, "SR-304", "science",
+        "Génère 2 de recherche sociale pour qui la possède.", { recherche: [["soc", 2]] }),
+
+    revenu("centre-d-espionnage-industriel", "planet", 1250, 1795348043309, "Centre d'espionnage industriel", "science",
+        "Génère 4 de recherche pour qui le possède, à cocher sur une technologie qu'une autre faction possède et que vous n'avez pas (le choix de la technologie est à vous).",
+        { recherche: [["", 4]], note: "sur une technologie qu'une autre faction possède et que vous n'avez pas" }),
+
     revenu("station-de-combat", "planet", 56, 1795190407278, "Station de combat", "science",
         "Génère 2 de recherche militaire pour qui la possède.", { recherche: [["mil", 2]] }),
 
@@ -1961,6 +1978,11 @@ export const SCRIPTS = [
     regle("salai-sai-corian", "unit", 148, 1795046343782, "Salai Sai Corian", "auto",
         "Conflit, combat spatial",
         "+1 au combat par vaisseau adverse que visent ses engagements."),
+
+    regle("stations-scientifiques", "habilite", 1260, 1795348043361, "Stations scientifiques", "auto",
+        "Mise en place de la partie ; onglet Faveurs, à l'encaissement",
+        "Mise en place : quand Jol-Nar joue, ses 4 stations scientifiques (SR-301 à SR-304) sont mélangées avec les 16 tuiles du haut de la pioche. " +
+        "À chaque encaissement des faveurs résolu : 1 point par station scientifique que vous possédez, marqué d'office avec l'encaissement."),
 
     regle("nef-de-la-rupture", "unit", 810, 1795205230657, "Nef de la rupture", "auto",
         "Conflit : cadre de blocage (passage par un trou de ver oméga)",

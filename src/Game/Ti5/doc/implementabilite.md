@@ -22,14 +22,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
-| Habilités | 63 | 41 | 7 | 15 | 33 | 6 | 16 |
-| Unités | 113 | 76 | 37 | 0 | 25 | 4 | 42 |
-| Planètes | 30 | 25 | 2 | 3 | 15 | 8 | 12 |
+| Habilités | 64 | 42 | 7 | 15 | 33 | 6 | 17 |
+| Unités | 114 | 77 | 37 | 0 | 25 | 4 | 43 |
+| Planètes | 35 | 29 | 3 | 3 | 20 | 8 | 12 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **378** | **282** | **70** | **26** | **158** | **62** | **121** |
+| **Total** | **385** | **288** | **71** | **26** | **163** | **62** | **123** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -204,6 +204,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 927 | Influent (Les Empyréens WIP) | non | — | Habilité vide d'une faction WIP : nom seul, pas de texte de règle. | Texte à écrire. (sans objet) |
 | 942 | Racket (Pirate Mentak) | **oui** | nouveau bouton | Fiche d'un système, ravitaillement, à côté d'une planète d'une autre faction dans un système où vous avez des unités militaires : « Racket » ouvre un test de domination (onglet Conflit) ; à sa clôture, si vous dominez, vous gagnez les ressources de la planète et son propriétaire les perd. Une fois par tour et par planète. | — |
 | 1022 | Physiologie gashlai (Braises de Muaat WIP) | **oui** | automatique | Déplacement assisté : une supernova sur le trajet n'est plus un obstacle. | — |
+| 1260 | Stations scientifiques (Université de Jol-Nar) | **oui** | automatique | Mise en place : les 4 stations scientifiques de Jol-Nar sont mélangées avec les 16 tuiles du haut de la pioche (au lancement de la partie, côté serveur). Onglet Faveurs : à chaque encaissement résolu, 1 point par station scientifique possédée, marqué avec l'encaissement. | — |
 | 1023 | Étude de la forge (Braises de Muaat WIP) | **oui** | nouveau bouton | Fiche d'une supernova, science : use un scientifique, active le système, 4 de recherche de forge d'arme notée au journal de recherche. | Recherche de forge sur une planète : comme les autres sciences, à la main. |
 | 1038 | Bilan de l'aide humanitaire (Peste lointaine) | **oui** | nouveau bouton | Fiche de la carte : « Aide humanitaire : faire le décompte » — 1 point par 4 commerce livrés, une faveur neutre à qui en a livré le plus (seul) ; les cartes « Aide humanitaire » et « Bilan de l'aide humanitaire » sont retirées. L'événement « Peste lointaine » (#1039) a son bouton « Mettre en place » : Vaccin et Arme bactériologique dans la main de chaque joueur, Aide humanitaire au tour T, le bilan au tour T+3. | — |
 
@@ -266,6 +267,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
 | 512 | Station de combat | **oui** | automatique | Caractéristiques de l'unité déjà utilisées ; militaire (mot-clé ajouté) : sa valeur de contrôle `#Con(3)` compte dans les conflits de contrôle, de domination et les blocages. | — |
+| 1246 | Station automatisée de défense | **oui** | automatique | Unité neutre native (structure spatiale, figurine du dock, combat 5 à deux dés, résistance 3) de six tuiles : « station de défense » (×3), un champ d'astéroïdes, une nébuleuse, Hopeld. Militaire et défensive : elle compte dans les contrôles, les dominations et les blocages. | — |
 | 513 | Canon ancien | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 514 | Canon restauré | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 516 | Mech géant | **oui** | automatique | Compte pour 3 dans la capacité d'un vaisseau (avertissement à l'embarquement, déplacement assisté) ; valeur de contrôle lue par `#con`. | — |
@@ -358,6 +360,11 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 469 | New eden | **oui** | automatique | Ravitaillement automatique : 2 Letani posés sur la planète. | — |
 | 473 | SIG-1 à SIG-4 | **oui** | nouveau bouton | Fiche du système, phase de science : « Obtenir » use un scientifique, la carte va dans les éléments actifs. | — |
 | 508 | Université polytechnique | non | — (passé) | — | Agent tiré au ravitaillement, achats par commerce ou livraison. (difficile) |
+| 1250 | Centre d'espionnage industriel | **partiel** | nouveau bouton | Phase de science, « Revenus de la phase » : 4 de recherche pour le possesseur, à cocher sur une technologie qu'une autre faction possède et qu'il n'a pas. | Achat de 4 de recherche par livraison de 3 (stock d'achat) : à faire. |
+| 1252 | SR-301 (Université de Jol-Nar) | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche génétique. Mise en place : mélangée dans le haut de la pioche de tuiles quand Jol-Nar joue. | — |
+| 1254 | SR-302 (Université de Jol-Nar) | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche spatiale. Mise en place : comme SR-301. | — |
+| 1256 | SR-303 (Université de Jol-Nar) | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche militaire. Mise en place : comme SR-301. | — |
+| 1258 | SR-304 (Université de Jol-Nar) | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 2 de recherche sociale. Mise en place : comme SR-301. | — |
 | 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. Possession perdue sans unité dessus, comme Avar. | — |
 | 784 | Anneau Arcturus | **oui** | nouveau bouton + automatique | Ravitaillement automatique : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (use un scientifique). | — |
 | 1041 | Haven | **oui** | automatique | Ravitaillement automatique : posséder Haven compte comme posséder une planète natale, elle donne la faveur du ravitaillement. | Les autres effets liés aux planètes natales (Vassal, Spectre de l'empereur) : à la main. |
