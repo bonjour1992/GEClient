@@ -992,7 +992,8 @@ faction qui n'a rien proposé n'est pas une option), choix 1 à N (type de
 technologie : les 4 de base ; type d'agent : `references.agentsBase` ; loi ou
 traité : les agendas de `general:table` ; objectif révélé ; liste « Votez pour
 A, B ou C » ; 6 si N est inconnu), sinon Contre et Pour ; « ou votez contre »
-ajoute Contre. Au-delà des lois du tour, une ligne n'a aucune option. Sur le
+ajoute Contre. Un texte qui commence par « Chaque vote » (Construire un monument,
+Recrutement disponible) n'a que Pour. Au-delà des lois du tour, une ligne n'a aucune option. Sur le
 plateau, une feuille de style (`<style data-options-vote>`, `vote.jsx` n'est
 pas touché) grise les autres colonnes et écrit en haut de chaque case ce pour
 quoi on y vote (`::before`) ; dans le décompte, leurs lignes sont grisées.
@@ -1011,7 +1012,7 @@ table ; une résolution par script n'a pas d'« annuler » (l'effet est déjà
 appliqué). Le script est déclaré dans `scripts.js` (sorte « regle », type
 `Agenda`, `resolution: true`) : désactivable dans l'outil « Scripts de règles ».
 Faits : Pardon, Sévérité, Mercenaire, Révocation, Artefact retrouvé, Révolution,
-Subvention, Ostracisme, Vote au conseil 1 à 5. Un traité ou une loi en jeu
+Construire un monument, Subvention, Ostracisme, Vote au conseil 1 à 5. Un traité ou une loi en jeu
 (`general:table`) a son effet par `aScript` (type `Agenda` : la carte est sur
 la table, ou dans les éléments actifs du joueur pour un mandat) : Impôt et
 Écologie punitive au ravitaillement automatique (`Entretien.jsx`), Sévérité au

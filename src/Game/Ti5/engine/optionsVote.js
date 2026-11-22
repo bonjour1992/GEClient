@@ -16,6 +16,9 @@ import { techType } from "../ti5Const.js";
 //   autre élection (type de technologie, type d'agent, loi ou traité,
 //   objectif révélé, « Votez pour A, B ou C »…)
 //       -> colonnes 1 à N, N le nombre de choix connus (6 s'il ne l'est pas)
+//   « Chaque vote… » en tête du texte (Construire un monument, Recrutement
+//   disponible)
+//       -> Pour seulement
 //   sinon (« Votez pour ou contre », pas d'élection)
 //       -> Contre et Pour
 //
@@ -106,6 +109,12 @@ export function optionsDeLoi(contenu, ctx = {}) {
         });
 
         return avecContre("factions", libelles);
+    }
+
+    // « Chaque vote coûte… », « Chaque vote pour cette directive… » : on ne vote que Pour
+    // (sorte « pour-contre » : la colonne porte déjà son nom sur le plateau)
+    if (/^chaque\s+vote\b/i.test(texte)) {
+        return { sorte: "pour-contre", colonnes: [POUR], libelles: { [POUR]: "Pour" } };
     }
 
     // Autre élection : colonnes 1 à N

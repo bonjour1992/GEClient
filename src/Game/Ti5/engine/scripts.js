@@ -3845,6 +3845,8 @@ export const SCRIPTS = [
         "La faction élue gagne la relique révélée à côté de la loi (ses éléments actifs, sans les points de fabrication). La carte est retirée du jeu."),
     resolution("revolution", 340, 1795076851710, "Révolution",
         "Pour l'emporte : toutes les lois, traités et mandats en jeu sont retirés du jeu, y compris ceux résolus plus tôt dans le tour. La carte est retirée du jeu."),
+    resolution("construire-un-monument", 344, 1795076851713, "Construire un monument",
+        "On ne vote que Pour. Chaque voix coûte 2 ressources ; chaque faction gagne 1 point par faction qui a moins voté qu'elle, et 2 de plus si elle a voté seule plus que toutes les autres. La carte est retirée du jeu."),
     resolution("subvention", 556, 1795076851743, "Subvention",
         "Chaque faction gagne 1 commerce par voix reçue dans sa colonne. La carte est retirée du jeu."),
     resolution("ostracisme", 748, 1795068635381, "Ostracisme",

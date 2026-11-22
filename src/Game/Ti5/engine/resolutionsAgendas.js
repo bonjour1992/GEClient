@@ -191,6 +191,38 @@ export const RESOLUTIONS = {
         }),
     },
 
+    // Construire un monument (#344) : on ne vote que Pour (optionsVote.js). Chaque voix coûte
+    // 2 ressources ; 1 point par faction qui a moins voté que vous, 2 de plus pour la faction qui
+    // a voté seule plus que toutes les autres. La directive s'applique quel que soit le total.
+    344: {
+        script: "construire-un-monument",
+        resoudre: ({ etat, joueurs, votes, loi }) => {
+            const voix = joueurs.map(j => ({ j, n: votes.voix(loi, POUR, j.userId) }));
+            const max = Math.max(0, ...voix.map(x => x.n));
+            const seule = voix.filter(x => x.n === max).length === 1;
+
+            const gains = voix.filter(x => x.n > 0).map(x => ({
+                ...x,
+                cout: 2 * x.n,
+                points: voix.filter(y => y.n < x.n).length + (seule && x.n === max ? 2 : 0),
+            }));
+
+            const manque = gains.filter(x => (Number(etat.compteurs[`joueur:${x.j.userId}:res`]) || 0) < x.cout);
+
+            return {
+                code: VERS_HORS_JEU,
+                texte: gains.length
+                    ? gains.map(x => `${x.j.nom} ${x.n} voix, −${x.cout} ressources, +${x.points} point${x.points > 1 ? "s" : ""}`).join(" ; ")
+                    : "aucune voix : sans effet",
+                actions: gains.flatMap(x => [
+                    { type: "compteur", id: `joueur:${x.j.userId}:res`, delta: -x.cout },
+                    ...actionsPiste(etat, x.j.userId, "points", x.points),
+                ]),
+                obstacles: manque.map(x => `${x.j.nom} n'a pas ${x.cout} ressources pour payer ses voix`),
+            };
+        },
+    },
+
     // Subvention (#556) : chaque voix reçue par une faction lui rapporte 1 commerce
     556: {
         script: "subvention",

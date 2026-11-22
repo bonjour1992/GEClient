@@ -29,8 +29,8 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Promesses | 19 | 17 | 2 | 0 | 14 | 4 | 5 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| Agendas | 58 | 15 | 2 | 41 | 0 | 13 | 5 |
-| **Total** | **444** | **350** | **33** | **61** | **176** | **86** | **144** |
+| Agendas | 58 | 16 | 2 | 40 | 0 | 14 | 5 |
+| **Total** | **444** | **351** | **33** | **60** | **176** | **87** | **144** |
 
 Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
@@ -497,11 +497,11 @@ Le vote se fait dans l'onglet Vote (options lues sur la carte, colonnes hors opt
 | 318 | Création trou de ver (directive) | non | bouton existant modifié (prévu) | Systèmes proposés à la prévote, votés dans la colonne de la faction qui propose. | moyenne : un jeton trou de ver bêta posé sur le système élu. |
 | 319 | Partage de connaissance (directive) | non | bouton existant modifié (prévu) | — | difficile : options = technologies communes possédées par au moins 2 factions, données à toutes. |
 | 320 | Mobilisation (directive) | non | bouton existant modifié (prévu) | — | moyenne : une infanterie par planète possédée, au choix de chaque faction (onglet Décision). |
-| 330 | Recrutement disponible (directive) | non | bouton existant modifié (prévu) | — | moyenne : une infanterie par voix, sur des planètes à structure choisies par chaque faction. |
+| 330 | Recrutement disponible (directive) | non | bouton existant modifié (prévu) | Seule la colonne Pour est une option. | moyenne : une infanterie par voix, sur des planètes à structure choisies par chaque faction. |
 | 340 | Révolution (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : Pour l'emporte, toutes les lois, traités et mandats en jeu sont retirés du jeu, y compris ceux résolus plus tôt dans le tour. | — |
 | 341 | Croisade (directive) | non | bouton existant modifié (prévu) | Planètes proposées à la prévote. | difficile : engagements sans rupture dans le système ; points au tour suivant selon la possession au vote. |
 | 342 | Subvention militaire (directive) | non | bouton existant modifié (prévu) | — | moyenne : chaque faction construit un vaisseau de coût 5 au plus dans un système natal (choix). |
-| 344 | Construire un monument (directive) | non | bouton existant modifié (prévu) | — | facile une fois la règle précisée (quelles voix comptent, effet seulement si Pour l'emporte ?) : 2 ressources par voix, 1 point par faction qui a moins voté, 2 de plus pour la seule en tête. |
+| 344 | Construire un monument (directive) | **oui** | bouton existant modifié | Seule la colonne Pour est une option. Onglet Vote, « Résoudre » : chaque voix coûte 2 ressources ; 1 point par faction qui a moins voté, 2 de plus pour la faction seule en tête (une faction qui n'a pas de quoi payer rend le bouton rouge gris). | — |
 | 347 | Dette impériale (directive) | non | bouton existant modifié (prévu) | — | moyenne : dette de 6 sur 3 tours envers Mecatol Rex ; l'infamie pour ses vaisseaux de commerce détruits : difficile. |
 | 556 | Subvention (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : chaque faction gagne 1 commerce par voix reçue dans sa colonne. | — |
 | 727 | Soutien au conclave (directive) | partiel | automatique | Posée à côté du plateau du Conclave (ou sur la table), le Conclave lance 3D10 votes au lieu de 1D10 (script Vote du conclave). | moyenne : « Résoudre » — faveurs du Conclave (3 voix pour, et la faction qui en a engagé le plus), pose de la carte si Pour l'emporte. |

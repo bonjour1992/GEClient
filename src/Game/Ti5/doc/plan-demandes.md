@@ -675,6 +675,6 @@ courtes (`Aide.jsx`).
 
 Scripts d'agendas (2026-11-22) : implémentabilité des 58 agendas évaluée (tableau Agendas de
 `implementabilite.md`) ; « Résoudre » fait l'effet des directives Pardon, Mercenaire, Révocation, Artefact retrouvé,
-Révolution, Subvention, Ostracisme, Votes au conseil 1 à 5 et place la loi Sévérité (`resolutionsAgendas.js`) ;
+Révolution, Construire un monument (seulement Pour), Subvention, Ostracisme, Votes au conseil 1 à 5 et place la loi Sévérité (`resolutionsAgendas.js`) ;
 traités Impôt et Écologie punitive au ravitaillement automatique. Structures spatiales : déjà comptées au contrôle
-de l'espace (`test-controle-structure-spatiale.mjs`). À préciser : Construire un monument (quelles voix comptent).
+de l'espace (`test-controle-structure-spatiale.mjs`).
