@@ -374,15 +374,17 @@ const memoriaSignal = (id, carte, ecritLe, nom) => action(id, "unit", carte, ecr
 
 // Marqueur de signal (#859, Le Nomade) : bouton de sa fiche, pour la faction qui a l'habilité Signal
 const signalRecherche = action("signal-recherche", "token", 859, 0, "Signal : recherche", "carte",
-    "Science, sur la fiche d'un marqueur de signal : use un scientifique, 4 de recherche de signal sont notés (onglet Technologie, à cocher). Le marqueur reste en place.", {
+    "Science, sur la fiche d'un marqueur de signal : use un scientifique, le marqueur est retiré et 4 de recherche de signal sont notés (onglet Technologie, à cocher).", {
         phase: "science",
         agent: SCIENTIFIQUE,
         visible: outils => outils.aScript("signal"),
         special: atelier => ({
-            actions: [atelier.recherche(atelier.moi, 859, 4)].filter(Boolean),
-            avis: "Signal : 4 de recherche de signal notés — cochez-les dans l'onglet Technologie.",
+            // (le marqueur de la fiche est dépensé)
+            actions: [atelier.c && { type: "supprimer", c: atelier.c.id }, atelier.recherche(atelier.moi, 859, 4)].filter(Boolean),
+            sans: atelier.c ? null : "marqueur de signal introuvable",
+            avis: "Signal : marqueur retiré, 4 de recherche de signal notés — cochez-les dans l'onglet Technologie.",
         }),
-        libelle: "Signal : +4 de recherche de signal (use un scientifique)",
+        libelle: "Signal : +4 de recherche de signal (use un scientifique, retire le marqueur)",
     });
 
 // Bouton SIG-N : la carte du signal n° N va dans mes éléments actifs, face visible
@@ -1203,7 +1205,7 @@ export const SCRIPTS = [
         "« Nouveau tour » (début du ravitaillement)",
         "À chaque nouveau tour, les mercenaires disponibles sur la station sont remplacés : ceux qui restent retournent sous la pioche, et autant de nouveaux que le dit son texte sont révélés sur la station."),
 
-    regle("signal", "habilite", 765, 1795372821165, "Signal", "auto",
+    regle("signal", "habilite", 765, 1795373790000, "Signal", "auto",
         "Ravitaillement automatique (début de la phase)",
         "L'entretien pose un marqueur de signal sur un système tiré au hasard."),
 
