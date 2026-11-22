@@ -1132,6 +1132,18 @@ export const SCRIPTS = [
         "Pour chaque faction : points de la piste, lignes du décompte (connaissance, sièges, infamie et Sévérité, Canon restauré, Colonie Ladaran, Armageddon conquis, Arbre de vie éternelle, Graine d'eden, Monument éternel, Spectre de l'empereur, Plan ancien), total et départage. Une unité rapporte à son camp ; une unité neutre ne rapporte rien. « Marquer mes points du décompte » déplace votre marqueur, une fois.",
         [30, 590, 490, 571, 470, 554, 387, 853]),
 
+    regle("monument-eternel", "unit", 554, 0, "Monument éternel : contributions pillées", "auto",
+        "Conflit : dégâts attribués au monument",
+        "Un dégât ne blesse pas le monument tant qu'il porte 3 commerce de contribution (jetons de commerce posés dessus) : l'attaquant en pille 3, pris d'abord à qui a le plus contribué (à égalité, par ordre d'initiative). Sinon le monument subit le dégât."),
+
+    regle("s-ula-mentarion", "unit", 732, 0, "S'Ula Mentarion", "auto",
+        "Conflit : « Terminer le combat » ; fiche de l'unité : « Livraison commerciale »",
+        "Un vaisseau de commerce qu'il détruit lui fait poser un marqueur (un seul à la fois). À la diplomatie, sa livraison de 5 dépense ce marqueur, non l'unité."),
+
+    regle("graine-d-eden", "unit", 470, 0, "Graine d'eden", "auto",
+        "Ravitaillement automatique (début de la phase)",
+        "Sa résistance n'a pas de limite : la Sève de vie continue de la soigner sans dégât (résistance en plus, affichée en vert). À 6 de résistance ou plus au ravitaillement, New eden est posé sur sa planète."),
+
     regle("gloire-au-juste", "unit", 151, 0, "Gloire au juste", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Tant que Gloire au juste est sur la carte : si le Winnu possède Mecatol Rex, l'entretien de chaque faction rapporte 1 influence par faction qui a plus d'infamie qu'elle ; sinon, la faction qui possède Mecatol Rex gagne 1 infamie."),

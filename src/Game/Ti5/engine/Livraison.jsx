@@ -5,7 +5,7 @@ import { lieuDe } from "./regleBlocage";
 import { elementsAchat, actionsVersStock, stockDe } from "./Achats";
 import { possesseurActuel } from "./Controle";
 import { useElement, contenuEnCache } from "./sync";
-import { DETTE, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
+import { DETTE, MARQUEUR, campDe, MOTIF_NEGOCIANT } from "./miseEnPlace";
 import { demander } from "./demande";
 
 // ============================================================
@@ -106,6 +106,14 @@ const valeurAuStock = ({ etat, moi, aScript }, valeur) => valeur +
 const texteDe = c => contenuEnCache(c.ref.id)?.habilite || "";
 const valeurDe = c => Number(/#livr\((\d+)\)/i.exec(texteDe(c))?.[1]) || 0;
 
+// Unité qui livre en dépensant un marqueur posé sur elle (« #spend marqueur: #livr(n) » : S'Ula
+// Mentarion, qui le gagne en détruisant un vaisseau de commerce — Combat.jsx) : c'est le marqueur
+// qui est dépensé, non l'unité.
+const RE_MARQUEUR = /#spend\s+marqueur[^<]*#livr/i;
+const livreParMarqueur = c => RE_MARQUEUR.test(texteDe(c));
+const marqueurDeLivraison = (etat, c) => Object.values(etat.composants)
+    .find(x => x.sur === c.id && !x.ref && x.jeton === MARQUEUR && x.marques?.livraison) || null;
+
 // Bouton de livraison, sur la fiche d'une de mes unités à « #livr(n) ».
 // Destination : une faction qui a un comptoir dans le système (elle gagne le commerce, mes
 // dettes envers elle baissent), ou le stock d'achat d'un élément à achat du système (Achats.jsx :
@@ -165,7 +173,9 @@ export function LivraisonCommerciale({ c, fermer }) {
 
     // D'après le texte : un négociant est utilisé, l'unité est dépensée
     const avecNegociant = /#use\s*#neg/i.test(texte);
-    const depensee = /#spend[^<]*#livr/i.test(texte);
+    const parMarqueur = RE_MARQUEUR.test(texte);
+    const depensee = !parMarqueur && /#spend[^<]*#livr/i.test(texte);
+    const sansMarqueur = parMarqueur && !marqueurDeLivraison(etat, c);
 
     const negociants = (index.parZone.get(`joueur:${moi}:agents`) || [])
         .filter(x => !x.cache && x.ref?.type === "agent" && new RegExp(MOTIF_NEGOCIANT, "i").test(nomElement(search, x.ref)));
@@ -173,7 +183,9 @@ export function LivraisonCommerciale({ c, fermer }) {
 
     // Flotte : mes autres vaisseaux à livraison du même espace, pas encore utilisés
     const flotte = /^hex:\d+$/.test(c.zone || "") ? Object.values(etat.composants).filter(x =>
-        x.ref?.type === "unit" && x.zone === c.zone && !x.sur && campDe(x) === moi && !x.marques?.use && valeurDe(x) > 0) : [];
+        x.ref?.type === "unit" && x.zone === c.zone && !x.sur && campDe(x) === moi && !x.marques?.use && valeurDe(x) > 0 &&
+        // (une unité qui livre par marqueur ne livre qu'avec son marqueur)
+        (!livreParMarqueur(x) || marqueurDeLivraison(etat, x))) : [];
 
     // Fait livrer ces vaisseaux à la destination choisie ; agents : les négociants utilisés
     async function livrerAvec(navires, agents, commentaire) {
@@ -214,10 +226,12 @@ export function LivraisonCommerciale({ c, fermer }) {
                 messages.push(...livraison.messages);
             }
 
-            // (dépensée ou usée d'après le texte de l'unité)
-            actions.push(/#spend[^<]*#livr/i.test(texteDe(navire))
-                ? { type: "supprimer", c: navire.id }
-                : { type: "marquer", c: navire.id, marque: "use", valeur: true });
+            // (dépensée ou usée d'après le texte de l'unité ; livraison par marqueur : c'est lui qui est dépensé)
+            actions.push(livreParMarqueur(navire)
+                ? (marqueurDeLivraison(etat, navire) ? { type: "supprimer", c: marqueurDeLivraison(etat, navire).id } : null)
+                : (/#spend[^<]*#livr/i.test(texteDe(navire))
+                    ? { type: "supprimer", c: navire.id }
+                    : { type: "marquer", c: navire.id, marque: "use", valeur: true }));
         }
 
         // Au stock d'achat : une seule écriture, la somme des livraisons
@@ -252,13 +266,14 @@ export function LivraisonCommerciale({ c, fermer }) {
                 obstacles={[
                     !destinations.length && sansDestination,
                     avecNegociant && !negociant && "vous n'avez pas de négociant disponible (aucun ne sera usé)",
+                    sansMarqueur && "cette unité n'a pas de marqueur à dépenser (elle le gagne en détruisant un vaisseau de commerce)",
                 ]}
                 faire={commentaire => (choix
                     ? livrerAvec([c], negociant ? [negociant] : [], commentaire)
                     : aviser("Livraison commerciale : " + sansDestination + "."))}
                 title={`Livre ${valeur} à une faction qui a un comptoir dans ce système, ou à votre stock d'achat sur un élément à achat${avecNegociant ? " ; use un négociant" : ""}${depensee ? " ; l'unité est dépensée" : ""}. Un test de blocage s'ouvre d'abord si d'autres factions peuvent bloquer l'unité.`}
             >
-                Livraison commerciale ({valeur}{depensee ? ", l'unité est dépensée" : ""})
+                Livraison commerciale ({valeur}{depensee ? ", l'unité est dépensée" : ""}{parMarqueur ? ", dépense son marqueur" : ""})
             </BoutonRegle>
 
             {/* Flotte : 2 négociants font livrer tous mes vaisseaux à livraison de cet espace */}

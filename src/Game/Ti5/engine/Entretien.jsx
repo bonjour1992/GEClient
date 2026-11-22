@@ -134,11 +134,29 @@ export function useEntretien(u, idFaction) {
     //   Destin légendaire 1 point par planète légendaire possédée
     //   Conclave secret   aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire en main
     //   Signal            un marqueur de signal sur un système tiré au hasard
+    // Graine d'eden (#470) : « pas de limite à la résistance » — elle continue de récupérer de la
+    // résistance sans dégât (ses dégâts deviennent négatifs) ; à 6 de résistance ou plus au
+    // ravitaillement, New eden (#469) est posé sur sa planète.
+    const estGraine = c => c.ref.id === 470 && aScript(u, "graine-d-eden");
+
     const bioBlessees = !aScript(u, "seve-de-vie") ? [] : Object.values(etat.composants).filter(c =>
         !c.cache && c.ref?.type === "unit" && (c.marques?.possession ?? c.proprio) === u && /^hex:\d+/.test(c.zone || "") &&
-        Number(c.marques?.degat) > 0 && aMotCle(c, "bio"));
+        (Number(c.marques?.degat) > 0 || estGraine(c)) && aMotCle(c, "bio"));
 
     const soin = aScript(u, "vie-fructifiante") ? 2 : 1;
+
+    // Dégâts d'une unité biologique après le soin du ravitaillement (la Graine n'a pas de plafond)
+    const degatApresSoin = c => (bioBlessees.includes(c)
+        ? (estGraine(c) ? Number(c.marques?.degat || 0) - soin : Math.max(0, Number(c.marques.degat) - soin))
+        : Number(c.marques?.degat) || 0);
+
+    const graineDEden = useElement(470);
+
+    const nouveauxEdens = Object.values(etat.composants).filter(c =>
+        !c.cache && c.ref?.type === "unit" && estGraine(c) && (c.marques?.possession ?? c.proprio) === u &&
+        /^hex:\d+:planete:\d+$/.test(c.zone || "") &&
+        (Number(graineDEden?.PV) || 3) - degatApresSoin(c) >= 6 &&
+        !(index.parZone.get(c.zone) || []).some(x => !x.cache && x.ref?.type === "planet" && x.ref.id === 469));
 
     const legendaires = aScript(u, "destin-legendaire")
         ? planetes.filter(c => contenuPlanetes[c.ref.id]?.legendary).length
@@ -253,6 +271,7 @@ export function useEntretien(u, idFaction) {
         raideurs.length > 0 && `Portail de repli : ${raideurs.length} Raideur(s) détruit(s) au tour précédent replacé(s) dans son système`,
         !possedeNatale && idNatal > 0 && "Planète natale : aucune possédée, pas de faveur",
         bioBlessees.length > 0 && `Sève de vie : ${bioBlessees.length} unité(s) soignée(s)${soin > 1 ? ` (Vie fructifiante : ${soin} de résistance)` : ""}`,
+        nouveauxEdens.length > 0 && "Graine d'eden : 6 de résistance ou plus, New eden est posé sur sa planète",
         legendaires > 0 && `Destin légendaire : +${legendaires} point(s)`,
         // (« marquez le précédent » : l'objectif précédent s'évalue pour soi seul ; rien au tour 1)
         conclave && ("Conclave secret : 1 objectif militaire pioché" + (etat.tour > 1
@@ -272,7 +291,8 @@ export function useEntretien(u, idFaction) {
         ...noblesUses.map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false })),
         ...techsUtilisees.map(id => ({ type: "compteur", id, valeur: 0 })),
         ...revenus.actions,
-        ...bioBlessees.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: Math.max(0, Number(c.marques.degat) - soin) })),
+        ...bioBlessees.map(c => ({ type: "marquer", c: c.id, marque: "degat", valeur: degatApresSoin(c) })),
+        ...nouveauxEdens.map(c => ({ type: "creer", ref: { type: "planet", id: 469 }, zone: c.zone })),
         ...actionsPoints(etat, u, legendaires),
         conclave && { type: "piocher", de: "pioche:militaire", vers: base + ":main" },
         systemesPoses.length > 0 && {

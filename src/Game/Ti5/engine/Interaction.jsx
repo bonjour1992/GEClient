@@ -1451,7 +1451,7 @@ function Pion({ groupe, petit }) {
                 titre={nom + (n > 1 ? ` ×${n}` : "") +
                     // Le propriétaire est dit en toutes lettres, pas seulement par la couleur
                     (detenteur ? ` — ${nomDe(detenteur)}` : " — neutre") +
-                    (degat ? ` — ${degat} dégât(s)` : "") +
+                    (degat > 0 ? ` — ${degat} dégât(s)` : (degat < 0 ? ` — ${-degat} de résistance en plus` : "")) +
                     (horsFiche ? " — hors fiche de faction" : "") +
                     (n > 1 ? " — Ctrl + glisser : tout le groupe" : "")}
                 style={{ gap: 2, opacity: c.marques?.use ? 0.5 : 1 }}
@@ -1498,6 +1498,8 @@ function Pion({ groupe, petit }) {
                 {!petit && <LogoFaction id={c.ref.id} />}
                 {!petit && <span style={{ fontSize: 11 }}>{nom}</span>}
                 {degat > 0 && <b style={{ ...badge, color: "#c00" }}>✹{degat}</b>}
+                {/* (résistance au-delà du maximum : Graine d'eden) */}
+                {degat < 0 && <b style={{ ...badge, color: "#2e7d32" }}>+{-degat}</b>}
                 {n > 1 && <b style={badge}>{n}</b>}
                 <Portes liste={portes} />
             </CoquePion>
@@ -1509,7 +1511,7 @@ function Pion({ groupe, petit }) {
             data-composant={c.id}
             data-groupe={groupe.map(x => x.id).join(",")}
             data-nom={nom}
-            title={nom + (n > 1 ? ` ×${n}` : "") + (degat ? ` — ${degat} dégât(s)` : "")}
+            title={nom + (n > 1 ? ` ×${n}` : "") + (degat > 0 ? ` — ${degat} dégât(s)` : (degat < 0 ? ` — ${-degat} de résistance en plus` : ""))}
             style={{
                 ...stylePion,
                 ...taille,
@@ -1526,6 +1528,7 @@ function Pion({ groupe, petit }) {
             {dette ? `Dette ${Number(c.marques?.montant) || 0}` : nom}
             {c.face === "verso" && " ↺"}
             {degat > 0 && <b style={{ color: "#c00" }}>✹{degat}</b>}
+            {degat < 0 && <b style={{ color: "#2e7d32" }}>+{-degat}</b>}
             {n > 1 && <b>×{n}</b>}
             {/* Une dette porte le marqueur du créancier, affiché tel quel */}
             {dette

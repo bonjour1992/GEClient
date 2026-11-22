@@ -961,6 +961,18 @@ function CombatSysteme({ lieu }) {
         }
 
 
+        // S'Ula Mentarion (#732) : un vaisseau de commerce qu'il détruit (marque « degatPar ») lui
+        // fait poser un marqueur, un seul à la fois — dépensé à la diplomatie pour une livraison
+        // (Livraison.jsx). Un seul marqueur par combat, même s'il en détruit plusieurs.
+        const sula = etat.composants[v.c.marques?.degatPar];
+
+        if (mots.includes("ship") && mots.includes("com") && sula?.ref?.id === 732 && aScript(camp, "s-ula-mentarion") &&
+            !Object.values(etat.composants).some(x => x.sur === sula.id && !x.ref && x.jeton === MARQUEUR && x.marques?.livraison) &&
+            aRetirer.find(w => (w.u.mot_cle || []).includes("com") && w.c.marques?.degatPar === sula.id)?.id === v.id) {
+            actions.push({ type: "creer", jeton: MARQUEUR, sur: sula.id, proprio: camp, marques: { livraison: 1 } });
+            gains.push("un marqueur posé sur S'Ula Mentarion (livraison de 5 à la diplomatie)");
+        }
+
         if (v.c.ref?.id === 850 && aScript(camp, "armageddon-capture")) {
             const local = "t" + (String(v.id).replace(/\D/g, "").slice(-11) || "1");
             const resistance = Number(armageddon?.PV) || 1;
@@ -1029,7 +1041,8 @@ function CombatSysteme({ lieu }) {
         const actions = [];
         const gains = [];
 
-        const pillage = aScript(camp, "pillage-unite") ? lirePillage(v.u) : null;
+        // (Monument éternel : son « #pill(3) » est le pillage de chaque dégât — attribution —, non un butin à sa destruction)
+        const pillage = aScript(camp, "pillage-unite") && !(v.c.ref?.id === 554 && aScript(camp, "monument-eternel")) ? lirePillage(v.u) : null;
         const present = dansLeSysteme(camp).length > 0;
 
         if (pillage && !present) {
@@ -1537,9 +1550,74 @@ function CombatSysteme({ lieu }) {
                 (Number(x.c.marques?.degat) || 0) + parCible.get(x.id) >= pv(x).valeur)
             .flatMap(({ x }) => victimesBombe(etat, x.c, x.u, [...parCible.keys()]));
 
+        // Monument éternel (#554) : « Dégât : #pill(3) à la place » — un dégât ne le blesse pas :
+        // l'attaquant pille 3 commerce de contribution (les jetons de commerce posés dessus), pris
+        // d'abord à qui a le plus contribué (à égalité, par ordre d'initiative) ; s'il n'y en a pas
+        // 3, le monument subit le dégât.
+        const pillagesMonument = [];
+
+        for (const [id, n] of [...parCible]) {
+
+            if (parId[id].c.ref?.id !== 554 || !aScript(moi, "monument-eternel")) {
+                continue;
+            }
+
+            const jetons = Object.values(etat.composants)
+                .filter(c => c.sur === id && !c.ref && c.jeton === RESSOURCES.commerce[0])
+                .map(c => ({ c, proprio: c.proprio ?? NEUTRE, reste: Number(c.marques?.montant) || 1 }));
+
+            const total = () => jetons.reduce((somme, j) => somme + j.reste, 0);
+            const de = u => jetons.filter(j => j.proprio === u).reduce((somme, j) => somme + j.reste, 0);
+            let pilles = 0;
+
+            while (pilles < n && total() >= 3) {
+
+                let aPrendre = 3;
+
+                while (aPrendre > 0) {
+
+                    // (le plus gros contributeur d'abord ; à égalité, l'ordre d'initiative)
+                    const [u] = [...new Set(jetons.filter(j => j.reste > 0).map(j => j.proprio))]
+                        .sort((a, b) => de(b) - de(a) || rang(a) - rang(b));
+
+                    for (const j of jetons.filter(x => x.proprio === u && x.reste > 0)) {
+                        const pris = Math.min(aPrendre, j.reste);
+
+                        j.reste -= pris;
+                        aPrendre -= pris;
+
+                        if (!aPrendre) {
+                            break;
+                        }
+                    }
+                }
+
+                pilles++;
+            }
+
+            if (pilles > 0) {
+
+                const camp = auteurs.get(id);
+
+                pillagesMonument.push(
+                    ...jetons.filter(j => j.reste !== (Number(j.c.marques?.montant) || 1)).map(j => (j.reste > 0
+                        ? { type: "marquer", c: j.c.id, marque: "montant", valeur: j.reste }
+                        : { type: "supprimer", c: j.c.id })),
+                    camp !== NEUTRE && { type: "compteur", id: `joueur:${camp}:commerce`, delta: 3 * pilles });
+
+                // (ces dégâts ne blessent pas le monument)
+                if (n - pilles > 0) {
+                    parCible.set(id, n - pilles);
+                } else {
+                    parCible.delete(id);
+                }
+            }
+        }
+
         return [
             ...epidemie,
             ...desAttribues,
+            ...pillagesMonument.filter(Boolean),
             // (noté avant le dégât lui-même : le pillage lit qui a détruit l'unité ; « degatPar » :
             // l'unité qui a tiré — Myru Vos, frégate du khan)
             ...[...auteurs].map(([id, camp]) => ({ type: "marquer", c: id, marque: "degatDe", valeur: "c" + camp })),

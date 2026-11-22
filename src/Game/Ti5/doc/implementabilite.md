@@ -23,13 +23,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
 | Habilités | 64 | 44 | 7 | 13 | 34 | 6 | 18 |
-| Unités | 114 | 99 | 15 | 0 | 32 | 8 | 53 |
+| Unités | 114 | 103 | 11 | 0 | 32 | 9 | 54 |
 | Planètes | 35 | 30 | 4 | 1 | 22 | 8 | 13 |
 | Mercenaires | 40 | 25 | 10 | 5 | 19 | 20 | 2 |
 | Promesses | 19 | 17 | 2 | 0 | 14 | 3 | 5 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **385** | **321** | **42** | **22** | **174** | **66** | **136** |
+| **Total** | **385** | **325** | **38** | **22** | **174** | **67** | **137** |
 
 Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
@@ -260,7 +260,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 465 | Arbre père (Omni-esprit d'Arborec) | **oui** | automatique | Ravitaillement automatique : un Fruit de vie est créé dans l'espace du système de l'arbre. | — |
 | 466 | Épineux géant (Omni-esprit d'Arborec) | **oui** | automatique | Conflit, bombardement de sa planète : il attaque aussi les unités terrestres, avec sa valeur de combat. | — |
 | 467 | Arbre mère (Omni-esprit d'Arborec) | **oui** | automatique | Ravitaillement automatique : autant de Letani que le niveau de connaissance génétique, posés sur la planète de l'arbre. | — |
-| 470 | Graine d'eden (Omni-esprit d'Arborec) | **partiel** | automatique | Caractéristiques de l'unité déjà utilisées. Décompte des points : compté dans le cadre du décompte (5 points si New eden est posé sur sa planète). | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
+| 470 | Graine d'eden (Omni-esprit d'Arborec) | **oui** | automatique | Résistance sans limite : la Sève de vie continue de la soigner sans dégât (résistance en plus, affichée en vert sur le pion). Ravitaillement automatique : à 6 de résistance ou plus, New eden est posé sur sa planète. Décompte des points : 5 points si New eden y est posé. | — |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | **oui** | nouveau bouton + automatique | Conflit, combat spatial : autant d'attaques que votre niveau de connaissance génétique. Bombardement : « Duha Menaimon : jet » — au plus ce niveau, un Letani est posé sur la planète. | — |
 | 490 | Armageddon conquis | **oui** | nouveau bouton + automatique | Fiche de l'unité, science (Reforger) : 3 fragments militaires, un scientifique est posé sur l'unité et y reste. Canons spatiaux : portée 0 lue sur l'unité (son seul système), 1 une fois reforgé (un agent posé dessus). Décompte des points : compté dans le cadre du décompte (2 points, 4 reforgé). | — |
 | 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
@@ -274,7 +274,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 524 | Frégate du Khan (Invasion du grand Khan) | **oui** | nouveau bouton | Conflit : détruite, « Riposte du khan » — son destructeur lance un dé (6 ou moins, 4 si l'unité qui l'a détruite a la frappe en premier) et encaisse 1 dégât sur une de ses unités ; elle se retire ensuite. | — |
 | 525 | Palais du Khan (Invasion du grand Khan) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage. | — |
 | 527 | Soldat du Khan (Invasion du grand Khan) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 554 | Monument éternel | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Décompte des points : compté dans le cadre du décompte (1 point par 4 commerce de la faction posés sur le monument). | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer. |
+| 554 | Monument éternel | **oui** | automatique | Conflit : un dégât ne le blesse pas tant qu'il porte 3 commerce de contribution (jetons de commerce posés dessus) — l'attaquant en pille 3, pris d'abord à qui a le plus contribué (à égalité, par ordre d'initiative) ; sinon il subit le dégât. Pas de butin à sa destruction. Décompte des points : 1 point par 4 commerce de la faction posés sur le monument. | — |
 | 557 | Rebelle (Rébellion interplanétaire) | **oui** | automatique | Conflit, combat terrestre : furtif — un engagement de groupe ne l'atteint pas, et il ne riposte qu'à qui le cible. | — |
 | 568 | Indigène | **oui** | nouveau bouton | Fiche de l'unité (pour toute faction : l'unité est neutre), combat terrestre : use un diplomate, 4 dés à 3 lancés par le serveur contre l'unité ; chaque réussite lui inflige 1 dégât, elle est retirée si elle n'a plus de résistance. | — |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
@@ -295,7 +295,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 600 | Nekro Acidos | **oui** | automatique | Conflit, combat terrestre : autant d'attaques que votre niveau de connaissance militaire (aucune à 0). | — |
 | 601 | Riftwalker Meian | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Déplacement furtif : à brancher sur le déplacement assisté. (difficile) |
 | 723 | Milicien mercenaire (Conclave secret) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 732 | S'Ula Mentarion | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Marqueur posé à la destruction d'un vaisseau de commerce ; bouton : le dépenser, livraison 5. (moyenne) |
+| 732 | S'Ula Mentarion | **oui** | automatique + bouton existant modifié | Conflit, « Terminer le combat » : un vaisseau de commerce qu'il détruit lui fait poser un marqueur (un seul à la fois). Fiche de l'unité, diplomatie : « Livraison commerciale (5, dépense son marqueur) » — le marqueur est dépensé, l'unité reste. | — |
 | 745 | Olivier Dubois | **oui** | nouveau bouton | Conflit, combat terrestre : « Olivier Dubois : +2 aux infanteries cochées » — au plus votre capacité logistique, pour ce combat. | — |
 | 746 | Bombardier Lourd | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 747 | Combattant Voyageur | **partiel** | nouveau bouton | Fiche de l'unité, débarquement : l'unité est usée, 3 ressources. | Le déplacement (3 de distance au plus) : à la main. |
@@ -324,7 +324,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 1016 | Bombe bactériologique (Néo-peste WIP) | **oui** | automatique | Caractéristiques et bombardement 5** déjà utilisés par l'outil. Elle est retirée à « Terminer le combat » du bombardement où elle a tiré. | — |
 | 1017 | Alpha (Sardakk N'orr WIP) | oui | — | Caractéristiques déjà utilisées (combat 6). | — |
 | 1018 | Exotrirème (Sardakk N'orr WIP) | **oui** | nouveau bouton | Caractéristiques déjà utilisées (combat 3). Conflit, combat spatial : détruit, il inflige 1 dégât à la faction qui l'a détruit — « ✹ Exotrirème détruit » sur ses vaisseaux militaires du combat, elle choisit lequel l'encaisse. | — |
-| 1019 | Transporteur (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (capacité 3, mouvement 1). | Débarquer à la fin du déplacement : à la main. (moyenne) |
+| 1019 | Transporteur (Sardakk N'orr WIP) | **oui** | — | Caractéristiques déjà utilisées (capacité 3, mouvement 1). Débarquer à la fin de son déplacement : rien à écrire, l'outil ne contrôle le débarquement qu'à sa sous-phase (le glisser-déposer reste libre à la phase de déplacement). | — |
 | 1024 | Soleil de guerre (Braises de Muaat WIP) | oui | — | Caractéristiques déjà utilisées ; de type vaisseau amiral, il ne demande pas la technologie Soleil de guerre. | — |
 
 ## Planètes
