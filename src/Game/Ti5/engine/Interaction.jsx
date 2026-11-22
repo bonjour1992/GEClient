@@ -37,6 +37,7 @@ import {
     REFORGE_PORTAIL,
 } from "./miseEnPlace";
 import { joueurDeMain, estPioche } from "./etat";
+import { optionsDesLois, optionsDeLigne, estValide } from "./optionsVote";
 import { distanceIndex, distanceBande } from "../hexSpirale";
 import { ICONE_MERCENAIRE } from "../Component/Nom";
 
@@ -2210,7 +2211,7 @@ export function Plan({ children, style }) {
 
     const {
         etat, index, jouer, envoyer, ouvrirFiche, ouvrirLibre, joueur, moi, cliquer, production, setProduction, signaler,
-        search, aScript, factionDe, connaissance, aviser, allerA,
+        search, aScript, factionDe, connaissance, aviser, allerA, partie,
     } = useEngine();
 
     const appui = useRef(null);
@@ -3047,6 +3048,19 @@ export function Plan({ children, style }) {
                 (!etat.composants[id]?.ref && etat.composants[id]?.jeton === CUBE_MERCENAIRE)) &&
             !confirmerRegle("Poser un agent sur le plateau de vote",
                 ["ce n'est pas la phase de vote : les agents se posent sur le plateau à la phase de vote"])) {
+            return;
+        }
+
+        // Plateau de vote : une colonne hors des options de la loi (grisée, optionsVote.js) est semi-bloquée
+        const caseVote = /^joueur:\d+:vote:(\d+):(\d+)(:d)?$/.exec(zone);
+
+        if (caseVote && etat.tour > 0 &&
+            aDeplacer.some(id => etat.composants[id]?.ref?.type === "agent" ||
+                (!etat.composants[id]?.ref && etat.composants[id]?.jeton === CUBE_MERCENAIRE)) &&
+            !estValide(optionsDeLigne(optionsDesLois({ etat, index, joueurs: partie?.joueurs || [], contenuDe: contenuEnCache }),
+                Number(caseVote[1])), Number(caseVote[2])) &&
+            !confirmerRegle("Poser un agent sur une option de vote non valide",
+                [`cette colonne n'est pas une option de la loi ${caseVote[1]} (elle est grisée)`])) {
             return;
         }
 

@@ -969,6 +969,31 @@ agents usés, ceux des carrés et le reste sont retirés du jeu, les compteurs
 sont remis à 0. En haut de l'onglet : la liste numérotée des lois du tour
 (cartes de `general:agenda:<tour>`).
 
+Options de vote (`optionsVote.js`, lues sur le texte de la carte) : factions
+(mandat, « Élisez une faction », « Votez pour une / des factions », « la
+faction élue »), planète ou système (dans la colonne de la faction qui l'a
+proposé à la prévote — compteur `agenda:<tour>:<ligne>:designe:<u>` ; une
+faction qui n'a rien proposé n'est pas une option), choix 1 à N (type de
+technologie : les 4 de base ; type d'agent : `references.agentsBase` ; loi ou
+traité : les agendas de `general:table` ; objectif révélé ; liste « Votez pour
+A, B ou C » ; 6 si N est inconnu), sinon Contre et Pour ; « ou votez contre »
+ajoute Contre. Au-delà des lois du tour, une ligne n'a aucune option. Sur le
+plateau, une feuille de style (`<style data-options-vote>`, `vote.jsx` n'est
+pas touché) grise les autres colonnes et écrit en haut de chaque case ce pour
+quoi on y vote (`::before`) ; dans le décompte, leurs lignes sont grisées.
+Poser un agent sur une colonne grisée est semi-bloqué (`Interaction.jsx`).
+
+« Résoudre » (sous le décompte de chaque loi, phase de vote, tous les plateaux
+révélés) : un mandat va aux éléments actifs de la faction élue (sans voix :
+`horsJeu`), un traité sur `general:table` si l'option en tête hors Contre a
+plus de voix que Contre (sinon `horsJeu`) ; une loi ou une directive appelle
+son script de résolution (`RESOLUTIONS`, vide pour l'instant), sans script le
+bouton est indisponible (« résolution manuelle nécessaire »). La résolution est
+notée dans le compteur `agenda:<tour>:<ligne>:resolution` (> 0 : joueur ; −1 :
+hors jeu ; −2 : table) et la carte n'est déplacée qu'en quittant la phase de
+vote (`changerPhase`, `Partie.jsx`) : le numéro d'une loi est son rang dans
+la case Agenda, la sortir plus tôt décalerait les suivantes.
+
 ### scripts d'unités, de planètes et d'habilités
 
 Trois sortes de scripts de plus dans `engine/scripts.js` :

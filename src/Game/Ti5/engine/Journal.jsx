@@ -296,11 +296,13 @@ function Coup({ coup, max }) {
 
     // Effet du jeu (bouton vert, ou rouge gris : Interaction.jsx, BoutonRegle) :
     // la ligne est verte s'il était faisable, rouge s'il a été fait hors conditions
-    // (le ravitaillement, automatique, est écrit en vert lui aussi)
+    // (le ravitaillement, automatique, est écrit en vert lui aussi, comme « Prêt à révéler » et
+    //  « Vote : plateau révélé » — Vote.jsx, sync.js)
     // (les interactions de combat et de blocage faites dans les règles aussi : estCombatCorrect,
     //  estBlocageCorrect ; « Passer », « Fin de mon tour » et « Attendre » portent « ✔ »)
     const regle = lireRegle(coup.commentaire) ||
-        (/^Ravitaillement\b/.test(coup.commentaire || "") || estCombatCorrect(coup) || estBlocageCorrect(coup) ? { hors: false } : null);
+        (/^(Ravitaillement\b|Prêt à révéler|Vote : plateau révélé)/.test(coup.commentaire || "") ||
+            estCombatCorrect(coup) || estBlocageCorrect(coup) ? { hors: false } : null);
 
     return (
         <div

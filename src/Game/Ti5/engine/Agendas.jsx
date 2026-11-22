@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, BoutonRegle, nomElement, nomCase } from "./Interaction";
 import { useElements, contenuEnCache } from "./sync";
+import { optionsDesLois } from "./optionsVote";
 
 // ============================================================
 // AGENDAS DU TOUR : CARTES RÉVÉLÉES ET DÉSIGNATIONS
@@ -19,10 +20,11 @@ import { useElements, contenuEnCache } from "./sync";
 //       au changement de phase, loi arrivée après).
 //
 //   « Élisez une planète », « Élisez un système »
-//       De la phase de mandat à la fin du vote, chaque faction a une
-//       décision (onglet Décision) : désigner une planète ou un
-//       système, ou ne rien désigner. Les désignations s'affichent à
-//       côté de la loi, à la couleur de chaque faction.
+//       À la phase de prévote, chaque faction a une décision facultative
+//       (onglet Décision) : proposer une planète ou un système, ou ne
+//       rien proposer. Les propositions s'affichent à côté de la loi, à
+//       la couleur de chaque faction ; on vote pour une proposition dans
+//       la colonne de la faction qui l'a faite (optionsVote.js).
 //         agenda:<tour>:<ligne>:designe:<joueur> = id de la planète,
 //         ou numéro de case + 1 (système), ou −1 (rien)
 //
@@ -92,7 +94,8 @@ export function actionsRevelation({ etat, index }, seulement = null) {
         .map(l => ({ type: "piocher", de: l.lecture.revele.pioche, vers: zoneRevelee(l.carte), n: l.lecture.revele.n }));
 }
 
-const enPhaseDeDesignation = etat => /mandat|vote/i.test(etat.phase || "");
+// (la proposition se fait à la prévote)
+const enPhaseDeDesignation = etat => /pr[ée]vote/i.test(etat.phase || "");
 
 // Lois pour lesquelles je dois encore désigner une planète ou un système
 export function designationsEnAttente({ etat, index, joueur, moi }) {
@@ -109,7 +112,7 @@ export function designationsEnAttente({ etat, index, joueur, moi }) {
 // Planètes et systèmes de la carte
 // ------------------------------------------------------------
 
-function useCarte() {
+export function useCarte() {
 
     const { etat, search } = useEngine();
 
@@ -166,10 +169,11 @@ function Designation({ loi, style }) {
 
     return (
         <div data-decision={"designation:" + loi.ligne} style={style}>
-            <b>Loi {loi.ligne} « {nomLoi} » : désignez {NOMS_SORTE[sorte]}</b>
+            <b>Loi {loi.ligne} « {nomLoi} » : proposer {NOMS_SORTE[sorte]} (facultatif)</b>
             <div>
-                Chaque faction désigne {NOMS_SORTE[sorte]} ; les désignations s'affichent à côté de la loi dans l'onglet Vote,
-                à la couleur de chaque faction.
+                Chaque faction peut proposer {NOMS_SORTE[sorte]} ; les propositions s'affichent à côté de la loi dans l'onglet Vote,
+                à la couleur de chaque faction. On vote pour une proposition dans la colonne de la faction qui l'a faite ;
+                une faction qui ne propose rien n'est pas une option du vote.
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
                 <select data-designation-choix value={valeur} onChange={e => setValeur(e.target.value)}>
@@ -183,18 +187,18 @@ function Designation({ loi, style }) {
                     style={{ padding: "5px 12px", fontWeight: "bold" }}
                     onClick={() => envoyer(
                         [{ type: "compteur", id: cle, valeur: Number(valeur) }],
-                        `Loi ${loi.ligne} « ${nomLoi} » : désigne ${carteDuJeu.nomDe(sorte, Number(valeur))}`
+                        `Loi ${loi.ligne} « ${nomLoi} » : propose ${carteDuJeu.nomDe(sorte, Number(valeur))}`
                     )}
                 >
-                    Désigner
+                    Proposer
                 </button>
                 <button
                     type="button"
                     data-action="designer-rien"
                     style={{ padding: "5px 12px" }}
-                    onClick={() => envoyer([{ type: "compteur", id: cle, valeur: -1 }], `Loi ${loi.ligne} « ${nomLoi} » : ne désigne rien`)}
+                    onClick={() => envoyer([{ type: "compteur", id: cle, valeur: -1 }], `Loi ${loi.ligne} « ${nomLoi} » : ne propose rien`)}
                 >
-                    Ne rien désigner
+                    Ne rien proposer
                 </button>
             </div>
         </div>
@@ -207,6 +211,28 @@ export function DesignationsAgenda({ style }) {
     useLoisDuTour();
 
     return designationsEnAttente(ctx).map(loi => <Designation key={loi.carte.id} loi={loi} style={style} />);
+}
+
+// ------------------------------------------------------------
+// Options de vote des lois du tour (optionsVote.js), avec leurs noms :
+// [options ou null] par ligne du plateau de vote
+// ------------------------------------------------------------
+
+export function useOptionsDesLois() {
+
+    const { etat, index, partie, search } = useEngine();
+    const carteDuJeu = useCarte();
+
+    useLoisDuTour();
+
+    return optionsDesLois({
+        etat,
+        index,
+        joueurs: partie.joueurs,
+        contenuDe: contenuEnCache,
+        nom: ref => nomElement(search, ref),
+        designationTexte: (valeur, contenu) => carteDuJeu.nomDe(lireAgenda(contenu).designe || "planete", valeur),
+    });
 }
 
 // ------------------------------------------------------------
@@ -285,7 +311,7 @@ export function AnnexesDeLoi({ carte, ligne }) {
             {/* Désignations : une pastille par faction, à sa couleur */}
             {lecture.designe && (
                 <div data-designations={ligne} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, fontSize: 13 }}>
-                    <b>{lecture.designe === "planete" ? "Planètes désignées" : "Systèmes désignés"} :</b>
+                    <b>{lecture.designe === "planete" ? "Planètes proposées" : "Systèmes proposés"} :</b>
                     {designations.map(({ j, valeur }) => (
                         <span
                             key={j.userId}
@@ -300,16 +326,16 @@ export function AnnexesDeLoi({ carte, ligne }) {
                                 opacity: valeur ? 1 : 0.55,
                             }}
                         >
-                            {j.nom} : {valeur ? carteDuJeu.nomDe(lecture.designe, valeur) : "en attente"}
+                            {j.nom} : {valeur ? carteDuJeu.nomDe(lecture.designe, valeur) : (enPhaseDeDesignation(etat) ? "en attente" : "rien")}
                             {joueur && j.userId === moi && valeur !== 0 && (
                                 <button
                                     type="button"
                                     data-action="designation-changer"
-                                    title="Annule votre désignation : la décision revient dans l'onglet Décision"
+                                    title="Annule votre proposition : la décision revient dans l'onglet Décision (à la prévote)"
                                     style={{ marginLeft: 6, fontSize: 11, padding: "0 4px" }}
                                     onClick={() => envoyer(
                                         [{ type: "compteur", id: cleDesignation(etat.tour, ligne, moi), valeur: 0 }],
-                                        `Loi ${ligne} « ${nomLoi} » : désignation annulée`
+                                        `Loi ${ligne} « ${nomLoi} » : proposition annulée`
                                     )}
                                 >
                                     changer

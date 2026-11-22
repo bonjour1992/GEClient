@@ -304,7 +304,9 @@ function etatRecomposition({ etat, moi, aScript }) {
 }
 
 // Nombre de décisions durables qui m'attendent
-export function decisionsDurables(ctx) {
+//   avecFacultatives : faux pour ne compter que celles qui semi-bloquent « Passer » (la proposition
+//   d'une planète ou d'un système pour une loi, à la prévote, est facultative)
+export function decisionsDurables(ctx, avecFacultatives = true) {
 
     if (!ctx.joueur) {
         return 0;
@@ -315,8 +317,8 @@ export function decisionsDurables(ctx) {
         (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0) +
         (ctx.propositions?.cartes.length ? 1 : 0) +
         (mercenairesAChoisir(ctx).length ? 1 : 0) +
-        // (lois du tour qui demandent de désigner une planète ou un système : Agendas.jsx)
-        designationsEnAttente(ctx).length +
+        // (lois du tour qui demandent de proposer une planète ou un système, facultatif : Agendas.jsx)
+        (avecFacultatives ? designationsEnAttente(ctx).length : 0) +
         // (carte face cachée sur laquelle j'ai cliqué : la révéler ou la consulter)
         (ctx.cadreCachee ? 1 : 0);
 }

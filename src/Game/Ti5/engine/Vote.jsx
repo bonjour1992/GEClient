@@ -4,7 +4,11 @@ import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDispo
 import { MARQUEUR, CUBES } from "./miseEnPlace";
 import { demander } from "./demande";
 import { COLONNES_VOTE, COULEURS_COLONNES, joueurDeColonne } from "./voteCouleurs";
-import { AnnexesDeLoi } from "./Agendas";
+import { AnnexesDeLoi, useOptionsDesLois } from "./Agendas";
+import { contenuEnCache } from "./sync";
+import {
+    estValide, optionsDeLigne, resolutionAutomatique, RESOLUTIONS, cleResolution, VERS_TABLE,
+} from "./optionsVote";
 import { SOUTIEN_POLITIQUE } from "./Transaction";
 import { estPhaseDeVote } from "./etat";
 
@@ -36,6 +40,31 @@ import { estPhaseDeVote } from "./etat";
 // À la réinitialisation, un agent de la case va donc dans les agents usés,
 // et un agent du carré de droite est retiré du jeu.
 const estPartieDroite = zone => zone.endsWith(":d");
+
+// Feuille de style du plateau d'un joueur (zones <base>:vote:<loi>:<col>) : une case hors des
+// options de sa loi est grisée ; en haut d'une case, ce pour quoi on y vote (faction, choix,
+// planète ou système proposé — pas pour « Pour » et « Contre », déjà écrits sur le plateau)
+function cssOptions(base, toutesOptions) {
+
+    return Array.from({ length: LIGNES_PLATEAU }, (_, k) => k + 1).flatMap(loi => {
+
+        const options = optionsDeLigne(toutesOptions, loi);
+
+        return COLONNES_VOTE.flatMap((_, col) => {
+
+            const selecteur = `[data-prefixe="${base}"] [data-emplacement="vote:${loi}:${col}"]`;
+            const libelle = options && options.sorte !== "pour-contre" ? String(options.libelles[col] || "").replace(/\s+/g, " ") : "";
+
+            return [
+                !estValide(options, col) && `${selecteur} { filter: grayscale(1); opacity: 0.3; }`,
+                libelle && `${selecteur}::before { content: ${JSON.stringify(libelle)}; position: absolute; top: 3px; left: 3px; ` +
+                    "max-width: calc(75% - 8px); padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.92); color: #000; " +
+                    "font: bold 12px/1.15 Arial, sans-serif; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; " +
+                    "z-index: 4; pointer-events: none; }",
+            ].filter(Boolean);
+        });
+    }).join("\n");
+}
 
 const stylePions = zone => (estPartieDroite(zone)
     ? {
@@ -104,6 +133,100 @@ function styleVote(col) {
 }
 
 const styleCellule = { border: "1px solid #bbb", padding: "1px 6px", textAlign: "center" };
+
+// Lignes du plateau de vote (vote.jsx)
+const LIGNES_PLATEAU = 6;
+
+// ------------------------------------------------------------
+// Résolution d'une loi (optionsVote.js), sous son décompte, une fois les votes révélés :
+// mandat et traité ont leur résolution ; une loi ou une directive, son script de
+// résolution (RESOLUTIONS), sinon bouton indisponible. La carte change de place à la
+// fin de la phase de vote (compteur agenda:<tour>:<loi>:resolution, Partie.jsx).
+// ------------------------------------------------------------
+function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
+
+    const { etat, index, envoyer, joueur, search, nomDe } = useEngine();
+
+    if (!carte || carte.cache || !carte.ref) {
+        return null;
+    }
+
+    const cle = cleResolution(etat.tour, loi);
+    const code = Number(etat.compteurs[cle]) || 0;
+    const nomLoi = nomElement(search, carte.ref);
+    const contenu = contenuEnCache(carte.ref.id);
+
+    // Déjà résolue : où ira la carte
+    if (code) {
+        return (
+            <div data-resolution={loi} data-resolution-vers={code} style={{ fontSize: 12, color: "#1b5e20" }}>
+                ✔ Résolue : la carte va {code > 0 ? `dans les éléments actifs de ${nomDe(code)}` : (code === VERS_TABLE ? "sur la table" : "hors jeu")}
+                {" "}à la fin de la phase de vote.
+                {joueur && (
+                    <button
+                        type="button"
+                        data-action="resolution-annuler"
+                        style={{ ...styleMini, marginLeft: 6 }}
+                        onClick={() => envoyer([{ type: "compteur", id: cle, valeur: 0 }], `Loi ${loi} « ${nomLoi} » : résolution annulée`)}
+                    >
+                        annuler
+                    </button>
+                )}
+            </div>
+        );
+    }
+
+    if (!ouverte || !joueur) {
+        return null;
+    }
+
+    const auto = resolutionAutomatique({ contenu, options, votes, loi, joueurs });
+    const script = !auto && RESOLUTIONS[carte.ref.id];
+
+    if (!auto && !script) {
+        return (
+            <button
+                type="button"
+                disabled
+                data-action="resoudre-loi"
+                data-resolution-manuelle
+                title="Cette carte n'a pas de script de résolution : appliquez-la à la main (fiche de la carte, « Envoyer vers… »)"
+                style={{ alignSelf: "flex-start", opacity: 0.6, cursor: "default" }}
+            >
+                Résoudre — résolution manuelle nécessaire
+            </button>
+        );
+    }
+
+    if (auto) {
+        return (
+            <BoutonRegle
+                data-action="resoudre-loi"
+                nom={`Loi ${loi} « ${nomLoi} » : ${auto.texte}`}
+                obstacles={auto.obstacles}
+                faire={commentaire => envoyer([{ type: "compteur", id: cle, valeur: auto.code }], commentaire + " (à la fin de la phase de vote)")}
+                title="La carte change de place à la fin de la phase de vote"
+                style={{ alignSelf: "flex-start" }}
+            >
+                Résoudre : {auto.texte}
+            </BoutonRegle>
+        );
+    }
+
+    const resultat = script({ etat, index, joueurs, votes, loi, carte });
+
+    return (
+        <BoutonRegle
+            data-action="resoudre-loi"
+            nom={resultat.message || `Loi ${loi} « ${nomLoi} » résolue`}
+            obstacles={resultat.obstacles || []}
+            faire={commentaire => envoyer(resultat.actions, commentaire)}
+            style={{ alignSelf: "flex-start" }}
+        >
+            Résoudre
+        </BoutonRegle>
+    );
+}
 const styleMini = { fontSize: 11, padding: "0 4px" };
 
 // Voix et classement des votes du tour (aussi lu par effets.js, pour Trading)
@@ -308,6 +431,9 @@ function Decompte({ lois }) {
     const { cleAjustement, cleOrdre, ajustement, voix, total, bonus, conclave, conclaveEnJeu } = votes;
     const nombreLois = Math.max(lois.length, votes.nombreLois);
 
+    // Options de vote de chaque loi (optionsVote.js) : les autres colonnes sont grisées
+    const toutesOptions = useOptionsDesLois();
+
     // Responsable du sénat : le joueur de la dernière case d'initiative
     const senat = (index.parZone.get("general:initiative:" + joueurs.length) || [])
         .find(m => m.jeton === MARQUEUR && m.proprio)?.proprio ?? null;
@@ -328,7 +454,9 @@ function Decompte({ lois }) {
     // « Prêt » : rien d'autre ne part. Quand tous le sont, la page de chaque
     // joueur envoie son coup local et révèle son plateau (sync.js).
     function basculerPret() {
-        envoyer([{ type: "compteur", id: `joueur:${moi}:votePret`, valeur: estPret(moi) ? 0 : 1 }], "");
+        // (« Prêt à révéler » est écrit en vert dans le journal : Journal.jsx)
+        envoyer([{ type: "compteur", id: `joueur:${moi}:votePret`, valeur: estPret(moi) ? 0 : 1 }],
+            estPret(moi) ? "Plus prêt à révéler" : "Prêt à révéler");
     }
 
     // Soutiens politiques engagés ce tour (issue annoncée à la prévote) : détenteur, faction au
@@ -453,6 +581,7 @@ function Decompte({ lois }) {
                 {numerosLois.map(loi => {
 
                     const carte = lois[loi - 1];
+                    const options = optionsDeLigne(toutesOptions, loi);
 
                     const classement = votes.classement(loi);
 
@@ -463,7 +592,8 @@ function Decompte({ lois }) {
                         classement.some(autre => autre !== col && total(loi, autre) === total(loi, col));
 
                     return (
-                        <table key={loi} style={{ borderCollapse: "collapse", backgroundColor: "#fff", fontSize: 13 }}>
+                        <div key={loi} data-loi-decompte={loi} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <table style={{ borderCollapse: "collapse", backgroundColor: "#fff", fontSize: 13 }}>
                             <caption style={{ textAlign: "left", fontWeight: "bold", padding: "2px 0" }}>
                                 {loi}. {carte && !carte.cache && carte.ref ? nomElement(search, carte.ref) : "loi " + loi}
 
@@ -524,7 +654,17 @@ function Decompte({ lois }) {
                                 )}
 
                                 {affichees.map(col => (
-                                    <tr key={col} style={{ backgroundColor: classement[0] === col && total(loi, col) > 0 ? "#e8f5e9" : undefined }}>
+                                    <tr
+                                        key={col}
+                                        data-option-valide={estValide(options, col) ? "oui" : "non"}
+                                        title={estValide(options, col) ? undefined : "Option non valide pour cette loi"}
+                                        style={{
+                                            backgroundColor: !estValide(options, col)
+                                                ? "#e0e0e0"
+                                                : (classement[0] === col && total(loi, col) > 0 ? "#e8f5e9" : undefined),
+                                            opacity: estValide(options, col) ? 1 : 0.5,
+                                        }}
+                                    >
                                         <td style={styleCellule}>
                                             {total(loi, col) > 0 ? classement.indexOf(col) + 1 : "—"}
                                             {egalite(col) && <span title="Égalité" style={{ color: "#c00" }}> =</span>}
@@ -548,6 +688,16 @@ function Decompte({ lois }) {
                                                 <span data-faction-colonne={col} style={{ marginLeft: 4, fontWeight: "normal", fontSize: 12 }}>
                                                     {joueurDeColonne(joueurs, col).nom}
                                                 </span>
+                                            )}
+                                            {/* Ce pour quoi on vote dans cette colonne (choix, planète ou système proposé) */}
+                                            {options?.sorte !== "pour-contre" && options?.libelles[col] &&
+                                                options.libelles[col] !== joueurDeColonne(joueurs, col)?.nom && (
+                                                <span data-option-libelle={col} style={{ marginLeft: 4, fontWeight: "normal", fontSize: 12, fontStyle: "italic" }}>
+                                                    {options.libelles[col]}
+                                                </span>
+                                            )}
+                                            {!estValide(options, col) && (
+                                                <span style={{ marginLeft: 4, fontWeight: "normal", fontSize: 11, color: "#666" }}>(non valide)</span>
                                             )}
                                         </td>
 
@@ -639,6 +789,17 @@ function Decompte({ lois }) {
                                 ))}
                             </tbody>
                         </table>
+
+                        {/* « Résoudre », une fois les votes révélés */}
+                        <Resolution
+                            loi={loi}
+                            carte={carte}
+                            options={options}
+                            votes={votes}
+                            joueurs={joueurs}
+                            ouverte={enVote && caches.length === 0}
+                        />
+                        </div>
                     );
                 })}
             </div>
@@ -646,7 +807,8 @@ function Decompte({ lois }) {
             <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>
                 Égalités : départagées par le responsable du sénat
                 {senat ? ` (${nomDe(senat)})` : " (personne sur la dernière case d'initiative)"}.
-                L'application de la loi se fait à la main.
+                Options grisées : non valides pour la loi. « Résoudre » (votes révélés) : un mandat va à la faction élue,
+                un traité adopté sur la table ; une loi ou une directive sans script se résout à la main.
             </div>
         </div>
     );
@@ -664,6 +826,9 @@ export function Vote({ vu }) {
     const idVote = etat.references?.vote;
 
     const lien = useMemo(() => ({ type: "vote", id: idVote }), [idVote]);
+
+    // Options de vote de chaque loi (optionsVote.js)
+    const toutesOptions = useOptionsDesLois();
 
     const drapeau = base + ":voteRevele";
     const enVote = estPhaseDeVote(etat);
@@ -807,6 +972,9 @@ export function Vote({ vu }) {
                     </span>
                 ))}
             </div>
+
+            {/* Plateau : options non valides grisées ; en haut de chaque case, ce pour quoi on vote */}
+            <style data-options-vote={u}>{cssOptions(base, toutesOptions)}</style>
 
             <Defilable>
                 <Emplacements prefixe={base} stylePions={stylePions} style={{ width: "max-content" }}>

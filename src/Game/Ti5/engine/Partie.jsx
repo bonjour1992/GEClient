@@ -74,6 +74,7 @@ import { reglerDemande, confirmer } from "./demande";
 import { InfosPartie } from "./InfosPartie";
 import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
 import { actionsRevelation } from "./Agendas";
+import { cleResolution, zoneDeResolution } from "./optionsVote";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
@@ -823,10 +824,24 @@ export function Partie({ id }) {
             messages: finDeVote.flatMap(x => x.messages),
         };
 
+        // … et les lois résolues (« Résoudre », onglet Vote) vont où leur résolution le dit :
+        // éléments actifs de la faction élue, table, hors jeu (optionsVote.js)
+        const resolues = quitteVote
+            ? (index.parZone.get("general:agenda:" + etat.tour) || [])
+                .map((carte, k) => [carte, Number(etat.compteurs[cleResolution(etat.tour, k + 1)]) || 0])
+                .filter(([, code]) => code)
+                .map(([carte, code]) => ({ type: "deplacer", c: carte.id, vers: zoneDeResolution(code) }))
+            : [];
+
         // Nouvelle phase : plus personne n'a passé, le premier de l'ordre joue
         if (phase) {
-            p.envoyer([commentaire, ...trading.messages, quitteVote && "vote réinitialisé"].filter(Boolean).join(" — "), [
+            p.envoyer([
+                commentaire, ...trading.messages,
+                resolues.length > 0 && `${resolues.length} loi${resolues.length > 1 ? "s" : ""} résolue${resolues.length > 1 ? "s" : ""} mise${resolues.length > 1 ? "s" : ""} en place`,
+                quitteVote && "vote réinitialisé",
+            ].filter(Boolean).join(" — "), [
                 ...trading.actions,
+                ...resolues,
                 // (après Trading et Harrugh, qui lisent le décompte)
                 ...(quitteVote ? [{ type: "reinitialiserVotes" }] : []),
                 ...(pas > 0 ? [...retraitMarqueurs, ...retraitUse, ...retraitResolus] : []),
@@ -2243,7 +2258,8 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre, attendreAmiral }) {
 
     // Une décision m'attend (onglet Décision) : « Joueur suivant » et « Passer » sont
     // semi-bloqués — rouge gris, utilisables après la confirmation qui dit pourquoi
-    const enAttente = ctx.decisions.length + decisionsDurables(ctx);
+    // (sans les décisions facultatives : proposer une planète ou un système pour une loi)
+    const enAttente = ctx.decisions.length + decisionsDurables(ctx, false);
 
     const obstacles = [enAttente > 0 &&
         `${enAttente} décision${enAttente > 1 ? "s vous attendent" : " vous attend"} dans l'onglet Décision`];
