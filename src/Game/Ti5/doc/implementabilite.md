@@ -23,13 +23,13 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
 | Habilités | 64 | 42 | 8 | 14 | 34 | 6 | 17 |
-| Unités | 114 | 77 | 37 | 0 | 25 | 4 | 43 |
+| Unités | 114 | 83 | 31 | 0 | 30 | 4 | 45 |
 | Planètes | 35 | 29 | 5 | 1 | 23 | 8 | 12 |
 | Mercenaires | 40 | 18 | 17 | 5 | 18 | 21 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **385** | **288** | **74** | **23** | **167** | **62** | **123** |
+| **Total** | **385** | **294** | **68** | **23** | **172** | **62** | **125** |
 
 Les trois dernières colonnes comptent les scripts écrits (une carte peut en avoir deux : « bouton existant modifié + nouveau bouton »).
 
@@ -262,10 +262,10 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 467 | Arbre mère (Omni-esprit d'Arborec) | **oui** | automatique | Ravitaillement automatique : autant de Letani que le niveau de connaissance génétique, posés sur la planète de l'arbre. | — |
 | 470 | Graine d'eden (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | **oui** | nouveau bouton + automatique | Conflit, combat spatial : autant d'attaques que votre niveau de connaissance génétique. Bombardement : « Duha Menaimon : jet » — au plus ce niveau, un Letani est posé sur la planète. | — |
-| 490 | Armageddon conquis | **partiel** | nouveau bouton | Fiche de l'unité, science (Reforger) : 3 fragments militaires, un scientifique est posé sur l'unité et y reste. | Portée du canon +1 et 2 points de plus au décompte : à la main. |
+| 490 | Armageddon conquis | **partiel** | nouveau bouton + automatique | Fiche de l'unité, science (Reforger) : 3 fragments militaires, un scientifique est posé sur l'unité et y reste. Canons spatiaux : portée 0 lue sur l'unité (son seul système), 1 une fois reforgé (un agent posé dessus). | 2 points de plus au décompte : à la main. |
 | 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
-| 509 | Dinosaure | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
-| 511 | Garde impériale | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Valeur de contrôle : calcul du contrôle par planète ou système à créer. (moyenne) |
+| 509 | Dinosaure | **oui** | automatique | Caractéristiques de l'unité déjà utilisées. Sa valeur de contrôle `#con(n)` est comptée dans les conflits de contrôle, les dominations et le rapport de force. | — |
+| 511 | Garde impériale | **oui** | automatique | Caractéristiques de l'unité déjà utilisées. Sa valeur de contrôle `#con(n)` est comptée dans les conflits de contrôle, les dominations et le rapport de force. | — |
 | 512 | Station de combat | **oui** | automatique | Caractéristiques de l'unité déjà utilisées ; militaire (mot-clé ajouté) : sa valeur de contrôle `#Con(3)` compte dans les conflits de contrôle, de domination et les blocages. | — |
 | 1246 | Station automatisée de défense | **oui** | automatique | Unité neutre native (structure spatiale, figurine du dock, combat 5 à deux dés, résistance 3) de six tuiles : « station de défense » (×3), un champ d'astéroïdes, une nébuleuse, Hopeld. Militaire et agressive : elle engage au combat quand elle le peut, et compte dans les contrôles, les dominations et les blocages. | — |
 | 513 | Canon ancien | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
@@ -280,7 +280,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
 | 570 | Cuve de Clonage | **oui** | nouveau bouton | Fiche de l'unité, production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète. | — |
 | 571 | Arbre de vie éternelle | **partiel** | nouveau bouton | Fiche de l'unité, phase de production : l'arbre est usé et prend 1 dégât, +4 commerce. | Soin en phase de science (coût « #regen(2) » à préciser) ; points du décompte. |
-| 572 | Étoile de la mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique ; valeur de contrôle non calculée. (moyenne) |
+| 572 | Étoile de la mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique. (moyenne) La valeur de contrôle `#con(n)` est comptée. |
 | 573 | Vaisseau gigantesque | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 574 | Ravageur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
 | 575 | Corsaire | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | — |
@@ -299,11 +299,11 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 745 | Olivier Dubois | **oui** | nouveau bouton | Conflit, combat terrestre : « Olivier Dubois : +2 aux infanteries cochées » — au plus votre capacité logistique, pour ce combat. | — |
 | 746 | Bombardier Lourd | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 747 | Combattant Voyageur | **partiel** | nouveau bouton | Fiche de l'unité, débarquement : l'unité est usée, 3 ressources. | Le déplacement (3 de distance au plus) : à la main. |
-| 766 | Memoria (Le Nomade) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : dépense un signal, +4 cases de recherche de signal. (facile) |
-| 767 | Memoria B (Le Nomade) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton : dépense un signal, +4 cases de recherche de signal. (facile) |
-| 768 | Memoria A (Le Nomade) | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton signal facile ; furtivité et malus d'anomalie liés au déplacement. (difficile) |
-| 769 | Memoria D (Le Nomade) | **partiel** | nouveau bouton | Conflit : une de vos infanteries détruites — « Memoria D : jet (6 ou moins) », puis « Poser sur Memoria D » (à bord). | Dépense d'un signal (recherche de signal) : à la main. |
-| 770 | Memoria C (Le Nomade) | **partiel** | automatique | Ravitaillement automatique : une frégate marchande est créée dans le système. | Dépense d'un signal ; revendication. |
+| 766 | Memoria (Le Nomade) | **oui** | nouveau bouton | Fiche de l'unité, science : « Memoria : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | — |
+| 767 | Memoria B (Le Nomade) | **oui** | nouveau bouton | Fiche de l'unité, science : « Memoria B : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | — |
+| 768 | Memoria A (Le Nomade) | **partiel** | nouveau bouton + automatique (prévu) | Fiche de l'unité, science : « Memoria A : dépenser un signal » retire un marqueur de signal de son système et note 4 de recherche de signal. | Furtivité et malus d'anomalie liés au déplacement. (difficile) |
+| 769 | Memoria D (Le Nomade) | **oui** | nouveau bouton | Conflit : une de vos infanteries détruites — « Memoria D : jet (6 ou moins) », puis « Poser sur Memoria D » (à bord). Science : « Memoria D : dépenser un signal » (4 de recherche de signal). | — |
+| 770 | Memoria C (Le Nomade) | **partiel** | automatique + nouveau bouton | Ravitaillement automatique : une frégate marchande est créée dans le système. Science : « Memoria C : dépenser un signal » (4 de recherche de signal). | Revendication. |
 | 786 | Centre de contrebande (Le Nomade) | **oui** | automatique | Ravitaillement automatique : 3 ressources et 3 influence, moins 1 par autre centre de contrebande à 3 systèmes ou moins. | — |
 | 810 | Nef de la rupture (Rupture de l'espace-temps) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Déplacement, trou de ver oméga : son jet ne l'arrête pas et ne la touche pas (elle n'ignore que ce blocage-là). | — |
 | 835 | Milice (Réfugiés) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -321,7 +321,7 @@ Les trois dernières colonnes comptent les scripts écrits (une carte peut en av
 | 1013 | Infanterie (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; sans le mot-clé « transportable », elle ne s'embarque pas. | — |
 | 1014 | Infanterie infectée (Néo-peste WIP) | partiel | — | Caractéristiques déjà utilisées ; non transportable. | « Ne peut jamais être déplacée » : non vérifié. (moyenne) |
 | 1015 | Cuirassé (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; bombardement 5 à une seule attaque. | — |
-| 1016 | Bombe bactériologique (Néo-peste WIP) | partiel | — | Caractéristiques et bombardement 5** déjà utilisés par l'outil. | La détruire quand elle bombarde : à la main. (facile) |
+| 1016 | Bombe bactériologique (Néo-peste WIP) | **oui** | automatique | Caractéristiques et bombardement 5** déjà utilisés par l'outil. Elle est retirée à « Terminer le combat » du bombardement où elle a tiré. | — |
 | 1017 | Alpha (Sardakk N'orr WIP) | oui | — | Caractéristiques déjà utilisées (combat 6). | — |
 | 1018 | Exotrirème (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (combat 3). | 1 dégât infligé quand il est détruit : à la main. (moyenne) |
 | 1019 | Transporteur (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (capacité 3, mouvement 1). | Débarquer à la fin du déplacement : à la main. (moyenne) |
@@ -489,7 +489,7 @@ Deux sortes : les **capacités** écrites dans le texte d'une unité (`#furtif`,
 | Mot-clé | Règle | Unités | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---:|---|---|---|---|
 | `#bomb` bombardement | Attaque contre les forces terrestres. | 12 | **oui** | automatique | Conflit, « Bombardement » : les unités de l'espace qui ont `#bomb(valeur, dés)` ou la notation à étoiles (« 5\*\* » : 5, 2 dés) tirent sur la planète. | — |
-| `#can` canon spatial | Attaque à distance, portée 1 par défaut. | 11 | **oui** | nouveau bouton | Conflit, « Canons spatiaux » : chaque joueur voit ses canons à portée avec leur distance (`#can(valeur, dés)` ou « 6\*\* ») ; en choisir un use un amiral et pose un marqueur d'activation. Portée 2 avec Canon longue portée. « Prêt au combat » ouvre d'abord un test de blocage là où sont vos unités qui tirent, si d'autres factions peuvent les bloquer ; une unité bloquée ne tire pas. | « portée 0 » écrite sur une unité : non lue. (facile) |
+| `#can` canon spatial | Attaque à distance, portée 1 par défaut. | 11 | **oui** | nouveau bouton | Conflit, « Canons spatiaux » : chaque joueur voit ses canons à portée avec leur distance (`#can(valeur, dés)` ou « 6\*\* ») ; en choisir un use un amiral et pose un marqueur d'activation. Portée 2 avec Canon longue portée ; une portée écrite sur l'unité (« portée 0 ») remplace la portée 1. « Prêt au combat » ouvre d'abord un test de blocage là où sont vos unités qui tirent, si d'autres factions peuvent les bloquer ; une unité bloquée ne tire pas. | « portée 0 » écrite sur une unité : non lue. (facile) |
 | `#fpre` frappe en premier | L'unité attaque avant les autres. | 6 | **oui** | automatique | Conflit : phases 1 et 2 du combat (frappe en premier, puis ses dégâts) avant les autres attaques. | — |
 | `#prec` précis | Pas de malus en ciblant une unité. | 6 | **oui** | automatique | Conflit : « Cibler » ne coûte pas −2 à cette unité. | — |
 | `#con` contrôle | Valeur de contrôle de l'unité (1 par défaut). | 16 | **oui** | automatique | Blocage d'un déplacement, test de blocage d'une action, conflits de contrôle et de domination : chaque unité militaire vaut la valeur écrite (`#con(3)`), sinon 1 ; +1 avec Rayon tracteur. Une unité non militaire ne compte que si son texte lui donne une valeur, et seulement pour un camp qui a une unité militaire ou la possession. | — |

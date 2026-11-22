@@ -351,6 +351,25 @@ const LIBRE = "libre";
 // pioche:signal-N ; un marqueur libre « Signal N » la représente sur la table
 const pileSignal = n => `pioche:signal-${n}`;
 
+// Memoria (Le Nomade) — « #Pscience: #spend signal: #resig(4) » : un marqueur de signal (#859)
+// du système où est l'unité est dépensé, 4 de recherche de signal sont notés.
+const memoriaSignal = (id, carte, ecritLe, nom) => action(id, "unit", carte, ecritLe, `${nom} : signal`, "unite",
+    "Science, sur la fiche de l'unité : un marqueur de signal du système où elle se trouve est dépensé, 4 de recherche de signal sont notés (onglet Technologie, à cocher).", {
+        phase: "science",
+        special: atelier => {
+
+            const signal = Object.values(atelier.etat.composants).find(x => !x.cache && x.ref?.type === "token" && x.ref.id === 859 &&
+                x.zone === "hex:" + atelier.numero);
+
+            return {
+                actions: signal ? [{ type: "supprimer", c: signal.id }, atelier.recherche(atelier.moi, carte, 4)].filter(Boolean) : [],
+                sans: signal ? null : "aucun marqueur de signal dans ce système",
+                avis: signal ? `${nom} : signal dépensé, 4 de recherche de signal notés — cochez-les dans l'onglet Technologie.` : "",
+            };
+        },
+        libelle: `${nom} : dépenser un signal (+4 de recherche de signal)`,
+    });
+
 // Bouton SIG-N : la carte du signal n° N va dans mes éléments actifs, face visible
 const signal = (n, carte, ecritLe) => action(`sig-${n}`, "tech", carte, ecritLe, `SIG-${n}`, "plateau",
     `Le signal n° ${n} de l'événement « Signal capté » (carte cachée, numérotée à la mise en place) arrive face visible dans vos éléments actifs ; son marqueur « Signal ${n} » est retiré de la table.`, {
@@ -2051,6 +2070,14 @@ export const SCRIPTS = [
         "Conflit, combat terrestre : « Olivier Dubois : +2 aux infanteries cochées »",
         "Jusqu'à votre capacité logistique de vos infanteries cochées ont +2 pour ce combat."),
 
+    regle("bombe-bacteriologique-depensee", "unit", 1016, 1795046343902, "Bombe bactériologique", "auto",
+        "Conflit : « Terminer le combat » d'un bombardement",
+        "La bombe qui a bombardé est dépensée : elle est retirée à « Terminer le combat »."),
+
+    regle("armageddon-conquis-portee", "unit", 490, 1795072921262, "Armageddon conquis : portée", "auto",
+        "Conflit : canons spatiaux (« Mes canons spatiaux à portée »)",
+        "La portée écrite sur une unité est lue (« portée 0 » : son canon ne tire que dans son système). Armageddon conquis reforgé (un scientifique posé dessus) : portée +1."),
+
     regle("memoria-d", "unit", 769, 1795073444382, "Memoria D", "nouveau",
         "Conflit : « Memoria D : jet » sur une de vos infanteries détruites",
         "Un dé : 6 ou moins, l'infanterie est sauvée et posée à bord de votre Memoria D."),
@@ -2100,13 +2127,13 @@ export const SCRIPTS = [
         }),
 
     action("armageddon-scientifique", "unit", 490, 1795072921262, "Armageddon conquis : scientifique", "unite",
-        "Science (Reforger) : dépensez 3 fragments militaires et posez un scientifique sur cette unité, où il reste : la portée de son canon augmente de 1 et elle rapporte 2 points de plus au décompte (à compter à la main).", {
+        "Science (Reforger) : dépensez 3 fragments militaires et posez un scientifique sur cette unité, où il reste : la portée de son canon augmente de 1 et elle rapporte 2 points de plus au décompte (les points se comptent à la main ; la portée est appliquée par l'outil tant que le scientifique est sur l'unité).", {
             // (Reforger : à la phase de science ; ici le scientifique reste sur l'unité au lieu d'être dépensé)
             phase: "science",
             fragments: { mil: 3 },
             agent: { motif: "scientifique", nom: "scientifique", pose: true, surCarte: true },
             visible: outils => !!outils.c && !Object.values(outils.etat.composants).some(x => x.sur === outils.c.id && x.ref?.type === "agent"),
-            avis: "Armageddon : portée du canon +1 et 2 points de plus au décompte, à appliquer à la main.",
+            avis: "Armageddon : portée du canon +1 (appliquée tant que le scientifique est dessus) ; 2 points de plus au décompte, à compter à la main.",
             libelle: "Poser un scientifique (3 fragments militaires)",
         }),
 
@@ -2594,6 +2621,12 @@ export const SCRIPTS = [
         }),
 
     // ----- Signal capté : SIG-1 à SIG-4 -----
+
+    memoriaSignal("memoria-signal", 766, 1795046343872, "Memoria"),
+    memoriaSignal("memoria-b-signal", 767, 1795046343873, "Memoria B"),
+    memoriaSignal("memoria-a-signal", 768, 1795046343874, "Memoria A"),
+    memoriaSignal("memoria-d-signal", 769, 1795073444382, "Memoria D"),
+    memoriaSignal("memoria-c-signal", 770, 1794049918252, "Memoria C"),
 
     signal(1, 481, 1795072921271),
     signal(2, 482, 1795072921272),

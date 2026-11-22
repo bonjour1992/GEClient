@@ -360,14 +360,25 @@ function CombatSysteme({ lieu }) {
 
     const nomCamp = camp => nomDuCamp(nomDe, camp);
 
-    // Canons spatiaux : distance d'une unité au système, et portée — 1, +1 avec le
+    // Canons spatiaux : distance d'une unité au système, et portée — celle écrite sur
+    // l'unité (1 par défaut), +1 avec le
     // script Canon longue portée ; une case de plus encore avec Laser longue
     // portée, au prix d'un scientifique. -> "oui", "scientifique" ou null
     const distanceDe = c => distanceCases(numero, Number(/^hex:(\d+)/.exec(c.zone || "")?.[1]));
 
+    // Portée écrite sur l'unité (« #can(6,4) portée 0 », « #can(6,2) portée 1 »), 1 sinon
+    const porteeEcrite = c => {
+        const m = /#can\([^)]*\)\s*port[ée]e\s*(\d+)/i.exec(String(contenus[c.ref.id]?.habilite || "").replace(/<[^>]+>/g, " "));
+
+        return m ? Number(m[1]) : 1;
+    };
+
+    // Armageddon conquis (#490) reforgé — un scientifique est posé dessus : portée de son canon +1
+    const armageddonReforge = c => c.ref.id === 490 && Object.values(etat.composants).some(x => x.sur === c.id && x.ref?.type === "agent");
+
     const aPortee = c => {
         const camp = campDe(c);
-        const portee = 1 + (camp !== NEUTRE && aScript(camp, "canon-longue-portee") ? 1 : 0);
+        const portee = porteeEcrite(c) + (camp !== NEUTRE && aScript(camp, "canon-longue-portee") ? 1 : 0) + (armageddonReforge(c) ? 1 : 0);
         const d = distanceDe(c);
 
         return d <= portee ? "oui"
@@ -1803,6 +1814,9 @@ function CombatSysteme({ lieu }) {
             // l'unité ne tire donc plus si ce bombardement est rouvert au même tour (issue #3)
             ...unites.filter(c => c.marques?.bombarde === CE_COMBAT)
                 .map(c => ({ type: "marquer", c: c.id, marque: "bombarde", valeur: "fini:" + CE_COMBAT })),
+            // Bombe bactériologique (#1016, « #spend : #bomb ») : elle est dépensée quand elle a bombardé
+            ...unites.filter(c => c.ref.id === 1016 && c.marques?.bombarde === CE_COMBAT && !aRetirer.some(v => v.id === c.id))
+                .map(c => ({ type: "supprimer", c: c.id })),
             // Unités épargnées à la main : la marque ne vaut que pour ce combat
             ...effacerMarques(["epargne"]),
             // Destruction : les unités indiquées détruites quittent le jeu (après les
