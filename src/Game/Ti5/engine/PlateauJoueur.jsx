@@ -88,6 +88,8 @@ export function Compteur({ id, libelle, glisser, conversions = [] }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                // (les conversions passent à la ligne)
+                flexWrap: "wrap",
                 gap: 6,
                 padding: "4px 8px",
                 border: "1px solid #aaa",
@@ -97,27 +99,7 @@ export function Compteur({ id, libelle, glisser, conversions = [] }) {
             }}
         >
             {glisser && joueur && <SourceRessource ressource={glisser} />}
-            <span style={{ flex: 1 }}>{libelle}</span>
-            {joueur && conversions.map(([cle, nom]) => (
-                <button
-                    key={cle}
-                    type="button"
-                    data-action={"convertir-" + cle}
-                    disabled={valeur < 1}
-                    title={`Convertir 1 ${libelle.toLowerCase()} en 1 ${nom} (Ctrl + clic : 5 d'un coup)`}
-                    onClick={event => {
-                        const n = Math.min(valeur, event.ctrlKey ? 5 : 1);
-
-                        envoyer([
-                            { type: "compteur", id, delta: -n },
-                            { type: "compteur", id: id.replace(/:[^:]+$/, ":" + cle), delta: n },
-                        ], `${libelle} converti : ${n} ${nom}${n > 1 ? "s" : ""}`);
-                    }}
-                    style={{ padding: 1, lineHeight: 0, opacity: valeur < 1 ? 0.4 : 1 }}
-                >
-                    <IconeRessource ressource={cle} n="+1" cote={24} />
-                </button>
-            ))}
+            <span style={{ flex: 1, minWidth: 0 }}>{libelle}</span>
             {/* Ctrl + clic : 5 d'un coup (un seul coup au journal) */}
             <button
                 type="button"
@@ -136,6 +118,37 @@ export function Compteur({ id, libelle, glisser, conversions = [] }) {
             >
                 +
             </button>
+
+            {/* Conversions : sur une seconde ligne du cadre, à droite (la première n'a pas la place
+                dans le volet de droite) */}
+            {joueur && conversions.length > 0 && (
+                <span
+                    data-conversions
+                    style={{ flexBasis: "100%", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, fontSize: 12 }}
+                >
+                    Convertir en
+                    {conversions.map(([cle, nom]) => (
+                        <button
+                            key={cle}
+                            type="button"
+                            data-action={"convertir-" + cle}
+                            disabled={valeur < 1}
+                            title={`Convertir 1 ${libelle.toLowerCase()} en 1 ${nom} (Ctrl + clic : 5 d'un coup)`}
+                            onClick={event => {
+                                const n = Math.min(valeur, event.ctrlKey ? 5 : 1);
+
+                                envoyer([
+                                    { type: "compteur", id, delta: -n },
+                                    { type: "compteur", id: id.replace(/:[^:]+$/, ":" + cle), delta: n },
+                                ], `${libelle} converti : ${n} ${nom}${n > 1 ? "s" : ""}`);
+                            }}
+                            style={{ padding: 1, lineHeight: 0, opacity: valeur < 1 ? 0.4 : 1 }}
+                        >
+                            <IconeRessource ressource={cle} n="+1" cote={24} />
+                        </button>
+                    ))}
+                </span>
+            )}
         </span>
     );
 }
