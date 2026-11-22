@@ -17,7 +17,7 @@ Ce que la mise en place fait déjà est décrit dans `structure.md`. Il reste :
   dans la main du Nomade ; 2 Esclaves (#157) dans les éléments actifs du Kabal.
   Ce que la table ne sait pas exprimer reste à faire à la main au tour 0 :
   Winnu « 6 influence et 6 ressources » et infanterie dans les vaisseaux ;
-  Nomade « piocher 4 mercenaires, en garder deux » ; Jol-Nar « Dock sur … SDP
+  Jol-Nar « Dock sur … SDP
   sur … » (planète précise). Arborec, Mentak : texte de mise en place vide ;
 - **votes au conseil** : les cartes « Vote au conseil 1 à 5 » (#798 à #802) sont
   reconnues à leur nom ; le texte « Voter pour obtenir … sièges » du déroulé

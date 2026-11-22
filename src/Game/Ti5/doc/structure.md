@@ -1252,6 +1252,11 @@ joueur. Refusé si les ressources ne suffisent pas.
   `joueur:<u>:choix`, zone que le joueur est seul à voir (comme sa main). Une
   fenêtre lui fait en prendre une en main ; les autres retournent sous la
   pioche (`deplacer` avec `dessous: true`).
+- La même zone reçoit les 4 mercenaires de la mise en place du Nomade : la
+  décision durable « Mercenaires de départ » (`Decisions.jsx`) lui en fait
+  garder deux en main, les autres vont dans `defausse:mercenaire`. Les
+  propositions ne prennent que les cartes de la zone dont le dos n'est pas
+  « mercenaire » (`dosDe`).
 - Ctrl + clic sur un agenda de sa main : il va dans `general:agenda:<tour+1>`
   et un politique est utilisé. Une fois par tour (compteur
   `joueur:<u>:proposition` = tour de la dernière proposition).
@@ -1756,7 +1761,7 @@ client/src/Game/Ti5/engine/
     sync.js              interrogation périodique, envoi immédiat des actions, chat
     Parties.jsx          outil : liste et création
     Preparation.jsx      sièges, lancement
-    Partie.jsx           en-tête (tour, phase, qui joue), onglets, fiche d'un composant
+    Partie.jsx           en-tête (tour, phase, qui joue), onglets en trois groupes (GROUPES_ONGLETS), fiche d'un composant
     Interaction.jsx      pions, zones, emplacements, glisser d'un composant
     Espace.jsx           onglet espace
     PlateauJoueur.jsx    onglet plateau joueur

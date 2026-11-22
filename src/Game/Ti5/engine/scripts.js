@@ -513,7 +513,7 @@ export const SCRIPTS = [
         carte: { type: "faction", id: 763 },
         ecritLe: 1795028318753,
         nom: "Mise en place du Nomade",
-        description: "4 mercenaires piochés en main (en garder deux) ; les infanteries embarquent dans Memoria ; un négociant est posé sur l'Anneau Arcturus (la station est à vous, pas la planète Arcturus) ; 3 marqueurs de signal sont posés sur des systèmes tirés au hasard.",
+        description: "4 mercenaires piochés, à part : l'onglet Décision fait en garder deux en main, les deux autres sont défaussés ; les infanteries embarquent dans Memoria ; un négociant est posé sur l'Anneau Arcturus (la station est à vous, pas la planète Arcturus) ; 3 marqueurs de signal sont posés sur des systèmes tirés au hasard.",
         placer: (unite, plan) => {
             const memoria = plan.vaisseaux.find(v => v.c.ref.id === 766);
 
@@ -530,12 +530,13 @@ export const SCRIPTS = [
             const tires = [...(plan.systemes || [])].sort(() => Math.random() - 0.5).slice(0, 3);
 
             return [
-                { type: "piocher", de: "pioche:mercenaire", vers: `joueur:${plan.u}:main`, n: 4 },
+                // (zone de choix, que le joueur est seul à voir : décision « Mercenaires de départ », Decisions.jsx)
+                { type: "piocher", de: "pioche:mercenaire", vers: `joueur:${plan.u}:choix`, n: 4 },
                 negociant && anneau && { type: "deplacer", c: negociant.id, vers: anneau, proprio: plan.u },
                 ...tires.map(zone => ({ type: "creer", ref: { type: "token", id: 859 }, zone, proprio: plan.u })),
             ].filter(Boolean);
         },
-        message: "4 mercenaires piochés : gardez-en deux, défaussez les deux autres. Un négociant tient l'Anneau Arcturus ; vous ne possédez pas la planète Arcturus. 3 marqueurs de signal sont posés sur des systèmes tirés au hasard.",
+        message: "4 mercenaires piochés : choisissez les deux à garder dans l'onglet Décision, les deux autres seront défaussés. Un négociant tient l'Anneau Arcturus ; vous ne possédez pas la planète Arcturus. 3 marqueurs de signal sont posés sur des systèmes tirés au hasard.",
     },
 
     {
@@ -1047,24 +1048,24 @@ export const SCRIPTS = [
     revenu("asteroide-d-or", "planet", 31, 1795190407294, "Astéroïde d'or", "production",
         "Génère 3 commerce pour qui le possède.", { gains: { commerce: 3 } }),
 
-    revenu("sr-42", "planet", 33, 1795349737875, "SR-42", "science",
-        "Génère 3 de recherche spatiale pour qui la possède.", { recherche: [["spa", 3]] }),
+    revenu("sr-42", "planet", 33, 1795379301954, "SR-42", "science",
+        "Génère 2 de recherche spatiale (doublée par sa spécialité) pour qui la possède.", { recherche: [["spa", 2]] }),
 
-    revenu("sr-124", "planet", 47, 1795349737881, "SR-124", "science",
-        "Génère 3 de recherche sociale pour qui la possède.", { recherche: [["soc", 3]] }),
+    revenu("sr-124", "planet", 47, 1795379301960, "SR-124", "science",
+        "Génère 2 de recherche sociale (doublée par sa spécialité) pour qui la possède.", { recherche: [["soc", 2]] }),
 
     // Stations scientifiques de Jol-Nar (une par technologie de base) et Centre d'espionnage industriel
-    revenu("sr-301", "planet", 1252, 1795349737894, "SR-301", "science",
-        "Génère 4 de recherche génétique pour qui la possède.", { recherche: [["gen", 4]] }),
+    revenu("sr-301", "planet", 1252, 1795379301966, "SR-301", "science",
+        "Génère 2 de recherche génétique (doublée par sa spécialité) pour qui la possède.", { recherche: [["gen", 2]] }),
 
-    revenu("sr-302", "planet", 1254, 1795349737899, "SR-302", "science",
-        "Génère 4 de recherche spatiale pour qui la possède.", { recherche: [["spa", 4]] }),
+    revenu("sr-302", "planet", 1254, 1795379301971, "SR-302", "science",
+        "Génère 2 de recherche spatiale (doublée par sa spécialité) pour qui la possède.", { recherche: [["spa", 2]] }),
 
-    revenu("sr-303", "planet", 1256, 1795349737904, "SR-303", "science",
-        "Génère 4 de recherche militaire pour qui la possède.", { recherche: [["mil", 4]] }),
+    revenu("sr-303", "planet", 1256, 1795379301978, "SR-303", "science",
+        "Génère 2 de recherche militaire (doublée par sa spécialité) pour qui la possède.", { recherche: [["mil", 2]] }),
 
-    revenu("sr-304", "planet", 1258, 1795349737908, "SR-304", "science",
-        "Génère 4 de recherche sociale pour qui la possède.", { recherche: [["soc", 4]] }),
+    revenu("sr-304", "planet", 1258, 1795379301983, "SR-304", "science",
+        "Génère 2 de recherche sociale (doublée par sa spécialité) pour qui la possède.", { recherche: [["soc", 2]] }),
 
     revenu("centre-d-espionnage-industriel", "planet", 1250, 1795348043309, "Centre d'espionnage industriel", "science",
         "Génère 4 de recherche pour qui le possède, à cocher sur une technologie qu'une autre faction possède et que vous n'avez pas (le choix de la technologie est à vous).",
@@ -1097,7 +1098,7 @@ export const SCRIPTS = [
         "Fiche d'un système : « Revendiquer »",
         "Avar ne peut pas être en votre possession sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris, et la possession tombe d'elle-même quand votre dernière unité la quitte (glisser) ou y est détruite (« Terminer le combat »). Vaut aussi pour Arcturus.", [783]),
 
-    regle("cormund", "planet", 49, 1795376857846, "Cormund", "modifie",
+    regle("cormund", "planet", 49, 1795378097363, "Cormund", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",
         "Il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines."),
 
@@ -1418,7 +1419,7 @@ export const SCRIPTS = [
             },
         }),
 
-    action("sr-42-recherche", "planet", 33, 1795349737875, "SR-42 : recherche", "planete",
+    action("sr-42-recherche", "planet", 33, 1795379301954, "SR-42 : recherche", "planete",
         "La station est activée (une fois) : dépensez 3 ressources, 1 de recherche militaire, génétique et sociale.", {
             possede: true,
             activer: true,
@@ -1509,7 +1510,7 @@ export const SCRIPTS = [
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), un Ravageur neutre est ajouté sur Atlas."),
 
-    regle("cormund-attaque", "planet", 49, 1795376857846, "Cormund : attaque", "auto",
+    regle("cormund-attaque", "planet", 49, 1795378097363, "Cormund : attaque", "auto",
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), chaque unité présente sur Cormund subit une attaque de force 4 : un dé à 10 faces par unité, 1 dégât sur 4 ou moins."),
 

@@ -88,7 +88,7 @@ import { ouvrirProduction, lireProduction } from "./Production";
 import { ChoixFouille, PiocherPlan } from "./Archeologie";
 import { EnvoyerVers, MontrerA } from "./Envoi";
 import { Notes } from "./Notes";
-import { quiVoit } from "./etat";
+import { quiVoit, dosDe } from "./etat";
 
 // ============================================================
 // ÉCRAN D'UNE PARTIE
@@ -98,19 +98,27 @@ import { quiVoit } from "./etat";
 // les glisser vers n'importe quel onglet.
 // ============================================================
 
-const ONGLETS = [
-    ["espace", "Espace"],
-    ["combat", "Conflit"],
-    ["decision", "Décision"],
-    ["joueur", "Plateau joueur"],
-    ["tech", "Technologie"],
-    ["general", "Plateau général"],
-    ["vote", "Vote"],
-    ["transactions", "Transactions"],
-    ["chat", "Chat"],
-    ["notes", "Notes"],
-    ["journal", "Journal"],
-    ["aide", "Aide"],
+// Trois groupes : à gauche les plateaux, au milieu ce qui demande une réponse,
+// à droite l'aide et les échanges
+const GROUPES_ONGLETS = [
+    ["gauche", [
+        ["joueur", "Plateau joueur"],
+        ["tech", "Technologie"],
+        ["espace", "Espace"],
+        ["general", "Plateau général"],
+    ]],
+    ["milieu", [
+        ["decision", "Décision"],
+        ["combat", "Conflit"],
+        ["transactions", "Transactions"],
+        ["vote", "Vote"],
+    ]],
+    ["droite", [
+        ["aide", "Aide"],
+        ["journal", "Journal"],
+        ["chat", "Chat"],
+        ["notes", "Notes"],
+    ]],
 ];
 
 const styleCadre = {
@@ -497,7 +505,8 @@ export function Partie({ id }) {
 
         // Propositions piochées (phase de proposition) : le choix se fait dans l'onglet Décision
         propositions: {
-            cartes: index.parZone.get(`joueur:${moi}:choix`) || [],
+            // (les mercenaires de départ du Nomade, dans la même zone, ont leur propre décision)
+            cartes: (index.parZone.get(`joueur:${moi}:choix`) || []).filter(c => dosDe(c) !== "mercenaire"),
             choisir: idCarte => choisirProposition(idCarte),
         },
 
@@ -628,9 +637,9 @@ export function Partie({ id }) {
     const faveurs = faveursDuTour(etat, deroule);
     const ongletFaveurs = faveurs.prevus > 0 && /[ée]v[ée]nement/i.test(etat.phase);
 
-    const onglets = ongletFaveurs
-        ? [...ONGLETS.slice(0, 7), ["faveurs", "Faveurs"], ...ONGLETS.slice(7)]
-        : ONGLETS;
+    // (Faveurs : à la fin du groupe du milieu)
+    const groupesOnglets = GROUPES_ONGLETS.map(([groupe, liste]) =>
+        [groupe, ongletFaveurs && groupe === "milieu" ? [...liste, ["faveurs", "Faveurs"]] : liste]);
 
     // Décisions qui m'attendent : ponctuelles (ce navigateur) et durables (état de la partie)
     const nombreDecisions = decisions.length + decisionsDurables(ctx);
@@ -1290,7 +1299,8 @@ export function Partie({ id }) {
     // --------------------------------------------------------
 
     const zoneChoix = `joueur:${moi}:choix`;
-    const aChoisir = index.parZone.get(zoneChoix) || [];
+    // (sans les mercenaires de départ du Nomade, choisis à part : Decisions.jsx)
+    const aChoisir = (index.parZone.get(zoneChoix) || []).filter(c => dosDe(c) !== "mercenaire");
 
     // Une seule pioche de propositions par tour
     const compteurPioche = `joueur:${moi}:piocheProposition`;
@@ -1867,7 +1877,20 @@ export function Partie({ id }) {
                                 borderBottomColor: "#555",
                             }}
                         >
-                            {onglets.map(([cle, libelle]) => (
+                            {groupesOnglets.map(([groupe, liste], g) => (
+                            <div
+                                key={groupe}
+                                data-groupe-onglets={groupe}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "flex-end",
+                                    columnGap: 2,
+                                    order: g === 0 ? 0 : g + 1,
+                                    marginLeft: g === 0 ? 0 : "auto",
+                                    paddingLeft: g === 0 ? 0 : 16,
+                                }}
+                            >
+                            {liste.map(([cle, libelle]) => (
                                 <button
                                     key={cle}
                                     type="button"
@@ -1929,6 +1952,8 @@ export function Partie({ id }) {
                                     )}
                                 </button>
                             ))}
+                            </div>
+                            ))}
 
                             {["joueur", "tech", "vote"].includes(onglet) && joueurs.map((j, k) => (
                                 <button
@@ -1936,6 +1961,7 @@ export function Partie({ id }) {
                                     type="button"
                                     onClick={() => setVuId(j.userId)}
                                     style={{
+                                        order: 1,
                                         padding: "4px 10px",
                                         margin: `0 0 4px ${k === 0 ? 12 : 6}px`,
                                         fontWeight: vu.userId === j.userId ? "bold" : "normal",

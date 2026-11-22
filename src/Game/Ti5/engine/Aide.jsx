@@ -66,10 +66,11 @@ const MODE_EMPLOI = [
         "Aussi : votre main, vos marqueurs, vos fragments de relique, vos éléments actifs, les derniers coups (trois actions par coup ; le détail est dans l'onglet Journal).",
     ]],
     ["Onglets", [
+        "Trois groupes : à gauche les plateaux (Plateau joueur, Technologie, Espace, Plateau général), au milieu ce qui attend une réponse (Décision, Conflit, Transactions, Vote, et Faveurs quand il y en a), à droite Aide, Journal, Chat et Notes.",
         "Espace : la carte. Clic sur un système : sa fiche — unités par emplacement, actions de la phase, combats, achats. Sous la carte, « Afficher les numéros des systèmes » (décoché au départ).",
         "Conflit : les combats, et au-dessus les déplacements en cours, les conflits de contrôle, les tests de domination et les tests de blocage.",
         "Décision : toute question qu'une action pose s'ouvre ici, et l'onglet s'affiche tout seul. Le coup n'est envoyé qu'une fois la décision prise ; « Renoncer » l'abandonne.",
-        "Décisions qui durent : elles restent dans l'onglet tant qu'elles ne sont pas réglées (Recomposition, désignation d'une loi). Tant qu'une décision vous attend, « Joueur suivant » et « Passer » sont rouge gris.",
+        "Décisions qui durent : elles restent dans l'onglet tant qu'elles ne sont pas réglées (Recomposition, désignation d'une loi, mercenaires de départ du Nomade : en garder deux des quatre piochés). Tant qu'une décision vous attend, « Joueur suivant » et « Passer » sont rouge gris.",
         "Plateau joueur : feuille de faction, réserve, faveurs, fragments, éléments actifs, compte rendu du ravitaillement. Les boutons de joueur montrent le plateau des autres.",
         "Technologie : clic sur une technologie : une case de plus ; Ctrl + clic : une de moins ; Maj + clic : utilisée ce tour. On peut y poser un agent.",
         "Plateau général : le déroulé (un « + » en tête des pistes avance votre marqueur), le recrutement, les réserves, les sacs et les pioches.",

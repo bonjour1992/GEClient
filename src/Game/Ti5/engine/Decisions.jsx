@@ -4,6 +4,7 @@ import { useEngine, BoutonRegle, agentDisponible, nomElement, nomCase, tuileDe }
 import { useUnitesDeFaction } from "./sync";
 import { MARQUEUR, actionsPiste, typeUnite, MOTIF_LOGISTICIEN, aMot } from "./miseEnPlace";
 import { lotsDeDes, desDeLaReponse } from "./effets";
+import { dosDe } from "./etat";
 import { DesignationsAgenda, designationsEnAttente, useLoisDuTour } from "./Agendas";
 
 // ============================================================
@@ -32,7 +33,8 @@ import { DesignationsAgenda, designationsEnAttente, useLoisDuTour } from "./Agen
 //
 //   durable     lue dans l'état de la partie : elle reste tant qu'elle n'est pas
 //               réglée, d'un navigateur à l'autre. Recomposition (Arborec) : le jet,
-//               puis les vaisseaux produits jusqu'au nombre de réussites.
+//               puis les vaisseaux produits jusqu'au nombre de réussites. Mercenaires
+//               de départ (Nomade) : en garder deux des quatre piochés.
 //
 // decisionsDurables(ctx) compte les durables (pastille de l'onglet).
 // ============================================================
@@ -184,6 +186,92 @@ function Propositions() {
 }
 
 // ------------------------------------------------------------
+// Mercenaires de départ (mise en place du Nomade) : 4 mercenaires piochés
+// dans ma zone de choix (joueur:<u>:choix) ; j'en garde deux en main, les
+// autres vont dans la défausse des mercenaires.
+// ------------------------------------------------------------
+
+const MERCENAIRES_A_GARDER = 2;
+
+const mercenairesAChoisir = ({ index, moi }) =>
+    (index.parZone.get(`joueur:${moi}:choix`) || []).filter(c => dosDe(c) === "mercenaire");
+
+function MercenairesDeDepart() {
+
+    const ctx = useEngine();
+    const { envoyer, moi } = ctx;
+
+    const [gardes, setGardes] = useState([]);
+
+    const cartes = mercenairesAChoisir(ctx);
+
+    if (!cartes.length) {
+        return null;
+    }
+
+    const voulus = Math.min(MERCENAIRES_A_GARDER, cartes.length);
+    const choisis = gardes.filter(id => cartes.some(c => c.id === id));
+    const complet = choisis.length === voulus;
+
+    const basculer = id => setGardes(choisis.includes(id)
+        ? choisis.filter(x => x !== id)
+        : (choisis.length < voulus ? [...choisis, id] : choisis));
+
+    const valider = () => envoyer([
+        ...choisis.map(id => ({ type: "deplacer", c: id, vers: `joueur:${moi}:main` })),
+        ...cartes.filter(c => !choisis.includes(c.id)).map(c => ({ type: "deplacer", c: c.id, vers: "defausse:mercenaire" })),
+    ], `Mercenaires de départ : ${choisis.length} gardé(s), ${cartes.length - choisis.length} défaussé(s)`);
+
+    return (
+        <div data-decision="mercenaires-depart" style={styleCarte}>
+            <b>Mercenaires de départ</b>
+            <div>
+                Gardez {voulus} des {cartes.length} mercenaires piochés à la mise en place : ils vont dans votre main,
+                les autres dans la défausse des mercenaires.
+            </div>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                {cartes.map(c => {
+                    const garde = choisis.includes(c.id);
+
+                    return (
+                        <div key={c.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+                            {c.ref
+                                ? <LoadAndDisplay link={{ ...c.ref, __link: true }} />
+                                : <i>carte inconnue</i>}
+                            <button
+                                type="button"
+                                data-action="mercenaire-garder"
+                                data-garde={garde ? "oui" : "non"}
+                                disabled={!garde && complet}
+                                onClick={() => basculer(c.id)}
+                                style={{ ...styleChoix, backgroundColor: garde ? "#c8e6c9" : undefined }}
+                            >
+                                {garde ? "✔ Gardé" : "Garder"}
+                            </button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div>
+                <button
+                    type="button"
+                    data-action="mercenaires-valider"
+                    disabled={!complet}
+                    onClick={valider}
+                    style={{ ...styleChoix, backgroundColor: complet ? "#c8e6c9" : undefined }}
+                >
+                    {complet
+                        ? `Garder ces ${voulus} mercenaires, défausser les autres`
+                        : `Choisissez encore ${voulus - choisis.length} mercenaire(s)`}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ------------------------------------------------------------
 // Décision durable : Recomposition (technologie d'Arborec)
 //
 // À la fin des canons spatiaux et du combat spatial : autant de dés
@@ -226,6 +314,7 @@ export function decisionsDurables(ctx) {
         (ctx.etat.compteurs[`embuscade:${ctx.moi}`] ? 1 : 0) +
         (ctx.etat.compteurs[`pupille:${ctx.moi}`] ? 1 : 0) +
         (ctx.propositions?.cartes.length ? 1 : 0) +
+        (mercenairesAChoisir(ctx).length ? 1 : 0) +
         // (lois du tour qui demandent de désigner une planète ou un système : Agendas.jsx)
         designationsEnAttente(ctx).length +
         // (carte face cachée sur laquelle j'ai cliqué : la révéler ou la consulter)
@@ -562,6 +651,7 @@ export function Decisions() {
 
             {ctx.cadreCachee}
             {joueur && <Propositions />}
+            {joueur && <MercenairesDeDepart />}
             {joueur && <DesignationsAgenda style={styleCarte} />}
             {joueur && <Recomposition />}
             {joueur && <Embuscade />}
