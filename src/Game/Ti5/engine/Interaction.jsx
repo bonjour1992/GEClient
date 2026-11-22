@@ -2480,7 +2480,15 @@ export function Plan({ children, style }) {
             unites.some(ref => ref.id === 444) &&
             aScript(moi, "station-meteorologique-production") && !aScript(moi, "station-meteorologique-technologie") &&
                 "une Station météorologique nécessite la technologie « Station météorologique »",
+            // Traité Moratoire sur les soleils de guerre (#338) sur la table
+            unites.some(ref => typeUnite(contenuEnCache(ref.id)) === "sun") && aScript(moi, "moratoire-soleils-de-guerre") &&
+                "Moratoire sur les soleils de guerre (traité) : il est interdit de produire un soleil de guerre",
         );
+
+        // Loi Embargo militaire (#307) sur la table : chaque unité militaire hors infanteries coûte 1 de plus
+        const embargo = aScript(moi, "embargo-militaire-en-jeu")
+            ? unites.filter(ref => (contenuEnCache(ref.id)?.mot_cle || []).includes("mil") && typeUnite(contenuEnCache(ref.id)) !== "inf").length
+            : 0;
 
         // Phase de construction (case « Construction ») : on ne construit que des
         // structures, pas deux fois la même au même endroit. Sur une planète, la
@@ -2633,7 +2641,7 @@ export function Plan({ children, style }) {
             return null;
         }
 
-        const brut = unites.reduce((total, ref) => total + (Number(contenuEnCache(ref.id)?.cout) || 0), 0);
+        const brut = unites.reduce((total, ref) => total + (Number(contenuEnCache(ref.id)?.cout) || 0), 0) + embargo;
         const remise = Math.min(brut, mercenaires.remise);
         const reduction = Math.min(brut - remise, ouverte?.reduction || 0);
         const cout = brut - remise - reduction;
@@ -2683,6 +2691,10 @@ export function Plan({ children, style }) {
             if (mercenaires.enPlus.length) {
                 aviser?.(`Production : ${noms(mercenaires.enPlus)} de plus, sans coût (mercenaire qui a ouvert la production).`);
             }
+        }
+
+        if (embargo > 0) {
+            aviser?.(`Embargo militaire (loi) : ${embargo} ressource${embargo > 1 ? "s" : ""} de plus (unité militaire hors infanterie).`);
         }
 
         return [

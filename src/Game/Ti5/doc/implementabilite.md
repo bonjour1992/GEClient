@@ -29,8 +29,8 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Promesses | 19 | 17 | 2 | 0 | 14 | 4 | 5 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| Agendas | 58 | 16 | 2 | 40 | 0 | 14 | 5 |
-| **Total** | **444** | **356** | **33** | **55** | **178** | **99** | **146** |
+| Agendas | 58 | 25 | 4 | 29 | 1 | 25 | 5 |
+| **Total** | **444** | **365** | **35** | **44** | **179** | **110** | **146** |
 
 Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
@@ -484,24 +484,24 @@ Reste hors script, pour tous les événements :
 
 ## Agendas
 
-Le vote se fait dans l'onglet Vote (options lues sur la carte, colonnes hors options grisées). Une fois les plateaux révélés, chaque loi du tour a son bouton « Résoudre » sous son décompte. **Mandat** et **traité** ont une résolution générale, pour toutes les cartes : le mandat va dans les éléments actifs de la faction élue (sans voix : retiré du jeu), le traité sur la table si l'option en tête a plus de voix que Contre (sinon retiré du jeu) — cette ligne ne dit donc que l'effet de la carte une fois en jeu. Une **loi** ou une **directive** n'a de résolution que si elle a son script (`engine/resolutionsAgendas.js`) : l'effet est appliqué au clic, la carte change de place à la fin de la phase de vote (directive retirée du jeu, loi adoptée sur la table) ; sans script, le bouton dit « résolution manuelle nécessaire ». Recensement : `node E:\GE\demandes-ti5\agendas-liste.mjs` ; tests : `test-resolutions-agendas.mjs`.
+Le vote se fait dans l'onglet Vote (options lues sur la carte, colonnes hors options grisées). Une fois les plateaux révélés, chaque loi du tour a son bouton « Résoudre » sous son décompte. **Mandat** et **traité** ont une résolution générale, pour toutes les cartes : le mandat va dans les éléments actifs de la faction élue (sans voix : retiré du jeu), le traité sur la table si l'option en tête a plus de voix que Contre (sinon retiré du jeu) — cette ligne ne dit donc que l'effet de la carte une fois en jeu. Une **loi** ou une **directive** n'a de résolution que si elle a son script (`engine/resolutionsAgendas.js`) : l'effet est appliqué au clic, la carte change de place à la fin de la phase de vote (directive retirée du jeu, loi adoptée sur la table) ; sans script, le bouton dit « résolution manuelle nécessaire ». Un traité dont le script remplace la résolution générale fait aussi son effet au clic (Monument suprême, Zone démilitarisée). Le choix élu qu'une loi ou un traité garde en jeu (type d'agent, orientation, système) est écrit sur la carte par sa résolution ; les règles le lisent tant que la carte est sur la table (`engine/agendasEnJeu.js`). Recensement : `node E:\GE\demandes-ti5\agendas-liste.mjs` ; tests : `test-resolutions-agendas.mjs`.
 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
 | 305 | Pardon (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : Pour l'emporte, le marqueur d'infamie de chaque faction revient à 0. | — |
-| 309 | Mission de guerre (directive) | non | bouton existant modifié (prévu) | Les 3 objectifs militaires sont révélés à côté de la loi à la phase de mandat. | moyenne : l'objectif élu sur la case Événement du tour T+2, les autres défaussés. |
+| 309 | Mission de guerre (directive) | **oui** | bouton existant modifié | Les 3 objectifs militaires sont révélés à côté de la loi à la phase de mandat. Onglet Vote, « Résoudre » : l'objectif élu va dans la case Événement du tour T+2, les autres sont défaussés ; sans objectif élu, rien ne bouge. | — |
 | 312 | Mercenaire (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : la faction élue gagne le mercenaire révélé à côté de la loi (ses éléments actifs). | — |
 | 313 | Révocation (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : la loi ou le traité élu (options 1 à N : les agendas de la table, dans leur ordre) est retiré du jeu ; Contre : rien. | — |
 | 314 | Concours scientifique (directive) | non | bouton existant modifié (prévu) | Options : les 4 types de technologie. | moyenne : commerce selon connaissance et spécialité du type élu ; la faction seule en tête choisit 3 points à la place (onglet Décision). |
 | 316 | Artefact retrouvé (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : la faction élue gagne la relique révélée (ses éléments actifs, sans les points de fabrication). | — |
-| 318 | Création trou de ver (directive) | non | bouton existant modifié (prévu) | Systèmes proposés à la prévote, votés dans la colonne de la faction qui propose. | moyenne : un jeton trou de ver bêta posé sur le système élu. |
+| 318 | Création trou de ver (directive) | **oui** | bouton existant modifié | Systèmes proposés à la prévote, votés dans la colonne de la faction qui propose. Onglet Vote, « Résoudre » : un jeton trou de ver bêta (#827) est posé dans le système élu ; Contre : rien. | — |
 | 319 | Partage de connaissance (directive) | non | bouton existant modifié (prévu) | — | difficile : options = technologies communes possédées par au moins 2 factions, données à toutes. |
 | 320 | Mobilisation (directive) | non | bouton existant modifié (prévu) | — | moyenne : une infanterie par planète possédée, au choix de chaque faction (onglet Décision). |
 | 330 | Recrutement disponible (directive) | non | bouton existant modifié (prévu) | Seule la colonne Pour est une option. | moyenne : une infanterie par voix, sur des planètes à structure choisies par chaque faction. |
 | 340 | Révolution (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : Pour l'emporte, toutes les lois, traités et mandats en jeu sont retirés du jeu, y compris ceux résolus plus tôt dans le tour. | — |
 | 341 | Croisade (directive) | non | bouton existant modifié (prévu) | Planètes proposées à la prévote. | difficile : engagements sans rupture dans le système ; points au tour suivant selon la possession au vote. |
 | 342 | Subvention militaire (directive) | non | bouton existant modifié (prévu) | — | moyenne : chaque faction construit un vaisseau de coût 5 au plus dans un système natal (choix). |
-| 344 | Construire un monument (directive) | **oui** | bouton existant modifié | Seule la colonne Pour est une option. Onglet Vote, « Résoudre » : chaque voix coûte 2 ressources ; 1 point par faction qui a moins voté, 2 de plus pour la faction seule en tête (une faction qui n'a pas de quoi payer rend le bouton rouge gris). | — |
+| 344 | Construire un monument (directive) | **oui** | bouton existant modifié | Seule la colonne Pour est une option. Onglet Vote, « Résoudre » : chaque voix coûte 2 ressources ; 1 point par faction qui a moins voté (carte du 22 novembre : plus de bonus pour la faction seule en tête ; une faction qui n'a pas de quoi payer rend le bouton rouge gris). | — |
 | 347 | Dette impériale (directive) | non | bouton existant modifié (prévu) | — | moyenne : dette de 6 sur 3 tours envers Mecatol Rex ; l'infamie pour ses vaisseaux de commerce détruits : difficile. |
 | 556 | Subvention (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : chaque faction gagne 1 commerce par voix reçue dans sa colonne. | — |
 | 727 | Soutien au conclave (directive) | partiel | automatique | Posée à côté du plateau du Conclave (ou sur la table), le Conclave lance 3D10 votes au lieu de 1D10 (script Vote du conclave). | moyenne : « Résoudre » — faveurs du Conclave (3 voix pour, et la faction qui en a engagé le plus), pose de la carte si Pour l'emporte. |
@@ -512,17 +512,17 @@ Le vote se fait dans l'onglet Vote (options lues sur la carte, colonnes hors opt
 | 801 | Vote au conseil 4 (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : les 4 factions qui ont le plus de voix gagnent 4, 3, 2, 1 sièges (égalité : départagée par le responsable du sénat). | — |
 | 802 | Vote au conseil 5 (directive) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : les 5 factions qui ont le plus de voix gagnent 5, 4, 3, 2, 1 sièges (égalité : départagée par le responsable du sénat). | — |
 | 306 | Sévérité (loi) | **oui** | bouton existant modifié + automatique | Onglet Vote, « Résoudre » : Pour l'emporte, la loi va sur la table. En jeu, le décompte des points retire 1 point de plus par infamie. | — |
-| 307 | Embargo militaire (loi) | non | bouton existant modifié (prévu) | — | moyenne : production des unités militaires (hors infanterie) +1. |
+| 307 | Embargo militaire (loi) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : Pour l'emporte, la loi va sur la table. En jeu, la production (pose d'une unité depuis la réserve) coûte 1 ressource de plus par unité militaire hors infanterie, avec un message. | — |
 | 315 | Guerre totale (loi) | non | automatique (prévu) | — | difficile : domination de Mecatol Rex (système et planète) au tour T+3, fin de partie. |
 | 326 | Planète relique (loi) | non | nouveau bouton (prévu) | Planètes proposées à la prévote. | moyenne : choix au ravitaillement (infamie ou point) ; construction : la carte dépensée. |
-| 332 | Activité réprimée (loi) | non | bouton existant modifié (prévu) | Options : les types d'agent. | moyenne : recruter un agent du type élu coûte 1 influence de plus. |
-| 334 | Péage au trou de ver (loi) | non | bouton existant modifié (prévu) | — | moyenne : déplacement assisté, 1 influence par vaisseau passant par un trou de ver alpha ou bêta. |
+| 332 | Activité réprimée (loi) | **oui** | bouton existant modifié | Options : les types d'agent. Onglet Vote, « Résoudre » : le type élu est écrit sur la carte, qui va sur la table (Contre : retirée du jeu). En jeu, recruter (Ctrl + clic) un agent de ce type, ou sa version de faction, coûte 1 influence de plus, avec un message. | — |
+| 334 | Péage au trou de ver (loi) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : Pour l'emporte, la loi va sur la table. En jeu, le déplacement assisté affiche le péage (1 influence par vaisseau et par passage d'un trou de ver alpha ou bêta ; des ressources pour une faction sans influence) et le retire au départ ; s'il manque de l'influence, « Déplacer » demande une confirmation. | — |
 | 337 | Prime (loi) | non | automatique (prévu) | — | moyenne : 12 commerce sur la carte, 1 pris à chaque vaisseau de la faction élue détruit. |
-| 343 | Révolution anti intellectuel (loi) | non | bouton existant modifié (prévu) | — | moyenne : rechercher une technologie use un politique. |
+| 343 | Révolution anti intellectuel (loi) | **oui** | bouton existant modifié | Onglet Vote, « Résoudre » : Pour l'emporte, la loi va sur la table. En jeu, la première case cochée d'une technologie dans le tour (arbre ou technologie isolée) use un politique, avec un message ; sans politique disponible, la case demande une confirmation. | — |
 | 346 | Recherche impériale (loi) | non | automatique (prévu) | Options : les 4 types de technologie. | difficile : un prérequis du type élu pour toutes les factions. |
 | 721 | Dissolution du sénat (loi) | non | automatique (prévu) | — | difficile : voix des unités terrestres sur Mecatol Rex, 30 points, sièges sans valeur. |
 | 726 | Ouverture bureau des mercenaires (loi) | non | nouveau bouton (prévu) | En jeu, Milice au coeur du pouvoir pose 2D10 miliciens au lieu de 1D10. | moyenne : diplomatie, use un diplomate, 2 ressources : un milicien sur Mecatol Rex. |
-| 728 | Orientation de l'empire (loi) | partiel | automatique | Décompte des points : l'orientation est rappelée, à compter à la main. | moyenne : compter l'orientation élue au décompte. |
+| 728 | Orientation de l'empire (loi) | **partiel** | bouton existant modifié + automatique | Options : expansion, économique, diplomatique, scientifique. Onglet Vote, « Résoudre » : l'orientation élue est écrite sur la carte, qui va sur la table. Décompte des points : expansion 1 point par planète possédée, économique 1 point par 5 commerce, scientifique 3 points par technologie à 4 de connaissance. | moyenne : diplomatique (2 points par faveur encaissée, au tour 10), rappelée au décompte, à compter à la main. |
 | 223 | Premier ministre (mandat) | non | automatique (prévu) | — | moyenne : 2 voix de plus aux élections de ministres ; dépensé s'il vote pour lui et est élu. |
 | 308 | Conseil de censure (mandat) | non | nouveau bouton (prévu) | — | moyenne : use la carte et 2 politiques, une loi retirée de l'agenda. |
 | 311 | Bureau des mercenaires (mandat) | non | nouveau bouton (prévu) | — | moyenne : révéler un mercenaire, dépenser un politique pour l'acquérir, sinon aux autres factions. |
@@ -533,18 +533,18 @@ Le vote se fait dans l'onglet Vote (options lues sur la carte, colonnes hors opt
 | 325 | Ministre de l'intérieur (mandat) | non | nouveau bouton (prévu) | — | difficile : réaction à la rupture d'un traité. |
 | 327 | Ministre des sciences (mandat) | non | nouveau bouton (prévu) | — | difficile : échange d'une technologie contre des faveurs. |
 | 328 | Chef du sénat (mandat) | non | bouton existant modifié (prévu) | — | moyenne : ajouter une loi à l'agenda sans politique. |
-| 329 | Gardien de la constitution (mandat) | non | nouveau bouton (prévu) | — | facile : 3 influence pour un politique ; l'interdiction de dépenser des politiques au vote : moyenne. |
+| 329 | Gardien de la constitution (mandat) | **partiel** | nouveau bouton | Phase de mandat, plateau joueur de la faction qui a le mandat : « Gardien de la constitution : 3 influence, un politique » — le politique est tiré du sac s'il y en a un, sinon créé, et va dans ses agents. | moyenne : l'interdiction de dépenser des politiques aux votes, à la main. |
 | 331 | Ministre de la paix (mandat) | non | nouveau bouton (prévu) | — | difficile : déclarer une trêve. |
 | 310 | Écologie punitive (traité) | **oui** | automatique | Ravitaillement automatique, tant que le traité est sur la table : chaque planète rapporte 1 ressource de moins (3 pour une planète sauvage), jamais moins de 0. | — |
 | 317 | Trêve (traité) | non | automatique (prévu) | — | difficile : engagement des signataires interdit jusqu'à la phase d'événement. |
-| 333 | Protection des civils (traité) | non | bouton existant modifié (prévu) | — | moyenne : bombardement semi-bloqué sur une planète non militaire. |
-| 338 | Moratoire Sur les Soleils de guerre (traité) | non | bouton existant modifié (prévu) | — | moyenne : production et déplacement d'un soleil de guerre semi-bloqués. |
+| 333 | Protection des civils (traité) | **oui** | bouton existant modifié | Traité sur la table : le bouton « Bombardement » d'une planète non militaire (fiche d'un système) est rouge gris et demande une confirmation. | — |
+| 338 | Moratoire Sur les Soleils de guerre (traité) | **oui** | bouton existant modifié | Traité sur la table : produire un soleil de guerre (pose depuis la réserve) ou le faire partir avec le déplacement assisté demande une confirmation. | — |
 | 339 | Impôt (traité) | **oui** | automatique | Ravitaillement automatique, tant que le traité est sur la table : chaque faction dépense 2 commerce (ce qu'elle en a, au plus). | — |
 | 345 | Ban technologique (traité) | non | automatique (prévu) | — | difficile : une recherche élue interdite de recherche et d'usage. |
 | 348 | Protection du commerce (traité) | non | bouton existant modifié (prévu) | — | moyenne : détruire un vaisseau de commerce non militaire semi-bloqué. |
-| 555 | Monument suprême (traité) | non | bouton existant modifié (prévu) | Planètes proposées à la prévote ; le Monument éternel (554) a ses règles. | moyenne : poser le Monument éternel sur la planète élue. |
+| 555 | Monument suprême (traité) | **partiel** | bouton existant modifié | Planètes proposées à la prévote. Onglet Vote, « Résoudre » : adopté (l'option en tête a plus de voix que Contre), le traité va sur la table et le Monument éternel (554, neutre) est posé sur la planète élue ; le monument a ses règles (contributions pillées, décompte). | moyenne : rompre le traité en engageant le monument (contribution détruite), à la main. |
 | 564 | Collaboration contre révolutionnaire (traité) | non | automatique (prévu) | — | moyenne : la règle de la rébellion 563 hors service tant que le traité est en jeu. |
-| 579 | Zone démilitarisée (traité) | non | bouton existant modifié (prévu) | Systèmes proposés à la prévote. | moyenne : engagement semi-bloqué dans le système élu. |
+| 579 | Zone démilitarisée (traité) | **oui** | bouton existant modifié | Systèmes proposés à la prévote. Onglet Vote, « Résoudre » : adopté, le système élu est écrit sur la carte, qui va sur la table. En jeu, « Engager » et « Cibler » dans ce système (onglet Conflit) demandent une confirmation. | — |
 | 717 | Lutte contre la corruption (traité) | non | bouton existant modifié (prévu) | — | moyenne : vente des Soutiens politiques semi-bloquée, ceux du Conclave annulés. |
 
 ## Mots-clés d'unité

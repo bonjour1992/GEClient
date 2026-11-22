@@ -269,6 +269,13 @@ export function useDeplacement({ tuiles, systemes = {} }) {
 
     const arrivee = trajet.length ? trajet[trajet.length - 1] : null;
 
+    // Loi Péage au trou de ver (#334) sur la table : 1 influence par vaisseau, à chaque étape par un
+    // trou de ver alpha ou bêta (habilité Sans influence : payée en ressources)
+    const passagesPeage = aScript(moi, "peage-au-trou-de-ver-en-jeu") ? etapes.filter(e => /^trou:(alpha|beta)$/.test(e.sorte)).length : 0;
+    const peage = passagesPeage * selection.length;
+    const compteurPeage = `joueur:${moi}:${aScript(moi, "sans-influence") ? "res" : "inf"}`;
+    const monInfluence = Number(etat.compteurs[compteurPeage]) || 0;
+
     // Risques de blocage, case par case : chaque case que l'on quitte (le
     // départ, puis chaque case avant l'arrivée)
     //   { ou, camps: unités militaires spatiales d'un autre camp, jet: "rift", "omega" ou null }
@@ -384,6 +391,11 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                 (b.dispo.length ? `seuls ceux-là seront ${depuisActive ? "dépensés" : "utilisés"}` : "aucun agent ne sera pris")),
         soleilsDOr > 0 && monCommerce < 2 * soleilsDOr &&
             `Soleil d'or : le déplacer coûte ${2 * soleilsDOr} commerce, vous en avez ${monCommerce} (seul ce commerce sera dépensé)`,
+        peage > 0 && monInfluence < peage &&
+            `Péage au trou de ver : ${peage} influence à payer, vous en avez ${monInfluence} (seule celle-là sera dépensée)`,
+        // Traité Moratoire sur les soleils de guerre (#338) sur la table
+        aScript(moi, "moratoire-soleils-de-guerre") && partent.some(v => estSoleilDeGuerre(contenus[v.ref.id])) &&
+            "Moratoire sur les soleils de guerre (traité) : il est interdit de déplacer un soleil de guerre",
         sansPlace > 0 && `${sansPlace} unité(s) embarquée(s) au-delà de la capacité des vaisseaux`,
         avecGravite && scientifiquesGravite.length < coutEnAgents(selection.length) &&
             `Moteur à gravité : il faut ${coutEnAgents(selection.length)} scientifique(s), ${scientifiquesGravite.length} disponible(s)`,
@@ -438,6 +450,8 @@ export function useDeplacement({ tuiles, systemes = {} }) {
             ...(parEvelyne ? actionsUserCarte(index, moi, carteEvelyne) : []),
             // (Soleil d'or : 2 commerce par Soleil d'or déplacé)
             soleilsDOr > 0 && monCommerce > 0 && { type: "compteur", id: `joueur:${moi}:commerce`, delta: -Math.min(monCommerce, 2 * soleilsDOr) },
+            // (Péage au trou de ver : 1 influence par vaisseau et par trou de ver alpha ou bêta)
+            peage > 0 && monInfluence > 0 && { type: "compteur", id: compteurPeage, delta: -Math.min(monInfluence, peage) },
             // (compte des vaisseaux déplacés : « Finir le déplacement »)
             { type: "compteur", id: compteurDeplaces(moi), delta: partent.length },
             ...partent.flatMap(v => [
@@ -727,6 +741,11 @@ export function useDeplacement({ tuiles, systemes = {} }) {
                                 </span>
                             ))}
                             {soleilsDOr > 0 && <span data-soleil-d-or style={{ marginRight: 12 }}>Soleil d'or : <b>{2 * soleilsDOr} commerce</b></span>}
+                        </div>
+                    )}
+                    {peage > 0 && (
+                        <div data-peage-trou-de-ver>
+                            Péage au trou de ver : {selection.length} vaisseau{selection.length > 1 ? "x" : ""} × {passagesPeage} trou{passagesPeage > 1 ? "s" : ""} de ver = <b>{peage} influence</b>
                         </div>
                     )}
 

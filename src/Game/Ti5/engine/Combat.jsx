@@ -19,6 +19,7 @@ import { Blocages } from "./Blocage";
 import { BlocagesAction, demanderBlocage } from "./BlocageAction";
 import { estBloquee, lieuDe, MARQUE_AGI } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
+import { caseDemilitarisee } from "./agendasEnJeu";
 import {
     Controles, demanderControleSysteme, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
     actionsOuvrirDomination, resultatDomination, cleRecuperation, actionsPossessionPerdue,
@@ -584,6 +585,12 @@ function CombatSysteme({ lieu }) {
 
         if (!choisis.length) {
             signaler("Cocher d'abord les unités qui engagent.");
+            return;
+        }
+
+        // Traité Zone démilitarisée (#579) sur la table : les engagements sont interdits dans le système élu
+        if (aScript(moi, "zone-demilitarisee-en-jeu") && caseDemilitarisee(index) === numero &&
+            !confirmerRegle(`Engager ${libelle(code)}`, ["Zone démilitarisée (traité) : les engagements sont interdits dans ce système"])) {
             return;
         }
 

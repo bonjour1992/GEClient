@@ -688,3 +688,17 @@ carte sinon, +2 aux infanteries au combat terrestre. Sai Seravus : trous de ver 
 Suldhan Wraeg : jeton « Repère de Suldhan Wraeg » (#1265, `migrate-suldhan.mjs`, image `cartographe.svg` dans
 `server/public/ti/token`) posé à la science, anomalie sans effet sur les déplacements. Ipswitch : bouton de
 livraison de 2 sur le plateau d'une autre faction et sur la fiche de ses unités à comptoir.
+
+Agendas de difficulté moyenne (2026-11-22, soir) : « Résoudre » fait l'effet de Mission de guerre (objectif élu
+à l'événement de T+2, les autres défaussés), Création trou de ver (jeton bêta #827), Activité réprimée et
+Orientation de l'empire (choix élu noté sur la carte), Monument suprême (Monument éternel posé sur la planète
+élue) et Zone démilitarisée (système noté sur la carte) ; Embargo militaire, Péage au trou de ver et Révolution
+anti intellectuel vont sur la table si Pour l'emporte. En jeu : production +1 par unité militaire hors infanterie,
+péage de 1 influence par vaisseau et par trou de ver au déplacement assisté, recrutement +1 influence pour le type
+d'agent réprimé, un politique usé à la première case d'une technologie dans le tour, orientation comptée au
+décompte (sauf diplomatique), « Engager » / « Cibler » semi-bloqués dans la zone démilitarisée, bombardement
+semi-bloqué sur une planète non militaire (Protection des civils), production et déplacement d'un soleil de
+guerre semi-bloqués (Moratoire). Gardien de la constitution : bouton de mandat, 3 influence pour un politique.
+Construire un monument suit la carte du 22 novembre (plus de +2 pour la faction seule en tête). Restent à la
+main : l'interdiction de dépenser des politiques aux votes (Gardien), la rupture du Monument suprême, l'orientation
+diplomatique ; Prime (#337), Protection du commerce (#348) et les directives à choix de chaque faction restent à faire.

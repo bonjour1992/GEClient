@@ -1013,12 +1013,33 @@ résolution — une directive est retirée du jeu, une loi adoptée va sur la
 table ; une résolution par script n'a pas d'« annuler » (l'effet est déjà
 appliqué). Le script est déclaré dans `scripts.js` (sorte « regle », type
 `Agenda`, `resolution: true`) : désactivable dans l'outil « Scripts de règles ».
-Faits : Pardon, Sévérité, Mercenaire, Révocation, Artefact retrouvé, Révolution,
-Construire un monument, Subvention, Ostracisme, Vote au conseil 1 à 5. Un traité ou une loi en jeu
+Un traité dont le script porte `remplaceAuto: true` (Monument suprême, Zone
+démilitarisée) passe par son script au lieu de la résolution générale. Le
+script reçoit `{ etat, index, joueurs, votes, loi, carte, options, nomDe, nom,
+contenuDe }` (`contenuDe` : contenu d'un élément déjà chargé, par exemple les
+planètes d'un système). Le choix élu qu'une carte garde en jeu est écrit sur
+elle par une action `marquer` (Activité réprimée : `agentReprime` ;
+Orientation de l'empire : `orientation` ; Zone démilitarisée : `systeme`, le
+numéro de case) ; `engine/agendasEnJeu.js` (pur) lit ces marques sur la carte
+de `general:table` pour les règles. Faits : Pardon, Sévérité, Embargo
+militaire, Mission de guerre, Mercenaire, Révocation, Artefact retrouvé,
+Création trou de ver, Activité réprimée, Péage au trou de ver, Révolution,
+Révolution anti intellectuel, Construire un monument, Monument suprême,
+Subvention, Zone démilitarisée, Orientation de l'empire, Ostracisme, Vote au
+conseil 1 à 5. Un traité ou une loi en jeu
 (`general:table`) a son effet par `aScript` (type `Agenda` : la carte est sur
-la table, ou dans les éléments actifs du joueur pour un mandat) : Impôt et
-Écologie punitive au ravitaillement automatique (`Entretien.jsx`), Sévérité au
-décompte. La résolution est
+la table, ou dans les éléments actifs du joueur pour un mandat ; une loi qui a
+un effet en jeu a donc une règle `…-en-jeu` à côté de sa résolution, toujours
+active) : Impôt et Écologie punitive au ravitaillement automatique
+(`Entretien.jsx`), Sévérité et Orientation de l'empire au décompte
+(`regleDecompte.js`), Embargo militaire et Moratoire sur les soleils de guerre
+à la production (`payerProduction`, `Interaction.jsx`), Péage au trou de ver
+et Moratoire au déplacement assisté (`Deplacement.jsx`), Activité réprimée au
+recrutement (`Partie.jsx`), Révolution anti intellectuel à la recherche
+(`Technologie.jsx`), Protection des civils au bouton « Bombardement »
+(`Espace.jsx`), Zone démilitarisée à « Engager » / « Cibler » (`Combat.jsx`).
+Gardien de la constitution (mandat) est une action de plateau, phase de
+mandat (`scripts.js`). La résolution est
 notée dans le compteur `agenda:<tour>:<ligne>:resolution` (> 0 : joueur ; −1 :
 hors jeu ; −2 : table) et la carte n'est déplacée qu'en quittant la phase de
 vote (`changerPhase`, `Partie.jsx`) : le numéro d'une loi est son rang dans

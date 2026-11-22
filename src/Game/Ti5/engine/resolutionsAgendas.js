@@ -1,6 +1,7 @@
 import { CONTRE, POUR, estValide, resultatLoi, cleResolution, VERS_HORS_JEU, VERS_TABLE } from "./optionsVote.js";
 import { COLONNES_VOTE, joueurDeColonne } from "./voteCouleurs.js";
 import { actionsPiste, MARQUEUR } from "./etat.js";
+import { MONUMENT_ETERNEL, ORIENTATIONS, TROU_DE_VER_BETA, sansAccents } from "./agendasEnJeu.js";
 
 // ============================================================
 // SCRIPTS DE RÉSOLUTION DES LOIS ET DIRECTIVES
@@ -14,10 +15,16 @@ import { actionsPiste, MARQUEUR } from "./etat.js";
 // la fin de la phase de vote (compteur agenda:<tour>:<loi>:resolution) :
 // une directive est retirée du jeu ; une loi adoptée va sur la table.
 //
-//   id de l'agenda -> { script, resoudre }
+//   id de l'agenda -> { script, resoudre, remplaceAuto }
 //     script    id du script (scripts.js : désactivable dans l'outil « Scripts de règles »)
-//     resoudre  ({ etat, index, joueurs, votes, loi, carte, options, nomDe }) ->
+//     resoudre  ({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom, contenuDe }) ->
 //               { code, texte, actions, obstacles }
+//     remplaceAuto  un traité (ou un mandat) dont le script remplace la résolution
+//               générale : il dit lui-même où va la carte (Zone démilitarisée,
+//               Monument suprême : ce qui est élu est écrit sur la carte)
+//
+// Une loi ou un traité qui reste en jeu garde ce que son vote a élu en marque
+// sur sa carte ; son effet est lu dans agendasEnJeu.js.
 // ============================================================
 
 // Faction élue (colonne gagnante parmi les options de la loi) : { elu, egalite }
@@ -102,6 +109,50 @@ const voteAuConseil = n => ctx => {
     };
 };
 
+// Loi votée pour ou contre qui reste en jeu : adoptée, sur la table (son effet : un script « …-en-jeu »)
+const loiPourContre = effet => ctx => {
+    const { adopte, voixPour, voixContre, egalite } = pourOuContre(ctx);
+
+    return {
+        code: adopte ? VERS_TABLE : VERS_HORS_JEU,
+        texte: adopte
+            ? `adoptée (${voixPour} pour, ${voixContre} contre) : sur la table — ${effet}`
+            : `rejetée (${voixPour} pour, ${voixContre} contre) : retirée du jeu`,
+        actions: [],
+        obstacles: [egaliteNonDepartagee(egalite)],
+    };
+};
+
+// « Élisez … ou votez contre » : colonne gagnante, Contre (colonne 0) ou la faction de la colonne
+function eluOuContre({ options, votes, loi, joueurs }) {
+    const { gagnant, egalite } = resultatLoi(options, votes, loi);
+    const contre = gagnant === CONTRE;
+
+    return { gagnant, contre, elu: gagnant !== null && !contre ? joueurDeColonne(joueurs, gagnant) : null, egalite };
+}
+
+// Traité qui élit (règle des traités, optionsVote.js) : adopté si l'option en tête, hors Contre, a plus
+// de voix que Contre -> { adopte, elu (faction de cette colonne), voixPour, voixContre, egalite }
+function traiteElu({ options, votes, loi, joueurs }) {
+    const valides = votes.classement(loi).filter(col => col !== CONTRE && estValide(options, col));
+    const [pour, second] = valides;
+    const voixPour = pour === undefined ? 0 : votes.total(loi, pour);
+    const voixContre = votes.total(loi, CONTRE);
+    const adopte = voixPour > voixContre;
+
+    return {
+        adopte,
+        elu: adopte ? joueurDeColonne(joueurs, pour) : null,
+        voixPour,
+        voixContre,
+        egalite: adopte && second !== undefined && votes.total(loi, second) === voixPour && votes.ordre(loi, second) === votes.ordre(loi, pour),
+    };
+}
+
+// Ce qu'une faction a proposé à la prévote pour cette loi (Agendas.jsx) : id de la planète, ou
+// numéro de case + 1 (système) ; 0 si rien
+const designation = (etat, loi, userId) => Math.max(0, Number(etat.compteurs[`agenda:${etat.tour}:${loi}:designe:${userId}`]) || 0);
+
 // Cartes d'agenda en jeu : lois et traités sur la table, mandats chez les joueurs
 const agendasEnJeu = index => [...index.parZone]
     .filter(([zone]) => zone === "general:table" || /^joueur:\d+:(actif|tour:\d+)$/.test(zone))
@@ -142,6 +193,39 @@ export const RESOLUTIONS = {
         },
     },
 
+    // Embargo militaire (#307) : adoptée, sur la table — les unités militaires hors infanteries
+    // coûtent 1 de plus à produire (Interaction.jsx, payerProduction)
+    307: {
+        script: "embargo-militaire",
+        resoudre: loiPourContre("les unités militaires hors infanteries coûtent 1 de plus"),
+    },
+
+    // Mission de guerre (#309) : l'objectif militaire élu (révélé à côté de la loi, colonnes 1 à 3)
+    // va dans la case Événement du tour T+2 ; les autres sont défaussés
+    309: {
+        script: "mission-de-guerre",
+        resoudre: ({ etat, index, options, votes, loi, carte, nom }) => {
+            const { gagnant, egalite } = resultatLoi(options, votes, loi);
+            const revelees = (index.parZone.get("general:revele:" + carte.id) || []).filter(c => c.ref);
+            const elue = gagnant !== null && gagnant >= 2 ? revelees[gagnant - 2] : null;
+            const tour = etat.tour + 2;
+
+            return {
+                code: VERS_HORS_JEU,
+                texte: elue
+                    ? `« ${nom(elue.ref)} » ajouté à la phase d'événement du tour ${tour}${revelees.length > 1 ? ", les autres défaussés" : ""}`
+                    : "aucun objectif élu : sans effet (les objectifs révélés restent à côté de la loi)",
+                actions: elue
+                    ? revelees.map(c => ({ type: "deplacer", c: c.id, vers: c === elue ? `general:evenement:${tour}` : "defausse:militaire" }))
+                    : [],
+                obstacles: [
+                    egaliteNonDepartagee(egalite),
+                    gagnant !== null && gagnant >= 2 && !elue && `la colonne « ${COLONNES_VOTE[gagnant]} » n'est plus un objectif révélé`,
+                ],
+            };
+        },
+    },
+
     // Mercenaire (#312) : la faction élue gagne le mercenaire révélé
     312: { script: "mercenaire-directive", resoudre: directiveFaction(gagneLaCarteRevelee("mercenaire")) },
 
@@ -171,6 +255,54 @@ export const RESOLUTIONS = {
     // Artefact retrouvé (#316) : la faction élue gagne la relique révélée (sans les points de fabrication)
     316: { script: "artefact-retrouve", resoudre: directiveFaction(gagneLaCarteRevelee("relique")) },
 
+    // Création trou de ver (#318) : un trou de ver bêta (jeton #827) est posé dans le système élu —
+    // celui que la faction de la colonne gagnante a proposé à la prévote ; Contre : rien
+    318: {
+        script: "creation-trou-de-ver",
+        resoudre: ctx => {
+            const { contre, elu, egalite } = eluOuContre(ctx);
+            const valeur = elu ? designation(ctx.etat, ctx.loi, elu.userId) : 0;
+            const numero = valeur > 0 ? valeur - 1 : null;
+
+            return {
+                code: VERS_HORS_JEU,
+                texte: numero !== null
+                    ? `${elu.nom} : trou de ver bêta posé dans le système de la case ${numero + 1}`
+                    : (contre ? "contre l'emporte : sans effet" : "aucun système élu : sans effet"),
+                actions: numero !== null ? [{ type: "creer", ref: { type: "token", id: TROU_DE_VER_BETA }, zone: "hex:" + numero }] : [],
+                obstacles: [egaliteNonDepartagee(egalite), elu && numero === null && `${elu.nom} n'a proposé aucun système à la prévote`],
+            };
+        },
+    },
+
+    // Activité réprimée (#332) : le type d'agent élu (colonnes 1 à N : les agents de base) est écrit
+    // sur la carte, qui va sur la table — ces agents coûtent 1 influence de plus à recruter
+    // (Partie.jsx, recrutement) ; Contre : retirée du jeu
+    332: {
+        script: "activite-reprimee",
+        resoudre: ctx => {
+            const { etat, carte, nom } = ctx;
+            const { gagnant, contre, egalite } = eluOuContre(ctx);
+            const agent = gagnant !== null && gagnant >= 2 ? (etat.references?.agentsBase || [])[gagnant - 2] ?? null : null;
+
+            return {
+                code: agent ? VERS_TABLE : VERS_HORS_JEU,
+                texte: agent
+                    ? `${nom({ type: "agent", id: agent })} : 1 influence de plus à recruter (sur la table)`
+                    : (contre ? "contre l'emporte : retirée du jeu" : "aucun type d'agent élu : retirée du jeu"),
+                actions: agent ? [{ type: "marquer", c: carte.id, marque: "agentReprime", valeur: agent }] : [],
+                obstacles: [egaliteNonDepartagee(egalite), gagnant !== null && gagnant >= 2 && !agent && "type d'agent élu inconnu"],
+            };
+        },
+    },
+
+    // Péage au trou de ver (#334) : adoptée, sur la table — utiliser un trou de ver alpha ou bêta
+    // coûte 1 influence par vaisseau (Deplacement.jsx)
+    334: {
+        script: "peage-au-trou-de-ver",
+        resoudre: loiPourContre("un trou de ver alpha ou bêta coûte 1 influence par vaisseau"),
+    },
+
     // Révolution (#340) : toutes les lois, traités et mandats en jeu sont retirés du jeu — aussi ceux
     // résolus plus tôt dans ce tour, qui ne sont pas encore à leur place
     340: {
@@ -191,20 +323,25 @@ export const RESOLUTIONS = {
         }),
     },
 
+    // Révolution anti intellectuel (#343) : adoptée, sur la table — rechercher une technologie use
+    // un politique (Technologie.jsx)
+    343: {
+        script: "revolution-anti-intellectuel",
+        resoudre: loiPourContre("rechercher une technologie use un politique"),
+    },
+
     // Construire un monument (#344) : on ne vote que Pour (optionsVote.js). Chaque voix coûte
-    // 2 ressources ; 1 point par faction qui a moins voté que vous, 2 de plus pour la faction qui
-    // a voté seule plus que toutes les autres. La directive s'applique quel que soit le total.
+    // 2 ressources ; 1 point par faction qui a moins voté que vous (carte du 22 novembre : plus de
+    // bonus pour la faction seule en tête). La directive s'applique quel que soit le total.
     344: {
         script: "construire-un-monument",
         resoudre: ({ etat, joueurs, votes, loi }) => {
             const voix = joueurs.map(j => ({ j, n: votes.voix(loi, POUR, j.userId) }));
-            const max = Math.max(0, ...voix.map(x => x.n));
-            const seule = voix.filter(x => x.n === max).length === 1;
 
             const gains = voix.filter(x => x.n > 0).map(x => ({
                 ...x,
                 cout: 2 * x.n,
-                points: voix.filter(y => y.n < x.n).length + (seule && x.n === max ? 2 : 0),
+                points: voix.filter(y => y.n < x.n).length,
             }));
 
             const manque = gains.filter(x => (Number(etat.compteurs[`joueur:${x.j.userId}:res`]) || 0) < x.cout);
@@ -223,6 +360,38 @@ export const RESOLUTIONS = {
         },
     },
 
+    // Monument suprême (#555, traité) : adopté, le Monument éternel (#554, neutre) est posé sur la
+    // planète élue — celle que la faction de la colonne en tête a proposée à la prévote
+    555: {
+        script: "monument-supreme",
+        remplaceAuto: true,
+        resoudre: ctx => {
+            const { etat, index, loi, nom, contenuDe } = ctx;
+            const { adopte, elu, voixPour, voixContre, egalite } = traiteElu(ctx);
+            const idPlanete = elu ? designation(etat, loi, elu.userId) : 0;
+
+            // Zone de la planète : la case dont la tuile la porte
+            const zone = idPlanete > 0 ? [...index.parZone].flatMap(([z, contenu]) => {
+                const tuile = /^hex:\d+$/.test(z) && contenu.find(x => x.ref?.type === "system");
+                const k = tuile ? (contenuDe?.(tuile.ref.id)?.elems || []).findIndex(lien => Number(lien?.id) === idPlanete) : -1;
+                return k >= 0 ? [`${z}:planete:${k}`] : [];
+            })[0] ?? null : null;
+
+            return {
+                code: adopte ? VERS_TABLE : VERS_HORS_JEU,
+                texte: adopte
+                    ? `adopté (${voixPour} contre ${voixContre}) : sur la table${zone ? ` — Monument éternel posé sur ${nom({ type: "planet", id: idPlanete })}` : ""}`
+                    : `rejeté (${voixPour} contre ${voixContre}) : retiré du jeu`,
+                actions: zone ? [{ type: "creer", ref: { type: "unit", id: MONUMENT_ETERNEL }, zone }] : [],
+                obstacles: [
+                    egaliteNonDepartagee(egalite),
+                    adopte && !idPlanete && `${elu ? elu.nom : "la colonne en tête"} : aucune planète proposée à la prévote`,
+                    adopte && idPlanete > 0 && !zone && "la planète élue n'est pas sur la carte : le Monument éternel est à poser à la main",
+                ],
+            };
+        },
+    },
+
     // Subvention (#556) : chaque voix reçue par une faction lui rapporte 1 commerce
     556: {
         script: "subvention",
@@ -234,6 +403,52 @@ export const RESOLUTIONS = {
                 texte: classees.length ? classees.map(x => `${x.joueur.nom} +${x.voix} commerce`).join(", ") : "aucune voix : sans effet",
                 actions: classees.map(x => ({ type: "compteur", id: `joueur:${x.joueur.userId}:commerce`, delta: x.voix })),
                 obstacles: [],
+            };
+        },
+    },
+
+    // Zone démilitarisée (#579, traité) : adopté, le système élu (proposé à la prévote par la faction
+    // de la colonne en tête) est écrit sur la carte — les engagements y sont semi-bloqués (Combat.jsx)
+    579: {
+        script: "zone-demilitarisee",
+        remplaceAuto: true,
+        resoudre: ctx => {
+            const { etat, loi, carte } = ctx;
+            const { adopte, elu, voixPour, voixContre, egalite } = traiteElu(ctx);
+            const valeur = elu ? designation(etat, loi, elu.userId) : 0;
+            const numero = valeur > 0 ? valeur - 1 : null;
+
+            return {
+                code: adopte ? VERS_TABLE : VERS_HORS_JEU,
+                texte: adopte
+                    ? `adopté (${voixPour} contre ${voixContre}) : sur la table${numero !== null ? ` — engagements interdits dans le système de la case ${numero + 1}` : ""}`
+                    : `rejeté (${voixPour} contre ${voixContre}) : retiré du jeu`,
+                actions: numero !== null ? [{ type: "marquer", c: carte.id, marque: "systeme", valeur: numero }] : [],
+                obstacles: [
+                    egaliteNonDepartagee(egalite),
+                    adopte && numero === null && `${elu ? elu.nom : "la colonne en tête"} : aucun système proposé à la prévote`,
+                ],
+            };
+        },
+    },
+
+    // Orientation de l'empire (#728) : l'orientation élue (colonnes 1 à 4 : expansion, économique,
+    // diplomatique, scientifique) est écrite sur la carte, qui va sur la table — le décompte des points
+    // la compte (regleDecompte.js)
+    728: {
+        script: "orientation-de-l-empire",
+        resoudre: ({ options, votes, loi, carte }) => {
+            const { gagnant, egalite } = resultatLoi(options, votes, loi);
+            const libelle = gagnant !== null ? String(options?.libelles?.[gagnant] || "") : "";
+            const orientation = ORIENTATIONS.find(o => sansAccents(libelle).startsWith(o)) || null;
+
+            return {
+                code: orientation ? VERS_TABLE : VERS_HORS_JEU,
+                texte: orientation
+                    ? `orientation « ${libelle} » : sur la table, comptée au décompte des points`
+                    : "aucune orientation élue : retirée du jeu",
+                actions: orientation ? [{ type: "marquer", c: carte.id, marque: "orientation", valeur: orientation }] : [],
+                obstacles: [egaliteNonDepartagee(egalite), gagnant !== null && !orientation && `orientation inconnue : « ${libelle} »`],
             };
         },
     },

@@ -1,5 +1,6 @@
 import { MARQUEUR, MAX_POINTS } from "./etat.js";
 import { campDe, NEUTRE, RESSOURCES } from "./miseEnPlace.js";
+import { orientationElue } from "./agendasEnJeu.js";
 
 // ============================================================
 // DÉCOMPTE DES POINTS (règle pure)
@@ -234,10 +235,42 @@ export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, c
         }
     }
 
+    // ---- loi Orientation de l'empire (#728) : l'orientation votée, écrite sur la carte par sa
+    //      résolution (agendasEnJeu.js) ; diplomatique, ou carte résolue à la main : à compter à la main ----
+    const orientation = surLaTable("Agenda", 728) ? orientationElue(index) : null;
+
+    for (const u of orientation ? joueurs : []) {
+
+        if (orientation === "expansion") {
+
+            const planetes = actifs(u).filter(c => c.ref?.type === "planet").length;
+
+            if (planetes > 0) {
+                ajouter(u, `Orientation de l'empire (expansion) : ${planetes} planète${planetes > 1 ? "s" : ""}`, planetes, "1 point par planète");
+            }
+        } else if (orientation === "economique") {
+
+            const commerce = Number(etat.compteurs[`joueur:${u}:commerce`]) || 0;
+
+            if (commerce >= 5) {
+                ajouter(u, `Orientation de l'empire (économique) : ${commerce} commerce`, Math.floor(commerce / 5), "1 point de plus par 5 commerce");
+            }
+        } else if (orientation === "scientifique") {
+
+            const feuilles = feuillesDe(u).filter(f => f.niveau >= 4).length;
+
+            if (feuilles > 0) {
+                ajouter(u, `Orientation de l'empire (scientifique) : ${feuilles} technologie${feuilles > 1 ? "s" : ""} à 4 de connaissance`, 3 * feuilles, "3 points chacune");
+            }
+        }
+    }
+
     // ---- ce que l'outil ne compte pas ----
-    if (surLaTable("Agenda", 728)) {
-        aLaMain.push("Orientation de l'empire (loi) : selon l'orientation votée — expansion (1 par planète), économique (1 de plus par 5 commerce), " +
-            "scientifique (3 par technologie à 4 de connaissance), diplomatique (2 par faveur encaissée au tour 10).");
+    if (surLaTable("Agenda", 728) && (!orientation || orientation === "diplomatique")) {
+        aLaMain.push(orientation === "diplomatique"
+            ? "Orientation de l'empire (loi, diplomatique) : 2 points par faveur encaissée."
+            : "Orientation de l'empire (loi) : selon l'orientation votée — expansion (1 par planète), économique (1 de plus par 5 commerce), " +
+                "scientifique (3 par technologie à 4 de connaissance), diplomatique (2 par faveur encaissée au tour 10).");
     }
 
     const parJoueur = Object.fromEntries(joueurs.map(u => {

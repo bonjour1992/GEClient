@@ -3910,8 +3910,8 @@ export const SCRIPTS = [
         "La faction élue gagne la relique révélée à côté de la loi (ses éléments actifs, sans les points de fabrication). La carte est retirée du jeu."),
     resolution("revolution", 340, 1795076851710, "Révolution",
         "Pour l'emporte : toutes les lois, traités et mandats en jeu sont retirés du jeu, y compris ceux résolus plus tôt dans le tour. La carte est retirée du jeu."),
-    resolution("construire-un-monument", 344, 1795076851713, "Construire un monument",
-        "On ne vote que Pour. Chaque voix coûte 2 ressources ; chaque faction gagne 1 point par faction qui a moins voté qu'elle, et 2 de plus si elle a voté seule plus que toutes les autres. La carte est retirée du jeu."),
+    resolution("construire-un-monument", 344, 1795384200439, "Construire un monument",
+        "On ne vote que Pour. Chaque voix coûte 2 ressources ; chaque faction gagne 1 point par faction qui a moins voté qu'elle. La carte est retirée du jeu."),
     resolution("subvention", 556, 1795076851743, "Subvention",
         "Chaque faction gagne 1 commerce par voix reçue dans sa colonne. La carte est retirée du jeu."),
     resolution("ostracisme", 748, 1795068635381, "Ostracisme",
@@ -3919,6 +3919,72 @@ export const SCRIPTS = [
     resolution("vote-au-conseil", 798, 1793972765960, "Vote au conseil",
         "Les factions qui ont le plus de voix gagnent des sièges : N à la première, N − 1 à la deuxième… (Vote au conseil N, de 1 à 5). La carte est retirée du jeu.",
         [799, 800, 801, 802]),
+
+    // Agendas du 22 novembre (soir). Une loi ou un traité qui reste en jeu a deux scripts : sa
+    // résolution, et son effet « …-en-jeu » (aScript : la carte est sur la table) ; ce que le vote a
+    // élu est écrit sur la carte (agendasEnJeu.js).
+    resolution("embargo-militaire", 307, 1795076851684, "Embargo militaire",
+        "Pour l'emporte : la loi va sur la table, sinon elle est retirée du jeu."),
+    regle("embargo-militaire-en-jeu", "Agenda", 307, 1795076851684, "Embargo militaire : coût", "modifie",
+        "Production : coût payé à la pose d'une unité",
+        "Tant que la loi est sur la table, chaque unité militaire produite, hors infanteries, coûte 1 ressource de plus."),
+    resolution("mission-de-guerre", 309, 1795076851686, "Mission de guerre",
+        "L'objectif militaire élu (révélé à côté de la loi) va dans la case Événement du tour T+2, les autres sont défaussés. La carte est retirée du jeu."),
+    resolution("creation-trou-de-ver", 318, 1795076851693, "Création trou de ver",
+        "Un trou de ver bêta est posé dans le système élu (proposé à la prévote par la faction de la colonne gagnante) ; Contre : rien. La carte est retirée du jeu."),
+    resolution("activite-reprimee", 332, 1795076851704, "Activité réprimée",
+        "Le type d'agent élu est écrit sur la carte, qui va sur la table ; Contre : elle est retirée du jeu."),
+    regle("activite-reprimee-en-jeu", "Agenda", 332, 1795076851704, "Activité réprimée : recrutement", "modifie",
+        "Recrutement (Ctrl + clic) : coût d'un agent",
+        "Tant que la loi est sur la table, recruter un agent du type élu coûte 1 influence de plus."),
+    resolution("peage-au-trou-de-ver", 334, 1795076851706, "Péage au trou de ver",
+        "Pour l'emporte : la loi va sur la table, sinon elle est retirée du jeu."),
+    regle("peage-au-trou-de-ver-en-jeu", "Agenda", 334, 1795076851706, "Péage au trou de ver : déplacement", "modifie",
+        "Déplacement assisté : « Déplacer »",
+        "Tant que la loi est sur la table, chaque étape par un trou de ver alpha ou bêta coûte 1 influence par vaisseau déplacé (semi-bloqué si l'influence manque : seule celle-là est dépensée)."),
+    resolution("revolution-anti-intellectuel", 343, 1795076851712, "Révolution anti intellectuel",
+        "Pour l'emporte : la loi va sur la table, sinon elle est retirée du jeu."),
+    regle("revolution-anti-intellectuel-en-jeu", "Agenda", 343, 1795076851712, "Révolution anti intellectuel : recherche", "modifie",
+        "Arbre des technologies : case de recherche cochée",
+        "Tant que la loi est sur la table, la première case cochée d'une technologie dans le tour use un politique (semi-bloqué sans politique disponible)."),
+    resolution("monument-supreme", 555, 1795076851743, "Monument suprême",
+        "Traité adopté (l'option en tête a plus de voix que Contre) : sur la table, et le Monument éternel est posé sur la planète élue (proposée à la prévote) ; rejeté : retiré du jeu. Rompre le traité en engageant le monument : à la main."),
+    resolution("zone-demilitarisee", 579, 1795076851745, "Zone démilitarisée",
+        "Traité adopté : sur la table, et le système élu (proposé à la prévote) est écrit sur la carte ; rejeté : retiré du jeu."),
+    regle("zone-demilitarisee-en-jeu", "Agenda", 579, 1795076851745, "Zone démilitarisée : engagements", "modifie",
+        "Conflit : « Engager », « Cibler »",
+        "Tant que le traité est sur la table, engager ou cibler dans le système élu est semi-bloqué."),
+    resolution("orientation-de-l-empire", 728, 1795076851747, "Orientation de l'empire",
+        "L'orientation élue est écrite sur la carte, qui va sur la table."),
+    regle("orientation-de-l-empire-en-jeu", "Agenda", 728, 1795076851747, "Orientation de l'empire : décompte", "auto",
+        "Décompte des points",
+        "Tant que la loi est sur la table, le décompte compte l'orientation élue : expansion, 1 point par planète possédée ; économique, 1 point de plus par 5 commerce ; scientifique, 3 points par type de technologie à 4 niveaux de connaissance ou plus. Diplomatique (2 points par faveur encaissée) : rappelée, à compter à la main."),
+    regle("protection-des-civils", "Agenda", 333, 1795076851705, "Protection des civils", "modifie",
+        "Fiche d'un système : « Bombardement »",
+        "Tant que le traité est sur la table, bombarder une planète qui n'est pas une planète militaire est semi-bloqué."),
+    regle("moratoire-soleils-de-guerre", "Agenda", 338, 1795076851708, "Moratoire sur les soleils de guerre", "modifie",
+        "Production (pose d'une unité) ; déplacement assisté : « Déplacer »",
+        "Tant que le traité est sur la table, produire ou déplacer un soleil de guerre est semi-bloqué."),
+    action("gardien-de-la-constitution", "Agenda", 329, 1795076851702, "Gardien de la constitution", "plateau",
+        "Phase de mandat, pour la faction qui a le mandat : dépensez 3 influence, vous obtenez un politique (tiré du sac s'il y en a un). L'interdiction de dépenser des politiques aux votes : à la main.", {
+            phase: "mandat",
+            cout: { inf: 3 },
+            special: atelier => {
+
+                const base = atelier.etat.references?.agentsBase || [];
+                const idPolitique = base.find(id => /politi/i.test(atelier.nom({ type: "agent", id }))) ?? 6;
+                const duSac = (atelier.index.parZone.get("pioche:sac") || []).find(a => a.ref?.type === "agent" && a.ref.id === idPolitique);
+
+                return {
+                    actions: [duSac
+                        ? { type: "deplacer", c: duSac.id, vers: `joueur:${atelier.moi}:agents`, proprio: atelier.moi }
+                        : { type: "creer", ref: { type: "agent", id: idPolitique }, zone: `joueur:${atelier.moi}:agents`, proprio: atelier.moi }],
+                    avis: "Gardien de la constitution : vous obtenez un politique.",
+                };
+            },
+            libelle: "Gardien de la constitution : 3 influence, un politique",
+        }),
+
     regle("impot", "Agenda", 339, 1795076851709, "Impôt", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Tant que le traité est sur la table, chaque faction dépense 2 commerce (ce qu'elle en a, au plus)."),

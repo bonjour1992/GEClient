@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { getHandler } from "../../games";
-import { useEngine, Emplacements, Pions, nomElement, confirmerRegle, carteUsee, actionsUserCarte } from "./Interaction";
+import { useEngine, Emplacements, Pions, nomElement, confirmerRegle, carteUsee, actionsUserCarte, agentDisponible } from "./Interaction";
 import { demander } from "./demande";
 import { Text } from "../../../Component/Text";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
@@ -475,6 +475,12 @@ function Feuille({ composant, base }) {
             ? await avecCarrina({ etat, index, moi, aScript, search }, chercheur, idTech, prerequis - niveau)
             : null;
 
+        // Loi Révolution anti intellectuel (#343) sur la table : rechercher une technologie use un
+        // politique — une fois par technologie dans le tour (sa première case cochée du tour)
+        const politiqueVoulu = plus && aScript(moi, "revolution-anti-intellectuel-en-jeu") &&
+            !lireJournal(etat, chercheur).lignes.some(l => l.sorte === "t" && l.element === idTech);
+        const politique = politiqueVoulu ? agentDisponible({ index, moi: chercheur, search }, "politi", { sansRemplacant: true }) : null;
+
         // Une case de plus est un effet du jeu (ligne verte du journal) ; elle est semi-bloquée s'il
         // manque un prérequis ou s'il n'y a pas de point de recherche pour la payer. Une case de
         // moins est une correction, sans commentaire.
@@ -482,15 +488,22 @@ function Feuille({ composant, base }) {
             niveau < prerequis && !carrina &&
                 `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
             !pointDisponible(etat, chercheur, techs[idTech]?.techType) && SANS_POINT,
+            politiqueVoulu && !politique &&
+                "Révolution anti intellectuel (loi) : rechercher une technologie use un politique, vous n'en avez pas de disponible (aucun ne sera usé)",
         ]);
 
         if (commentaire === null) {
             return;
         }
 
+        if (politique) {
+            aviser("Révolution anti intellectuel (loi) : un politique est utilisé pour rechercher cette technologie.");
+        }
+
         // La case cochée (ou décochée) est notée au journal de recherche du tour
         const avance = [
             ...(carrina?.actions || []),
+            politique && { type: "deplacer", c: politique.id, vers: `joueur:${chercheur}:agentsUses` },
             { type: "compteur", id: idProgres(k), valeur },
             noter(etat, chercheur, "t", idTech, plus ? 1 : -1),
             noterFinie(etat, chercheur, idTech, valeur >= cout(k)),
@@ -672,19 +685,31 @@ function TechIsolee({ composant, base }) {
         // (Doctor Carrina peut faire ignorer un niveau de prérequis : avecCarrina)
         const carrina = plus && niveau < prerequis ? await avecCarrina(ctx, chercheur, idTech, prerequis - niveau) : null;
 
+        // (loi Révolution anti intellectuel : un politique, une fois par technologie dans le tour)
+        const politiqueVoulu = plus && ctx.aScript(ctx.moi, "revolution-anti-intellectuel-en-jeu") &&
+            !lireJournal(etat, chercheur).lignes.some(l => l.sorte === "t" && l.element === idTech);
+        const politique = politiqueVoulu ? agentDisponible({ index: ctx.index, moi: chercheur, search }, "politi", { sansRemplacant: true }) : null;
+
         // (comme sur une feuille : effet du jeu, semi-bloqué sans prérequis ou sans point de recherche)
         const commentaire = !plus ? "" : confirmerRegle(carrina?.texte || `Rechercher ${nomElement(search, { type: "tech", id: idTech })}`, [
             niveau < prerequis && !carrina &&
                 `prérequis : ${prerequis} niveau${prerequis > 1 ? "x" : ""} de connaissance, vous en avez ${niveau}`,
             !pointDisponible(etat, chercheur, tech?.techType) && SANS_POINT,
+            politiqueVoulu && !politique &&
+                "Révolution anti intellectuel (loi) : rechercher une technologie use un politique, vous n'en avez pas de disponible (aucun ne sera usé)",
         ]);
 
         if (commentaire === null) {
             return;
         }
 
+        if (politique) {
+            aviser("Révolution anti intellectuel (loi) : un politique est utilisé pour rechercher cette technologie.");
+        }
+
         const avance = [
             ...(carrina?.actions || []),
+            politique && { type: "deplacer", c: politique.id, vers: `joueur:${chercheur}:agentsUses` },
             { type: "compteur", id: idProgres, valeur },
             noter(etat, chercheur, "t", idTech, plus ? 1 : -1),
             noterFinie(etat, chercheur, idTech, valeur >= cout),

@@ -187,7 +187,8 @@ function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
         return null;
     }
 
-    const auto = resolutionAutomatique({ contenu, options, votes, loi, joueurs });
+    // (un traité dont le script dit ce qui est élu remplace la résolution générale : remplaceAuto)
+    const auto = scriptCarte?.remplaceAuto ? null : resolutionAutomatique({ contenu, options, votes, loi, joueurs });
     const script = !auto && scriptCarte;
 
     if (!auto && !script) {
@@ -221,7 +222,7 @@ function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
     }
 
     // Script de résolution : l'effet tout de suite, la carte à sa place à la fin de la phase de vote
-    const resultat = script.resoudre({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom: ref => nomElement(search, ref) });
+    const resultat = script.resoudre({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom: ref => nomElement(search, ref), contenuDe: contenuEnCache });
 
     return (
         <BoutonRegle

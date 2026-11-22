@@ -2053,7 +2053,10 @@ function FicheSysteme({ numero, id, fermer }) {
                                                     "Ouvre un combat entre les unités de cette planète", [pasUnePlanete(planete)])}
                                                 {boutonCombat(`${numero}p${k}b`, "Bombardement",
                                                     "Les unités à bombardement de l'espace du système tirent sur cette planète",
-                                                    [pasUnePlanete(planete), obstacleSousPhase(etat, numero, BOMBARDEMENT)])}
+                                                    [pasUnePlanete(planete), obstacleSousPhase(etat, numero, BOMBARDEMENT),
+                                                        // (traité Protection des civils, #333, sur la table)
+                                                        aScript(moi, "protection-des-civils") && planete?.planetType !== "mil" &&
+                                                            "Protection des civils (traité) : le bombardement est interdit sur une planète non militaire"])}
                                                 {/* Raid (#raid, Kabal de l'ombre) : une unité à raid est dans l'espace du système */}
                                                 {(combats.includes(`${numero}p${k}r`) || (index.parZone.get("hex:" + numero) || []).some(c =>
                                                     c.ref?.type === "unit" && ([152, 153].includes(c.ref.id) ||

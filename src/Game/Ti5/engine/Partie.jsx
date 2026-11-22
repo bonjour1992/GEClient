@@ -81,6 +81,7 @@ import { InfosPartie } from "./InfosPartie";
 import { Vote, tradingFinDeVote, harrughFinDeVote } from "./Vote";
 import { actionsRevelation } from "./Agendas";
 import { cleResolution, zoneDeResolution } from "./optionsVote";
+import { agentReprime } from "./agendasEnJeu";
 import { Transaction, Transactions, transactionsEnAttente } from "./Transaction";
 import { Chat, conversationDe } from "./Chat";
 import { Faveurs, faveursDuTour } from "./Faveurs";
@@ -1267,8 +1268,14 @@ export function Partie({ id }) {
                 .map(s => s.recrutement({ type: typeAchat, nom, nomDeBase: nom, cout, surcout }))
                 .filter(Boolean);
 
-            const prix = Math.max(0, cout + effets.reduce((total, e) => total + (Number(e.cout) || 0), 0));
-            const messages = effets.map(e => e.message).filter(Boolean);
+            // Loi Activité réprimée (#332) sur la table : un agent du type élu (l'agent de base, ou celui de
+            // ma faction qui le réimplémente) coûte 1 influence de plus
+            const reprime = achete.ref.type === "agent" && ctx.aScript(moi, "activite-reprimee-en-jeu") ? agentReprime(ctx.index) : null;
+            const visee = reprime !== null && (achete.ref.id === reprime ||
+                Number((await chargerContenu(achete.ref.id))?.reimplemente?.id) === reprime);
+
+            const prix = Math.max(0, cout + effets.reduce((total, e) => total + (Number(e.cout) || 0), 0) + (visee ? 1 : 0));
+            const messages = [...effets.map(e => e.message), visee && "Activité réprimée (loi) : +1 influence"].filter(Boolean);
 
             if (achete.ref.type !== "agent") {
                 acheter(undefined, [], prix, messages);
