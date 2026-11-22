@@ -34,7 +34,7 @@ const MODE_EMPLOI = [
         "Ordre de jeu : il est figé pendant toute la phase. Un marqueur d'initiative déplacé (en passant au recrutement) ne change l'ordre qu'à la phase suivante ; le nouvel ordre est annoncé dans l'en-tête.",
         "Finir mon tour : bouton de la troisième ligne de l'en-tête, jaune quand c'est à vous : la main passe au joueur suivant. Il n'est utilisable qu'à votre tour ; pour corriger, « Doit jouer » est dans l'en-tête déplié.",
         "Attendre : sur la troisième ligne de l'en-tête, use un diplomate et passe la main (à toute phase). À la phase de déplacement, le bandeau propose aussi d'attendre avec un amiral.",
-        "Passer : bouton de la troisième ligne de l'en-tête ; vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase.",
+        "Passer : bouton de la troisième ligne de l'en-tête ; vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase. Quand le dernier joueur passe, la phase suivante commence toute seule (le tour suivant après la dernière phase), sauf si un combat est ouvert, des faveurs restent à encaisser ou un système est activé : « Phase suivante » reste alors à cliquer.",
         "Phase suivante : prévue quand tous les joueurs ont passé. Tant que ce n'est pas le cas, le bouton est rouge gris mais reste utilisable, après confirmation (un joueur absent ne bloque pas la partie). Il est vraiment bloqué tant qu'un combat est ouvert (phases de combat) ou que les faveurs ne sont pas encaissées (phase d'événement) ; la raison est écrite dans l'en-tête.",
         "Fin d'une phase : les marqueurs d'activation de la carte et les marqueurs de faction posés dans l'espace d'un système sont retirés, même posés sur un pion ; les unités « usées » redeviennent disponibles.",
         "Nouveau tour : disponible à la dernière phase du tour seulement (et au tour 0). Le décompte n'est une phase qu'au tour 10, qui est le dernier.",
@@ -76,7 +76,7 @@ const MODE_EMPLOI = [
         "Volet de droite : « Ma main » montre les noms des cartes (clic : la fiche) ; sur la ligne Commerce, les deux petits boutons « +1 » convertissent 1 commerce en 1 ressource ou 1 influence (Ctrl + clic : 5).",
         "Cartes dans une transaction : relique, promesse, agenda ou mercenaire. Ce n'est vérifié qu'à l'application : si la faction ne l'a pas, la transaction est annulée sans user de diplomate.",
         "Faveurs : à la phase d'événement des tours concernés, choisir en secret les faveurs à encaisser et valider. Les points sont comptés quand tous ont validé.",
-        "Chat : « Général » et une conversation privée par joueur. Journal : tous les coups.",
+        "Chat : « Général » et une conversation privée par joueur. Journal : tous les coups. Un nombre rouge sur son onglet : des actions faites malgré une règle (lignes rouges), pas encore vues ; ouvrir l'onglet l'efface.",
         "Bouton rouge gris : la règle dit non, l'outil laisse faire après une confirmation (« Normalement impossible… »). C'est la seule fenêtre qui reste.",
     ]],
     ["Combats", [

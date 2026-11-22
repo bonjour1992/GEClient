@@ -48,6 +48,7 @@ import {
     estTreve,
     BoutonRegle,
     confirmerRegle,
+    lireRegle,
     reglerConnexion,
     payerConnexion,
     choisirRemplacants,
@@ -80,7 +81,7 @@ import { Combat, combatsEnCours, combatsActifs, cleCombat, aDesUnites, COULEUR_C
 import { passagesEnCours } from "./Blocage";
 import { blocagesActionEnCours } from "./regleBlocage";
 import { SousPhases } from "./SousPhases";
-import { actionsFinDeSousPhases } from "./regleSousPhases";
+import { actionsFinDeSousPhases, estPhaseBombardementDebarquement, sousPhaseEnCours } from "./regleSousPhases";
 import { controlesEnCours, dominationsEnCours, accordsEnCours } from "./Controle";
 import { Notifications } from "./Notifications";
 import { ouvrirProduction, lireProduction } from "./Production";
@@ -269,6 +270,43 @@ export function Partie({ id }) {
 
     const messagesNonLus = p.chat.filter(m =>
         m.auteur !== p.moi && m.n > (chatLu[conversationDe(m, p.moi)] || 0)).length;
+
+    // Journal : actions semi-bloquées faites malgré une règle (coup au commentaire « ⚠ », en rouge
+    // dans le journal) et pas encore vues : leur nombre s'affiche en rouge sur l'onglet Journal.
+    // Le numéro du dernier coup vu est gardé d'une visite à l'autre ; ouvrir l'onglet Journal
+    // marque tout comme vu. À la première visite d'une partie, ce qui est déjà joué compte comme vu.
+    const cleJournalLu = "ge-engine-journal-lu-" + id;
+    const coupsRecents = p.vue?.coups;
+    const dernierCoup = (coupsRecents || []).reduce((max, c) => Math.max(max, c.n), 0);
+
+    const [journalLu, setJournalLu] = useState(() => {
+        try {
+            const lu = localStorage.getItem(cleJournalLu);
+            return lu === null ? null : Number(lu) || 0;
+        } catch {
+            return null;
+        }
+    });
+
+    useEffect(() => {
+
+        // (partie pas encore chargée, ou rien de nouveau à marquer)
+        if (!coupsRecents || (journalLu !== null && (onglet !== "journal" || journalLu >= dernierCoup))) {
+            return;
+        }
+
+        setJournalLu(dernierCoup);
+
+        try {
+            localStorage.setItem(cleJournalLu, String(dernierCoup));
+        } catch {
+            // préférence non enregistrée
+        }
+    }, [coupsRecents, journalLu, onglet, dernierCoup, cleJournalLu]);
+
+    const horsReglesNonVus = journalLu === null
+        ? 0
+        : (coupsRecents || []).filter(c => c.n > journalLu && lireRegle(c.commentaire)?.hors).length;
 
     // Les noms des éléments viennent de la recherche du jeu. Elle est rechargée à l'ouverture d'une
     // partie : une page restée ouverte garderait sinon les anciens noms (phases renommées…).
@@ -1186,8 +1224,36 @@ export function Partie({ id }) {
         p.envoyer(commentaire, [...actions, { type: "partie", joueurActif: suivantId }]);
     }
 
-    function passer() {
-        p.jouer([
+    // Passer : je suis retiré de l'ordre du tour jusqu'à la fin de la phase.
+    // Si tous les autres ont déjà passé, la phase est finie : on passe tout seul à la phase
+    // suivante — au tour suivant après la dernière phase du tour. Rien d'automatique si quelque
+    // chose retient la phase (combat ouvert, faveurs à encaisser, système activé de la phase de
+    // bombardement et de débarquement) : « Phase suivante » reste alors à cliquer.
+    // commentaire : celui de l'effet du jeu (« ✔ Passer »), pour le journal
+    function passer(commentaire = "") {
+
+        const tousOntPasse = etat.tour > 0 && iPhase >= 0 &&
+            joueurs.every(j => j.userId === moi || aPasse(j.userId));
+
+        const retenue = !!blocage ||
+            (estPhaseBombardementDebarquement(etat) && sousPhaseEnCours(etat).numero !== null);
+
+        if (tousOntPasse && !retenue) {
+
+            const suite = (commentaire || "Passer") + " — tout le monde a passé";
+
+            if (phases[iPhase + 1]) {
+                changerPhase(1, suite + " : phase suivante");
+                return;
+            }
+
+            if (!dernierTour) {
+                nouveauTour(suite + " : nouveau tour");
+                return;
+            }
+        }
+
+        p.envoyer(commentaire, [
             { type: "compteur", id: `joueur:${moi}:passe`, valeur: 1 },
             { type: "partie", joueurActif: joueurApres(moi, moi) },
         ]);
@@ -1207,7 +1273,8 @@ export function Partie({ id }) {
         choisirRemplacants([
             { type: "deplacer", c: agent.id, vers: `joueur:${moi}:agentsUses` },
             { type: "partie", joueurActif: suivantId },
-        ]).then(actions => p.jouer(actions));
+        // (un effet du jeu : sa ligne est verte dans le journal)
+        ]).then(actions => p.envoyer(confirmerRegle(`Attendre (use un ${nomAgent})`), actions));
     }
 
     // --------------------------------------------------------
@@ -1779,6 +1846,16 @@ export function Partie({ id }) {
                                     {cle === "transactions" && transactionsEnCours.length > 0
                                         ? ` (${transactionsEnCours.length})`
                                         : ""}
+                                    {/* Actions faites malgré une règle (semi-bloquées), pas encore vues */}
+                                    {cle === "journal" && horsReglesNonVus > 0 && (
+                                        <b
+                                            data-hors-regles={horsReglesNonVus}
+                                            title="Action(s) faite(s) malgré une règle (lignes rouges du journal), pas encore vue(s)"
+                                            style={{ marginLeft: 4, color: "#c00" }}
+                                        >
+                                            ({horsReglesNonVus})
+                                        </b>
+                                    )}
                                     {cle === "chat" && messagesNonLus > 0 && (
                                         <b
                                             style={{
@@ -2096,7 +2173,14 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                 type="button"
                 data-action="joueur-suivant"
                 disabled={p.envoi || tourDunAutre}
-                onClick={() => confirmerRegle("Joueur suivant", obstacles) && p.jouer({ type: "partie", joueurActif: suivantId })}
+                onClick={() => {
+                    // (un effet du jeu : sa ligne est verte dans le journal, rouge si une décision attendait)
+                    const commentaire = confirmerRegle(monTour ? "Fin de mon tour" : "Joueur suivant", obstacles);
+
+                    if (commentaire) {
+                        p.envoyer(commentaire, [{ type: "partie", joueurActif: suivantId }]);
+                    }
+                }}
                 title={tourDunAutre
                     ? `C'est le tour de ${ctx.nomDe(ctx.etat.joueurActif)}`
                     : "Passe la main au joueur suivant dans l'ordre d'initiative" + titreBloque}
@@ -2134,8 +2218,14 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                 type="button"
                 data-action="passer"
                 disabled={p.envoi || aPasse}
-                onClick={() => confirmerRegle("Passer", obstacles) && passer()}
-                title={"Vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase" + titreBloque}
+                onClick={() => {
+                    const commentaire = confirmerRegle("Passer", obstacles);
+
+                    if (commentaire) {
+                        passer(commentaire);
+                    }
+                }}
+                title={"Vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase. Si tous les autres ont passé, la phase suivante (ou le tour suivant) commence toute seule" + titreBloque}
                 style={aPasse ? {} : semiBloque}
             >
                 {aPasse ? "Vous avez passé" : "Passer"}

@@ -277,6 +277,12 @@ function estCombatCorrect(coup) {
     return actions.every(a => propre(a) || suite(a)) && actions.some(propre);
 }
 
+// Action de blocage faite dans les règles : sa ligne est verte elle aussi — choix d'une unité
+// (bloque, égalise…), test de blocage ouvert ou abandonné, drain spatial. Ce qui a été fait
+// malgré une règle porte déjà « ⚠ » (rouge), la résolution du test « ✔ ».
+const estBlocageCorrect = coup =>
+    /^(Blocage\b|Test de blocage\b|Drain spatial\b)|— test de blocage ouvert/.test(String(coup.commentaire || ""));
+
 // max : nombre d'actions détaillées (volet « Derniers coups ») ; le reste
 // est compté, le détail complet est dans l'onglet Journal.
 function Coup({ coup, max }) {
@@ -291,9 +297,10 @@ function Coup({ coup, max }) {
     // Effet du jeu (bouton vert, ou rouge gris : Interaction.jsx, BoutonRegle) :
     // la ligne est verte s'il était faisable, rouge s'il a été fait hors conditions
     // (le ravitaillement, automatique, est écrit en vert lui aussi)
-    // (les interactions de combat faites dans les règles aussi : estCombatCorrect)
+    // (les interactions de combat et de blocage faites dans les règles aussi : estCombatCorrect,
+    //  estBlocageCorrect ; « Passer », « Fin de mon tour » et « Attendre » portent « ✔ »)
     const regle = lireRegle(coup.commentaire) ||
-        (/^Ravitaillement\b/.test(coup.commentaire || "") || estCombatCorrect(coup) ? { hors: false } : null);
+        (/^Ravitaillement\b/.test(coup.commentaire || "") || estCombatCorrect(coup) || estBlocageCorrect(coup) ? { hors: false } : null);
 
     return (
         <div
