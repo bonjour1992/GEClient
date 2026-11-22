@@ -704,6 +704,7 @@ async function calculerStatistiques(content) {
             planetes.push({
                 res: Number(planete.res) || 0,
                 inf: Number(planete.inf) || 0,
+                com: Number(planete.com) || 0,
                 ruine: planete.ruine === true,
                 techSpe,
             });
@@ -723,6 +724,7 @@ async function calculerStatistiques(content) {
 
         let influence = 0;
         let ressource = 0;
+        let commerce = 0;
         let ruines = 0;
         let specialites = 0;
 
@@ -738,6 +740,7 @@ async function calculerStatistiques(content) {
 
                 ressource += planete.res / ponderation;
                 influence += planete.inf / ponderation;
+                commerce += planete.com / ponderation;
 
                 if (planete.ruine) {
                     ruines += 1 / ponderation;
@@ -756,9 +759,10 @@ async function calculerStatistiques(content) {
             numero: index + 1,
             influence,
             ressource,
+            commerce,
             ruines,
             specialitesTechnologiques: specialites,
-            total: influence + ressource,
+            total: influence + ressource + commerce,
         });
     });
 
@@ -933,6 +937,7 @@ function StatistiquesPlateau({ content, hauteur }) {
 
                             <LigneStat libelle="Influence" valeur={natal.influence.toFixed(4)} />
                             <LigneStat libelle="Ressource" valeur={natal.ressource.toFixed(4)} />
+                            <LigneStat libelle="Commerce" valeur={natal.commerce.toFixed(4)} />
                             <LigneStat libelle="Ruines" valeur={natal.ruines.toFixed(4)} />
                             <LigneStat
                                 libelle="Spécialités technologiques"

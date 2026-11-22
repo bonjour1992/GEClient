@@ -51,6 +51,8 @@ class Classe extends aggregation(ElementContent, TypeLienCarac) {
     stationType = ""
     res
     inf
+    // Commerce produit au ravitaillement, comme les ressources et l'influence
+    com
     type = "pla"
     techSpe = []
     legendary = false
@@ -143,6 +145,7 @@ export function PlanetPict({ content, style, context, explication }) {
             }} >
                 {content.res ? <Hexagone color="yellow">{content.res}</Hexagone> : ""}
                 {content.inf ? <Hexagone color="blue">{content.inf}</Hexagone> : ""}
+                {content.com ? <Rond>{content.com}</Rond> : ""}
                 {content.ruine ? <Ruine type={content.ruineType} /> : ""}
                 {content.ruine2 ? <Ruine type={content.ruineType2} /> : ""}
                 {content.techSpe&& content.techSpe.map((e, i) => <img key={i} src={pub + (techIcon.get(e) || "/404.jpeg")} alt={techIcon.get(e) || "/404.jpeg"} width={20} height={20} />)}
@@ -213,6 +216,7 @@ function Form({ content, onChange, onSubmit, style }) {
                 <ImagePicker onChange={onChange} name="img" value={content} />
                 <NumberInput onChange={onChange} name="res" value={content} min={0} max={9} lebel="res"/>
                 <NumberInput onChange={onChange} name="inf" value={content} min={0} max={9} label="inf"/>
+                <NumberInput onChange={onChange} name="com" value={content} min={0} max={9} label="com"/>
                 <TagInput onChange={onChange} name="techSpe" value={content} tagClass={techType} />
                 <BooleanInput onChange={onChange} name="ruine" value={content} lebal="ruine" />
                 <EnumInput onChange={onChange} name="ruineType" value={content} enumClass={ruineType} className={content.ruine ? "" : "hidden"} />
@@ -250,6 +254,33 @@ function Ruine({ type }) {
                 fill={{ normal: "#FFFFFF", mil: "#FF0000", ancien: "#8800FF", civ: "#AAAA00", spa: "#2222DD" }[type]}
                 d="m 114.52808,133.36352 v -1.38834 l 0.44097,-0.14737 0.44097,-0.14737 -0.004,-6.40842 -0.004,-6.40841 h 3.09077 3.09078 v 1.41111 1.41111 h -0.35278 -0.35278 v 4.03612 4.03613 l 0.35278,0.21803 0.35278,0.21803 v 0.86112 0.86112 h 1.05833 1.05833 v -1.05833 -1.05833 h 0.35278 0.35278 v -4.05695 -4.05694 h 1.40205 1.40205 l 0.58602,1.14653 0.58602,1.14652 0.48138,0.28212 0.48137,0.28211 v 2.6283 2.62831 h 0.35278 0.35277 v 1.05833 1.05833 h 0.37408 0.37407 l -0.10949,1.32292 -0.10949,1.32292 -8.02569,0.0948 -8.02569,0.0948 z m 14.81667,-0.036 v -0.35278 h -6.87917 -6.87917 v 0.35278 0.35277 h 6.87917 6.87917 z m -9.16411,-1.94028 v -0.35278 l -1.94433,-0.1058 -1.94434,-0.1058 v 0.56438 0.56437 l 1.94434,-0.1058 1.94433,-0.10579 z m 8.72466,0.0882 -0.14546,-0.44097 -2.0006,-0.1058 -2.0006,-0.1058 v 0.54677 0.54677 h 2.14606 2.14607 z m -11.20222,-5.73264 v -4.05694 h -0.52917 -0.52916 v 4.05694 4.05695 h 0.52916 0.52917 z m 2.11667,0 v -4.05694 h -0.52917 -0.52916 v 4.05694 4.05695 h 0.52916 0.52917 z m 6.35,0.52917 v -3.52778 h -0.35278 -0.35278 v 3.52778 3.52778 h 0.35278 0.35278 z m 2.04459,1.17464 -0.10431,-2.35313 -0.35278,-0.11719 -0.35278,-0.1172 0.11714,2.47033 0.11715,2.47033 h 0.33994 0.33995 z m -7.68904,-7.17186 v -0.35278 h -2.11666 -2.11667 v 0.35278 0.35278 h 2.11667 2.11666 z"
                 id="path1" /></g></svg>)
+}
+
+// Rond doré pour le commerce (la forme et la couleur du remplacement #com), de la taille des hexagones
+function Rond(props) {
+    return (
+        <div
+            data-commerce-planete
+            style={{
+                // (comme l'hexagone : 19 de haut dans la ligne, 5 de débord en haut et en bas)
+                margin: "-5px 0",
+                flexShrink: 0,
+                boxSizing: "border-box",
+                height: 29,
+                width: 29,
+                borderRadius: "50%",
+                border: "3px solid #d4a017",
+                backgroundColor: "#000",
+                textAlign: "center",
+                color: "#fff",
+                lineHeight: "23px",
+                fontSize: 16,
+                fontWeight: 700,
+            }}
+        >
+            {props.children}
+        </div>
+    )
 }
 
 //Hexagone de couleur pour l'influence et les ressources

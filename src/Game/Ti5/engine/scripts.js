@@ -1038,7 +1038,7 @@ export const SCRIPTS = [
     revenu("relique-reforgee", "planet", 131, 1795190407273, "Relique reforgée", "ravit",
         "Rapporte 1 point à qui la possède.", { gains: { points: 1 } }),
 
-    revenu("anneau-arcturus", "planet", 784, 1795372845144, "Anneau Arcturus", "ravit",
+    revenu("anneau-arcturus", "planet", 784, 1795376624395, "Anneau Arcturus", "ravit",
         "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
 
     revenu("new-eden", "planet", 469, 1795190407285, "New eden", "ravit",
@@ -1097,7 +1097,7 @@ export const SCRIPTS = [
         "Fiche d'un système : « Revendiquer »",
         "Avar ne peut pas être en votre possession sans unité dessus : la revendiquer sans y avoir d'unité est rouge gris, et la possession tombe d'elle-même quand votre dernière unité la quitte (glisser) ou y est détruite (« Terminer le combat »). Vaut aussi pour Arcturus.", [783]),
 
-    regle("cormund", "planet", 49, 1795376185089, "Cormund", "modifie",
+    regle("cormund", "planet", 49, 1795376857846, "Cormund", "modifie",
         "Fiche d'un système : « Fouiller la ruine »",
         "Il faut au moins 3 de vos infanteries sur Cormund pour fouiller ses ruines."),
 
@@ -1365,7 +1365,7 @@ export const SCRIPTS = [
             libelle: "Réparer (use un logisticien)",
         }),
 
-    action("mecatol-dissoudre-la-garde", "planet", 34, 1795190407283, "Mecatol Rex : dissoudre la Garde impériale", "planete",
+    action("mecatol-dissoudre-la-garde", "planet", 34, 1795376624389, "Mecatol Rex : dissoudre la Garde impériale", "planete",
         "Combat terrestre : dépensez 12 influence, les Gardes impériales de la planète sont retirées. (Les faveurs des autres factions, qui valent 4, se comptent à la main.)", {
             phase: "terrestre",
             nomPhase: "combat terrestre",
@@ -1444,7 +1444,7 @@ export const SCRIPTS = [
             libelle: "SR-124 : 1 voix sur chaque loi du tour (active la station, use un politique)",
         }),
 
-    action("anneau-arcturus-recherche", "planet", 784, 1795372845144, "Anneau Arcturus : recherche", "planete",
+    action("anneau-arcturus-recherche", "planet", 784, 1795376624395, "Anneau Arcturus : recherche", "planete",
         "Science : la station est activée (une fois par tour) et un scientifique est utilisé : 1 de recherche sociale, 1 spatiale et 1 libre.", {
             phase: "science",
             possede: true,
@@ -1493,7 +1493,7 @@ export const SCRIPTS = [
         "Fiche d'un système : « Produire ici »",
         "La production de l'Anneau monde (2 unités) demande un amiral posé sur la station."),
 
-    regle("mecatol-rex", "planet", 34, 1795190407283, "Mecatol Rex", "modifie",
+    regle("mecatol-rex", "planet", 34, 1795376624389, "Mecatol Rex", "modifie",
         "Fiche d'un système : « Prendre possession », « Revendiquer »",
         "Prendre possession de Mecatol Rex vous donne aussi la carte Mecatol Rex spéciale (#229)."),
 
@@ -1509,7 +1509,7 @@ export const SCRIPTS = [
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), un Ravageur neutre est ajouté sur Atlas."),
 
-    regle("cormund-attaque", "planet", 49, 1795376185089, "Cormund : attaque", "auto",
+    regle("cormund-attaque", "planet", 49, 1795376857846, "Cormund : attaque", "auto",
         "En-tête : « Nouveau tour »",
         "À chaque nouveau tour (ravitaillement), chaque unité présente sur Cormund subit une attaque de force 4 : un dé à 10 faces par unité, 1 dégât sur 4 ou moins."),
 

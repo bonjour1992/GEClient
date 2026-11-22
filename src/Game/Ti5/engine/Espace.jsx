@@ -92,6 +92,28 @@ export function Espace() {
     const { etat, index, jouer, envoyer, joueur, moi, partie, couleurDe, nomDe, search, signaler, aScript } = useEngine();
 
     const [zoom, setZoom] = useState(1);
+
+    // Numéros des systèmes sur la carte : masqués par défaut (case à cocher sous la carte ; le
+    // choix est gardé dans le navigateur)
+    const CLE_NUMEROS = "ge-ti5-numeros-des-systemes";
+
+    const [numeros, setNumeros] = useState(() => {
+        try {
+            return window.localStorage.getItem(CLE_NUMEROS) === "1";
+        } catch {
+            return false;
+        }
+    });
+
+    const basculerNumeros = affiches => {
+        setNumeros(affiches);
+
+        try {
+            window.localStorage.setItem(CLE_NUMEROS, affiches ? "1" : "0");
+        } catch {
+            // (stockage indisponible : le choix vaut pour cette page)
+        }
+    };
     const [edition, setEdition] = useState(false);
     const [caseChoisie, setCaseChoisie] = useState(null);
 
@@ -731,6 +753,8 @@ export function Espace() {
         <div
             onClick={onClick}
             {...poigneesDeplacement}
+            // (numéros des systèmes masqués : règle de style ci-dessous, [data-sans-numeros])
+            {...(numeros ? {} : { "data-sans-numeros": "" })}
             style={{ zoom, width: "max-content", margin: "0 auto", ...poigneesDeplacement.style }}
         >
             <Emplacements stylePions={stylePions} extra={etendard} petit>
@@ -838,6 +862,14 @@ export function Espace() {
                     deplacement.fleches(false, anneauxAffiches)
                 )}
             </Defilable>
+
+            {/* Numéros des systèmes : affichés ou non (masqués par défaut) */}
+            <style>{"[data-sans-numeros] [data-numero-case] { display: none !important; }"}</style>
+
+            <label data-numeros-systemes style={{ display: "inline-block", margin: "4px 0", fontSize: 13 }}>
+                <input type="checkbox" checked={numeros} onChange={e => basculerNumeros(e.target.checked)} />{" "}
+                Afficher les numéros des systèmes
+            </label>
 
             {/* SYSTÈMES SECONDAIRES : à part du plan central, on y accède par
                 des trous de ver. Le cadre n'apparaît que s'il y en a, ou en

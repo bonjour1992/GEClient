@@ -40,7 +40,7 @@ const nombre = v => Number(v) || 0;
 
 const estRuineSeule = p => p.type === "pla" && p.ruine &&
     (p.res === undefined || p.res === null || p.res === "") &&
-    (p.inf === undefined || p.inf === null || p.inf === "");
+    (p.inf === undefined || p.inf === null || p.inf === "") && !nombre(p.com);
 const estPlanete = p => p.type === "pla" && !estRuineSeule(p);
 const estStation = p => p.type === "sat";
 const trouDeVer = p => (p.type === "spe" && /wormhole\/(\w+)\./.exec(p.img || "")?.[1]) || null;
@@ -84,6 +84,7 @@ function sections(tuiles) {
         ["Ressources et influence", [
             ["res", "Ressources", t => t.elements.reduce((s, p) => s + nombre(p.res), 0)],
             ["inf", "Influence", t => t.elements.reduce((s, p) => s + nombre(p.inf), 0)],
+            ["com", "Commerce", t => t.elements.reduce((s, p) => s + nombre(p.com), 0)],
         ]],
         ["Planètes", [
             compter("planete", "Planètes", estPlanete),

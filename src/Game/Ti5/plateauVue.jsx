@@ -156,8 +156,9 @@ function CasePlateau({
                     </div>
                 )}
 
-                {/* NUMÉRO */}
+                {/* NUMÉRO (data-numero-case : repère, pour le masquer dans l'outil de partie) */}
                 <div
+                    data-numero-case=""
                     style={{
                         position: "absolute",
                         left: 0,

@@ -108,6 +108,9 @@ export function useEntretien(u, idFaction) {
 
     const ressources = somme("res") + vide.gain + revenus.res;
 
+    // Commerce produit par les planètes (champ « com », comme « res » et « inf »)
+    const commerce = somme("com");
+
     // Scripts d'entretien. Diversité : +1 influence par planète. Culture
     // courtisane : +1 influence par alliance en jeu chez moi (promesse de
     // type alliance dans mes éléments actifs ou sur une case de tour).
@@ -254,7 +257,7 @@ export function useEntretien(u, idFaction) {
 
     const lignes = [
         ...planetes
-            .map(c => ({ c, texte: [gain(valeur(c, "res"), "res"), sansInfluence ? "" : gain(valeur(c, "inf"), "inf")].filter(Boolean).join(" ") }))
+            .map(c => ({ c, texte: [gain(valeur(c, "res"), "res"), sansInfluence ? "" : gain(valeur(c, "inf"), "inf"), gain(valeur(c, "com"), "com")].filter(Boolean).join(" ") }))
             .map(x => `${nom(x.c.ref)} : ${x.texte || "rien"}`),
         ...revenus.lignes.filter(l => !l.vide).map(l => `${l.nom}${l.ou ? " sur " + l.ou : ""} : ${l.texte}`),
         vide.gain > 0 && `Exploitation du vide : +${vide.gain} res`,
@@ -278,7 +281,7 @@ export function useEntretien(u, idFaction) {
             ? " — évaluez pour vous seul l'objectif précédent et marquez ses points (« + » de la piste Points)"
             : "")),
         systemesPoses.length > 0 && "Signal : 1 marqueur sur un système au hasard",
-        `Total : +${ressources} res, +${influence} inf`,
+        `Total : +${ressources} res, +${influence} inf` + (commerce ? `, +${commerce} com` : ""),
     ].filter(Boolean);
 
     const actions = [
@@ -286,6 +289,7 @@ export function useEntretien(u, idFaction) {
         { type: "compteur", id: base + ":entretien", valeur: etat.tour, si: Number(etat.compteurs[base + ":entretien"]) || 0 },
         ressources && { type: "compteur", id: base + ":res", delta: ressources },
         influence && { type: "compteur", id: base + ":inf", delta: influence },
+        commerce && { type: "compteur", id: base + ":commerce", delta: commerce },
         ...agentsRendus.map(c => ({ type: "deplacer", c: c.id, vers: base + ":agents" })),
         ...retourCubes,
         ...noblesUses.map(c => ({ type: "marquer", c: c.id, marque: "use", valeur: false })),
@@ -324,7 +328,7 @@ export function useEntretien(u, idFaction) {
         controles: revenus.controles,
         vide,
         lignes,
-        resume: `Ravitaillement : +${ressources} res, +${influence} inf, ${agentsRendus.length} agent(s)` +
+        resume: `Ravitaillement : +${ressources} res, +${influence} inf, ${commerce ? `+${commerce} com, ` : ""}${agentsRendus.length} agent(s)` +
             (possedeNatale ? ", +1 faveur" : ""),
         actions,
     };

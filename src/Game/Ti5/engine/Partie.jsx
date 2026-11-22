@@ -1,5 +1,6 @@
 import { Decompte } from "./Decompte";
 import { VersionOutil } from "./VersionOutil";
+import { ExplicationCarte } from "./ExplicationCarte";
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useSearch, getFromType } from "../../../lib/store";
@@ -190,6 +191,9 @@ const styleBarre = {
     gap: 10,
     marginBottom: 8,
 };
+
+// Une ligne du gestionnaire de phase (en-tête de la partie)
+const styleLigne = { ...styleBarre, marginBottom: 0, minHeight: 26 };
 
 export function Partie({ id }) {
 
@@ -1293,192 +1297,223 @@ export function Partie({ id }) {
                     EN-TÊTE
                 ============================================ */}
 
-                <div style={styleBarre}>
+                {/* Gestionnaire de phase, sur trois lignes :
+                      1. la partie — son nom, les notifications, les infos ;
+                      2. où on en est — le tour, la phase, ce qui retient la phase suivante ;
+                      3. à qui de jouer — et « Finir mon tour », « Attendre », « Passer ».
+                    Replié : les corrections manuelles (tour, phase précédente, « Doit jouer ») sont masquées. */}
+                <div data-gestionnaire-phase style={{ display: "grid", gap: 4, marginBottom: 8 }}>
 
-                    {/* Replié : il ne reste que le tour, la phase, l'ordre de jeu et
-                        « Phase suivante » ; les corrections manuelles sont masquées */}
-                    <BoutonRepli ferme={enteteReduit} basculer={basculerEntete} />
+                    {/* ----- 1. La partie ----- */}
+                    <div data-ligne-phase="partie" style={styleLigne}>
 
-                    {/* Le retour à la liste est dans la barre de navigation (« Parties ») */}
-                    <b style={{ fontSize: 18 }}>{partie.nom}</b>
+                        <BoutonRepli ferme={enteteReduit} basculer={basculerEntete} />
 
-                    {/* Notifications du navigateur : mon tour, un conflit où j'ai des unités */}
-                    {estJoueur && <Notifications />}
+                        {/* Le retour à la liste est dans la barre de navigation (« Parties ») */}
+                        <b style={{ fontSize: 18 }}>{partie.nom}</b>
 
-                    <span>
-                        Tour{" "}
+                        {/* Notifications du navigateur : mon tour, un conflit où j'ai des unités */}
+                        {estJoueur && <Notifications />}
+
+                        {!estJoueur && <i>Vous regardez cette partie.</i>}
+
+                        {/* Infos de la partie : paramètres de départ, et « Supprimer la partie » pour son créateur */}
                         {!enteteReduit && (
-                            <button
-                                type="button"
-                                disabled={!estJoueur}
-                                title="Correction manuelle du tour"
-                                onClick={() => p.jouer({ type: "partie", tour: etat.tour - 1 })}
-                            >
-                                −
+                            <button type="button" data-action="infos-partie" onClick={() => setInfos(true)} style={{ marginLeft: "auto" }}>
+                                Infos de la partie
                             </button>
                         )}
-                        <b style={{ fontSize: 18, margin: "0 6px" }}>{etat.tour}</b>
-                        {!enteteReduit && (
-                            <button
-                                type="button"
-                                disabled={!estJoueur}
-                                title="Correction manuelle du tour"
-                                onClick={() => p.jouer({ type: "partie", tour: etat.tour + 1 })}
-                            >
-                                +
-                            </button>
-                        )}
-                    </span>
+                    </div>
 
-                    {/* À la dernière phase du tour seulement (et au tour 0) */}
-                    {(!enteteReduit || (dernierePhase && !dernierTour)) && (
-                        <BoutonRegle
-                            nom="Nouveau tour"
-                            disabled={!estJoueur || dernierTour}
-                            obstacles={[
-                                !dernierePhase && "ce n'est pas la dernière phase du tour (avant : « Phase suivante »)",
-                                blocage,
-                                attente,
-                            ]}
-                            faire={nouveauTour}
-                            title={dernierTour
-                                ? `Le tour ${turnNumber} est le dernier`
-                                : "Passe au tour suivant et revient à la première phase"}
-                        >
-                            Nouveau tour
-                        </BoutonRegle>
-                    )}
+                    {/* ----- 2. Où on en est ----- */}
+                    <div data-ligne-phase="avancement" style={styleLigne}>
 
-                    <span>
-                        Phase{" "}
-                        {!enteteReduit && (
-                            <button
-                                type="button"
-                                disabled={!estJoueur || (iPhase <= 0 && etat.tour <= 1)}
-                                onClick={phasePrecedente}
-                                title={iPhase > 0
-                                    ? "Phase précédente"
-                                    : "Revenir à la dernière phase du tour précédent"}
-                            >
-                                ◀
-                            </button>
-                        )}
-                        <b style={{ margin: "0 6px" }}>{etat.phase || "—"}</b>
-                        {/* Rouge gris tant qu'un combat est ouvert, que des faveurs restent à
-                            encaisser ou que tout le monde n'a pas passé : on peut quand
-                            même avancer, après confirmation */}
-                        <BoutonRegle
-                            nom="Phase suivante"
-                            disabled={!estJoueur || !phases[iPhase + 1]}
-                            obstacles={[blocage, attente]}
-                            faire={commentaire => changerPhase(1, commentaire)}
-                            title="Tout le monde a passé : phase suivante"
-                        >
-                            Phase suivante ▶
-                        </BoutonRegle>
-                    </span>
-
-                    {/* Correction manuelle : « Joueur suivant » et « Passer » sont
-                        dans le volet de droite */}
-                    {!enteteReduit && (
-                    <label>
-                        Doit jouer{" "}
-                        <select
-                            value={etat.joueurActif ?? ""}
-                            disabled={!estJoueur}
-                            onChange={e => p.jouer({ type: "partie", joueurActif: Number(e.target.value) || null })}
-                            style={{
-                                fontWeight: "bold",
-                                border: "3px solid " + (ctx.couleurDe(etat.joueurActif) || "#666"),
-                            }}
-                        >
-                            <option value="">personne</option>
-                            {joueurs.map(j => (
-                                <option key={j.userId} value={j.userId}>{j.nom}</option>
-                            ))}
-                        </select>
-                    </label>
-                    )}
-
-                    {/* Les joueurs dans l'ordre d'initiative : à qui le tour, qui a
-                        passé, qui joue encore */}
-                    <span style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 4 }}>
-                        {ordreJeu.map((u, k) => {
-
-                            const sonTour = etat.joueurActif === u;
-                            const passe = aPasse(u);
-
-                            return (
-                                <span
-                                    key={u}
-                                    title={sonTour ? "C'est son tour" : (passe ? "A passé" : "Joue encore")}
-                                    style={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: 4,
-                                        padding: "1px 8px",
-                                        borderRadius: 12,
-                                        border: `${sonTour ? 3 : 1}px solid ${sonTour ? "#c00" : "#888"}`,
-                                        backgroundColor: sonTour ? "#fff3cd" : (passe ? "#e0e0e0" : "#fff"),
-                                        color: passe ? "#777" : "#000",
-                                        fontWeight: sonTour ? "bold" : "normal",
-                                        fontSize: 13,
-                                    }}
+                        <span>
+                            Tour{" "}
+                            {!enteteReduit && (
+                                <button
+                                    type="button"
+                                    disabled={!estJoueur}
+                                    title="Correction manuelle du tour"
+                                    onClick={() => p.jouer({ type: "partie", tour: etat.tour - 1 })}
                                 >
+                                    −
+                                </button>
+                            )}
+                            <b style={{ fontSize: 18, margin: "0 6px" }}>{etat.tour}</b>
+                            {!enteteReduit && (
+                                <button
+                                    type="button"
+                                    disabled={!estJoueur}
+                                    title="Correction manuelle du tour"
+                                    onClick={() => p.jouer({ type: "partie", tour: etat.tour + 1 })}
+                                >
+                                    +
+                                </button>
+                            )}
+                        </span>
+
+                        {/* À la dernière phase du tour seulement (et au tour 0) */}
+                        {(!enteteReduit || (dernierePhase && !dernierTour)) && (
+                            <BoutonRegle
+                                nom="Nouveau tour"
+                                disabled={!estJoueur || dernierTour}
+                                obstacles={[
+                                    !dernierePhase && "ce n'est pas la dernière phase du tour (avant : « Phase suivante »)",
+                                    blocage,
+                                    attente,
+                                ]}
+                                faire={nouveauTour}
+                                title={dernierTour
+                                    ? `Le tour ${turnNumber} est le dernier`
+                                    : "Passe au tour suivant et revient à la première phase"}
+                            >
+                                Nouveau tour
+                            </BoutonRegle>
+                        )}
+
+                        <span>
+                            Phase{" "}
+                            {!enteteReduit && (
+                                <button
+                                    type="button"
+                                    disabled={!estJoueur || (iPhase <= 0 && etat.tour <= 1)}
+                                    onClick={phasePrecedente}
+                                    title={iPhase > 0
+                                        ? "Phase précédente"
+                                        : "Revenir à la dernière phase du tour précédent"}
+                                >
+                                    ◀
+                                </button>
+                            )}
+                            <b style={{ margin: "0 6px" }}>{etat.phase || "—"}</b>
+                            {/* Rouge gris tant qu'un combat est ouvert, que des faveurs restent à
+                                encaisser ou que tout le monde n'a pas passé : on peut quand
+                                même avancer, après confirmation */}
+                            <BoutonRegle
+                                nom="Phase suivante"
+                                disabled={!estJoueur || !phases[iPhase + 1]}
+                                obstacles={[blocage, attente]}
+                                faire={commentaire => changerPhase(1, commentaire)}
+                                title="Tout le monde a passé : phase suivante"
+                            >
+                                Phase suivante ▶
+                            </BoutonRegle>
+                        </span>
+
+                        {/* Ce qui empêche de passer à la phase suivante */}
+                        {blocage && (
+                            <span style={{ color: "#a15c00", fontSize: 13 }}>
+                                Phase suivante bloquée — {blocage}.
+                            </span>
+                        )}
+
+                        {/* Des joueurs n'ont pas passé : signalé, mais pas bloquant */}
+                        {attente && (
+                            <span style={{ color: "#7a1f1f", fontSize: 13 }}>
+                                {attente}.
+                            </span>
+                        )}
+
+                        {/* L'ordre choisi en passant ne vaut qu'à la phase suivante */}
+                        {ordreChange && (
+                            <span style={{ fontSize: 12, color: "#444" }}>
+                                Ordre à la phase suivante : {ordreSuivant.map(u => ctx.nomDe(u)).join(", ")}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* ----- 3. À qui de jouer ----- */}
+                    <div data-ligne-phase="main" style={styleLigne}>
+
+                        {etat.joueurActif === moi ? (
+                            <b data-a-qui="moi" style={{ padding: "1px 8px", borderRadius: 6, backgroundColor: COULEUR_A_FAIRE }}>
+                                À vous de jouer
+                            </b>
+                        ) : (
+                            <span data-a-qui="autre">
+                                {joueurs.some(j => j.userId === etat.joueurActif)
+                                    ? <>C'est à <b>{ctx.nomDe(etat.joueurActif)}</b> de jouer</>
+                                    : "Personne n'a la main"}
+                            </span>
+                        )}
+
+                        {/* « Finir mon tour », « Attendre », « Passer » */}
+                        {estJoueur && (
+                            <FinDeTour
+                                p={p}
+                                suivantId={suivantId}
+                                passer={passer}
+                                aPasse={aPasse(moi)}
+                                attendre={etat.tour > 0 ? () => attendre("diplomate") : null}
+                            />
+                        )}
+
+                        {/* Les joueurs dans l'ordre d'initiative : à qui le tour, qui a
+                            passé, qui joue encore */}
+                        <span style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 4 }}>
+                            {ordreJeu.map((u, k) => {
+
+                                const sonTour = etat.joueurActif === u;
+                                const passe = aPasse(u);
+
+                                return (
                                     <span
+                                        key={u}
+                                        title={sonTour ? "C'est son tour" : (passe ? "A passé" : "Joue encore")}
                                         style={{
-                                            display: "inline-block",
-                                            width: 12,
-                                            height: 12,
-                                            borderRadius: "50%",
-                                            backgroundColor: ctx.couleurDe(u) || "#888",
-                                            border: "1px solid #000",
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 4,
+                                            padding: "1px 8px",
+                                            borderRadius: 12,
+                                            border: `${sonTour ? 3 : 1}px solid ${sonTour ? "#c00" : "#888"}`,
+                                            backgroundColor: sonTour ? "#fff3cd" : (passe ? "#e0e0e0" : "#fff"),
+                                            color: passe ? "#777" : "#000",
+                                            fontWeight: sonTour ? "bold" : "normal",
+                                            fontSize: 13,
                                         }}
-                                    />
-                                    {k + 1}. {ctx.nomDe(u)}
-                                    <span style={{ fontSize: 11 }}>
-                                        {sonTour ? "▶ son tour" : (passe ? "a passé" : "joue encore")}
+                                    >
+                                        <span
+                                            style={{
+                                                display: "inline-block",
+                                                width: 12,
+                                                height: 12,
+                                                borderRadius: "50%",
+                                                backgroundColor: ctx.couleurDe(u) || "#888",
+                                                border: "1px solid #000",
+                                            }}
+                                        />
+                                        {k + 1}. {ctx.nomDe(u)}
+                                        <span style={{ fontSize: 11 }}>
+                                            {sonTour ? "▶ son tour" : (passe ? "a passé" : "joue encore")}
+                                        </span>
                                     </span>
-                                </span>
-                            );
-                        })}
-                    </span>
-
-                    {/* L'ordre choisi en passant ne vaut qu'à la phase suivante */}
-                    {ordreChange && (
-                        <span style={{ fontSize: 12, color: "#444" }}>
-                            Ordre à la phase suivante : {ordreSuivant.map(u => ctx.nomDe(u)).join(", ")}
+                                );
+                            })}
                         </span>
-                    )}
 
-                    {etat.joueurActif === moi && (
-                        <b style={{ padding: "1px 8px", borderRadius: 6, backgroundColor: COULEUR_A_FAIRE }}>
-                            À vous de jouer
-                        </b>
-                    )}
-
-                    {/* Ce qui empêche de passer à la phase suivante */}
-                    {blocage && (
-                        <span style={{ color: "#a15c00", fontSize: 13 }}>
-                            Phase suivante bloquée — {blocage}.
-                        </span>
-                    )}
-
-                    {/* Des joueurs n'ont pas passé : signalé, mais pas bloquant */}
-                    {attente && (
-                        <span style={{ color: "#7a1f1f", fontSize: 13 }}>
-                            {attente}.
-                        </span>
-                    )}
-
-                    {!estJoueur && <i>Vous regardez cette partie.</i>}
-
-                    {/* Infos de la partie : paramètres de départ, et « Supprimer la partie » pour son créateur */}
-                    {!enteteReduit && (
-                        <button type="button" data-action="infos-partie" onClick={() => setInfos(true)} style={{ marginLeft: "auto" }}>
-                            Infos de la partie
-                        </button>
-                    )}
+                        {/* Correction manuelle de qui doit jouer */}
+                        {!enteteReduit && (
+                        <label>
+                            Doit jouer{" "}
+                            <select
+                                value={etat.joueurActif ?? ""}
+                                disabled={!estJoueur}
+                                onChange={e => p.jouer({ type: "partie", joueurActif: Number(e.target.value) || null })}
+                                style={{
+                                    fontWeight: "bold",
+                                    border: "3px solid " + (ctx.couleurDe(etat.joueurActif) || "#666"),
+                                }}
+                            >
+                                <option value="">personne</option>
+                                {joueurs.map(j => (
+                                    <option key={j.userId} value={j.userId}>{j.nom}</option>
+                                ))}
+                            </select>
+                        </label>
+                        )}
+                    </div>
                 </div>
 
                 {/* ============================================
@@ -1670,7 +1705,7 @@ export function Partie({ id }) {
                                 </button>
                                 <span>
                                     Ctrl + clic sur un système : pose votre marqueur de faction dessus.
-                                    « Attendre » avec un diplomate est dans le volet de droite, à toute phase.
+                                    « Attendre » avec un diplomate est sur la troisième ligne de l'en-tête, à toute phase.
                                 </span>
                             </div>
                         )}
@@ -1827,13 +1862,7 @@ export function Partie({ id }) {
                             {/* Script Archéologie : les deux fragments d'une fouille, en garder un */}
                             <ChoixFouille />
 
-                            <FinDeTour
-                                p={p}
-                                suivantId={suivantId}
-                                passer={passer}
-                                aPasse={aPasse(moi)}
-                                attendre={etat.tour > 0 ? () => attendre("diplomate") : null}
-                            />
+                            {/* (« Finir mon tour », « Attendre » et « Passer » sont sur la troisième ligne de l'en-tête) */}
 
                             {/* Chaque bloc se replie (▾) ; l'état est gardé dans le navigateur */}
 
@@ -2028,10 +2057,12 @@ function FicheCachee({ zone, fermer }) {
 }
 
 // ============================================================
-// FIN DE MON TOUR (volet de droite)
+// FIN DE MON TOUR (troisième ligne de l'en-tête)
 //
 // Les actions sont validées tout de suite : il n'y a plus de coup
-// à envoyer. Ce bouton passe la main au joueur suivant.
+// à envoyer. « Finir mon tour » passe la main au joueur suivant ;
+// « Attendre » aussi, en usant un diplomate ; « Passer » me retire
+// de l'ordre du tour jusqu'à la fin de la phase.
 // ============================================================
 
 function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
@@ -2059,12 +2090,7 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
     return (
         <div
             data-fin-de-tour={enAttente > 0 ? "semi-bloque" : "libre"}
-            style={{
-                padding: 6,
-                borderRadius: 8,
-                backgroundColor: "#f5f5f5",
-                border: "1px solid #aaa",
-            }}
+            style={{ display: "inline-flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}
         >
             <button
                 type="button"
@@ -2075,10 +2101,8 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                     ? `C'est le tour de ${ctx.nomDe(ctx.etat.joueurActif)}`
                     : "Passe la main au joueur suivant dans l'ordre d'initiative" + titreBloque}
                 style={{
-                    display: "block",
-                    width: "100%",
                     fontWeight: "bold",
-                    padding: "6px 0",
+                    padding: "3px 12px",
                     backgroundColor: monTour ? COULEUR_A_FAIRE : COULEUR_NEUTRE,
                     color: "#000",
                     border: "1px solid #333",
@@ -2087,9 +2111,8 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                     ...(tourDunAutre ? {} : semiBloque),
                 }}
             >
-                {monTour
-                    ? "Fin de mon tour : joueur suivant"
-                    : (tourDunAutre ? `Tour de ${ctx.nomDe(ctx.etat.joueurActif)}` : "Joueur suivant")}
+                {/* (personne n'a la main : n'importe qui la donne) */}
+                {monTour || tourDunAutre ? "Finir mon tour" : "Joueur suivant"}
             </button>
 
             {/* Attendre : use un diplomate et passe la main (à toute phase) */}
@@ -2101,7 +2124,7 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                     title={tourDunAutre
                         ? "Possible à votre tour seulement"
                         : "Use un de vos diplomates disponibles et passe la main au joueur suivant"}
-                    style={{ display: "block", width: "100%", marginTop: 4 }}
+                    data-action="attendre"
                 >
                     Attendre (use un diplomate)
                 </button>
@@ -2113,9 +2136,9 @@ function FinDeTour({ p, suivantId, passer, aPasse, attendre }) {
                 disabled={p.envoi || aPasse}
                 onClick={() => confirmerRegle("Passer", obstacles) && passer()}
                 title={"Vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase" + titreBloque}
-                style={{ display: "block", width: "100%", marginTop: 4, ...(aPasse ? {} : semiBloque) }}
+                style={aPasse ? {} : semiBloque}
             >
-                {aPasse ? "Vous avez passé" : "Passer (jusqu'à la fin de la phase)"}
+                {aPasse ? "Vous avez passé" : "Passer"}
             </button>
         </div>
     );
@@ -2631,6 +2654,9 @@ function Fiche({ id, fermer }) {
                 {c.ref && (
                     <LoadAndDisplay link={c.ref} displayeur={verso ? "verso" : undefined} />
                 )}
+
+                {/* Explication de la carte et de ses remplacements (mots-clés « #… » de son texte) */}
+                {c.ref && !c.cache && <ExplicationCarte contenu={contenu} />}
 
                 {/* Cartes citées par celle-ci : on les voit, et on peut les prendre */}
                 {cites.length > 0 && (
