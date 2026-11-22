@@ -74,6 +74,8 @@ import { Faveurs, faveursDuTour } from "./Faveurs";
 import { Combat, combatsEnCours, combatsActifs, cleCombat, aDesUnites, COULEUR_COMBAT } from "./Combat";
 import { passagesEnCours } from "./Blocage";
 import { blocagesActionEnCours } from "./regleBlocage";
+import { SousPhases } from "./SousPhases";
+import { actionsFinDeSousPhases } from "./regleSousPhases";
 import { controlesEnCours, dominationsEnCours, accordsEnCours } from "./Controle";
 import { Notifications } from "./Notifications";
 import { ouvrirProduction, lireProduction } from "./Production";
@@ -150,7 +152,24 @@ class Barriere extends Component {
 }
 
 // Rang d'une phase (par son nom) dans la liste des phases du tour, ou -1
-const iPhaseDe = (phases, nom) => phases.findIndex(ph => ph.nom === nom);
+// Rang d'une phase dans le tour, d'après son nom. Une partie commencée avant une renumérotation
+// des phases porte un ancien nom : on la retrouve par son nom sans numéro, et les anciennes
+// phases « Bombardement » et « débarquement » mènent à la phase qui les a fusionnées.
+const sansNumero = nom => String(nom || "").replace(/^\s*\d+\s*\./, "").trim().toLowerCase();
+
+const iPhaseDe = (phases, nom) => {
+
+    const exact = phases.findIndex(ph => ph.nom === nom);
+
+    if (exact >= 0 || !nom) {
+        return exact;
+    }
+
+    const meme = phases.findIndex(ph => sansNumero(ph.nom) === sansNumero(nom));
+
+    return meme >= 0 ? meme
+        : (/bombardement|d[ée]barquement/i.test(nom) ? phases.findIndex(ph => /bombardement/i.test(ph.nom)) : -1);
+};
 
 const styleAide = {
     marginBottom: 8,
@@ -693,7 +712,7 @@ export function Partie({ id }) {
         iPhaseDe(phases, etat.phase) === phases.length - 1;
     const dernierTour = etat.tour >= turnNumber;
 
-    const iPhase = phases.findIndex(ph => ph.nom === etat.phase);
+    const iPhase = iPhaseDe(phases, etat.phase);
 
     // Indications « jeu en ligne » de la phase en cours (champ de la phase)
     const aideEnLigne = contenusPhase[phases[iPhase]?.id]?.enLigne || "";
@@ -754,6 +773,8 @@ export function Partie({ id }) {
                 // … et les cartes que les lois du tour demandent de révéler le sont, à côté de la loi (Agendas.jsx)
                 ...(pas > 0 && /mandat/i.test(phase.nom) ? actionsRevelation({ etat, index }) : []),
                 ...remiseDesPasses,
+                // (phase de bombardement et de débarquement : plus de système activé)
+                ...actionsFinDeSousPhases(etat),
                 // Nouvelle phase : l'ordre des marqueurs d'initiative prend effet
                 ...(pas > 0 ? figerOrdre : []),
                 { type: "partie", phase: phase.nom, joueurActif: (pas > 0 ? ordreSuivant : ordreJeu)[0] ?? null },
@@ -1492,6 +1513,9 @@ export function Partie({ id }) {
                 {/* Ravitaillement automatique : mon entretien part tout seul au début de la phase ;
                     son compte rendu s'affiche ici pendant la phase (Entretien.jsx) */}
                 {estJoueur && etat.tour > 0 && <EntretienAuto auto />}
+
+                {/* Phase de bombardement et de débarquement : système activé, sous-phase, qui a passé */}
+                <SousPhases />
 
                 {etat.tour > 0 && (!aideVide ||
                     ((enDeplacement || enDiplomatie || enScience || enProduction || enConstruction || enProposition || enTreve || enRecrutement) && estJoueur)) && (

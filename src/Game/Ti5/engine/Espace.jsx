@@ -40,6 +40,8 @@ import {
 } from "./Controle";
 import { demanderBlocage } from "./BlocageAction";
 import { peutEtreBloque, estBloquee } from "./regleBlocage";
+import { ActiverSysteme } from "./SousPhases";
+import { obstacleSousPhase, BOMBARDEMENT } from "./regleSousPhases";
 import { pub } from "../../../lib/fetch";
 
 // ============================================================
@@ -1616,6 +1618,9 @@ function FicheSysteme({ numero, id, fermer }) {
 
                     {joueur && (
                         <span style={{ display: "inline-flex", gap: 6, marginLeft: 8 }}>
+                            {/* Phase de bombardement et de débarquement : le système se joue en entier */}
+                            <ActiverSysteme numero={numero} fermer={fermer} />
+
                             {boutonCombat(String(numero), "Combat spatial",
                                 "Ouvre un combat entre les vaisseaux de ce système, pour toute la table")}
                             {boutonCombat(numero + "c", "Canons spatiaux",
@@ -1838,13 +1843,15 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 {boutonCombat(`${numero}p${k}`, "Combat terrestre",
                                                     "Ouvre un combat entre les unités de cette planète", [pasUnePlanete(planete)])}
                                                 {boutonCombat(`${numero}p${k}b`, "Bombardement",
-                                                    "Les unités à bombardement de l'espace du système tirent sur cette planète", [pasUnePlanete(planete)])}
+                                                    "Les unités à bombardement de l'espace du système tirent sur cette planète",
+                                                    [pasUnePlanete(planete), obstacleSousPhase(etat, numero, BOMBARDEMENT)])}
                                                 {/* Raid (#raid, Kabal de l'ombre) : une unité à raid est dans l'espace du système */}
                                                 {(combats.includes(`${numero}p${k}r`) || (index.parZone.get("hex:" + numero) || []).some(c =>
                                                     c.ref?.type === "unit" && ([152, 153].includes(c.ref.id) ||
                                                         /#raid\b/i.test(contenuEnCache(c.ref.id)?.habilite || "")))) &&
                                                     boutonCombat(`${numero}p${k}r`, "Raid",
-                                                        "Après les bombardements : les unités à raid de l'espace du système tirent sur les infanteries de cette planète, et capturent celles qu'elles touchent", [pasUnePlanete(planete)])}
+                                                        "Après les bombardements : les unités à raid de l'espace du système tirent sur les infanteries de cette planète, et capturent celles qu'elles touchent",
+                                                        [pasUnePlanete(planete), obstacleSousPhase(etat, numero, BOMBARDEMENT)])}
 
                                                 {/* Test de domination de la planète (Controle.jsx) : ses unités militaires, et sa
                                                     possession qui vaut 2 — Guerre totale, objectifs militaires. Proposé quand

@@ -11,6 +11,7 @@ import { possesseurAuControle, actionsPossessionPerdue, demanderControle, unites
 import { demanderBlocage } from "./BlocageAction";
 import { MARQUE_AGI, estBloquee } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
+import { obstacleSousPhase, DEBARQUEMENT } from "./regleSousPhases";
 import { estHyperlane } from "./hyperlane";
 import { estProductible } from "./Production";
 import { typeUnite } from "./miseEnPlace";
@@ -3003,6 +3004,13 @@ export function Plan({ children, style }) {
 
         const monDock = (index.parZone.get(zone) || []).some(c =>
             c.ref?.type === "unit" && campDe(c) === moi && typeUnite(contenuEnCache(c.ref.id)) === "dock");
+
+        // (le débarquement se fait dans le système activé, à sa sous-phase de débarquement)
+        const horsSousPhase = porteurs.length ? obstacleSousPhase(etat, Number(/^hex:(\d+)/.exec(zone)[1]), DEBARQUEMENT) : null;
+
+        if (horsSousPhase && confirmerRegle("Débarquement", [horsSousPhase]) === null) {
+            return;
+        }
 
         if (porteurs.length && !monDock) {
 
