@@ -124,6 +124,8 @@ export function PlanetPict({ content, style, context, explication }) {
             {(content.type === "sat" && content.stationType) ? (
                 <Text style={{
                     textAlign: "center",
+                    // (blanc comme le nom : sur un système, la couleur héritée est le noir)
+                    color: "white",
                     fontSize: 9,
                     fontWeight: 600,
                     textShadow: "1px 0px 2px black"
