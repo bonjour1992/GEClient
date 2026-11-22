@@ -1129,7 +1129,7 @@ export const SCRIPTS = [
     // replié du Plateau général. Les cartes citées rapportent leurs points « #Decomp » dans ce cadre.
     regle("decompte-des-points", "phase", 440, 0, "Décompte des points", "auto",
         "En tête de la partie à la phase de décompte ; Plateau général : aperçu replié",
-        "Pour chaque faction : points de la piste, lignes du décompte (connaissance, sièges, infamie et Sévérité, Canon restauré, Colonie Ladaran, Armageddon conquis, Arbre de vie éternelle, Graine d'eden, Monument éternel, Spectre de l'empereur, Plan ancien), total et départage. « Marquer mes points du décompte » déplace votre marqueur, une fois.",
+        "Pour chaque faction : points de la piste, lignes du décompte (connaissance, sièges, infamie et Sévérité, Canon restauré, Colonie Ladaran, Armageddon conquis, Arbre de vie éternelle, Graine d'eden, Monument éternel, Spectre de l'empereur, Plan ancien), total et départage. Une unité rapporte à son camp ; une unité neutre ne rapporte rien. « Marquer mes points du décompte » déplace votre marqueur, une fois.",
         [30, 590, 490, 571, 470, 554, 387, 853]),
 
     regle("conclave-secret", "habilite", 160, 1795046343788, "Conclave secret", "auto",
@@ -1208,7 +1208,7 @@ export const SCRIPTS = [
 
     regle("mech-aerien-reparation", "unit", 171, 0, "Mech aérien : réparation (2)", "modifie",
         "Fiche d'une de vos unités endommagées du système : « Réparer »",
-        "« #Rep(2) » : à la phase de production, une unité qui porte une réparation limitée répare jusqu'à ce nombre d'unités de son système par tour, elle-même comprise (1 ressource par dégât)."),
+        "« #Rep(2) » : à la phase de production, une unité qui porte une réparation limitée répare jusqu'à ce nombre d'unités de son système par tour, elle-même comprise (1 ressource par dégât). Elle permet de réparer le dock, qui ne se répare pas lui-même."),
 
     regle("exotrireme", "unit", 1018, 0, "Exotrirème", "nouveau",
         "Conflit, combat spatial : « ✹ Exotrirème détruit » sur vos vaisseaux militaires",

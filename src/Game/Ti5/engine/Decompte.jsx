@@ -1,4 +1,4 @@
-import { useEngine, BoutonRegle, nomElement, tuileDe } from "./Interaction";
+import { useEngine, BoutonRegle, nomElement } from "./Interaction";
 import { contenuEnCache, useElements } from "./sync";
 import { possesseurActuel, etatDuControle } from "./Controle";
 import { decompte, actionsPointsA, cleDecompte } from "./regleDecompte";
@@ -22,6 +22,9 @@ import { decompte, actionsPointsA, cleDecompte } from "./regleDecompte";
 
 export const estPhaseDecompte = etat => /d[ée]compte/i.test(etat?.phase || "");
 
+// Haven (règle #1041) : la posséder compte comme posséder une planète natale (Entretien.jsx)
+const HAVEN = 1041;
+
 export function Decompte({ apercu = false }) {
 
     const { etat, index, moi, joueur, partie, nomDe, couleurDe, search, envoyer, aScript, factionDe, feuillesDe, scriptsDesactives } = useEngine();
@@ -32,25 +35,38 @@ export function Decompte({ apercu = false }) {
     const idsFeuilles = [...new Set(joueurs.flatMap(u => feuillesDe(u).map(f => f.id)))];
     const contenus = useElements([...idsFeuilles, ...joueurs.map(factionDe).filter(id => id > 0)]);
 
+    // Systèmes natals des factions (leurs planètes : Spectre de l'empereur)
+    const idNatal = u => Number(contenus[factionDe(u)]?.system?.id) || -1;
+    const systemesNatals = useElements(joueurs.map(idNatal).filter(id => id > 0));
+
     // (script « decompte-des-points » désactivé : le décompte se fait à la main)
     if ((!apercu && !estPhaseDecompte(etat)) || scriptsDesactives.includes("decompte-des-points")) {
         return null;
     }
 
-    // Possesseur de la planète d'une zone « hex:<case>:planete:<k> »
-    const possesseurDe = zone => {
-        const m = /^hex:(\d+):planete:(\d+)$/.exec(zone || "");
-        const idPlanete = m ? Number(contenuEnCache(tuileDe(index, Number(m[1]))?.ref?.id)?.elems?.[Number(m[2])]?.id) || -1 : -1;
 
-        return idPlanete > 0 ? possesseurActuel(etat, idPlanete) : null;
-    };
-
-    // Contrôle de son système natal par un joueur (Spectre de l'empereur)
+    // Contrôle d'une de ses planètes natales par un joueur (Spectre de l'empereur) : il en possède
+    // une et son contrôle n'y est pas disputé -> "oui" ; possédée mais disputée -> "dispute" ou
+    // "enCours" ; aucune possédée -> "non". Haven (#1041, script haven) compte comme une planète natale.
     const controleNatal = u => {
-        const idSysteme = Number(contenus[factionDe(u)]?.system?.id) || -1;
-        const tuile = Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "system" && c.ref.id === idSysteme && /^hex:\d+$/.test(c.zone || ""));
 
-        return tuile ? etatDuControle({ etat, index, aScript }, u, Number(tuile.zone.slice(4))) : null;
+        if (aScript(u, "haven") && possesseurActuel(etat, HAVEN) === u) {
+            return "oui";
+        }
+
+        const tuile = Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "system" && c.ref.id === idNatal(u) && /^hex:\d+$/.test(c.zone || ""));
+
+        if (!tuile) {
+            return null;
+        }
+
+        const etats = (systemesNatals[idNatal(u)]?.elems || [])
+            .map((lien, k) => (lien?.id > 0 && possesseurActuel(etat, lien.id) === u
+                ? etatDuControle({ etat, index, aScript }, u, Number(tuile.zone.slice(4)), k, u)
+                : null))
+            .filter(Boolean);
+
+        return etats.includes("oui") ? "oui" : (etats.find(e => e !== "non") || "non");
     };
 
     const resultat = decompte({
@@ -58,7 +74,6 @@ export function Decompte({ apercu = false }) {
         contenuDe: id => contenus[id] || contenuEnCache(id),
         feuillesDe,
         nomDe: ref => nomElement(search, ref),
-        possesseurDe,
         controleNatal,
     });
 
@@ -125,7 +140,7 @@ export function Decompte({ apercu = false }) {
                 </tbody>
             </table>
 
-            {[...resultat.nonAttribues, ...resultat.aLaMain].map((texte, k) => (
+            {resultat.aLaMain.map((texte, k) => (
                 <div key={k} data-decompte-a-la-main style={{ marginTop: 4, color: "#b71c1c", fontSize: 12 }}>À compter à la main — {texte}</div>
             ))}
 

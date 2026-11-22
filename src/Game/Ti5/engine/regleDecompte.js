@@ -25,12 +25,12 @@ import { campDe, NEUTRE, RESSOURCES } from "./miseEnPlace.js";
 //                 Graine d'eden (#470, si New eden #469 est posé sur
 //                 sa planète), Monument éternel (#554, 1 point par
 //                 4 contributions de la faction)
-//   reliques      Spectre de l'empereur (#387, système natal
-//                 contrôlé), Plan ancien (#853, 1 par relique forgée)
+//   reliques      Spectre de l'empereur (#387, une planète natale
+//                 contrôlée), Plan ancien (#853, 1 par relique forgée)
 //
-// Une unité rapporte à son camp ; l'unité neutre posée sur une
-// planète, à qui possède la planète ; l'unité neutre de l'espace
-// n'est attribuée à personne (liste `nonAttribues`).
+// Une unité rapporte à son camp (son propriétaire, ou la faction qui
+// en a pris le contrôle). Une unité neutre ne rapporte de point à
+// personne.
 // ============================================================
 
 // Points retirés par la case d'infamie (piste du déroulé : deroule.jsx, tableau `infa`)
@@ -80,14 +80,13 @@ export function decompteDeFeuille(contenu) {
 //   contenuDe        id -> contenu d'un élément (null s'il n'est pas chargé)
 //   feuillesDe       userId -> [{ id (de la feuille), type, niveau }]
 //   nomDe            ref -> nom d'un élément
-//   possesseurDe     zone d'une planète -> userId du joueur qui la possède, ou null
-//   controleNatal    userId -> "oui", "non", "dispute", "enCours" (contrôle de son système natal), ou null
+
+//   controleNatal    userId -> "oui", "non", "dispute", "enCours" (contrôle d'une de ses planètes natales), ou null
 // -> { parJoueur : { [userId]: { piste, lignes : [{ libelle, points, note }], gains, total } },
-//      nonAttribues : [texte], aLaMain : [texte] }
-export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, possesseurDe, controleNatal }) {
+//      aLaMain : [texte] }
+export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, controleNatal }) {
 
     const lignes = Object.fromEntries(joueurs.map(u => [u, []]));
-    const nonAttribues = [];
     const aLaMain = [];
     const ajouter = (u, libelle, points, note = "") => lignes[u]?.push({ libelle, points, note });
 
@@ -150,23 +149,15 @@ export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, p
     }
 
     // ---- éléments de la carte ----
-    const estPlanete = zone => /^hex:\d+:planete:\d+$/.test(zone || "");
     const portes = c => Object.values(etat.composants).filter(x => x.sur === c.id);
 
-    // À qui rapporte une unité : son camp ; neutre sur une planète : à qui possède la planète
-    const beneficiaire = c => {
-        const camp = campDe(c);
-        return camp !== NEUTRE ? camp : (estPlanete(c.zone) ? possesseurDe(c.zone) : null);
-    };
-
+    // Une unité rapporte à son camp ; une unité neutre ne rapporte de point à personne
     const attribuer = (c, libelle, points, note) => {
 
-        const u = beneficiaire(c);
+        const camp = campDe(c);
 
-        if (u !== null && lignes[u]) {
-            ajouter(u, libelle, points, note);
-        } else {
-            nonAttribues.push(`${libelle} (${points} point${points > 1 ? "s" : ""}) : unité neutre sans possesseur`);
+        if (camp !== NEUTRE) {
+            ajouter(camp, libelle, points, note);
         }
     };
 
@@ -218,9 +209,9 @@ export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, p
             const controle = controleNatal(u);
 
             if (controle === "oui") {
-                ajouter(u, "Spectre de l'empereur", 3, "système natal contrôlé");
+                ajouter(u, "Spectre de l'empereur", 3, "planète natale contrôlée");
             } else if (controle === "dispute" || controle === "enCours") {
-                ajouter(u, "Spectre de l'empereur", 0, "système natal disputé : 3 points si le conflit de contrôle est gagné");
+                ajouter(u, "Spectre de l'empereur", 0, "planète natale disputée : 3 points si le conflit de contrôle est gagné");
             }
         }
 
@@ -251,7 +242,7 @@ export function decompte({ etat, index, joueurs, contenuDe, feuillesDe, nomDe, p
         return [u, { piste, lignes: lignes[u], gains, marque, total: Math.max(0, marque === null ? piste + gains : piste) }];
     }));
 
-    return { parJoueur, nonAttribues, aLaMain };
+    return { parJoueur, aLaMain };
 }
 
 // Actions qui amènent le total des points d'un joueur à `cible` (≥ 0) : son marqueur avance ou

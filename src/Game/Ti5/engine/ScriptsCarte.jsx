@@ -156,7 +156,9 @@ function ReparationImprovisee({ c, fermer }) {
 // Réparation limitée « #Rep(n) » (Mech aérien, script mech-aerien-reparation) :
 // l'unité qui la porte répare jusqu'à n unités de son système par tour,
 // elle-même comprise. Sa marque « repare » = "<tour>:<nombre d'unités
-// réparées>". Elle ne sert que s'il n'y a pas de réparation illimitée.
+// réparées>". Elle sert quand aucune autre unité du système n'a de
+// réparation illimitée — en particulier pour réparer le dock lui-même,
+// qui ne se répare pas tout seul.
 // ------------------------------------------------------------
 
 const REPARATION_ILLIMITEE = /#rep\b(?!\()/i;
@@ -176,7 +178,9 @@ function ReparationIllimitee({ c, fermer }) {
 
     const contenus = useElements([...new Set([c.ref.id, ...duSysteme.map(x => x.ref.id)])]);
 
-    const illimitee = duSysteme.find(x => REPARATION_ILLIMITEE.test(contenus[x.ref.id]?.habilite || ""));
+    // (une unité à réparation illimitée ne se répare pas elle-même : le dock endommagé se répare
+    //  avec un autre dock du système, ou avec la réparation limitée d'une autre unité)
+    const illimitee = duSysteme.find(x => x.id !== c.id && REPARATION_ILLIMITEE.test(contenus[x.ref.id]?.habilite || ""));
 
     // Réparation limitée : nombre d'unités que cette unité peut réparer par tour, et déjà réparées ce tour
     const limite = x => Number(REPARATION_LIMITEE.exec(contenus[x.ref.id]?.habilite || "")?.[1]) || 0;
