@@ -234,6 +234,10 @@ export function Partie({ id }) {
     const [enteteReduit, basculerEntete] = useRepli("entete");
     const [aideReduite, basculerAide] = useRepli("a-faire");
 
+    // Case « Ne pas afficher À faire » (première ligne de l'en-tête), décochée au départ ; la croix
+    // du cadre « À faire » la coche. Gardée dans le navigateur.
+    const [sansAFaire, basculerSansAFaire] = useRepli("sans-a-faire");
+
     // Chat : numéro du dernier message lu de chaque conversation (« general »
     // ou l'identifiant d'un joueur), gardé d'une visite à l'autre. Afficher
     // une conversation la marque comme lue (Chat.jsx).
@@ -1384,9 +1388,19 @@ export function Partie({ id }) {
 
                         {!estJoueur && <i>Vous regardez cette partie.</i>}
 
+                        {/* Le cadre « À faire » de la phase peut être masqué (sa croix coche cette case) */}
+                        <label
+                            data-sans-a-faire={sansAFaire ? 1 : 0}
+                            title="Cochée : le cadre « À faire » de la phase n'est plus affiché (ses boutons d'action non plus)"
+                            style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, cursor: "pointer" }}
+                        >
+                            <input type="checkbox" checked={sansAFaire} onChange={basculerSansAFaire} />
+                            Ne pas afficher « À faire »
+                        </label>
+
                         {/* Infos de la partie : paramètres de départ, et « Supprimer la partie » pour son créateur */}
                         {!enteteReduit && (
-                            <button type="button" data-action="infos-partie" onClick={() => setInfos(true)} style={{ marginLeft: "auto" }}>
+                            <button type="button" data-action="infos-partie" onClick={() => setInfos(true)}>
                                 Infos de la partie
                             </button>
                         )}
@@ -1647,9 +1661,22 @@ export function Partie({ id }) {
                 {/* Phase de décompte : points de chaque faction, ligne par ligne (Decompte.jsx) */}
                 <Decompte />
 
-                {etat.tour > 0 && (!aideVide ||
+                {etat.tour > 0 && !sansAFaire && (!aideVide ||
                     ((enDeplacement || enDiplomatie || enScience || enProduction || enConstruction || enProposition || enTreve || enRecrutement) && estJoueur)) && (
-                    <div style={styleAide}>
+                    <div data-a-faire style={{ ...styleAide, position: "relative" }}>
+
+                        {/* Croix : ferme le cadre, comme cocher « Ne pas afficher À faire » */}
+                        <button
+                            type="button"
+                            data-action="fermer-a-faire"
+                            aria-label="Ne plus afficher « À faire »"
+                            title="Ne plus afficher « À faire » (pour le revoir : décocher « Ne pas afficher À faire », en haut à droite)"
+                            onClick={basculerSansAFaire}
+                            style={{ position: "absolute", top: 3, right: 5, padding: "0 6px", fontWeight: "bold", lineHeight: 1.4, cursor: "pointer" }}
+                        >
+                            ✕
+                        </button>
+
                         <BoutonRepli ferme={aideReduite} basculer={basculerAide} />
                         <b>À faire — {etat.phase}</b>
 

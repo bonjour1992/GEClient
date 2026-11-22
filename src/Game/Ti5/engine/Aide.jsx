@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { getFromType } from "../../../lib/store";
 import { useEngine } from "./Interaction";
@@ -6,8 +6,10 @@ import { useEngine } from "./Interaction";
 // ============================================================
 // ONGLET AIDE
 //
-//   - la fiche de la phase en cours : sa consigne « jeu en ligne »
-//     (champ enLigne de l'élément « phase »), puis ses règles ;
+//   - à gauche, la liste des phases ; à droite, la fiche de la phase
+//     cliquée — au départ, et à chaque réouverture de l'onglet, celle
+//     de la phase en cours : sa consigne « jeu en ligne » (champ
+//     enLigne de l'élément « phase »), puis ses règles ;
 //   - le mode d'emploi du jeu en ligne, le même à toutes les
 //     phases (MODE_EMPLOI ci-dessous) : à tenir à jour quand une
 //     fonction de l'engine change.
@@ -32,6 +34,7 @@ const MODE_EMPLOI = [
     ["Tour, phases et ordre de jeu", [
         "En-tête : le tour, la phase, et les joueurs dans l'ordre de jeu (son tour, a passé, joue encore). Le ▾ à gauche le réduit à une ligne ; les corrections manuelles (tour − / +, ◀, « Doit jouer ») sont alors masquées.",
         "Ordre de jeu : il est figé pendant toute la phase. Un marqueur d'initiative déplacé (en passant au recrutement) ne change l'ordre qu'à la phase suivante ; le nouvel ordre est annoncé dans l'en-tête.",
+        "À faire : le cadre bleu de la phase, sous l'en-tête. Sa croix le ferme ; « Ne pas afficher À faire », à côté d'« Infos de la partie », le masque ou le remet (ses boutons d'action disparaissent avec lui).",
         "Finir mon tour : bouton de la troisième ligne de l'en-tête, jaune quand c'est à vous : la main passe au joueur suivant. Il n'est utilisable qu'à votre tour ; pour corriger, « Doit jouer » est dans l'en-tête déplié.",
         "Attendre : sur la troisième ligne de l'en-tête, use un diplomate et passe la main (à toute phase). À la phase de déplacement, le bandeau propose aussi d'attendre avec un amiral.",
         "Passer : bouton de la troisième ligne de l'en-tête ; vous êtes retiré de l'ordre du tour jusqu'à la fin de la phase. Quand le dernier joueur passe, la phase suivante commence toute seule (le tour suivant après la dernière phase), sauf si un combat est ouvert, des faveurs restent à encaisser ou un système est activé : « Phase suivante » reste alors à cliquer.",
@@ -76,6 +79,7 @@ const MODE_EMPLOI = [
         "Volet de droite : « Ma main » montre les noms des cartes (clic : la fiche) ; sur la ligne Commerce, les deux petits boutons « +1 » convertissent 1 commerce en 1 ressource ou 1 influence (Ctrl + clic : 5).",
         "Cartes dans une transaction : relique, promesse, agenda ou mercenaire. Ce n'est vérifié qu'à l'application : si la faction ne l'a pas, la transaction est annulée sans user de diplomate.",
         "Faveurs : à la phase d'événement des tours concernés, choisir en secret les faveurs à encaisser et valider. Les points sont comptés quand tous ont validé.",
+        "Aide : à gauche, la liste des phases — un clic ouvre la consigne et les règles de cette phase ; rouvrir l'onglet revient à la phase en cours.", 
         "Chat : « Général » et une conversation privée par joueur. Journal : tous les coups. Un nombre rouge sur son onglet : des actions faites malgré une règle (lignes rouges), pas encore vues ; ouvrir l'onglet l'efface.",
         "Bouton rouge gris : la règle dit non, l'outil laisse faire après une confirmation (« Normalement impossible… »). C'est la seule fenêtre qui reste.",
     ]],
@@ -232,6 +236,10 @@ export function Aide() {
 
     const { etat, search } = useEngine();
 
+    // Phase dont l'aide est affichée : celle sur laquelle on a cliqué dans la liste de gauche, sinon
+    // la phase en cours. L'onglet est démonté quand on le quitte : le rouvrir revient à la phase en cours.
+    const [choisie, setChoisie] = useState(null);
+
     // (une partie commencée avant une renumérotation des phases porte un ancien nom : on la
     //  retrouve par son nom sans numéro ; les anciennes phases de bombardement et de débarquement
     //  mènent à la phase qui les a fusionnées)
@@ -242,37 +250,95 @@ export function Aide() {
         phases.find(e => sansNumero(e.name) === sansNumero(etat.phase)) ||
         (/bombardement|d[ée]barquement/i.test(etat.phase || "") ? phases.find(e => /bombardement/i.test(e.name)) : undefined);
 
-    const idPhase = phase?.id ?? null;
+    const idEnCours = phase?.id ?? null;
+    const idAffichee = choisie ?? idEnCours;
+    const affichee = phases.find(e => e.id === idAffichee);
+
+    // Liste de gauche : les phases du tour dans l'ordre de leur numéro (« 01. », « 02. »…), puis les autres
+    const numerotee = e => /^\s*\d+\s*\./.test(e.name);
+
+    const liste = phases.slice().sort((a, b) =>
+        (numerotee(b) - numerotee(a)) || a.name.localeCompare(b.name, "fr", { numeric: true }));
 
     const lien = useMemo(
-        () => (idPhase ? { type: "phase", id: idPhase } : null),
-        [idPhase]
+        () => (idAffichee ? { type: "phase", id: idAffichee } : null),
+        [idAffichee]
     );
 
     return (
         <div style={{ overflowX: "auto" }}>
 
-            {!etat.phase && (
-                <div>
-                    Aucune phase en cours (tour 0 : mise en place). L'aide de la phase
-                    s'affichera ici dès le tour 1.
+            <div data-aide-phases style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+
+                {/* Liste des phases : un clic ouvre les règles de la phase */}
+                <nav data-liste-phases aria-label="Phases" style={{ flex: "0 0 215px", display: "grid", gap: 2 }}>
+                    <b style={{ marginBottom: 2 }}>Phases</b>
+
+                    {liste.map(e => {
+
+                        const ouverte = e.id === idAffichee;
+                        const enCours = e.id === idEnCours;
+
+                        return (
+                            <button
+                                key={e.id}
+                                type="button"
+                                data-phase={e.id}
+                                aria-current={ouverte ? "true" : undefined}
+                                title={enCours ? "Phase en cours" : undefined}
+                                onClick={() => setChoisie(e.id)}
+                                style={{
+                                    padding: "3px 6px",
+                                    textAlign: "left",
+                                    fontSize: 13,
+                                    fontWeight: ouverte ? "bold" : "normal",
+                                    color: "#000",
+                                    cursor: "pointer",
+                                    border: "1px solid " + (ouverte ? "#ff9800" : "#bbb"),
+                                    borderLeft: "5px solid " + (ouverte ? "#ff9800" : (enCours ? "#2e7d32" : "#bbb")),
+                                    borderRadius: 4,
+                                    backgroundColor: ouverte ? "#fff3e0" : (enCours ? "#edf7ee" : "#f5f5f5"),
+                                }}
+                            >
+                                {e.name}{enCours ? " — en cours" : ""}
+                            </button>
+                        );
+                    })}
+                </nav>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+
+                    {!lien && !etat.phase && (
+                        <div>
+                            Aucune phase en cours (tour 0 : mise en place). L'aide de la phase
+                            s'affichera ici dès le tour 1 ; d'ici là, cliquez sur une phase de la liste.
+                        </div>
+                    )}
+
+                    {!lien && etat.phase && <div>Pas de fiche pour la phase « {etat.phase} ».</div>}
+
+                    {lien && (
+                        <>
+                            <b data-phase-affichee={idAffichee} style={{ fontSize: 16 }}>
+                                {idAffichee === idEnCours ? `Tour ${etat.tour} — ${etat.phase}` : affichee?.name}
+                            </b>
+
+                            {idAffichee !== idEnCours && idEnCours && (
+                                <button type="button" data-action="phase-en-cours" onClick={() => setChoisie(null)} style={{ marginLeft: 10 }}>
+                                    Revenir à la phase en cours
+                                </button>
+                            )}
+
+                            {/* Ce qu'il faut faire sur le jeu en ligne à cette phase */}
+                            <div style={{ margin: "8px 0 4px", fontWeight: "bold" }}>Sur le jeu en ligne</div>
+                            <LoadAndDisplay link={lien} displayeur="enLigne" style={STYLE_AIDE} />
+
+                            <div style={{ margin: "12px 0 4px", fontWeight: "bold" }}>Règles de la phase</div>
+                            <LoadAndDisplay link={lien} style={STYLE_AIDE} />
+                        </>
+                    )}
                 </div>
-            )}
-
-            {etat.phase && !lien && <div>Pas de fiche pour la phase « {etat.phase} ».</div>}
-
-            {lien && (
-                <>
-                    <b style={{ fontSize: 16 }}>Tour {etat.tour} — {etat.phase}</b>
-
-                    {/* Ce qu'il faut faire sur le jeu en ligne à cette phase */}
-                    <div style={{ margin: "8px 0 4px", fontWeight: "bold" }}>Sur le jeu en ligne</div>
-                    <LoadAndDisplay link={lien} displayeur="enLigne" style={STYLE_AIDE} />
-
-                    <div style={{ margin: "12px 0 4px", fontWeight: "bold" }}>Règles de la phase</div>
-                    <LoadAndDisplay link={lien} style={STYLE_AIDE} />
-                </>
-            )}
+            </div>
 
             <ReglesGenerales />
 
