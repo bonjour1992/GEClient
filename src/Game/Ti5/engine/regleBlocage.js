@@ -18,7 +18,8 @@ import { rangDePhase, estMilitaire, ESPACE_CONTROLE } from "./regleControle.js";
 //     engager pour l'aider. Valeur de blocage : contrôle des unités
 //     qui bloquent − contrôle de celles qui aident.
 //   - La faction qui agit égalise en engageant ses propres unités,
-//     les militaires d'abord, puis les autres. Les unités qu'elle
+//     les militaires d'abord, puis les transports, puis les autres
+//     unités non militaires. Les unités qu'elle
 //     engage sont bloquées ; celles qui restent sont non bloquées et
 //     peuvent faire l'action. Si elle ne peut pas égaliser, toutes
 //     ses unités sont bloquées.
@@ -114,6 +115,12 @@ export function choixDe(c, acteur) {
     return !m && campDe(c) === NEUTRE && acteur !== NEUTRE ? "b" : null;
 }
 
+// Rang d'engagement d'une unité de la faction qui agit : 0 militaire, 1 transport (non
+// militaire qui a une capacité), 2 autre unité non militaire. Une unité non militaire ne
+// bloque pas, mais elle a une valeur de contrôle (1 par défaut) pour égaliser.
+export const rangEngagement = (contenuDe, c) =>
+    (estMilitaire(contenuDe, c) ? 0 : (Number(contenuDe(c.ref.id)?.capacite) > 0 ? 1 : 2));
+
 // Une autre faction peut-elle bloquer cet acteur ici ? (unités militaires non engagées)
 export const peutEtreBloque = ({ etat, unites, contenuDe, acteur }) =>
     unites.some(c => campDe(c) !== acteur && estMilitaire(contenuDe, c) && !estEngagee(etat, c));
@@ -153,7 +160,11 @@ export function bilanBlocage({ etat, unites, contenuDe, aScript, acteur, plus = 
     const disponible = somme(miennes);
     const impossible = disponible < net;
 
-    const ordre = egalisent.some(c => !militaire(c)) && miennes.some(c => militaire(c) && choixDe(c, acteur) !== "p");
+    // Ordre d'engagement de la faction qui agit : ses unités militaires d'abord, puis ses
+    // transports, puis ses autres unités non militaires (rangEngagement)
+    const rang = c => rangEngagement(contenuDe, c);
+    const nonEngagees = miennes.filter(c => choixDe(c, acteur) !== "p");
+    const ordre = egalisent.some(u => nonEngagees.some(l => rang(l) < rang(u)));
 
     return {
         autres, miennes, bloquent, aident, egalisent, blocage, aide, net, egalise, disponible, impossible, ordre,

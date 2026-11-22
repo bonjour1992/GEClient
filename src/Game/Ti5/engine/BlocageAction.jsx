@@ -243,7 +243,7 @@ function BlocageAction({ test }) {
                         nom={`Conclure le test de blocage ${nomCase(numero)} (${nomAction}) : blocage ${bilan.blocage}, aide ${bilan.aide}`}
                         obstacles={[
                             !impossible && egalise < net && `il manque ${net - egalise} de contrôle à engager pour égaliser le blocage`,
-                            bilan.ordre && "vos unités militaires s'engagent avant vos unités non militaires",
+                            bilan.ordre && "vos unités militaires s'engagent d'abord, puis vos transports, puis vos autres unités non militaires",
                         ]}
                         faire={conclure}
                         title="Les unités qui ont bloqué, aidé ou égalisé sont engagées pour la phase ; vos unités restées libres peuvent agir dans ce système"

@@ -218,7 +218,7 @@ ou sa planète (unités de la planète) — confirmé par Loïc le 20 novembre e
 | Promesse#384 Frontière ouverte | « si la faction bloque un de vos mouvements : #spend, elle gagne #infa(1) » | **fait** : question au joueur bloqué (onglet Décision) quand le blocage arrête un de ses vaisseaux |
 | Promesse#226 Redevance de protection | « si vous engagez ou bloquez le Mentak : #spend » | **fait** pour le blocage (déplacement et action), d'office ; l'engagement reste au bouton de la carte |
 | règle #1033, « contrôle et diplomatie » | bloquer un vaisseau de commerce d'une faction endettée lui permet de mettre fin à ses dettes | **fait** : question au joueur bloqué quand un vaisseau de commerce non militaire est arrêté |
-| règle #1033, « coalition » | plusieurs factions font un seul test puis leurs actions à la suite | non géré : chaque faction passe son test |
+| règle #1033, « coalition » | plusieurs factions font un seul test puis leurs actions à la suite | **supprimée** de la règle (Update.md du 22 novembre) |
 | règle #1033 (spécial) | les neutres bloquent | **fait** : d'office, un joueur peut en décider autrement |
 | hab#529 Déplacement du Khan | blocage du Khan | non géré |
 

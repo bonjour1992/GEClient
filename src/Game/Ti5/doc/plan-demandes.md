@@ -645,3 +645,19 @@ Fin de soirée du 2026-11-20 (détail : `doc/revue-controle.md`, section 8) : SD
 dans tous les conflits ; prise de possession avec une unité militaire ; le contrôle comme état (Complexe de
 guerre, Vassalisation forcée, Chemin du vide) ; blocage d'un déplacement aligné sur celui d'une action ;
 domination d'une planète (possession 2) ; Nef de la rupture limitée aux trous de ver oméga.
+
+## Fichier « Update.md » du 2026-11-22 (`demandes-ti5/2026-11-22/Update.md`)
+
+Fait tout de suite (sans ambiguïté) : systèmes de défense à 2 de contrôle ; notion de coalition supprimée de
+la règle Contrôle ; ordre d'engagement militaires, transports, autres vaisseaux civils dans le test de blocage
+d'une action (il existait déjà au déplacement).
+
+En attente des réponses de Loïc (questions posées le 2026-11-22) :
+- blocage : option « ne pas bloquer les vaisseaux civils » au déplacement ; vaisseaux civils ignorés au
+  bombardement et au débarquement ; test refait à chaque action tant qu'il reste des unités en face ;
+- un contrôle ou un blocage raté consomme agents et ressources, sans activer la planète ou la ruine ;
+- fusion des phases de bombardement et de débarquement en une phase à sous-phases, système par système ;
+- livraisons : à la phase de déplacement, à la phase de diplomatie (négociant), stock d'achat par faction ;
+- données : centre d'espionnage industriel, station automatisée de défense, stations scientifiques et
+  habilité de Jol-Nar ;
+- réécriture des textes « Jeu en ligne » en listes d'actions.
