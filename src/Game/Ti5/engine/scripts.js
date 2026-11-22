@@ -1208,7 +1208,7 @@ export const SCRIPTS = [
 
     regle("mech-aerien-reparation", "unit", 171, 0, "Mech aérien : réparation (2)", "modifie",
         "Fiche d'une de vos unités endommagées du système : « Réparer »",
-        "« #Rep(2) » : à la phase de production, une unité qui porte une réparation limitée répare jusqu'à ce nombre d'unités de son système par tour, elle-même comprise (1 ressource par dégât). Elle permet de réparer le dock, qui ne se répare pas lui-même."),
+        "« #Rep(2) » : à la phase de production, une unité qui porte une réparation limitée répare jusqu'à ce nombre d'unités de son système par tour, elle-même comprise (1 ressource par dégât). Elle ne sert que sans dock dans le système : un dock répare tout, lui-même compris."),
 
     regle("exotrireme", "unit", 1018, 0, "Exotrirème", "nouveau",
         "Conflit, combat spatial : « ✹ Exotrirème détruit » sur vos vaisseaux militaires",
