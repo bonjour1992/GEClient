@@ -237,6 +237,46 @@ export function decrire(action, { search, jeu, nomDe }) {
     }
 }
 
+// ------------------------------------------------------------
+// Interaction de combat faite dans les règles : sa ligne est verte, comme celle d'un effet du jeu.
+//   avec un commentaire : « Combat… » (attaques, dégâts des neutres, fin du combat), riposte du
+//   khan, Exotrirème détruit ;
+//   sans commentaire : toutes ses actions sont des gestes de combat — engagement, « prêt », dés
+//   lancés, dégât attribué ou encaissé — dont au moins un geste propre au combat.
+// Une correction faite à la main reste en noir : dé inversé (desF), bonus ou malus manuel
+// (ajust, ajustN), dégâts remis à répartir. Ce qui a été fait malgré une règle porte déjà « ⚠ ».
+// ------------------------------------------------------------
+
+// (chaque sorte de combat a ses marques : suffixe C, T, B ou R)
+const GESTE_DE_COMBAT = /^(engage|des|desA)[CTBR]?$/;
+const SUITE_DE_COMBAT = /^(degat|degatDe|degatPar|bombarde|canon|blocAgi|khan|khanPris|exoPris|memoria|medecine|esclaveJet)$/;
+
+function estCombatCorrect(coup) {
+
+    const texte = String(coup.commentaire || "");
+
+    if (/^(Combat\b|Riposte du khan|Exotrirème détruit)/.test(texte)) {
+        return true;
+    }
+
+    const actions = coup.actions || [];
+
+    if (texte || !actions.length) {
+        return false;
+    }
+
+    const propre = a =>
+        (a.type === "marquer" && GESTE_DE_COMBAT.test(String(a.marque)) &&
+            // (dégâts remis à répartir : une correction)
+            !(/^desA/.test(String(a.marque)) && !a.valeur)) ||
+        (a.type === "compteur" && String(a.id).startsWith("combat:")) ||
+        (a.type === "des" && /^des[CTBR]?$/.test(String(a.marque || "")));
+
+    const suite = a => a.type === "marquer" && SUITE_DE_COMBAT.test(String(a.marque));
+
+    return actions.every(a => propre(a) || suite(a)) && actions.some(propre);
+}
+
 // max : nombre d'actions détaillées (volet « Derniers coups ») ; le reste
 // est compté, le détail complet est dans l'onglet Journal.
 function Coup({ coup, max }) {
@@ -251,7 +291,9 @@ function Coup({ coup, max }) {
     // Effet du jeu (bouton vert, ou rouge gris : Interaction.jsx, BoutonRegle) :
     // la ligne est verte s'il était faisable, rouge s'il a été fait hors conditions
     // (le ravitaillement, automatique, est écrit en vert lui aussi)
-    const regle = lireRegle(coup.commentaire) || (/^Ravitaillement\b/.test(coup.commentaire || "") ? { hors: false } : null);
+    // (les interactions de combat faites dans les règles aussi : estCombatCorrect)
+    const regle = lireRegle(coup.commentaire) ||
+        (/^Ravitaillement\b/.test(coup.commentaire || "") || estCombatCorrect(coup) ? { hors: false } : null);
 
     return (
         <div
