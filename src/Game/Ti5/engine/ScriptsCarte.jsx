@@ -149,17 +149,22 @@ function ReparationImprovisee({ c, fermer }) {
 // ------------------------------------------------------------
 // RÉPARATION ILLIMITÉE (fiche d'une de mes unités endommagées)
 //
-// Une de mes unités du système porte #rep sans nombre (Dock ; « #Rep(2) »,
-// réparation limitée, ne compte pas) : l'unité est réparée, 1 ressource par
-// dégât, à la phase de production (rouge gris sinon). Pas d'agent. Une unité
-// biologique ne se répare pas.
+// Une de mes unités du système porte #rep sans nombre (Dock) : l'unité est
+// réparée, 1 ressource par dégât, à la phase de production (rouge gris
+// sinon). Pas d'agent. Une unité biologique ne se répare pas.
+//
+// Réparation limitée « #Rep(n) » (Mech aérien, script mech-aerien-reparation) :
+// l'unité qui la porte répare jusqu'à n unités de son système par tour,
+// elle-même comprise. Sa marque « repare » = "<tour>:<nombre d'unités
+// réparées>". Elle ne sert que s'il n'y a pas de réparation illimitée.
 // ------------------------------------------------------------
 
 const REPARATION_ILLIMITEE = /#rep\b(?!\()/i;
+const REPARATION_LIMITEE = /#rep\((\d+)\)/i;
 
 function ReparationIllimitee({ c, fermer }) {
 
-    const { etat, envoyer, moi, search } = useEngine();
+    const { etat, envoyer, moi, search, aScript } = useEngine();
 
     const numero = /^hex:(\d+)/.exec(c.zone || "")?.[1];
     const zoneEspace = "hex:" + numero;
@@ -171,7 +176,20 @@ function ReparationIllimitee({ c, fermer }) {
 
     const contenus = useElements([...new Set([c.ref.id, ...duSysteme.map(x => x.ref.id)])]);
 
-    const reparatrice = duSysteme.find(x => REPARATION_ILLIMITEE.test(contenus[x.ref.id]?.habilite || ""));
+    const illimitee = duSysteme.find(x => REPARATION_ILLIMITEE.test(contenus[x.ref.id]?.habilite || ""));
+
+    // Réparation limitée : nombre d'unités que cette unité peut réparer par tour, et déjà réparées ce tour
+    const limite = x => Number(REPARATION_LIMITEE.exec(contenus[x.ref.id]?.habilite || "")?.[1]) || 0;
+    const faites = x => {
+        const m = /^(\d+):(\d+)$/.exec(String(x.marques?.repare ?? ""));
+        return m && Number(m[1]) === etat.tour ? Number(m[2]) : 0;
+    };
+
+    const limitee = !illimitee && aScript(moi, "mech-aerien-reparation")
+        ? duSysteme.find(x => limite(x) > faites(x))
+        : null;
+
+    const reparatrice = illimitee || limitee;
     const degat = Number(c.marques?.degat) || 0;
 
     if (!reparatrice || !degat || contenus[c.ref.id]?.mot_cle?.includes("bio")) {
@@ -194,12 +212,16 @@ function ReparationIllimitee({ c, fermer }) {
                     { type: "compteur", id: `joueur:${moi}:res`, delta: -degat },
                     // (si : refusé si les dégâts ont changé entre-temps)
                     { type: "marquer", c: c.id, marque: "degat", valeur: 0, si: degat },
+                    // (réparation limitée : une unité de plus réparée ce tour par cette unité)
+                    limitee && { type: "marquer", c: limitee.id, marque: "repare", valeur: `${etat.tour}:${faites(limitee) + 1}` },
                 ], commentaire);
                 fermer?.();
             }}
-            title={`Réparation illimitée (${nomReparatrice} dans le système) : à la phase de production, 1 ressource par dégât`}
+            title={limitee
+                ? `Réparation limitée (${nomReparatrice} : ${faites(limitee)} unité(s) réparée(s) sur ${limite(limitee)} ce tour) : à la phase de production, 1 ressource par dégât`
+                : `Réparation illimitée (${nomReparatrice} dans le système) : à la phase de production, 1 ressource par dégât`}
         >
-            Réparer ({degat} ressource{degat > 1 ? "s" : ""})
+            Réparer ({degat} ressource{degat > 1 ? "s" : ""}{limitee ? `, ${nomReparatrice} ${faites(limitee) + 1}/${limite(limitee)}` : ""})
         </BoutonRegle>
     );
 }

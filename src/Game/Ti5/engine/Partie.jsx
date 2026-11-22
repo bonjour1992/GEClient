@@ -1,3 +1,4 @@
+import { Decompte } from "./Decompte";
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useSearch, getFromType } from "../../../lib/store";
@@ -513,6 +514,9 @@ export function Partie({ id }) {
 
         // Niveau de connaissance d'un joueur dans un type de technologie (« gen », « spa »…)
         connaissance: (userId, type) => technologies[userId]?.connaissance?.[type] || 0,
+
+        // Feuilles de technologie d'un joueur, avec leur niveau de connaissance (décompte des points)
+        feuillesDe: userId => technologies[userId]?.feuilles || [],
 
         // Capacité logistique d'un joueur (taille d'une flotte, production d'un dock) :
         // 3, plus 1 par logisticien posé sur sa technologie « Logistique améliorée »
@@ -1516,6 +1520,9 @@ export function Partie({ id }) {
 
                 {/* Phase de bombardement et de débarquement : système activé, sous-phase, qui a passé */}
                 <SousPhases />
+
+                {/* Phase de décompte : points de chaque faction, ligne par ligne (Decompte.jsx) */}
+                <Decompte />
 
                 {etat.tour > 0 && (!aideVide ||
                     ((enDeplacement || enDiplomatie || enScience || enProduction || enConstruction || enProposition || enTreve || enRecrutement) && estJoueur)) && (

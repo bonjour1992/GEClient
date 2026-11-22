@@ -151,6 +151,7 @@ const MODE_EMPLOI = [
         "Proposition : « proposition(s) » du bandeau, puis Ctrl + clic sur un agenda de votre main.",
         "Trêve : Ctrl + clic sur un système, ou « Déclarer une trêve » dans sa fiche.",
         "Événement : révéler l'événement du tour ; onglet Faveurs.",
+        "Décompte (tour 10) : le cadre « Décompte des points » en tête de la partie détaille les points de chaque faction ; « Marquer mes points du décompte » déplace votre marqueur, une fois. Aperçu replié en haut du Plateau général pendant toute la partie.",
         "Détail : la consigne de la phase en cours est en haut de cet onglet, action par action.",
     ]],
 ];

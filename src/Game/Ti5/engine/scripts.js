@@ -1125,9 +1125,16 @@ export const SCRIPTS = [
         "Ravitaillement automatique (début de la phase) ; fiche d'un système : prise de possession",
         "L'entretien rapporte 1 point par planète légendaire possédée ; la faction qui vous prend une planète légendaire gagne 1 point et 1 infamie."),
 
+    // Décompte des points (Decompte.jsx, regleDecompte.js) : cadre de la phase de décompte, et aperçu
+    // replié du Plateau général. Les cartes citées rapportent leurs points « #Decomp » dans ce cadre.
+    regle("decompte-des-points", "phase", 440, 0, "Décompte des points", "auto",
+        "En tête de la partie à la phase de décompte ; Plateau général : aperçu replié",
+        "Pour chaque faction : points de la piste, lignes du décompte (connaissance, sièges, infamie et Sévérité, Canon restauré, Colonie Ladaran, Armageddon conquis, Arbre de vie éternelle, Graine d'eden, Monument éternel, Spectre de l'empereur, Plan ancien), total et départage. « Marquer mes points du décompte » déplace votre marqueur, une fois.",
+        [30, 590, 490, 571, 470, 554, 387, 853]),
+
     regle("conclave-secret", "habilite", 160, 1795046343788, "Conclave secret", "auto",
         "Ravitaillement automatique (début de la phase)",
-        "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main."),
+        "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main ; à partir du tour 4, le compte rendu rappelle d'évaluer l'objectif précédent, pour vous seul, et d'en marquer les points."),
 
     regle("signal", "habilite", 765, 1795046343872, "Signal", "auto",
         "Ravitaillement automatique (début de la phase)",
@@ -1188,6 +1195,24 @@ export const SCRIPTS = [
             gains: { commerce: 4 },
             libelle: "Arbre de vie : +4 commerce (usé, 1 dégât)",
         }),
+
+    action("arbre-de-vie-eternelle-soin", "unit", 571, 0, "Arbre de vie éternelle : soin", "unite",
+        "Science, avec 2 niveaux de connaissance génétique : use un scientifique, l'arbre récupère 1 de résistance.", {
+            phase: "science",
+            agent: SCIENTIFIQUE,
+            degat: -1,
+            // (« #regen(2) » : prérequis de 2 niveaux de connaissance génétique)
+            calcul: outils => (outils.connaissance("gen") >= 2 ? {} : { sans: "il faut 2 niveaux de connaissance génétique" }),
+            libelle: "Arbre de vie : récupérer 1 résistance (use un scientifique)",
+        }),
+
+    regle("mech-aerien-reparation", "unit", 171, 0, "Mech aérien : réparation (2)", "modifie",
+        "Fiche d'une de vos unités endommagées du système : « Réparer »",
+        "« #Rep(2) » : à la phase de production, une unité qui porte une réparation limitée répare jusqu'à ce nombre d'unités de son système par tour, elle-même comprise (1 ressource par dégât)."),
+
+    regle("exotrireme", "unit", 1018, 0, "Exotrirème", "nouveau",
+        "Conflit, combat spatial : « ✹ Exotrirème détruit » sur vos vaisseaux militaires",
+        "Quand un Exotrirème est détruit en combat spatial, la faction qui l'a détruit subit 1 dégât : elle choisit lequel de ses vaisseaux militaires du combat l'encaisse."),
 
     action("magmus", "unit", 598, 1795074271171, "Magmus", "unite",
         "Quand un vaisseau est détruit dans son système : 1 de recherche militaire (notée au journal de recherche).", {
@@ -3786,6 +3811,7 @@ export async function technologiesDe(etat, userId, charger) {
     const base = `joueur:${userId}`;
     const debloquees = new Map();
     const connaissance = {};
+    const feuilles = [];
 
     for (const feuille of Object.values(etat.composants)) {
 
@@ -3829,6 +3855,9 @@ export async function technologiesDe(etat, userId, charger) {
         const type = contenu?.techType || "";
 
         connaissance[type] = Math.max(connaissance[type] || 0, Math.floor(points / (Number(contenu?.connaissanceReq) || 8)));
+
+        // (feuille par feuille, pour le décompte des points : regleDecompte.js)
+        feuilles.push({ id: feuille.ref.id, type, niveau: Math.floor(points / (Number(contenu?.connaissanceReq) || 8)) });
     }
 
     // Technologies isolées (Technologie.jsx) : une carte technologie posée seule dans la
@@ -3854,6 +3883,9 @@ export async function technologiesDe(etat, userId, charger) {
 
     // Niveaux de connaissance par type de technologie : { gen: 2, spa: 0… }
     debloquees.connaissance = connaissance;
+
+    // Feuilles de technologie du joueur : [{ id (de la feuille), type, niveau de connaissance }]
+    debloquees.feuilles = feuilles;
 
     return debloquees;
 }

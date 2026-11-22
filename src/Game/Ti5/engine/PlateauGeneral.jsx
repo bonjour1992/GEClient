@@ -1,3 +1,4 @@
+import { Decompte } from "./Decompte";
 import { useMemo, useState } from "react";
 import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Zone, Source, Defilable, Dos, nomType, nomElement, agentDisponible } from "./Interaction";
@@ -838,6 +839,9 @@ export function PlateauGeneral() {
                     <Zone key={zone} zone={zone} titre={titre} cartes={0.6} />
                 ))}
             </div>
+
+            {/* Décompte des points : aperçu replié (le cadre complet est en tête de la partie à la phase de décompte) */}
+            <Decompte apercu />
 
             {/* DÉROULÉ : les 3 pages côte à côte */}
 

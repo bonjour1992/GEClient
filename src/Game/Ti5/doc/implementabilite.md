@@ -22,14 +22,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
-| Habilités | 64 | 43 | 8 | 13 | 34 | 6 | 18 |
-| Unités | 114 | 87 | 27 | 0 | 31 | 5 | 48 |
-| Planètes | 35 | 29 | 5 | 1 | 22 | 8 | 12 |
+| Habilités | 64 | 44 | 7 | 13 | 34 | 6 | 18 |
+| Unités | 114 | 92 | 22 | 0 | 32 | 6 | 50 |
+| Planètes | 35 | 30 | 4 | 1 | 22 | 8 | 13 |
 | Mercenaires | 40 | 25 | 10 | 5 | 19 | 20 | 2 |
 | Promesses | 19 | 16 | 3 | 0 | 14 | 2 | 4 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **385** | **306** | **57** | **22** | **173** | **62** | **129** |
+| **Total** | **385** | **313** | **50** | **22** | **174** | **63** | **132** |
 
 Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
@@ -152,7 +152,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 157 | Esclaves | **oui** | nouveau bouton | Plateau joueur : « Esclaves : dépenser un esclave (+1 ressource) ». Un esclave est une infanterie d'un autre camp posée dans vos éléments actifs. | Capturer une infanterie : à la main (la déplacer dans ses éléments actifs). |
 | 158 | Exécuter les otages | **partiel** | nouveau bouton | Plateau joueur, prévote : « Exécuter les otages » dépense un de vos esclaves de la faction choisie (onglet Décision) ; un message rappelle ce qu'elle doit faire. | Vote forcé ou infamie de la faction visée : à la main. |
 | 159 | Restituer les otages | **oui** | nouveau bouton | Fiche de votre unité qui livre : « Restituer les otages » rend jusqu'à 2 de vos esclaves à la faction à comptoir du système, posés avec son comptoir (planète ou bord). | — |
-| 160 | Conclave secret | **partiel** | automatique | Ravitaillement automatique aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire est pioché dans la main. | Marquer l'objectif précédent : à la main. |
+| 160 | Conclave secret | **oui** | automatique | Ravitaillement automatique aux tours 1, 4, 6, 8, 9 et 10 : un objectif militaire est pioché dans la main ; à partir du tour 4, le compte rendu rappelle d'évaluer l'objectif précédent, pour vous seul, et d'en marquer les points. | — (l'évaluation d'un objectif reste à la main, comme pour tous les objectifs) |
 | 166 | Vassalisation forcée | **oui** | nouveau bouton | Plateau joueur, diplomatie : un diplomate est dépensé, la promesse Vassal de la faction choisie (onglet Décision) arrive dans vos éléments actifs avec son marqueur. La condition est comptée — systèmes où elle possède une planète et dont vous contrôlez l'espace, natal pour 3 ; un système disputé demande son conflit de contrôle (« Vassalisation forcée : contrôles » les ouvre) ; total insuffisant : signalé, sans bloquer. | — |
 | 167 | Fierté | **partiel** | bouton existant modifié | Conflit d'accord (revendication) : « Accepter » est grisé pour le camp qui possède la planète revendiquée. | Décompte des points : à la main. |
 | 168 | Seigneur | **partiel** | nouveau bouton | Plateau joueur : « Seigneur » transforme un de vos agents disponibles (amiral, politique ou diplomate, choix dans l'onglet Décision) en Seigneur. | Déclencheurs (destruction, vote de siège, vassal) : constatés à la main. |
@@ -238,7 +238,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 163 | Destroyeur (Volée argentée) | **oui** | nouveau bouton | Fiche de l'unité, combat spatial : « Deux attaques (1 influence) » — l'écran de combat lui donne deux fois plus de dés ce tour. | — |
 | 164 | Complexe de guerre (Volée argentée) | **oui** | automatique | Ravitaillement automatique : un destroyeur de la faction est posé dans le système du complexe si vous le contrôlez — d'office si personne ne peut s'y opposer ; sinon le ravitaillement attend un conflit de contrôle « Complexe de guerre », ouvert depuis son bandeau. Conflit, combat spatial : vos destroyers ont +1 (non cumulable) dans son système et les systèmes adjacents. | — |
 | 165 | Centre d'expansion (Volée argentée) | **oui** | nouveau bouton + automatique | Fiche d'un système où vous n'avez pas d'unité, ravitaillement (une fois par tour, avec un Centre d'expansion sur la carte) : +1 au combat spatial dans ce système pour le tour. | — |
-| 171 | Mech Aérien (Volée argentée) | **partiel** | automatique | Conflit, combat spatial : depuis une planète du système, il tire (il n'est pas une cible). | Réparation 2 non suivie. |
+| 171 | Mech Aérien (Volée argentée) | **oui** | automatique + bouton existant modifié | Conflit, combat spatial : depuis une planète du système, il tire (il n'est pas une cible). Production : « Réparer » sur la fiche d'une de vos unités endommagées de son système — `#Rep(2)`, jusqu'à 2 unités par tour, lui compris (1 ressource par dégât). | — |
 | 172 | J.N.S. Hylarim (Université de Jol-Nar) | **oui** | nouveau bouton | Conflit, combat spatial : « Annuler 1 (1 ressource) » sur une autre de vos unités qui doit encaisser — le dégât est annulé. | — |
 | 173 | Cuirassé (Université de Jol-Nar) | oui | — | Bombardement noté « 5\*\* » : vérifier que l'outil lit bien cette notation. | — |
 | 174 | Destroyeur (Université de Jol-Nar) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -260,9 +260,9 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 465 | Arbre père (Omni-esprit d'Arborec) | **oui** | automatique | Ravitaillement automatique : un Fruit de vie est créé dans l'espace du système de l'arbre. | — |
 | 466 | Épineux géant (Omni-esprit d'Arborec) | **oui** | automatique | Conflit, bombardement de sa planète : il attaque aussi les unités terrestres, avec sa valeur de combat. | — |
 | 467 | Arbre mère (Omni-esprit d'Arborec) | **oui** | automatique | Ravitaillement automatique : autant de Letani que le niveau de connaissance génétique, posés sur la planète de l'arbre. | — |
-| 470 | Graine d'eden (Omni-esprit d'Arborec) | partiel | nouveau bouton (prévu) | Caractéristiques de l'unité déjà utilisées. | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
+| 470 | Graine d'eden (Omni-esprit d'Arborec) | **partiel** | automatique | Caractéristiques de l'unité déjà utilisées. Décompte des points : compté dans le cadre du décompte (5 points si New eden est posé sur sa planète). | Résistance sans plafond à permettre ; bouton posant « New eden » à 6 de résistance. (moyenne) |
 | 472 | Duha Menaimon (Omni-esprit d'Arborec) | **oui** | nouveau bouton + automatique | Conflit, combat spatial : autant d'attaques que votre niveau de connaissance génétique. Bombardement : « Duha Menaimon : jet » — au plus ce niveau, un Letani est posé sur la planète. | — |
-| 490 | Armageddon conquis | **partiel** | nouveau bouton + automatique | Fiche de l'unité, science (Reforger) : 3 fragments militaires, un scientifique est posé sur l'unité et y reste. Canons spatiaux : portée 0 lue sur l'unité (son seul système), 1 une fois reforgé (un agent posé dessus). | 2 points de plus au décompte : à la main. |
+| 490 | Armageddon conquis | **oui** | nouveau bouton + automatique | Fiche de l'unité, science (Reforger) : 3 fragments militaires, un scientifique est posé sur l'unité et y reste. Canons spatiaux : portée 0 lue sur l'unité (son seul système), 1 une fois reforgé (un agent posé dessus). Décompte des points : compté dans le cadre du décompte (2 points, 4 reforgé). | — |
 | 496 | Cuirassé impérial | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Réaction automatique d'une unité neutre aux engagements des autres joueurs. (difficile) |
 | 509 | Dinosaure | **oui** | automatique | Caractéristiques de l'unité déjà utilisées. Sa valeur de contrôle `#con(n)` est comptée dans les conflits de contrôle, les dominations et le rapport de force. | — |
 | 511 | Garde impériale | **oui** | automatique | Caractéristiques de l'unité déjà utilisées. Sa valeur de contrôle `#con(n)` est comptée dans les conflits de contrôle, les dominations et le rapport de force. | — |
@@ -274,12 +274,12 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 524 | Frégate du Khan (Invasion du grand Khan) | **oui** | nouveau bouton | Conflit : détruite, « Riposte du khan » — son destructeur lance un dé (6 ou moins, 4 si l'unité qui l'a détruite a la frappe en premier) et encaisse 1 dégât sur une de ses unités ; elle se retire ensuite. | — |
 | 525 | Palais du Khan (Invasion du grand Khan) | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. L'engager (ciblé ou dans un groupe) coûte −1 pour toucher par frégate du khan, moitié moins (arrondi au-dessus) avec #prec ; ce malus remplace le −2 du ciblage. | — |
 | 527 | Soldat du Khan (Invasion du grand Khan) | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
-| 554 | Monument éternel | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer ; points par contributions. |
+| 554 | Monument éternel | **partiel** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Décompte des points : compté dans le cadre du décompte (1 point par 4 commerce de la faction posés sur le monument). | « Dégâts : pillage 3 au lieu » : lu comme un pillage de 3 à la destruction, à confirmer. |
 | 557 | Rebelle (Rébellion interplanétaire) | **oui** | automatique | Conflit, combat terrestre : furtif — un engagement de groupe ne l'atteint pas, et il ne riposte qu'à qui le cible. | — |
 | 568 | Indigène | **oui** | nouveau bouton | Fiche de l'unité (pour toute faction : l'unité est neutre), combat terrestre : use un diplomate, 4 dés à 3 lancés par le serveur contre l'unité ; chaque réussite lui inflige 1 dégât, elle est retirée si elle n'a plus de résistance. | — |
 | 569 | Vaisseau portail | partiel | automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Sert de trou de ver alpha : à brancher sur le déplacement assisté. (difficile) |
 | 570 | Cuve de Clonage | **oui** | nouveau bouton | Fiche de l'unité, production : la cuve est usée, 2 infanteries de votre faction sont posées sur sa planète. | — |
-| 571 | Arbre de vie éternelle | **partiel** | nouveau bouton | Fiche de l'unité, phase de production : l'arbre est usé et prend 1 dégât, +4 commerce. | Soin en phase de science (coût « #regen(2) » à préciser) ; points du décompte. |
+| 571 | Arbre de vie éternelle | **oui** | nouveau bouton + automatique | Fiche de l'unité, phase de production : l'arbre est usé et prend 1 dégât, +4 commerce. Science, avec 2 niveaux de connaissance génétique : « récupérer 1 résistance » (use un scientifique). Décompte des points : compté dans le cadre du décompte (3 points sans dégât). | — |
 | 572 | Étoile de la mort | partiel | nouveau bouton + automatique (prévu) | Caractéristiques de l'unité déjà utilisées. | Bouton de déplacement : use logisticien, amiral et scientifique. (moyenne) La valeur de contrôle `#con(n)` est comptée. |
 | 573 | Vaisseau gigantesque | oui | — | Caractéristiques et bombardement déjà utilisés par l'outil. | — |
 | 574 | Ravageur | oui | — | Aucun effet particulier : caractéristiques déjà utilisées. | — |
@@ -287,7 +287,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 576 | Vaisseau antique | **oui** | automatique | Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. (4 commerce et 1 point) | — |
 | 578 | Canon de Meer | oui | — | Caractéristiques et canon déjà utilisés par l'outil. | — |
 | 582 | Telluran | **oui** | automatique | Conflit, combat spatial : frappe en premier, furtif. | — |
-| 590 | Colonie Ladaran | **partiel** | automatique | Ravitaillement automatique : une infanterie de la faction est créée à bord. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. | Points du décompte. |
+| 590 | Colonie Ladaran | **oui** | automatique | Ravitaillement automatique : une infanterie de la faction est créée à bord. Conflit, « Terminer le combat » : le camp qui a infligé le dernier dégât gagne le pillage, s'il a encore une unité dans le système. Décompte des points : compté dans le cadre du décompte (2 points à son camp ; neutre, elle est signalée « à compter à la main »). | — |
 | 591 | Destroyeur Tak'Qav | oui | — | Bombardement noté `#bomb(6)` sans nombre de dés : notation à vérifier. | — |
 | 597 | Myru Vos | **oui** | automatique | Conflit : précis, furtif ; « Terminer le combat » d'un vaisseau de commerce qu'il a détruit : +2 commerce. | — |
 | 598 | Magmus | **oui** | nouveau bouton | Fiche de l'unité : « Un vaisseau détruit ici » — +1 de recherche militaire, notée au journal de recherche. | — |
@@ -323,7 +323,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 1015 | Cuirassé (Néo-peste WIP) | oui | — | Caractéristiques déjà utilisées ; bombardement 5 à une seule attaque. | — |
 | 1016 | Bombe bactériologique (Néo-peste WIP) | **oui** | automatique | Caractéristiques et bombardement 5** déjà utilisés par l'outil. Elle est retirée à « Terminer le combat » du bombardement où elle a tiré. | — |
 | 1017 | Alpha (Sardakk N'orr WIP) | oui | — | Caractéristiques déjà utilisées (combat 6). | — |
-| 1018 | Exotrirème (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (combat 3). | 1 dégât infligé quand il est détruit : à la main. (moyenne) |
+| 1018 | Exotrirème (Sardakk N'orr WIP) | **oui** | nouveau bouton | Caractéristiques déjà utilisées (combat 3). Conflit, combat spatial : détruit, il inflige 1 dégât à la faction qui l'a détruit — « ✹ Exotrirème détruit » sur ses vaisseaux militaires du combat, elle choisit lequel l'encaisse. | — |
 | 1019 | Transporteur (Sardakk N'orr WIP) | partiel | — | Caractéristiques déjà utilisées (capacité 3, mouvement 1). | Débarquer à la fin du déplacement : à la main. (moyenne) |
 | 1024 | Soleil de guerre (Braises de Muaat WIP) | oui | — | Caractéristiques déjà utilisées ; de type vaisseau amiral, il ne demande pas la technologie Soleil de guerre. | — |
 
@@ -334,7 +334,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | n° | Nom | Implémenté | Interface | Ce que fait l'outil | Reste à faire (faisabilité) |
 |---|---|---|---|---|---|
 | 27 | Canon ancien | **oui** | nouveau bouton | Fiche du système : « Réparer » (use un logisticien, 1 ressource par dégât : vos unités du système et le canon) ; « Restaurer le canon » (science, Reforger : dépense un scientifique et 2 fragments militaires ; l'unité devient un Canon restauré, sa carte arrive dans les éléments actifs, +2 points). | — |
-| 30 | Canon restauré | **partiel** | nouveau bouton | Fiche du système : « Réparer » (use un logisticien, 1 ressource par dégât). | 1 point au décompte. |
+| 30 | Canon restauré | **oui** | nouveau bouton + automatique | Fiche du système : « Réparer » (use un logisticien, 1 ressource par dégât). Décompte des points : compté dans le cadre du décompte (1 point à qui le possède). | — |
 | 31 | Astéroïde d'or | **oui** | nouveau bouton | Phase de production, « Revenus de la phase » : +3 commerce pour qui le possède. | — |
 | 33 | SR-42 | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 3 de recherche spatiale. Fiche du système : « SR-42 : 3 ressources » — la station est activée (une fois), 1 de recherche militaire, génétique et sociale. | — |
 | 34 | Mecatol Rex (Winnu) | **oui** | bouton existant modifié + nouveau bouton | Fiche du système, combat terrestre : « Dissoudre la Garde impériale » (12 influence, les Gardes de la planète sont retirées). Prendre possession de Mecatol Rex donne aussi la carte Mecatol Rex spéciale. | Faveurs des autres factions comptées 4 : à la main. |

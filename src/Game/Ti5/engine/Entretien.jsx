@@ -213,7 +213,10 @@ export function useEntretien(u, idFaction) {
         !possedeNatale && idNatal > 0 && "Planète natale : aucune possédée, pas de faveur",
         bioBlessees.length > 0 && `Sève de vie : ${bioBlessees.length} unité(s) soignée(s)${soin > 1 ? ` (Vie fructifiante : ${soin} de résistance)` : ""}`,
         legendaires > 0 && `Destin légendaire : +${legendaires} point(s)`,
-        conclave && "Conclave secret : 1 objectif militaire pioché",
+        // (« marquez le précédent » : l'objectif précédent s'évalue pour soi seul ; rien au tour 1)
+        conclave && ("Conclave secret : 1 objectif militaire pioché" + (etat.tour > 1
+            ? " — évaluez pour vous seul l'objectif précédent et marquez ses points (« + » de la piste Points)"
+            : "")),
         systemesPoses.length > 0 && "Signal : 1 marqueur sur un système au hasard",
         `Total : +${ressources} res, +${influence} inf`,
     ].filter(Boolean);

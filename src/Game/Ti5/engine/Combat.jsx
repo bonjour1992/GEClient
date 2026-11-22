@@ -1152,6 +1152,16 @@ function CombatSysteme({ lieu }) {
         (jetKhan(v) === null || riposteDue(v));
     const ripostesKhan = camp => vaisseaux.filter(v => riposteDue(v) && auteurDesDegats(v.c) === camp);
 
+    // Exotrirème (#1018, « détruit : inflige 1 dégât ») : au combat spatial seulement, la faction
+    // qui l'a détruit subit 1 dégât, qu'elle applique à un de ses vaisseaux militaires du combat
+    // (bouton « ✹ Exotrirème détruit » sur ses vaisseaux). Marque de l'Exotrirème : « exoPris ».
+    const exoDue = v => sorte === "spatial" && v.c.ref?.id === 1018 && aScript(moi, "exotrireme") && estDetruit(v) &&
+        !v.c.marques?.exoPris && ![null, NEUTRE].includes(auteurDesDegats(v.c));
+    const ripostesExo = camp => vaisseaux.filter(v => exoDue(v) && auteurDesDegats(v.c) === camp);
+    // (en attente : le destructeur a encore un vaisseau militaire debout pour l'encaisser)
+    const exoEnAttente = v => exoDue(v) &&
+        vaisseaux.some(x => x.camp === auteurDesDegats(v.c) && x.cible && x.militaire && !estDetruit(x));
+
     // Memoria D : une de mes infanteries détruites est sauvée sur un jet de 6 ou moins
     // (marque « memoria ») — elle est posée à bord de mon Memoria D
     const memoriaD = Object.values(etat.composants).find(c => !c.cache && c.ref?.type === "unit" && c.ref.id === 769 &&
@@ -1799,6 +1809,7 @@ function CombatSysteme({ lieu }) {
             testImpossible,
             // (une frégate du khan détruite attend sa riposte : elle sera retirée sans elle)
             aRetirer.some(khanEnAttente) && "une frégate du khan détruite attend encore sa riposte (elle sera retirée sans elle)",
+            aRetirer.some(exoEnAttente) && "un Exotrirème détruit attend que la faction qui l'a détruit encaisse 1 dégât (il sera retiré sans cela)",
         ];
 
         // Les unités indiquées détruites sont retirées (butin, capture), celles qu'un jet a
@@ -1844,7 +1855,7 @@ function CombatSysteme({ lieu }) {
                 { type: "marquer", c: c.id, marque: "embuscade", valeur: null },
                 c.marques?.possession !== undefined && { type: "marquer", c: c.id, marque: "possession", valeur: null },
             ].filter(Boolean)),
-            ...effacerMarques(["dubois", "evitement", "khan", "khanPris", "memoria", "duha", "esclaveJet"]),
+            ...effacerMarques(["dubois", "evitement", "khan", "khanPris", "memoria", "duha", "esclaveJet", "exoPris"]),
             // Bombardement fini : la marque « bombarde » de ce combat devient « fini:<lieu>:<tour> »,
             // l'unité ne tire donc plus si ce bombardement est rouvert au même tour (issue #3)
             ...unites.filter(c => c.marques?.bombarde === CE_COMBAT)
@@ -2385,6 +2396,27 @@ function CombatSysteme({ lieu }) {
                             style={{ ...styleBouton, backgroundColor: "#6a1b9a", color: "#fff", fontWeight: "bold" }}
                         >
                             ✹ Riposte du khan
+                        </button>
+                    )}
+
+                    {/* Exotrirème détruit par ma faction : un de mes vaisseaux militaires encaisse 1 dégât */}
+                    {joueur && aMoi && v.cible && v.militaire && !detruit && ripostesExo(moi).length > 0 && (
+                        <button
+                            type="button"
+                            data-action="exotrireme-encaisser"
+                            title="Exotrirème détruit : ce vaisseau prend le dégât qu'il inflige à la faction qui l'a détruit"
+                            onClick={() => {
+                                const exo = ripostesExo(moi)[0];
+
+                                envoyer([
+                                    { type: "marquer", c: v.id, marque: "degatDe", valeur: "c" + exo.camp },
+                                    { type: "marquer", c: v.id, marque: "degat", valeur: degat + 1, si: degat },
+                                    { type: "marquer", c: exo.id, marque: "exoPris", valeur: 1 },
+                                ], `Exotrirème détruit : ${v.nom} encaisse 1 dégât`);
+                            }}
+                            style={{ ...styleBouton, backgroundColor: "#6a1b9a", color: "#fff", fontWeight: "bold" }}
+                        >
+                            ✹ Exotrirème détruit
                         </button>
                     )}
 
