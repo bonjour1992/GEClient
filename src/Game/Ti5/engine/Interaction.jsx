@@ -1060,9 +1060,10 @@ export function tailleMini(type, petit) {
     return { width: Math.round(taille[0] * echelle), height: Math.round(taille[1] * echelle) };
 }
 
-// Contour blanc net d'une silhouette d'unité (un pixel de chaque côté) :
-// elle se détache du fond sombre de l'espace
-const CONTOUR_BLANC = "drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff)";
+// Cerne blanc d'une silhouette d'unité : un pixel plein dans les quatre directions, puis un léger
+// halo — elle se détache du fond sombre de l'espace, quelle que soit la couleur du joueur (le
+// noir compris). (À poser sur un élément qui englobe la silhouette masquée, pas sur elle.)
+const CONTOUR_BLANC = "drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 1px #fff)";
 
 // Marqueur de trêve : le token « Trêve » des données du jeu (reconnu à son
 // nom, comme les agents)
@@ -1472,27 +1473,36 @@ function Pion({ groupe, petit }) {
                         }}
                     />
                 ) : (
+                // Cerne clair : lisible sur le fond sombre de l'espace (doré pour une unité hors
+                // fiche de faction). Le filtre est sur un élément englobant : posé sur la
+                // silhouette elle-même, son masque le rognerait et le cerne ne se verrait pas.
                 <span
+                    data-cerne
                     style={{
                         display: "inline-block",
-                        width: mini ? mini.width : (petit ? 36 : 44),
-                        height: mini ? mini.height : (petit ? 24 : 29),
-                        backgroundColor: couleurDe(c.marques?.possession ?? c.proprio) || "#c8c8c8",
-                        WebkitMaskImage: icone,
-                        maskImage: icone,
-                        WebkitMaskSize: mini ? "100% 100%" : "125%",
-                        maskSize: mini ? "100% 100%" : "125%",
-                        WebkitMaskRepeat: "no-repeat",
-                        maskRepeat: "no-repeat",
-                        WebkitMaskPosition: "center",
-                        maskPosition: "center",
-                        // Liseré clair : lisible sur le fond sombre de l'espace
-                        // (doré pour une unité hors fiche de faction)
+                        lineHeight: 0,
                         filter: horsFiche
                             ? `drop-shadow(0 0 1px ${DORE}) drop-shadow(0 0 1px ${DORE}) drop-shadow(0 0 2px ${DORE})`
                             : CONTOUR_BLANC,
                     }}
-                />
+                >
+                    <span
+                        style={{
+                            display: "inline-block",
+                            width: mini ? mini.width : (petit ? 36 : 44),
+                            height: mini ? mini.height : (petit ? 24 : 29),
+                            backgroundColor: couleurDe(c.marques?.possession ?? c.proprio) || "#c8c8c8",
+                            WebkitMaskImage: icone,
+                            maskImage: icone,
+                            WebkitMaskSize: mini ? "100% 100%" : "125%",
+                            maskSize: mini ? "100% 100%" : "125%",
+                            WebkitMaskRepeat: "no-repeat",
+                            maskRepeat: "no-repeat",
+                            WebkitMaskPosition: "center",
+                            maskPosition: "center",
+                        }}
+                    />
+                </span>
                 )}
                 {/* Hors de la carte : le logo de la faction à laquelle l'unité est liée, puis son nom */}
                 {!petit && <LogoFaction id={c.ref.id} />}
@@ -3004,6 +3014,18 @@ export function Plan({ children, style }) {
             }
         }
 
+        // Plateau de vote d'une autre faction : y poser un agent (ou le cube d'un mercenaire) est
+        // semi-bloqué — chacun vote sur son propre plateau
+        const plateauAutrui = /^joueur:(\d+):vote:/.exec(zone);
+
+        if (plateauAutrui && Number(plateauAutrui[1]) !== moi &&
+            aDeplacer.some(id => etat.composants[id]?.ref?.type === "agent" ||
+                (!etat.composants[id]?.ref && etat.composants[id]?.jeton === CUBE_MERCENAIRE)) &&
+            !confirmerRegle("Poser un agent sur le plateau de vote d'une autre faction",
+                ["ce plateau de vote est celui d'une autre faction"])) {
+            return;
+        }
+
         // Infanterie infectée (#1014) : « ne peut jamais être déplacée » — une fois sur la carte,
         // elle n'en bouge plus (règle semi-bloquante : la confirmation laisse faire)
         if (aScript(moi, "infanterie-infectee") &&
@@ -3124,9 +3146,22 @@ export function Plan({ children, style }) {
             aviser?.(perdues.flatMap(p => p.textes).join(" ; ") + ".");
         }
 
+        // Réserve commune des promesses (« general:promesses ») : elle est infinie — quand la
+        // dernière carte d'une promesse en sort, une autre y est créée
+        const RESERVE_PROMESSES = "general:promesses";
+
+        const promessesSorties = zone === RESERVE_PROMESSES ? [] : aDeplacer.map(id => etat.composants[id])
+            .filter(c => c?.zone === RESERVE_PROMESSES && c.ref?.type === "Promesse");
+
+        const promessesRemplacees = [...new Map(promessesSorties.map(c => [c.ref.id, c])).values()]
+            .filter(c => !(index.parZone.get(RESERVE_PROMESSES) || [])
+                .some(x => x.ref?.type === "Promesse" && x.ref.id === c.ref.id && !aDeplacer.includes(x.id)))
+            .map(c => ({ type: "creer", ref: { type: "Promesse", id: c.ref.id }, zone: RESERVE_PROMESSES }));
+
         jouer([
             ...paiement,
             ...marquesDebarquement,
+            ...promessesRemplacees,
             ...perdues.flatMap(p => p.actions),
             ...aDeplacer.map(c => ({
                 type: "deplacer",

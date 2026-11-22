@@ -733,11 +733,12 @@ export function Espace() {
                     <input
                         type="range"
                         min={0.4}
-                        max={2}
+                        max={4}
                         step={0.1}
                         value={zoom}
                         onChange={e => setZoom(Number(e.target.value))}
                     />
+                    {" "}<span data-zoom style={{ fontSize: 12, color: "#555" }}>× {zoom.toFixed(1)}</span>
                 </label>
 
                 {joueur && (
@@ -1480,6 +1481,11 @@ function FicheSysteme({ numero, id, fermer }) {
         envoyer([...avant, ...actions], commentaire);
     }
 
+    // Planète spéciale (type « spe ») : ni revendication ni prise de possession (règle
+    // semi-bloquante : les deux boutons sont rouge gris)
+    const planeteSpeciale = planete => planete?.type === "spe" &&
+        "une planète spéciale ne se revendique pas et ne se possède pas";
+
     // Prendre possession : si un autre camp a des unités militaires sur la
     // planète, un conflit de contrôle s'ouvre dans l'onglet Conflit (Controle.jsx)
     // au lieu de la prise immédiate. (Une unité dont le contenu n'est pas encore
@@ -1888,6 +1894,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Prendre possession de ${nomPlanete(planete)}`}
                                                     obstacles={[
+                                                        planeteSpeciale(planete),
                                                         horsRevendication,
                                                         !monMilitaireSur(k) && "il faut une de vos unités militaires sur la planète",
                                                     ]}
@@ -1899,6 +1906,7 @@ function FicheSysteme({ numero, id, fermer }) {
                                                 <BoutonRegle
                                                     nom={`Revendiquer ${nomPlanete(planete)}`}
                                                     obstacles={[
+                                                        planeteSpeciale(planete),
                                                         horsRevendication,
                                                         sansUniteIci,
                                                         sansDiplomate,

@@ -250,7 +250,8 @@ function Coup({ coup, max }) {
 
     // Effet du jeu (bouton vert, ou rouge gris : Interaction.jsx, BoutonRegle) :
     // la ligne est verte s'il était faisable, rouge s'il a été fait hors conditions
-    const regle = lireRegle(coup.commentaire);
+    // (le ravitaillement, automatique, est écrit en vert lui aussi)
+    const regle = lireRegle(coup.commentaire) || (/^Ravitaillement\b/.test(coup.commentaire || "") ? { hors: false } : null);
 
     return (
         <div

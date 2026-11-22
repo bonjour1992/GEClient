@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ElementContent, Link, aggregation } from "../../lib/datatype.js";
 import { TypeLienCarac, TypeLienForm, filtreLien } from "./Component/TypeLien";
 import { backgroundColor, borderColor } from "./ti5Const.js";
@@ -32,14 +33,28 @@ function techPoint(content) {
     return (content?.unlocked || []).reduce((res, e) => e ? res + 2 : res, 0)
 }
 
+// Case d'une technologie de la feuille. Le composant est défini au niveau du module (et non dans
+// la feuille) : défini dans le rendu de la feuille, il serait un nouveau composant à chaque rendu,
+// et toutes les cases seraient démontées puis remontées au moindre clic (scintillement).
+const STYLE_TECH = { transform: "scale(0.85) translateX(-15px) translateY(-9px)" }
+const STYLE_DROITE = { float: "right" }
+
+function TechDisplayeur({ content, i, hauteur, style }) {
+
+    const unlocked = content?.unlocked?.[i]
+    const progres = content?.progres?.[i]
+
+    // (même objet tant que la case ne change pas : la carte n'est pas redessinée pour rien)
+    const context = useMemo(() => ({ unlocked, progres }), [unlocked, progres])
+
+    return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: hauteur, ...style }}>
+        {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
+            <LoadAndDisplay link={content.techs[i]} context={context} style={STYLE_TECH} />}
+    </div>)
+}
+
 function Display({ content, explication, style = {} }) {
     const LineNumber = 10
-    function TechDisplayeur({ i, style }) {
-        return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: 155, ...style }}>
-            {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
-                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked?.[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
-        </div>)
-    }
 
     return (<div style={{
         backgroundImage: imgURL("/ti/bg%20star.jpg"),
@@ -50,8 +65,8 @@ function Display({ content, explication, style = {} }) {
             height: 150,
             padding: "5px 20px"
         }}  >
-            <TechDisplayeur i={16} style={{ float: "right" }} />
-            <TechDisplayeur i={17} style={{ float: "right" }} />
+            <TechDisplayeur content={content} hauteur={155} i={16} style={STYLE_DROITE} />
+            <TechDisplayeur content={content} hauteur={155} i={17} style={STYLE_DROITE} />
             <Text text={"#img[" + content.logo + "] " + content.name} style={{ fontSize: 55, color: "white", textWrap: "nowrap" }} />
             {content.faction && content.faction.id !== -1 && <LoadAndDisplay style={{ fontSize: 24 }} link={content.faction} displayeur={"nom"} />}
         </div>
@@ -62,7 +77,7 @@ function Display({ content, explication, style = {} }) {
             float: "left"
         }}>
             {Array.from(new Array(16).keys()).map((i) => {
-                return (<TechDisplayeur key={i} i={i} />)
+                return (<TechDisplayeur key={i} content={content} hauteur={155} i={i} />)
             })}
         </div>
         <div style={{
@@ -134,13 +149,6 @@ function Connaissance({ content, LineNumber, explication, style }) {
 function SmallDisplay({ content, explication, style = {} }) {
     const LineNumber = 7
 
-    function TechDisplayeur({ i, style }) {
-        return (<div data-tech={i} data-emplacement={"case:" + i} style={{ width: 225, height: 143, ...style }}>
-            {content?.techs && content.techs[i] && content?.techs[i].id !== -1 &&
-                <LoadAndDisplay link={content.techs[i]} context={{ unlocked: content.unlocked?.[i], progres: content.progres?.[i] }} style={{ transform: "scale(0.85) translateX(-15px) translateY(-9px)" }} />}
-        </div>)
-    }
-
     return (<div style={{
         backgroundImage: imgURL("/ti/bg%20star.jpg"),
         ...demiA4Pa,
@@ -169,7 +177,7 @@ function SmallDisplay({ content, explication, style = {} }) {
         }}>
 
             {[8, 9, 10, 11, 12, 13, 14, 15].map((i) => {
-                return (<TechDisplayeur key={i} i={i} />)
+                return (<TechDisplayeur key={i} content={content} hauteur={143} i={i} />)
             })}
         </div>
 

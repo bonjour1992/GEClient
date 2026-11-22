@@ -170,6 +170,10 @@ export function MiseEnPlaceJoueur() {
                 const p = planetes.find(x => x.id === id);
                 return p ? `${hex}:planete:${p.k}` : null;
             },
+            // Zones des systèmes déjà posés sur le plan central (Le Nomade : signaux de départ)
+            systemes: [...index.parZone]
+                .filter(([zone, contenu]) => /^hex:\d{1,3}$/.test(zone) && contenu.some(c => c.ref?.type === "system"))
+                .map(([zone]) => zone),
             // Un de mes agents disponibles dont le nom contient ce motif (ou null)
             agent: motif => agentDisponible({ index, moi, search }, motif, { sansRemplacant: true }),
             // Zone d'une habilité de la feuille de faction (emplacement habilite:<rang>)

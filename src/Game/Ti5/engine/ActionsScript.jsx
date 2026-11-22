@@ -1,3 +1,4 @@
+import { joueurDeColonne } from "./voteCouleurs";
 import { useEngine, BoutonRegle, agentDisponible, nomElement, aMotCle, carteUsee, actionsUserCarte, distanceCases, nomCase, tuileDe, esclavesDe, possesseurDe } from "./Interaction";
 import { contenuEnCache, useElements, useUnitesDeFaction } from "./sync";
 import { SCRIPTS } from "./scripts";
@@ -200,6 +201,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         nomDe,
         aScript: id => aScript(moi, id),
         joueurs: partie.joueurs,
+        // Faction (nom du joueur) qui joue la couleur d'une colonne du plateau de vote (0 : Contre … 7 : « 6 »), ou null
+        factionDeColonne: col => joueurDeColonne(partie.joueurs, col)?.nom ?? null,
         // Unités de ma faction : [{ id, contenu }]
         unitesDeMaFaction: () => liensUnites.map(lien => ({ id: lien.id, contenu: unitesFaction[lien.id] })).filter(u => u.contenu),
         // Mes esclaves (infanteries capturées de mes éléments actifs)
@@ -249,6 +252,8 @@ export function BoutonsScripts({ lieu, c = null, idElement = null, numero = null
         index,
         moi,
         joueurs: partie.joueurs,
+        // Faction (nom du joueur) qui joue la couleur d'une colonne du plateau de vote (0 : Contre … 7 : « 6 »), ou null
+        factionDeColonne: col => joueurDeColonne(partie.joueurs, col)?.nom ?? null,
         nomDe,
         connaissance,
         points: (userId, n) => actionsPoints(etat, userId, n),

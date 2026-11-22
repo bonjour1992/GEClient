@@ -133,7 +133,8 @@ export function Transactions({ nouvelle }) {
                 texte: `Promesse « ${carte?.ref ? nomElement(search, carte.ref) : "?"} » chez ${nomDe(Number(m.chez))}` +
                     (m.duree === INFINI ? ", sans fin" : `, jusqu'au tour ${m.duree}`) +
                     `, marqueur de ${nomDe(Number(m.autre))}`,
-                obstacle: carte?.zone === "general:promesses" ? null : "la promesse n'est plus dans la réserve",
+                // (la réserve des promesses de base est infinie : la carte de la réserve sert de modèle)
+                obstacle: carte?.ref ? null : "la promesse est introuvable",
             };
         }
 
@@ -212,14 +213,20 @@ export function Transactions({ nouvelle }) {
 
             const m = ligne.marques;
 
-            if (m.sorte === "promesse") {
+            // Promesse de base : la réserve commune est infinie — une nouvelle carte de cette
+            // promesse est créée chez le détenteur (celle de la réserve y reste), avec le marqueur
+            // de l'autre faction
+            if (m.sorte === "promesse" && etat.composants[m.carte]?.ref) {
+
+                const local = "t" + (7000 + t.lignes.indexOf(ligne));
+
                 actions.push({
-                    type: "deplacer",
-                    c: m.carte,
-                    vers: m.duree === INFINI ? `joueur:${m.chez}:actif` : `joueur:${m.chez}:tour:${m.duree}`,
-                    de: "general:promesses",
+                    type: "creer",
+                    ref: { ...etat.composants[m.carte].ref },
+                    zone: m.duree === INFINI ? `joueur:${m.chez}:actif` : `joueur:${m.chez}:tour:${m.duree}`,
+                    idLocal: local,
                 });
-                actions.push({ type: "creer", jeton: MARQUEUR, sur: m.carte, proprio: Number(m.autre) });
+                actions.push({ type: "creer", jeton: MARQUEUR, sur: local, proprio: Number(m.autre) });
             }
 
             // Dette : un jeton avec son montant, et le marqueur du créancier dessus
@@ -448,9 +455,9 @@ export function Transaction({ fermer }) {
     // PROMESSES DE BASE (réserve du plateau général)
     // --------------------------------------------------------
 
+    // (réserve infinie : la même promesse peut figurer sur plusieurs lignes d'une transaction)
     const reserve = index.parZone.get("general:promesses") || [];
-    const prises = lignes.filter(l => l.sorte === "promesse").map(l => l.carte);
-    const libres = reserve.filter(c => c.ref && !prises.includes(c.id));
+    const libres = reserve.filter(c => c.ref);
 
     // Une option par promesse différente
     const sortes = [...new Map(libres.map(c => [c.ref.id, c])).values()];

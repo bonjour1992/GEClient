@@ -22,14 +22,14 @@ Un script ne joue que si le joueur possède sa carte (technologie débloquée, h
 | Type | Total | oui | partiel | non | nouveaux boutons | boutons existants modifiés | automatiques |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Technologies | 101 | 94 | 4 | 3 | 43 | 19 | 45 |
-| Habilités | 64 | 44 | 7 | 13 | 34 | 6 | 18 |
+| Habilités | 64 | 44 | 7 | 13 | 35 | 6 | 18 |
 | Unités | 114 | 103 | 11 | 0 | 32 | 9 | 54 |
-| Planètes | 35 | 30 | 4 | 1 | 22 | 8 | 13 |
+| Planètes | 35 | 30 | 4 | 1 | 22 | 8 | 14 |
 | Mercenaires | 40 | 25 | 10 | 5 | 19 | 20 | 2 |
 | Promesses | 19 | 17 | 2 | 0 | 14 | 3 | 5 |
 | Agents et reliques | 2 | 2 | 0 | 0 | 0 | 2 | 0 |
 | Événements | 10 | 10 | 0 | 0 | 10 | 0 | 0 |
-| **Total** | **385** | **325** | **38** | **22** | **174** | **67** | **137** |
+| **Total** | **385** | **325** | **38** | **22** | **175** | **67** | **138** |
 
 Les trois dernières colonnes comptent les cartes dont l'interface est écrite (une carte peut compter dans deux colonnes : « bouton existant modifié + nouveau bouton »). Recompte : `node E:\GE\demandes-ti5\verif-implementabilite.mjs`.
 
@@ -182,7 +182,7 @@ Les trois dernières colonnes comptent les cartes dont l'interface est écrite (
 | 722 | Achat de votes | **oui** | nouveau bouton | Bandeau « À faire », diplomatie, quand le Conclave secret est sur la table, une fois par tour : use un diplomate, un Soutien politique de valeur 3 à votre marqueur est posé chez le Conclave, 5 commerce vous attendent sur votre case du tour T+2. | — |
 | 725 | Milice au coeur du pouvoir | **oui** | automatique | « Nouveau tour », à partir du tour 8, habilité posée sur la table : 1D10 miliciens mercenaires sur Mecatol Rex (2D10 si la loi « Ouverture bureau des mercenaires » est en jeu). | — |
 | 764 | Confrérie de mercenaire | **oui** | bouton existant modifié + nouveau bouton | Recrutement (Ctrl + clic sur un mercenaire) : le surcoût du tour est ignoré. Bandeau « À faire » du recrutement : « piocher un mercenaire » (dans la main, à poser sur la case de son choix), une fois par tour. | — |
-| 765 | Signal | **oui** | automatique | Ravitaillement automatique : un marqueur de signal est posé sur un système tiré au hasard. | — |
+| 765 | Signal | **oui** | automatique + nouveau bouton | Mise en place du Nomade : 3 marqueurs de signal sur des systèmes tirés au hasard. Ravitaillement automatique : un marqueur de signal est posé sur un système tiré au hasard. Fiche d'un marqueur de signal, science : « Signal : +4 de recherche de signal » (use un scientifique, le marqueur reste). | — |
 | 814 | Rupture de l'espace-temps | **oui** | automatique | Déplacement assisté : passage par un trou de ver oméga, un dé de 10 par vaisseau (3 ou moins bloqué, 9 ou plus une touche), dans le cadre de blocage. | — |
 | 815 | Étude des failles | **oui** | nouveau bouton | Fiche d'une Faille, phase de science : use un scientifique, active le système, +2 de recherche de rupture, notée au journal de recherche. | — |
 | 837 | Réfugiés | **oui** | nouveau bouton | Bandeau « À faire », ravitaillement : 2 Milices sur chaque planète des Réfugiés (celles qui ont un Entrepôt d'aide), une fois par tour pour la table. | — |
@@ -338,7 +338,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 31 | Astéroïde d'or | **oui** | nouveau bouton | Phase de production, « Revenus de la phase » : +3 commerce pour qui le possède. | — |
 | 33 | SR-42 | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 3 de recherche spatiale. Fiche du système : « SR-42 : 3 ressources » — la station est activée (une fois), 1 de recherche militaire, génétique et sociale. | — |
 | 34 | Mecatol Rex (Winnu) | **oui** | bouton existant modifié + nouveau bouton | Fiche du système, combat terrestre : « Dissoudre la Garde impériale » (12 influence, les Gardes de la planète sont retirées). Prendre possession de Mecatol Rex donne aussi la carte Mecatol Rex spéciale. | Faveurs des autres factions comptées 4 : à la main. |
-| 38 | Station de mercenaire | **partiel** | nouveau bouton | Stock d'achat : une livraison commerciale peut être versée « à mon stock d'achat » sur la station (marqueur de faction posé dessus). Fiche du système, diplomatie : « Acheter » dépense 3 de ce stock, la faction possédante gagne 1 commerce. | Mercenaires révélés au ravitaillement, mercenaire acheté : à la main. (difficile) |
+| 38 | Station de mercenaire | **partiel** | nouveau bouton + automatique | « Nouveau tour » : les mercenaires disponibles sur la station sont remplacés (ceux qui restent retournent sous la pioche, 2 nouveaux y sont révélés). Stock d'achat : une livraison commerciale peut être versée « à mon stock d'achat » sur la station (marqueur de faction posé dessus). Fiche du système, diplomatie : « Acheter » dépense 4 de ce stock, la faction possédante gagne 1 commerce. | Le mercenaire acheté se prend à la main (le glisser de la station vers ses éléments actifs). |
 | 41 | Atlas | **oui** | automatique | « Nouveau tour » : un Ravageur neutre est ajouté sur Atlas. | — |
 | 45 | Anneau monde | **oui** | bouton existant modifié + nouveau bouton + automatique | Selon l'agent posé sur la station : logisticien — Ravitaillement automatique +2 ressources et +2 commerce ; scientifique — « Revenus de la phase » de science, 3 de recherche ; négociant — « Revenus de la phase » de production, 2 frégates marchandes ; diplomate — bouton « une faveur (4 commerce) » ; politique — bouton « piocher 3 lois » ; amiral — « Produire ici » (2 unités). | Ajouter une des lois piochées à l'agenda : à la main. |
 | 46 | Wanno | **oui** | bouton existant modifié | Prendre possession ou revendiquer Wanno : +1 infamie. | — |
@@ -366,7 +366,7 @@ Planètes et stations dont le texte porte un effet. « (passé) » : laissé de 
 | 1256 | SR-303 (Université de Jol-Nar) | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 4 de recherche militaire. Mise en place : comme SR-301. | — |
 | 1258 | SR-304 (Université de Jol-Nar) | **oui** | nouveau bouton | Phase de science, « Revenus de la phase » : 4 de recherche sociale. Mise en place : comme SR-301. | — |
 | 783 | Arcturus | **oui** | bouton existant modifié + automatique | « Revendiquer » : rouge gris sans unité du joueur sur la planète. Y poser des unités sans 2 niveaux de connaissance spatiale (et génétique pour des unités biologiques) affiche un avertissement, sans rien empêcher. Possession perdue sans unité dessus, comme Avar. | — |
-| 784 | Anneau Arcturus | **oui** | nouveau bouton + automatique | Ravitaillement automatique : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (use un scientifique). | — |
+| 784 | Anneau Arcturus | **oui** | nouveau bouton + automatique | Ravitaillement automatique : une frégate marchande créée dans le système ; « Produire ici » (`#prod`) ; fiche du système, science : « Recherche sociale, spatiale et libre » (la station est activée, un scientifique utilisé). | — |
 | 1041 | Haven | **oui** | automatique | Ravitaillement automatique : posséder Haven compte comme posséder une planète natale, elle donne la faveur du ravitaillement. | Les autres effets liés aux planètes natales (Vassal, Spectre de l'empereur) : à la main. |
 
 ## Mercenaires

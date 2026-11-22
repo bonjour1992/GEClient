@@ -328,7 +328,9 @@ const COLONNES_VOTE = ["Contre", "Pour", "1", "2", "3", "4", "5", "6"];
 const questionLoi = (titre, outils) => `${titre} : pour quelle loi ?\n` +
     (outils.lois().length ? outils.lois() : ["loi 1"]).map((nom, k) => `${k + 1} = ${k + 1}. ${nom}`).join("\n");
 
-const questionColonne = titre => `${titre} : quel vote ?\n` + COLONNES_VOTE.map((nom, k) => `${k + 1} = ${nom}`).join("\n");
+// (chaque choix dit aussi la faction qui joue la couleur de la colonne : outils.factionDeColonne)
+const questionColonne = (titre, outils) => `${titre} : quel vote ?\n` +
+    COLONNES_VOTE.map((nom, k) => `${k + 1} = ${nom}${outils?.factionDeColonne?.(k) ? ` — ${outils.factionDeColonne(k)}` : ""}`).join("\n");
 
 // Soutien politique : la carte n'est plus engagée, l'issue annoncée est oubliée
 const effacerVote = carte => ["use", "voteLoi", "voteCol", "voteTour"]
@@ -368,6 +370,19 @@ const memoriaSignal = (id, carte, ecritLe, nom) => action(id, "unit", carte, ecr
             };
         },
         libelle: `${nom} : dépenser un signal (+4 de recherche de signal)`,
+    });
+
+// Marqueur de signal (#859, Le Nomade) : bouton de sa fiche, pour la faction qui a l'habilité Signal
+const signalRecherche = action("signal-recherche", "token", 859, 0, "Signal : recherche", "carte",
+    "Science, sur la fiche d'un marqueur de signal : use un scientifique, 4 de recherche de signal sont notés (onglet Technologie, à cocher). Le marqueur reste en place.", {
+        phase: "science",
+        agent: SCIENTIFIQUE,
+        visible: outils => outils.aScript("signal"),
+        special: atelier => ({
+            actions: [atelier.recherche(atelier.moi, 859, 4)].filter(Boolean),
+            avis: "Signal : 4 de recherche de signal notés — cochez-les dans l'onglet Technologie.",
+        }),
+        libelle: "Signal : +4 de recherche de signal (use un scientifique)",
     });
 
 // Bouton SIG-N : la carte du signal n° N va dans mes éléments actifs, face visible
@@ -445,7 +460,7 @@ export const SCRIPTS = [
         mode: "modifie",
         ou: "« Mise en place de ma faction » (tour 0)",
         carte: { type: "faction", id: 143 },
-        ecritLe: 1795046895370,
+        ecritLe: 1795372821161,
         nom: "Mise en place de Winnu",
         description: "6 influence et 6 ressources ; les unités terrestres embarquent dans les vaisseaux.",
         placer: (unite, plan) => (unite.terrestre && !unite.vaisseau && plan.vaisseaux.length
@@ -496,7 +511,7 @@ export const SCRIPTS = [
         carte: { type: "faction", id: 763 },
         ecritLe: 1795028318753,
         nom: "Mise en place du Nomade",
-        description: "4 mercenaires piochés en main (en garder deux) ; les infanteries embarquent dans Memoria ; un négociant est posé sur l'Anneau Arcturus (la station est à vous, pas la planète Arcturus).",
+        description: "4 mercenaires piochés en main (en garder deux) ; les infanteries embarquent dans Memoria ; un négociant est posé sur l'Anneau Arcturus (la station est à vous, pas la planète Arcturus) ; 3 marqueurs de signal sont posés sur des systèmes tirés au hasard.",
         placer: (unite, plan) => {
             const memoria = plan.vaisseaux.find(v => v.c.ref.id === 766);
 
@@ -508,12 +523,17 @@ export const SCRIPTS = [
             const negociant = plan.agent(MOTIF_NEGOCIANT);
             const anneau = plan.zonePlanete(784);
 
+            // Habilité Signal : 3 marqueurs de signal (#859) sur trois systèmes différents du plan
+            // central, tirés au hasard (le système natal, posé dans ce même coup, n'en fait pas partie)
+            const tires = [...(plan.systemes || [])].sort(() => Math.random() - 0.5).slice(0, 3);
+
             return [
                 { type: "piocher", de: "pioche:mercenaire", vers: `joueur:${plan.u}:main`, n: 4 },
                 negociant && anneau && { type: "deplacer", c: negociant.id, vers: anneau, proprio: plan.u },
+                ...tires.map(zone => ({ type: "creer", ref: { type: "token", id: 859 }, zone, proprio: plan.u })),
             ].filter(Boolean);
         },
-        message: "4 mercenaires piochés : gardez-en deux, défaussez les deux autres. Un négociant tient l'Anneau Arcturus ; vous ne possédez pas la planète Arcturus.",
+        message: "4 mercenaires piochés : gardez-en deux, défaussez les deux autres. Un négociant tient l'Anneau Arcturus ; vous ne possédez pas la planète Arcturus. 3 marqueurs de signal sont posés sur des systèmes tirés au hasard.",
     },
 
     {
@@ -1016,7 +1036,7 @@ export const SCRIPTS = [
     revenu("relique-reforgee", "planet", 131, 1795190407273, "Relique reforgée", "ravit",
         "Rapporte 1 point à qui la possède.", { gains: { points: 1 } }),
 
-    revenu("anneau-arcturus", "planet", 784, 1795190407302, "Anneau Arcturus", "ravit",
+    revenu("anneau-arcturus", "planet", 784, 1795372845144, "Anneau Arcturus", "ravit",
         "Produit une frégate marchande dans son système.", { cree: { unite: 11, n: 1, ou: "espace" } }),
 
     revenu("new-eden", "planet", 469, 1795190407285, "New eden", "ravit",
@@ -1177,7 +1197,13 @@ export const SCRIPTS = [
         "Ravitaillement automatique (début de la phase)",
         "Aux tours 1, 4, 6, 8, 9 et 10, l'entretien pioche un objectif militaire dans votre main ; à partir du tour 4, le compte rendu rappelle d'évaluer l'objectif précédent, pour vous seul, et d'en marquer les points."),
 
-    regle("signal", "habilite", 765, 1795046343872, "Signal", "auto",
+    signalRecherche,
+
+    regle("station-de-mercenaire-ravitaillement", "planet", 38, 0, "Station de mercenaire : mercenaires du tour", "auto",
+        "« Nouveau tour » (début du ravitaillement)",
+        "À chaque nouveau tour, les mercenaires disponibles sur la station sont remplacés : ceux qui restent retournent sous la pioche, et autant de nouveaux que le dit son texte sont révélés sur la station."),
+
+    regle("signal", "habilite", 765, 1795372821165, "Signal", "auto",
         "Ravitaillement automatique (début de la phase)",
         "L'entretien pose un marqueur de signal sur un système tiré au hasard."),
 
@@ -1383,13 +1409,15 @@ export const SCRIPTS = [
             libelle: "SR-42 : 3 ressources → recherche militaire, génétique et sociale",
         }),
 
-    action("anneau-arcturus-recherche", "planet", 784, 1795190407302, "Anneau Arcturus : recherche", "planete",
-        "Science : use un scientifique, 1 de recherche sociale, 1 spatiale et 1 libre.", {
+    action("anneau-arcturus-recherche", "planet", 784, 1795372845144, "Anneau Arcturus : recherche", "planete",
+        "Science : la station est activée (une fois par tour) et un scientifique est utilisé : 1 de recherche sociale, 1 spatiale et 1 libre.", {
             phase: "science",
             possede: true,
+            // (« #use et #use#scien » : la station elle-même est activée, en plus du scientifique)
+            activer: true,
             agent: SCIENTIFIQUE,
             recherche: [["soc", 1], ["spa", 1], ["", 1]],
-            libelle: "Recherche sociale, spatiale et libre (use un scientifique)",
+            libelle: "Recherche sociale, spatiale et libre (active la station, use un scientifique)",
         }),
 
     // Anneau monde : l'effet dépend de l'agent posé sur la station
@@ -2066,7 +2094,7 @@ export const SCRIPTS = [
 
     // ----- Stock d'achat (Achats.jsx) : éléments qui vendent contre une livraison commerciale -----
 
-    regle("station-de-mercenaire-achat", "planet", 38, 1795348617509, "Station de mercenaire : achat", "nouveau",
+    regle("station-de-mercenaire-achat", "planet", 38, 1795372821163, "Station de mercenaire : achat", "nouveau",
         "Fiche d'un système : « Achats — Station de mercenaire », « Acheter »",
         "Une livraison commerciale peut être versée à votre stock d'achat sur la station (fiche de l'unité qui livre : destination « mon stock d'achat »). " +
         "Diplomatie : « Acheter » dépense 3 de ce stock, la faction qui possède la station gagne 1 commerce ; le mercenaire acheté se prend à la main."),
@@ -2088,7 +2116,7 @@ export const SCRIPTS = [
         "Mise en place : quand Jol-Nar joue, ses 4 stations scientifiques (SR-301 à SR-304) sont mélangées avec les 16 tuiles du haut de la pioche. " +
         "À chaque encaissement des faveurs résolu : 1 point par station scientifique que vous possédez, marqué d'office avec l'encaissement."),
 
-    regle("nef-de-la-rupture", "unit", 810, 1795205230657, "Nef de la rupture", "auto",
+    regle("nef-de-la-rupture", "unit", 810, 1795372420268, "Nef de la rupture", "auto",
         "Conflit : cadre de blocage (passage par un trou de ver oméga)",
         "Vos Nefs de la rupture ignorent le blocage et les touches des trous de ver oméga : leur jet ne les arrête pas et ne les touche pas. Un blocage par des unités ou une rupture gravitationnelle les arrêtent comme les autres."),
 
@@ -3262,7 +3290,7 @@ export const SCRIPTS = [
             visible: outils => !outils.c?.marques?.use,
             demandes: [
                 { question: outils => questionLoi("Soutien politique", outils), max: () => 1 },
-                { question: () => questionColonne("Soutien politique"), max: () => 1 },
+                { question: outils => questionColonne("Soutien politique", outils), max: () => 1 },
             ],
             calcul: (outils, xs) => {
 
@@ -3359,7 +3387,7 @@ export const SCRIPTS = [
                     max: outils => Math.max(1, Math.min(4, outils.compte("commerce"))),
                 },
                 { question: outils => questionLoi("Z'eu", outils), max: () => 1 },
-                { question: () => questionColonne("Z'eu"), max: () => 1 },
+                { question: outils => questionColonne("Z'eu", outils), max: () => 1 },
             ],
             calcul: (outils, xs) => {
 

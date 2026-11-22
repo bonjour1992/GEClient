@@ -917,8 +917,19 @@ export function Partie({ id }) {
             }
         }
 
+        // Station de mercenaire (#38) : à chaque ravitaillement, les mercenaires disponibles sont
+        // remplacés — ceux qui restent sur la station retournent sous la pioche, et autant de
+        // nouveaux que le dit son texte (« Révéler #merc(n) ») y sont révélés.
+        const mercenairesDeStation = (dernierTour || !ctx.aScript(moi, "station-de-mercenaire-ravitaillement")) ? []
+            : zonesDePlanete(38).flatMap(zone => [
+                ...(index.parZone.get(zone) || []).filter(c => c.ref?.type === "mercenaire")
+                    .map(c => ({ type: "deplacer", c: c.id, vers: "pioche:mercenaire", dessous: true })),
+                { type: "piocher", de: "pioche:mercenaire", vers: zone, n: Number(/#merc\((\d+)\)/i.exec(contenuEnCache(38)?.habilite || "")?.[1]) || 2 },
+            ]);
+
         p.envoyer(commentaire, [
             ...atlas.map(zone => ({ type: "creer", ref: { type: "unit", id: 574 }, zone })),
+            ...mercenairesDeStation,
             ...tirages.map((t, k) => ({ type: "des", n: 1, faces: t.faces, c: t.c, marque: "jetTour" + k })),
             ...retraitMarqueurs,
             ...retraitUse,
@@ -1673,17 +1684,43 @@ export function Partie({ id }) {
                             ONGLETS
                         ==================================== */}
 
-                        <div style={styleBarre}>
+                        {/* Une rangée d'onglets : chacun est attaché à la ligne du bas, l'onglet
+                            ouvert se détache (fond blanc, liseré orange en haut, ligne ouverte dessous) */}
+                        <div
+                            data-onglets
+                            role="tablist"
+                            style={{
+                                display: "flex",
+                                alignItems: "flex-end",
+                                flexWrap: "wrap",
+                                columnGap: 2,
+                                rowGap: 4,
+                                marginBottom: 8,
+                                paddingLeft: 4,
+                                borderBottomWidth: 2,
+                                borderBottomStyle: "solid",
+                                borderBottomColor: "#555",
+                            }}
+                        >
                             {onglets.map(([cle, libelle]) => (
                                 <button
                                     key={cle}
                                     type="button"
+                                    role="tab"
+                                    aria-selected={onglet === cle}
+                                    data-onglet={cle}
                                     onClick={() => setOnglet(cle)}
                                     style={{
-                                        padding: "6px 12px",
+                                        padding: onglet === cle ? "7px 14px 8px" : "5px 12px",
+                                        marginBottom: -2,
                                         fontWeight: onglet === cle ? "bold" : "normal",
-                                        border: onglet === cle ? "3px solid #ff9800" : "1px solid #555",
-                                        borderRadius: 5,
+                                        color: "#000",
+                                        cursor: "pointer",
+                                        borderStyle: "solid",
+                                        borderWidth: onglet === cle ? "3px 1px 2px 1px" : "1px 1px 2px 1px",
+                                        // (l'onglet ouvert : liseré orange en haut, bas de la couleur de son fond)
+                                        borderColor: onglet === cle ? "#ff9800 #555 #fff #555" : "#888 #888 #555 #888",
+                                        borderRadius: "8px 8px 0 0",
                                         // Messages non lus : l'onglet Chat est mis en avant ;
                                         // combat ou blocage en cours : l'onglet Conflit
                                         backgroundColor:
@@ -1694,7 +1731,7 @@ export function Partie({ id }) {
                                                     : (cle === "faveurs" && faveurs.attendu) ? "#ffe082"
                                                         : (cle === "transactions" && transactionsEnCours.length)
                                                             ? (transactionPourMoi ? "#ffe082" : "#e0e0e0")
-                                                            : undefined,
+                                                            : (onglet === cle ? "#fff" : "#dcdcdc"),
                                     }}
                                 >
                                     {libelle}{cle === "combat" && combatEnCours ? ` (${conflits})` : ""}
@@ -1718,13 +1755,14 @@ export function Partie({ id }) {
                                 </button>
                             ))}
 
-                            {["joueur", "tech", "vote"].includes(onglet) && joueurs.map(j => (
+                            {["joueur", "tech", "vote"].includes(onglet) && joueurs.map((j, k) => (
                                 <button
                                     key={j.userId}
                                     type="button"
                                     onClick={() => setVuId(j.userId)}
                                     style={{
                                         padding: "4px 10px",
+                                        margin: `0 0 4px ${k === 0 ? 12 : 6}px`,
                                         fontWeight: vu.userId === j.userId ? "bold" : "normal",
                                         border: `${vu.userId === j.userId ? 4 : 2}px solid ${couleurJoueur(j)}`,
                                         borderRadius: 12,
@@ -1808,7 +1846,8 @@ export function Partie({ id }) {
                             />
                             <Zone zone={`joueur:${moi}:agentsUses`} titre="Mes agents usés" repli="agentsUses" />
 
-                            <Zone zone={`joueur:${moi}:main`} titre="Ma main" cartes={0.65} repli="main" />
+                            {/* (noms encerclés seulement : un clic sur un nom ouvre la fiche de la carte) */}
+                            <Zone zone={`joueur:${moi}:main`} titre="Ma main" repli="main" />
 
                             {/* Marqueurs à poser : le mien, et le marqueur d'activation
                                 (neutre, noir). Illimités : glisser vers la carte. */}

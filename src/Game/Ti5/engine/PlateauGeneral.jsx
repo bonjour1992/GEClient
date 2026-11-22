@@ -874,7 +874,8 @@ export function PlateauGeneral() {
             <b style={{ fontSize: 16 }}>Réserves</b>
 
             <div style={styleGrille}>
-                <Zone zone="general:promesses" titre="Promesses" />
+                {/* (réserve infinie : la dernière carte d'une promesse qui en sort y est remplacée) */}
+                <Zone zone="general:promesses" titre="Promesses (réserve infinie)" />
                 <ReserveAgents />
                 <Sac />
                 <SacFragments />

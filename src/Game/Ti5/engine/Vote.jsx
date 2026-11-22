@@ -3,7 +3,7 @@ import { LoadAndDisplay } from "../../../Component/LoadAndDisplay";
 import { useEngine, Emplacements, Defilable, nomElement, BoutonRegle, agentDisponible } from "./Interaction";
 import { MARQUEUR, CUBES } from "./miseEnPlace";
 import { demander, confirmer } from "./demande";
-import { PlayerColor } from "../ti5Const";
+import { COLONNES_VOTE, COULEURS_COLONNES, joueurDeColonne } from "./voteCouleurs";
 import { AnnexesDeLoi } from "./Agendas";
 
 // ============================================================
@@ -78,11 +78,10 @@ const stylePions = zone => (estPartieDroite(zone)
 // L'engine n'applique pas la loi : les joueurs s'en chargent.
 // ============================================================
 
-const COLONNES = ["Contre", "Pour", "1", "2", "3", "4", "5", "6"];
-
-// Couleur de chaque colonne sur le plateau de vote (vote.jsx : les couleurs
-// de joueur, dans l'ordre) : Contre en noir, Pour en vert, puis 1 à 6.
-const COULEURS_COLONNES = Object.values(PlayerColor);
+// Colonnes du plateau de vote et leur couleur (les couleurs de joueur, dans l'ordre : Contre en
+// noir, Pour en vert, puis 1 à 6) : voteCouleurs.js. Une colonne désigne aussi la faction qui
+// joue sa couleur (loi qui élit une faction).
+const COLONNES = COLONNES_VOTE;
 
 // Le nom d'un vote, écrit comme sur le plateau : sur la couleur de sa colonne
 function styleVote(col) {
@@ -506,8 +505,14 @@ function Decompte({ lois }) {
                                                 </button>
                                             )}
                                         </td>
-                                        <td style={{ ...styleCellule, fontWeight: "bold" }}>
+                                        <td style={{ ...styleCellule, fontWeight: "bold", whiteSpace: "nowrap" }}>
                                             <span style={styleVote(col)}>{COLONNES[col]}</span>
+                                            {/* (la faction qui joue la couleur de cette colonne) */}
+                                            {joueurDeColonne(joueurs, col) && (
+                                                <span data-faction-colonne={col} style={{ marginLeft: 4, fontWeight: "normal", fontSize: 12 }}>
+                                                    {joueurDeColonne(joueurs, col).nom}
+                                                </span>
+                                            )}
                                         </td>
 
                                         {joueurs.map(j => {
@@ -602,7 +607,7 @@ function Decompte({ lois }) {
 
 export function Vote({ vu }) {
 
-    const { etat, index, jouer, envoyer, joueur, moi, search, ouvrirFiche, aScript } = useEngine();
+    const { etat, index, jouer, envoyer, joueur, moi, search, ouvrirFiche, aScript, partie } = useEngine();
 
     // Script Argumentation véhémente : loi et colonne visées
     const [argument, setArgument] = useState({ loi: 1, col: 1 });
@@ -775,6 +780,20 @@ export function Vote({ vu }) {
                         Réinitialiser
                     </button>
                 )}
+            </div>
+
+            {/* Au-dessus du plateau : la faction qui joue la couleur de chaque colonne (une loi qui
+                élit une faction se vote dans la colonne de sa couleur) */}
+            <div data-factions-colonnes style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, fontSize: 13 }}>
+                <b>Couleurs :</b>
+                {COLONNES.map((nom, col) => (
+                    <span key={col} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ ...styleVote(col), fontWeight: "bold", textAlign: "center" }}>{nom}</span>
+                        <span style={{ color: joueurDeColonne(partie.joueurs, col) ? "#000" : "#999" }}>
+                            {joueurDeColonne(partie.joueurs, col)?.nom || "—"}
+                        </span>
+                    </span>
+                ))}
             </div>
 
             <Defilable>

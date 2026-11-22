@@ -73,9 +73,11 @@ function SourceRessource({ ressource }) {
 
 // glisser : clé du compteur (« res », « inf », « commerce ») dont l'icône
 // se glisse pour poser un jeton (data-compteur : repère pour l'interface).
-export function Compteur({ id, libelle, glisser }) {
+//   conversions : [[clé du compteur gagné (« res », « inf »), nom]] — un petit bouton par conversion,
+//                 l'icône de ce qui est gagné avec « +1 » : 1 de ce compteur devient 1 de l'autre
+export function Compteur({ id, libelle, glisser, conversions = [] }) {
 
-    const { etat, jouer, joueur } = useEngine();
+    const { etat, jouer, envoyer, joueur } = useEngine();
 
     const valeur = Number(etat.compteurs[id]) || 0;
 
@@ -96,6 +98,26 @@ export function Compteur({ id, libelle, glisser }) {
         >
             {glisser && joueur && <SourceRessource ressource={glisser} />}
             <span style={{ flex: 1 }}>{libelle}</span>
+            {joueur && conversions.map(([cle, nom]) => (
+                <button
+                    key={cle}
+                    type="button"
+                    data-action={"convertir-" + cle}
+                    disabled={valeur < 1}
+                    title={`Convertir 1 ${libelle.toLowerCase()} en 1 ${nom} (Ctrl + clic : 5 d'un coup)`}
+                    onClick={event => {
+                        const n = Math.min(valeur, event.ctrlKey ? 5 : 1);
+
+                        envoyer([
+                            { type: "compteur", id, delta: -n },
+                            { type: "compteur", id: id.replace(/:[^:]+$/, ":" + cle), delta: n },
+                        ], `${libelle} converti : ${n} ${nom}${n > 1 ? "s" : ""}`);
+                    }}
+                    style={{ padding: 1, lineHeight: 0, opacity: valeur < 1 ? 0.4 : 1 }}
+                >
+                    <IconeRessource ressource={cle} n="+1" cote={24} />
+                </button>
+            ))}
             {/* Ctrl + clic : 5 d'un coup (un seul coup au journal) */}
             <button
                 type="button"
@@ -124,7 +146,14 @@ export function MesCompteurs({ userId }) {
     return (
         <div style={{ display: "grid", gap: 3 }}>
             {COMPTEURS.map(([nom, libelle]) => (
-                <Compteur key={nom} id={`joueur:${userId}:${nom}`} libelle={libelle} glisser={nom} />
+                <Compteur
+                    key={nom}
+                    id={`joueur:${userId}:${nom}`}
+                    libelle={libelle}
+                    glisser={nom}
+                    // (le commerce se convertit en ressource ou en influence, 1 pour 1)
+                    conversions={nom === "commerce" ? [["res", "ressource"], ["inf", "influence"]] : []}
+                />
             ))}
         </div>
     );
