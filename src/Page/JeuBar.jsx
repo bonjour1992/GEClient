@@ -40,7 +40,8 @@ export default function HeaderBar() {
 // RECHERCHE
 //
 // Recherche par nom, sans accents ni majuscules, dans tous les
-// éléments du jeu. Les résultats s'affichent sous le champ, avec
+// éléments du jeu ; chaque mot peut aussi se trouver dans le nom de
+// l'élément lié. Les résultats s'affichent sous le champ, avec
 // l'affichage « nom » de leur type (nom précédé de ses icônes)
 // et le nom du type. Entrée ouvre le résultat surligné, les
 // flèches le changent, Échap ferme.
@@ -83,14 +84,21 @@ function Search({ search }) {
         return () => clearTimeout(minuterie)
     }, [texte])
 
-    // Ceux dont le nom commence par le texte d'abord, puis par ordre alphabétique
+    // Chaque mot doit se trouver dans le nom ou dans ce à quoi l'élément est lié
+    // (« social vol » : la feuille de technologie sociale de la Volée argentée).
+    // Ceux dont le nom commence par le texte d'abord, puis ceux dont le nom le
+    // contient, puis par ordre alphabétique.
+    const mots = cherche.split(/\s+/).filter(Boolean)
+
     const trouves = cherche.length < 2
         ? []
         : search
-            .map(e => ({ e, nom: simplifier(e.name) }))
-            .filter(x => x.nom.includes(cherche))
+            .map(e => ({ e, nom: simplifier(e.name), lie: simplifier(e.lie) }))
+            .filter(x => mots.every(mot => x.nom.includes(mot) || x.lie.includes(mot)))
             .sort((a, b) =>
-                (b.nom.startsWith(cherche) - a.nom.startsWith(cherche)) || a.nom.localeCompare(b.nom))
+                (b.nom.startsWith(cherche) - a.nom.startsWith(cherche)) ||
+                (b.nom.includes(cherche) - a.nom.includes(cherche)) ||
+                a.nom.localeCompare(b.nom))
             .map(x => x.e)
 
     const affiches = trouves.slice(0, MAX_RESULTATS)
