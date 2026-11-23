@@ -702,3 +702,20 @@ guerre semi-bloqués (Moratoire). Gardien de la constitution : bouton de mandat,
 Construire un monument suit la carte du 22 novembre (plus de +2 pour la faction seule en tête). Restent à la
 main : l'interdiction de dépenser des politiques aux votes (Gardien), la rupture du Monument suprême, l'orientation
 diplomatique ; Prime (#337), Protection du commerce (#348) et les directives à choix de chaque faction restent à faire.
+
+Agendas du 23 novembre (14 cartes, réponses de Loïc : Milicien à l'acheteur, 5 commerce de l'Achat de votes
+retirés aussi, Mobilisation d'office, pas d'ex æquo — l'ordre du responsable du sénat) : « Résoudre » fait l'effet
+de Concours scientifique (commerce selon connaissance et spécialité ; la faction en tête peut prendre 3 points au
+lieu du commerce, bouton de plateau), Mobilisation (une infanterie par planète possédée), Recrutement disponible
+(infanteries à poser sur une planète à structure, bouton de plateau), Subvention militaire (un vaisseau de coût 5
+au plus posé gratuitement dans le système natal, bouton de plateau), Prime (12 commerce sur la carte, 1 pris à
+chaque vaisseau de la faction élue détruit, à « Terminer le combat »), Ouverture bureau des mercenaires (Milicien
+sur Mecatol Rex au bandeau de la diplomatie), Lutte contre la corruption (Soutiens du Conclave annulés) et Soutien
+au conclave (faveurs du Conclave). Égalité entre factions : boutons ↑ du responsable du sénat sous « Résoudre ».
+En jeu : Protection du commerce (« Engager » un vaisseau de commerce non militaire semi-bloqué), Collaboration
+contre révolutionnaire (« Armer les rebelles » semi-bloqué), Lutte contre la corruption (vente d'un Soutien
+politique semi-bloquée), Chef du sénat (proposition sans politique), Premier ministre (+2 voix aux élections de
+ministres, dépensé s'il s'élit), Conseil de censure (une loi de l'agenda retirée) et Ministre de la défense
+(Cuirassés impériaux retirés puis posés). Tests : `test-resolutions-agendas.mjs` (53) et `test-scripts-agendas.mjs`
+(18 vérifications). Restent : Bureau des mercenaires (#311), Ministre de l'écologie (#322), Planète relique (#326),
+Dette impériale (#347).

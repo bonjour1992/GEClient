@@ -12,7 +12,10 @@ Pour, 1 à 6), les voix de chaque joueur :
   droite ; les autres agents valent 0 ;
 - plus un ajustement manuel (boutons − / + de chaque case, compteur
   `vote:<tour>:<loi>:<colonne>:<joueur>`), possible à tout moment : voix
-  annoncées au prévote, effets que l'engine ne connaît pas.
+  annoncées au prévote, effets que l'engine ne connaît pas ;
+- plus les voix que donnent les règles en jeu, chacune sur sa ligne du
+  décompte : Premier ministre (mandat 223) donne 2 voix à la faction qui l'a,
+  aux élections de ministres, dans la colonne où elle a le plus de voix.
 
 Les colonnes 1 à 6 désignent des joueurs ou des numéros selon le vote : aux
 joueurs de s'entendre.
@@ -27,7 +30,10 @@ joueurs de s'entendre.
 3. **Ajustements** : le tableau reste modifiable. Le responsable du sénat
    (joueur de la dernière case d'initiative) départage toutes les égalités,
    pour / contre compris : son bouton ↑ fait passer un vote devant ses
-   ex æquo (compteur `vote:<tour>:<loi>:ordre:<colonne>`).
+   ex æquo (compteur `vote:<tour>:<loi>:ordre:<colonne>`). Une égalité entre
+   factions dans l'effet d'une loi (Concours scientifique, Soutien au
+   conclave) se départage de même sous son bouton « Résoudre » : ↑ fait
+   passer une faction devant (compteur `agenda:<tour>:<loi>:rang:<faction>`).
 
 ## secret
 

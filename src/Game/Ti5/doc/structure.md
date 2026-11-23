@@ -1016,8 +1016,18 @@ appliqué). Le script est déclaré dans `scripts.js` (sorte « regle », type
 Un traité dont le script porte `remplaceAuto: true` (Monument suprême, Zone
 démilitarisée) passe par son script au lieu de la résolution générale. Le
 script reçoit `{ etat, index, joueurs, votes, loi, carte, options, nomDe, nom,
-contenuDe }` (`contenuDe` : contenu d'un élément déjà chargé, par exemple les
-planètes d'un système). Le choix élu qu'une carte garde en jeu est écrit sur
+contenuDe, connaissance, factionDe }` (`contenuDe` : contenu d'un élément déjà
+chargé, par exemple les planètes d'un système ; `connaissance(u, type)` : niveau
+de connaissance d'un type de technologie). Une égalité entre factions
+(Concours scientifique, Soutien au conclave) n'a pas d'ex æquo : le script
+rend aussi `departage` (`[{ userId, nom, cle, enTete }]`, `cle` = compteur
+`agenda:<tour>:<loi>:rang:<u>`) et, sous « Résoudre », le responsable du sénat
+fait passer une faction devant avec ↑ (`data-departage-faction`) ; le rang le
+plus haut l'emporte, « Résoudre » reste semi-bloqué tant que la tête est ex
+æquo. Une directive dont chaque faction profite à son tour (Concours
+scientifique, Recrutement disponible, Subvention militaire) note un compteur
+`agenda:<tour>:…` lu par un bouton de plateau (`resolution: true`, `visible`).
+Le choix élu qu'une carte garde en jeu est écrit sur
 elle par une action `marquer` (Activité réprimée : `agentReprime` ;
 Orientation de l'empire : `orientation` ; Zone démilitarisée : `systeme`, le
 numéro de case) ; `engine/agendasEnJeu.js` (pur) lit ces marques sur la carte
@@ -1026,7 +1036,9 @@ militaire, Mission de guerre, Mercenaire, Révocation, Artefact retrouvé,
 Création trou de ver, Activité réprimée, Péage au trou de ver, Révolution,
 Révolution anti intellectuel, Construire un monument, Monument suprême,
 Subvention, Zone démilitarisée, Orientation de l'empire, Ostracisme, Vote au
-conseil 1 à 5. Un traité ou une loi en jeu
+conseil 1 à 5, Concours scientifique, Mobilisation, Recrutement disponible,
+Prime, Subvention militaire, Lutte contre la corruption, Ouverture bureau des
+mercenaires, Soutien au conclave. Un traité ou une loi en jeu
 (`general:table`) a son effet par `aScript` (type `Agenda` : la carte est sur
 la table, ou dans les éléments actifs du joueur pour un mandat ; une loi qui a
 un effet en jeu a donc une règle `…-en-jeu` à côté de sa résolution, toujours
@@ -1037,9 +1049,17 @@ active) : Impôt et Écologie punitive au ravitaillement automatique
 et Moratoire au déplacement assisté (`Deplacement.jsx`), Activité réprimée au
 recrutement (`Partie.jsx`), Révolution anti intellectuel à la recherche
 (`Technologie.jsx`), Protection des civils au bouton « Bombardement »
-(`Espace.jsx`), Zone démilitarisée à « Engager » / « Cibler » (`Combat.jsx`).
-Gardien de la constitution (mandat) est une action de plateau, phase de
-mandat (`scripts.js`). La résolution est
+(`Espace.jsx`), Zone démilitarisée à « Engager » / « Cibler » et Protection du
+commerce à « Engager » (`Combat.jsx`), Prime à « Terminer le combat »
+(`Combat.jsx`, `primeEnJeu` / `partagePrime`), Collaboration contre
+révolutionnaire à « Armer les rebelles » et Lutte contre la corruption à
+« Achat de votes » (`scripts.js`) et aux transactions (`Transaction.jsx`),
+Ouverture bureau des mercenaires au bandeau de la diplomatie (`scripts.js`).
+Mandats : Gardien de la constitution, Conseil de censure et Ministre de la
+défense (retrait au plateau, pose depuis la fiche d'un système) sont des
+actions de la phase de mandat (`scripts.js`) ; Chef du sénat à la proposition
+(`Partie.jsx`) ; Premier ministre au décompte des voix et à la résolution d'un
+mandat (`Vote.jsx`, `premierMinistreDepense`). La résolution est
 notée dans le compteur `agenda:<tour>:<ligne>:resolution` (> 0 : joueur ; −1 :
 hors jeu ; −2 : table) et la carte n'est déplacée qu'en quittant la phase de
 vote (`changerPhase`, `Partie.jsx`) : le numéro d'une loi est son rang dans

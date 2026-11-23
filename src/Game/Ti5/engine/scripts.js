@@ -46,8 +46,10 @@
 // faisable de la même façon.
 // ============================================================
 
-import { campDe, aMot, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace.js";
+import { campDe, aMot, typeUnite, LIMITES_UNITES, MOTIF_LOGISTICIEN, MOTIF_NEGOCIANT } from "./miseEnPlace.js";
 import { resultatDomination, actionsOuvrirDomination } from "./regleControle.js";
+import { CUIRASSE_IMPERIAL, MECATOL_REX, MILICIEN_MERCENAIRE, mandatDe } from "./agendasEnJeu.js";
+import { cleConcours, cleRecrutementDisponible, cleSubventionMilitaire } from "./resolutionsAgendas.js";
 
 // Nom de l'élément « reglage » qui garde la liste des scripts désactivés
 export const SCRIPTS_DESACTIVES = "Scripts désactivés";
@@ -345,6 +347,63 @@ const mandatsDonnes = outils => Object.values(outils.etat.composants).filter(x =
 // Le Conclave secret (faction neutre #718) est-il sur la table ?
 const conclaveEnJeu = etat => Object.values(etat.composants).some(c =>
     !c.cache && c.ref?.type === "neutral" && c.ref.id === 718 && c.zone === "general:table");
+
+// ----- Agendas du 23 novembre -----
+
+// Agent politique utilisé par un bouton ; mes politiques disponibles (pour en user plusieurs)
+const POLITIQUE = { motif: "politi", nom: "politique", depense: false };
+const mesPolitiques = outils => mesAgentsDisponibles(outils).filter(x => /politi/i.test(outils.nom(x.ref)));
+
+// Agenda du tour (case Agenda du tour) : ses cartes visibles
+const agendaDuTour = outils => (outils.index.parZone.get("general:agenda:" + outils.etat.tour) || [])
+    .filter(x => !x.cache && x.ref?.type === "Agenda");
+
+// Cartes révélées à côté d'une loi (Agendas.jsx) : chacune retourne à la défausse de sa pioche
+// (pioche:<type> -> defausse:<type> ; les unités mercenaires sont dans celle des mercenaires)
+const defausserLesRevelees = (index, carte) => (index.parZone.get("general:revele:" + carte.id) || [])
+    .filter(x => x.ref)
+    .map(x => ({ type: "deplacer", c: x.id, vers: "defausse:" + (x.marques?.dos || x.ref.type) }));
+
+// Cuirassés impériaux (#496, neutres) posés sur la carte ; ceux qui n'ont pas été posés ce tour
+// par le Ministre de la défense (marque ministreDefense : le tour de la pose)
+const cuirassesImperiaux = etat => Object.values(etat.composants).filter(x => !x.cache && x.ref?.type === "unit" &&
+    x.ref.id === CUIRASSE_IMPERIAL && /^hex:\d+/.test(x.zone || ""));
+const anciensCuirassesImperiaux = etat => cuirassesImperiaux(etat).filter(x => Number(x.marques?.ministreDefense) !== etat.tour);
+
+// Planètes de la carte où j'ai une structure : [{ zone, nom }]
+const planetesAStructure = outils => [...outils.index.parZone]
+    .filter(([zone, contenu]) => /^hex:\d+:planete:\d+$/.test(zone) && contenu.some(x => !x.cache && x.ref?.type === "unit" &&
+        campDe(x) === outils.moi && aMot(outils.contenuDe(x.ref.id), "struc")))
+    .map(([zone]) => {
+        const [, n, k] = /^hex:(\d+):planete:(\d+)$/.exec(zone).map(Number);
+        const id = Number(outils.systemeDe(n)?.elems?.[k]?.id) || 0;
+
+        return { zone, nom: id ? outils.nom({ type: "planet", id }) : `planète ${k + 1} de la ${outils.nomCase(n)}` };
+    });
+
+// Recrutement disponible (#330) : infanteries qu'il me reste à poser ce tour
+const resteRecrutement = outils => Number(outils.etat.compteurs[cleRecrutementDisponible(outils.etat.tour, outils.moi)]) || 0;
+
+// Cases de la carte de mon système natal (celui de ma feuille de faction)
+const casesNatales = outils => {
+    const natal = Number(outils.contenuDe(outils.factionDe(outils.moi))?.system?.id) || 0;
+
+    return natal ? casesDuSysteme(outils.index, natal) : [];
+};
+
+// Subvention militaire (#342) : vaisseaux de ma faction de coût 5 au plus que je peux poser dans
+// mon système natal — figurine prise dans ma réserve (types limités), sinon créée :
+// [{ id, contenu, figurine, numero }] (un par case natale)
+const vaisseauxSubventionnes = outils => {
+
+    const reserve = (outils.index.parZone.get(`joueur:${outils.moi}:reserve`) || []).filter(x => !x.cache && x.ref?.type === "unit");
+
+    return outils.unitesDeMaFaction()
+        .filter(u => aMot(u.contenu, "ship") && (Number(u.contenu.cout) || 0) <= 5)
+        .map(u => ({ ...u, limite: LIMITES_UNITES[typeUnite(u.contenu)] !== undefined, figurine: reserve.find(x => x.ref.id === u.id) || null }))
+        .filter(u => !u.limite || u.figurine)
+        .flatMap(u => casesNatales(outils).map(numero => ({ ...u, numero })));
+};
 
 // Marqueur libre (étiquette de texte) et sa couleur par défaut — miseEnPlace.js (LIBRE)
 const LIBRE = "libre";
@@ -2100,7 +2159,13 @@ export const SCRIPTS = [
             calcul: outils => (Number(outils.etat.compteurs["general:armer-rebelles"]) === outils.etat.tour
                 ? { sans: "les Rebelles sont déjà armés ce tour" }
                 : {}),
-            special: atelier => ({ actions: [{ type: "compteur", id: "general:armer-rebelles", valeur: atelier.etat.tour }] }),
+            special: atelier => ({
+                actions: [{ type: "compteur", id: "general:armer-rebelles", valeur: atelier.etat.tour }],
+                // (traité Collaboration contre révolutionnaire sur la table : interdit, semi-bloqué)
+                sans: atelier.aScript(atelier.moi, "collaboration-contre-revolutionnaire")
+                    ? "le traité « Collaboration contre révolutionnaire » l'interdit"
+                    : null,
+            }),
             libelle: "Armer les rebelles : +1 aux Rebelles ce tour (3 ressources)",
         }),
 
@@ -3825,10 +3890,15 @@ export const SCRIPTS = [
                     actions: [
                         { type: "creer", ref: { type: "Promesse", id: 227 }, zone: "neutre:718:habilite:0", idLocal: local, marques: { valeur: 3 } },
                         { type: "creer", jeton: "marqueur", sur: local, proprio: atelier.moi },
-                        // (jeton de commerce : miseEnPlace.js, RESSOURCES.commerce ; dernier tour : 10)
-                        tour <= 10 && { type: "creer", jeton: "Commerce", zone: `joueur:${atelier.moi}:tour:${tour}`, marques: { montant: 5 }, proprio: atelier.moi },
+                        // (jeton de commerce : miseEnPlace.js, RESSOURCES.commerce ; dernier tour : 10 ;
+                        // achatDeVotes : le paiement que « Lutte contre la corruption » retire)
+                        tour <= 10 && { type: "creer", jeton: "Commerce", zone: `joueur:${atelier.moi}:tour:${tour}`, marques: { montant: 5, achatDeVotes: 1 }, proprio: atelier.moi },
                     ].filter(Boolean),
-                    sans: tour > 10 ? "le tour T+2 est après le dernier tour : les 5 commerce ne seront pas posés" : null,
+                    sans: [
+                        tour > 10 && "le tour T+2 est après le dernier tour : les 5 commerce ne seront pas posés",
+                        // (traité Lutte contre la corruption sur la table : vendre un Soutien politique est interdit)
+                        atelier.aScript(atelier.moi, "lutte-contre-la-corruption-en-jeu") && "le traité « Lutte contre la corruption » interdit de vendre un Soutien politique",
+                    ].filter(Boolean).join(" ; ") || null,
                     avis: `Achat de votes : un Soutien politique 3 est donné au Conclave ; 5 commerce vous attendent au tour ${tour}.`,
                 };
             },
@@ -3991,6 +4061,226 @@ export const SCRIPTS = [
     regle("ecologie-punitive", "Agenda", 310, 1795076851686, "Écologie punitive", "auto",
         "Ravitaillement automatique (début de la phase)",
         "Tant que le traité est sur la table, chaque planète rapporte 1 ressource de moins (3 pour une planète sauvage), sans descendre sous 0."),
+
+    // Agendas du 23 novembre. Une directive qui laisse un choix à chaque faction écrit ce qui lui
+    // revient dans un compteur du tour (resolutionsAgendas.js) ; le bouton de son plateau (resolution :
+    // en service même quand la carte est retirée du jeu) n'est montré que s'il lui reste quelque chose.
+    // Égalité entre factions (« la faction qui a le plus… ») : l'ordre du responsable du sénat (↑).
+    resolution("concours-scientifique", 314, 1795076851690, "Concours scientifique",
+        "Le type de technologie élu : chaque faction gagne autant de commerce que son niveau de connaissance de ce type plus ses planètes de cette spécialité. La faction en tête (à égalité : l'ordre du responsable du sénat) peut rendre ce commerce pour 3 points (bouton de son plateau). La carte est retirée du jeu."),
+    action("concours-scientifique-points", "Agenda", 314, 1795076851690, "Concours scientifique : 3 points", "plateau",
+        "Le tour de la directive, pour la faction en tête : elle rend le commerce que la directive lui a donné et gagne 3 points à la place (une fois).", {
+            resolution: true,
+            visible: outils => Number(outils.etat.compteurs[cleConcours(outils.etat.tour, outils.moi)]) > 0,
+            calcul: outils => ({
+                libelle: `Concours scientifique : 3 points au lieu de ${Number(outils.etat.compteurs[cleConcours(outils.etat.tour, outils.moi)]) || 0} commerce`,
+            }),
+            special: atelier => {
+
+                const cle = cleConcours(atelier.etat.tour, atelier.moi);
+                const recu = Number(atelier.etat.compteurs[cle]) || 0;
+                const commerce = atelier.compte(atelier.moi, "commerce");
+                const rendu = Math.min(recu, commerce);
+
+                return {
+                    actions: [
+                        rendu > 0 && { type: "compteur", id: `joueur:${atelier.moi}:commerce`, delta: -rendu },
+                        ...atelier.points(atelier.moi, 3),
+                        { type: "compteur", id: cle, valeur: 0 },
+                    ].filter(Boolean),
+                    sans: commerce < recu ? `vous n'avez plus que ${commerce} des ${recu} commerce reçus (seuls ceux-là seront rendus)` : null,
+                    avis: `Concours scientifique : ${rendu} commerce rendu(s), 3 points gagnés.`,
+                };
+            },
+        }),
+    resolution("mobilisation", 320, 1795076851694, "Mobilisation",
+        "Pour l'emporte : chaque faction pose d'office une de ses infanteries sur chaque planète qu'elle possède sur la carte (à retirer à la main si elle n'en veut pas). La carte est retirée du jeu."),
+    resolution("recrutement-disponible", 330, 1795076851702, "Recrutement disponible",
+        "On ne vote que Pour : chaque voix d'une faction lui permet de poser une infanterie sur une planète où elle a une structure (bouton de son plateau, ce tour). La carte est retirée du jeu."),
+    action("recrutement-disponible-infanterie", "Agenda", 330, 1795076851702, "Recrutement disponible", "plateau",
+        "Le tour de la directive, pour chaque faction qui a voté pour : autant d'infanteries que ses voix, posées sur des planètes où elle a une structure (en une ou plusieurs fois).", {
+            resolution: true,
+            visible: outils => resteRecrutement(outils) > 0,
+            calcul: (outils, x) => {
+
+                const reste = resteRecrutement(outils);
+                const planetes = planetesAStructure(outils);
+
+                if (!planetes.length) {
+                    return { sans: "aucune planète de la carte où vous avez une structure" };
+                }
+
+                if (!outils.infanterie) {
+                    return { sans: "l'infanterie de votre faction est introuvable" };
+                }
+
+                if (x === undefined || x === null) {
+                    return { libelle: `Recrutement disponible : poser ${reste} infanterie${reste > 1 ? "s" : ""}` };
+                }
+
+                const [k, n] = x;
+                const planete = planetes[k - 1];
+
+                if (!planete) {
+                    return { sans: "choix invalide" };
+                }
+
+                const pose = Math.max(0, Math.min(n, reste));
+
+                return {
+                    actions: [
+                        ...Array.from({ length: pose }, () => ({ type: "creer", ref: { type: "unit", id: outils.infanterie }, zone: planete.zone, proprio: outils.moi })),
+                        { type: "compteur", id: cleRecrutementDisponible(outils.etat.tour, outils.moi), valeur: reste - pose },
+                    ],
+                    avis: `Recrutement disponible : ${pose} infanterie(s) sur ${planete.nom}${reste - pose ? ` (encore ${reste - pose} à poser)` : ""}.`,
+                };
+            },
+            demandes: [
+                {
+                    question: outils => "Recrutement disponible : sur quelle planète ?\n" +
+                        planetesAStructure(outils).map((p, k) => `${k + 1} = ${p.nom}`).join("\n"),
+                    max: () => 1,
+                },
+                {
+                    question: outils => `Recrutement disponible : combien d'infanteries sur cette planète (${resteRecrutement(outils)} au plus) ?`,
+                    max: outils => resteRecrutement(outils),
+                },
+            ],
+        }),
+    resolution("prime", 337, 1795076851707, "Prime",
+        "La faction élue est notée sur la carte (son marqueur), 12 commerce y sont posés, la carte va sur la table."),
+    regle("prime-en-jeu", "Agenda", 337, 1795076851707, "Prime : vaisseaux détruits", "auto",
+        "Combat : « Terminer le combat »",
+        "Tant que la loi est sur la table, chaque vaisseau de la faction élue détruit au combat (pas capturé) fait prendre 1 commerce de la carte à la faction qui l'a détruit ; vide, la carte est dépensée (retirée du jeu)."),
+    resolution("subvention-militaire", 342, 1795076851711, "Subvention militaire",
+        "Pour l'emporte : ce tour, chaque faction peut construire un vaisseau de coût 5 au plus dans son système natal (bouton de son plateau). La carte est retirée du jeu."),
+    action("subvention-militaire-vaisseau", "Agenda", 342, 1795076851711, "Subvention militaire", "plateau",
+        "Le tour de la directive, une fois par faction : un vaisseau de votre faction de coût 5 au plus (figurine de votre réserve) est posé, sans rien payer, dans l'espace de votre système natal.", {
+            resolution: true,
+            parTour: true,
+            visible: outils => Number(outils.etat.compteurs[cleSubventionMilitaire(outils.etat.tour)]) > 0 &&
+                Number(outils.etat.compteurs[`joueur:${outils.moi}:script:342`]) !== outils.etat.tour,
+            ...choixDansListe({
+                titre: "Subvention militaire : quel vaisseau construire ?",
+                options: vaisseauxSubventionnes,
+                libelle: (outils, u) => `${u.contenu.name} (coût ${Number(u.contenu.cout) || 0})` +
+                    (casesNatales(outils).length > 1 ? ` — ${outils.nomCase(u.numero)}` : ""),
+                vide: "aucun vaisseau de coût 5 au plus dans votre réserve, ou système natal introuvable sur la carte",
+                appliquer: (outils, u) => ({
+                    actions: [u.figurine
+                        ? { type: "deplacer", c: u.figurine.id, vers: "hex:" + u.numero }
+                        : { type: "creer", ref: { type: "unit", id: u.id }, zone: "hex:" + u.numero, proprio: outils.moi }],
+                    avis: `Subvention militaire : ${u.contenu.name} posé dans votre système natal.`,
+                }),
+            }),
+        }),
+    regle("premier-ministre", "Agenda", 223, 1795076851649, "Premier ministre", "auto",
+        "Onglet Vote : décompte des voix ; « Résoudre » d'un mandat",
+        "Pour la faction qui a le mandat : aux élections de ministres (les mandats), 2 voix de plus dans la colonne où elle a le plus de voix ; élue en ayant voté pour elle-même, la carte est dépensée à la résolution."),
+    action("conseil-de-censure", "Agenda", 308, 1795076851685, "Conseil de censure", "plateau",
+        "Phase de mandat, pour la faction qui a le mandat : la carte et 2 politiques sont usés, une loi de l'agenda du tour est retirée du jeu (les cartes révélées à côté d'elle retournent à leur défausse).", {
+            phase: "mandat",
+            ...choixDansListe({
+                titre: "Conseil de censure : quelle loi retirer de l'agenda ?",
+                options: agendaDuTour,
+                libelle: (outils, carte) => outils.nom(carte.ref),
+                vide: "l'agenda du tour est vide",
+                appliquer: (outils, carte) => ({
+                    actions: [{ type: "deplacer", c: carte.id, vers: "horsJeu" }, ...defausserLesRevelees(outils.index, carte)],
+                    avis: `Conseil de censure : « ${outils.nom(carte.ref)} » est retirée de l'agenda.`,
+                }),
+            }),
+            special: atelier => {
+
+                const carte = mandatDe(atelier.index, atelier.moi, 308);
+                const politiques = mesPolitiques(atelier).slice(0, 2);
+
+                return {
+                    actions: [
+                        ...(carte && !atelier.usee(carte) ? atelier.user(carte) : []),
+                        ...politiques.map(x => ({ type: "deplacer", c: x.id, vers: `joueur:${atelier.moi}:agentsUses` })),
+                    ],
+                    sans: [
+                        carte && atelier.usee(carte) && "la carte est déjà usée",
+                        politiques.length < 2 && `il faut 2 politiques disponibles, vous en avez ${politiques.length} (seuls ceux-là seront usés)`,
+                    ].filter(Boolean).join(" ; ") || null,
+                };
+            },
+            libelle: "Conseil de censure : retirer une loi de l'agenda (use la carte et 2 politiques)",
+        }),
+    action("ministre-de-la-defense-retrait", "Agenda", 323, 1795076851697, "Ministre de la défense : retrait", "plateau",
+        "Début de la phase de mandat, pour la faction qui a le mandat : les Cuirassés impériaux posés sur la carte avant ce tour sont retirés.", {
+            phase: "mandat",
+            visible: outils => anciensCuirassesImperiaux(outils.etat).length > 0,
+            special: atelier => {
+
+                const anciens = anciensCuirassesImperiaux(atelier.etat);
+
+                return {
+                    actions: anciens.map(x => ({ type: "supprimer", c: x.id })),
+                    avis: `Ministre de la défense : ${anciens.length} Cuirassé(s) impérial(aux) retiré(s) de la carte.`,
+                };
+            },
+            libelle: "Ministre de la défense : retirer les Cuirassés impériaux de la carte",
+        }),
+    action("ministre-de-la-defense-placement", "Agenda", 323, 1795076851697, "Ministre de la défense : placement", "systeme",
+        "Phase de mandat, pour la faction qui a le mandat : use un politique, un Cuirassé impérial (neutre) est posé dans l'espace de ce système. Semi-bloqué tant que ceux des tours précédents sont encore sur la carte.", {
+            phase: "mandat",
+            agent: POLITIQUE,
+            special: atelier => {
+
+                const anciens = anciensCuirassesImperiaux(atelier.etat);
+
+                return {
+                    actions: atelier.numero === null ? [] : [{
+                        type: "creer", ref: { type: "unit", id: CUIRASSE_IMPERIAL }, zone: "hex:" + atelier.numero,
+                        marques: { ministreDefense: atelier.etat.tour },
+                    }],
+                    sans: [
+                        atelier.numero === null && "système introuvable",
+                        anciens.length > 0 && `${anciens.length} Cuirassé(s) impérial(aux) des tours précédents encore sur la carte (bouton « Ministre de la défense : retrait » du plateau)`,
+                    ].filter(Boolean).join(" ; ") || null,
+                    avis: "Ministre de la défense : un Cuirassé impérial est posé dans ce système.",
+                };
+            },
+            libelle: "Ministre de la défense : poser un Cuirassé impérial ici (use un politique)",
+        }),
+    regle("chef-du-senat", "Agenda", 328, 1795076851701, "Chef du sénat", "modifie",
+        "Phase de proposition : ajouter une loi à l'agenda",
+        "Pour la faction qui a le mandat : ajouter une loi à l'agenda n'use pas de politique."),
+    regle("protection-du-commerce", "Agenda", 348, 1795076851716, "Protection du commerce", "modifie",
+        "Conflit : « Engager », « Cibler »",
+        "Tant que le traité est sur la table, engager ou cibler des vaisseaux de commerce non militaires est semi-bloqué."),
+    regle("collaboration-contre-revolutionnaire", "Agenda", 564, 1795072921283, "Collaboration contre révolutionnaire", "modifie",
+        "Plateau joueur : « Armer les rebelles »",
+        "Tant que le traité est sur la table, armer les rebelles est semi-bloqué."),
+    resolution("lutte-contre-la-corruption", 717, 1794339608763, "Lutte contre la corruption",
+        "Traité adopté : sur la table, et les Soutiens politiques du Conclave sont annulés (retour à la réserve des promesses, sans leur marqueur ; le paiement de 5 commerce de chaque vente est retiré) ; rejeté : retiré du jeu."),
+    regle("lutte-contre-la-corruption-en-jeu", "Agenda", 717, 1794339608763, "Lutte contre la corruption : vente", "modifie",
+        "Bandeau : « Achat de votes » ; transactions",
+        "Tant que le traité est sur la table, vendre un Soutien politique (Achat de votes, transaction qui le cède) est semi-bloqué."),
+    resolution("ouverture-bureau-des-mercenaires", 726, 1795046343866, "Ouverture bureau des mercenaires",
+        "Pour l'emporte : la loi va sur la table, sinon elle est retirée du jeu."),
+    action("ouverture-bureau-des-mercenaires-milicien", "Agenda", 726, 1795046343866, "Bureau des mercenaires : Milicien", "bandeau",
+        "Diplomatie, tant que la loi est sur la table : use un diplomate et dépensez 2 ressources, un Milicien mercenaire (à vous) est posé sur Mecatol Rex.", {
+            phase: "diplomatie",
+            agent: DIPLOMATE,
+            cout: { res: 2 },
+            visible: outils => /diplomatie/i.test(outils.phase),
+            special: atelier => {
+
+                const zone = atelier.zonesDePlanete(MECATOL_REX)[0] || null;
+
+                return {
+                    actions: zone ? [{ type: "creer", ref: { type: "unit", id: MILICIEN_MERCENAIRE }, zone, proprio: atelier.moi }] : [],
+                    sans: zone ? null : "Mecatol Rex n'est pas sur la carte : le Milicien mercenaire est à poser à la main",
+                    avis: zone ? "Bureau des mercenaires : un Milicien mercenaire est posé sur Mecatol Rex." : "",
+                };
+            },
+            libelle: "Bureau des mercenaires : un Milicien mercenaire sur Mecatol Rex (use un diplomate, 2 ressources)",
+        }),
+    resolution("soutien-au-conclave", 727, 1795068635391, "Soutien au conclave",
+        "Une faveur du Conclave à chaque faction qui a mis au moins 3 voix Pour, une autre à celle qui en a mis le plus (à égalité : l'ordre du responsable du sénat). Pour l'emporte : la carte va sur la table, à côté du Conclave (qui lance alors 3D10 votes) ; sinon elle est retirée du jeu."),
 ];
 
 // Script de résolution d'une loi ou d'une directive (son code : resolutionsAgendas.js)

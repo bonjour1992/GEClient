@@ -8,7 +8,7 @@ import { resistanceDe, victimesBombe, estSoleilDeGuerre, faceDe } from "./effets
 import { CombatResolu } from "./CombatResolu";
 import { Sauvetage } from "./Sauvetage";
 import { MARQUEUR, ACTIVATION, DETTE, FRAGMENTS, NEUTRE, RESSOURCES, actionsPiste, typeUnite, campDe, aMot } from "./miseEnPlace";
-import { promessesTenues, actionsRendrePromesse, REDEVANCE_DE_PROTECTION } from "./effetsBlocage";
+import { promessesTenues, actionsRendrePromesse, REDEVANCE_DE_PROTECTION, estCommerceNonMilitaire } from "./effetsBlocage";
 
 // Promesse Vassal : la carte est chez le suzerain, avec le marqueur du vassal
 const VASSAL = 224;
@@ -19,7 +19,7 @@ import { Blocages } from "./Blocage";
 import { BlocagesAction, demanderBlocage } from "./BlocageAction";
 import { estBloquee, lieuDe, MARQUE_AGI } from "./regleBlocage";
 import { rangDePhase } from "./regleControle";
-import { caseDemilitarisee } from "./agendasEnJeu";
+import { caseDemilitarisee, primeEnJeu, partagePrime } from "./agendasEnJeu";
 import {
     Controles, demanderControleSysteme, evaluerControle, unitesDuControle, ESPACE_CONTROLE,
     actionsOuvrirDomination, resultatDomination, cleRecuperation, actionsPossessionPerdue,
@@ -596,6 +596,17 @@ function CombatSysteme({ lieu }) {
 
         const militaires = code === "N" ? "n" : (code[0] === "J" ? "j" + code.slice(1) : null);
         const campVise = code === "N" ? NEUTRE : Number(code.slice(1));
+
+        // Traité Protection du commerce (#348) sur la table : détruire des vaisseaux de commerce non
+        // militaires est interdit — engager les non-militaires d'un camp qui en a, ou cibler l'un d'eux
+        const commerceVise = code.startsWith("@")
+            ? [parId[code.slice(1)]].filter(Boolean)
+            : (code === "N" || code[0] === "J" ? vaisseaux.filter(v => v.camp === campVise && v.cible && !v.militaire) : []);
+
+        if (aScript(moi, "protection-du-commerce") && commerceVise.some(v => estCommerceNonMilitaire(v.u)) &&
+            !confirmerRegle(`Engager ${libelle(code)}`, ["Protection du commerce (traité) : il est interdit de détruire des vaisseaux de commerce non militaires"])) {
+            return;
+        }
 
         // Raid : des unités militaires autres que des infanteries défendent la planète — il faut cibler
         if (sorte === "raid" && !code.startsWith("@") && unitesDe(zone).some(c => campDe(c) === campVise &&
@@ -1992,6 +2003,21 @@ function CombatSysteme({ lieu }) {
         const detruites = aRetirer.filter(v => !contaminee(v));
         const butins = detruites.map(butinDe).filter(Boolean).map(b => b.texte);
 
+        // Loi Prime (#337) sur la table : chaque vaisseau de la faction élue détruit (pas capturé) fait
+        // prendre 1 commerce de la carte à la faction qui l'a détruit ; vide, la carte est dépensée
+        const prime = aScript(moi, "prime-en-jeu") ? primeEnJeu(etat, index) : null;
+
+        const destructeursPrime = prime?.elu && prime.reste > 0
+            ? detruites.filter(v => v.camp === prime.elu && estVaisseau(v) && captureePar(v) === null)
+                .map(v => auteurDesDegats(v.c))
+                .filter(camp => ![null, NEUTRE, prime.elu].includes(camp))
+            : [];
+
+        const partPrime = destructeursPrime.length ? partagePrime(etat, prime, destructeursPrime) : null;
+
+        const textePrime = partPrime && `Prime : ${[...partPrime.gains].map(([camp, n]) => `${nomCamp(camp)} +${n} commerce`).join(", ")}` +
+            (partPrime.vide ? " (la carte est vide : dépensée)" : "");
+
         // (pas de décision à confirmer : « Terminer le combat » le termine ; seule une règle qui s'y
         //  oppose demande la confirmation des éléments semi-bloqués)
         const commentaire = obstacles.some(Boolean)
@@ -2038,6 +2064,8 @@ function CombatSysteme({ lieu }) {
                 ...actionsPiste(etat, u, "points", 1),
                 { type: "compteur", id: `joueur:${u}:quetzalcoalt`, valeur: etat.tour },
             ]),
+            // Prime : le commerce pris sur la carte (agendasEnJeu.js)
+            ...(partPrime?.actions || []),
             // Bombe bactériologique (#1016, « #spend : #bomb ») : elle est dépensée quand elle a bombardé
             ...unites.filter(c => c.ref.id === 1016 && c.marques?.bombarde === CE_COMBAT && !aRetirer.some(v => v.id === c.id))
                 .map(c => ({ type: "supprimer", c: c.id })),
@@ -2057,6 +2085,7 @@ function CombatSysteme({ lieu }) {
             commentaire,
             detruites.length > 0 && `${detruites.length} unité(s) détruite(s) retirée(s)`,
             quetzalcoalts.length > 0 && `Quetzalcoalt : +1 point pour ${quetzalcoalts.map(nomDe).join(", ")}`,
+            textePrime,
             transformees.length > 0 && `Contamination : ${transformees.length} unité(s) transformée(s) en Infanterie infectée de ${nomDe(contaminateur)}`,
             ...butins,
             gain && `Récupération : +${epaves} ressource(s) pour ${cochees.map(nomDe).join(", ")}`,
@@ -2069,8 +2098,8 @@ function CombatSysteme({ lieu }) {
                 : "Récupération : d'autres peuvent s'y opposer, un test de contrôle est ouvert (onglet Conflit, « Conflits de contrôle »).");
         }
 
-        if (butins.length) {
-            aviser(butins.join(" ; "));
+        if (butins.length || textePrime) {
+            aviser([...butins, textePrime].filter(Boolean).join(" ; "));
         }
     }
 

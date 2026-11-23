@@ -45,6 +45,10 @@ const INFINI = "infini";
 export const SOUTIEN_POLITIQUE = 227;
 const VALEUR_SOUTIEN_MAX = 10;
 
+// Traité Lutte contre la corruption (#717) sur la table : vendre un Soutien politique est interdit
+// (règle semi-bloquante : la transaction reste applicable après confirmation)
+const CORRUPTION = "Lutte contre la corruption (traité) : il est interdit de vendre ses Soutiens politiques";
+
 // Cartes qu'une transaction peut faire donner : [type, titre du groupe]
 const TYPES_CARTES = [
     ["relique", "Reliques"],
@@ -142,6 +146,7 @@ export function Transactions({ nouvelle }) {
                 // (la réserve des promesses de base est infinie : la carte de la réserve sert de modèle)
                 obstacle: !carte?.ref ? "la promesse est introuvable"
                     : (soutien && !(Number(m.valeur) > 0) ? "le Soutien politique n'a pas de valeur : refusez la transaction et proposez-la de nouveau" : null),
+                regles: soutien && aScript(Number(m.autre), "lutte-contre-la-corruption-en-jeu") ? [CORRUPTION] : [],
             };
         }
 
@@ -167,12 +172,17 @@ export function Transactions({ nouvelle }) {
                 texte: `${nomDe(donneur)} donne la carte « ${nomElement(search, { type: m.carteType, id: Number(m.carteId) })} » à ${nomDe(Number(m.a))}` +
                     " (vérifié à l'application)",
                 obstacle: null,
-                regles: !mandat ? [] : [
-                    !(index.parZone.get(`joueur:${donneur}:actif`) || []).some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 34) &&
-                        `Mandat : ${nomDe(donneur)} ne contrôle pas Mecatol Rex`,
-                    !!t && t.entete.proprio !== donneur &&
-                        `Mandat : seuls les diplomates de ${nomDe(donneur)} fournissent un mandat (la transaction doit être proposée par lui)`,
-                    dejaUn && `Mandat : ${nomDe(Number(m.a))} a déjà un mandat`,
+                regles: [
+                    ...(!mandat ? [] : [
+                        !(index.parZone.get(`joueur:${donneur}:actif`) || []).some(c => !c.cache && c.ref?.type === "planet" && c.ref.id === 34) &&
+                            `Mandat : ${nomDe(donneur)} ne contrôle pas Mecatol Rex`,
+                        !!t && t.entete.proprio !== donneur &&
+                            `Mandat : seuls les diplomates de ${nomDe(donneur)} fournissent un mandat (la transaction doit être proposée par lui)`,
+                        dejaUn && `Mandat : ${nomDe(Number(m.a))} a déjà un mandat`,
+                    ]),
+                    // (un Soutien politique donné : vendu)
+                    m.carteType === "Promesse" && Number(m.carteId) === SOUTIEN_POLITIQUE &&
+                        aScript(donneur, "lutte-contre-la-corruption-en-jeu") && CORRUPTION,
                 ].filter(Boolean),
             };
         }

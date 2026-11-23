@@ -5,11 +5,12 @@ import { MARQUEUR, CUBES } from "./miseEnPlace";
 import { demander } from "./demande";
 import { COLONNES_VOTE, COULEURS_COLONNES, joueurDeColonne } from "./voteCouleurs";
 import { AnnexesDeLoi, useOptionsDesLois } from "./Agendas";
-import { contenuEnCache } from "./sync";
+import { contenuEnCache, useElements } from "./sync";
 import {
     estValide, optionsDeLigne, resolutionAutomatique, cleResolution, VERS_TABLE,
 } from "./optionsVote";
-import { RESOLUTIONS } from "./resolutionsAgendas";
+import { RESOLUTIONS, premierMinistreDepense } from "./resolutionsAgendas";
+import { PREMIER_MINISTRE, mandatDe } from "./agendasEnJeu";
 import { SOUTIEN_POLITIQUE } from "./Transaction";
 import { estPhaseDeVote } from "./etat";
 
@@ -144,9 +145,26 @@ const LIGNES_PLATEAU = 6;
 // résolution (RESOLUTIONS), sinon bouton indisponible. La carte change de place à la
 // fin de la phase de vote (compteur agenda:<tour>:<loi>:resolution, Partie.jsx).
 // ------------------------------------------------------------
-function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
+//   senat : le responsable du sénat — il départage les factions à égalité (boutons ↑, resultat.departage)
+function Resolution({ loi, carte, options, votes, joueurs, ouverte, senat }) {
 
-    const { etat, index, envoyer, joueur, search, nomDe, aScript, moi } = useEngine();
+    const { etat, index, envoyer, joueur, search, nomDe, aScript, moi, connaissance, factionDe } = useEngine();
+
+    // Contenus que lisent certains scripts de résolution, chargés d'avance : les planètes possédées
+    // (Concours scientifique : leur spécialité), les feuilles de faction et leurs unités
+    // (Mobilisation : l'infanterie de chaque faction)
+    const idAgenda = carte && !carte.cache ? carte.ref?.id ?? null : null;
+
+    const planetesPossedees = idAgenda === 314
+        ? joueurs.flatMap(j => (index.parZone.get(`joueur:${j.userId}:actif`) || []).filter(c => !c.cache && c.ref?.type === "planet").map(c => c.ref.id))
+        : [];
+
+    const feuilles = useElements(idAgenda === 320 ? joueurs.map(j => Number(factionDe(j.userId))).filter(id => id > 0).sort((a, b) => a - b) : []);
+
+    useElements([...new Set([
+        ...planetesPossedees,
+        ...Object.values(feuilles).flatMap(f => (f?.units || []).map(lien => Number(lien?.id))),
+    ])].filter(id => id > 0).sort((a, b) => a - b));
 
     if (!carte || carte.cache || !carte.ref) {
         return null;
@@ -207,35 +225,78 @@ function Resolution({ loi, carte, options, votes, joueurs, ouverte }) {
     }
 
     if (auto) {
+
+        // Premier ministre (#223) : son détenteur, élu ministre en ayant voté pour lui-même, dépense la carte
+        const ministre = auto.code > 0
+            ? premierMinistreDepense({ index, joueurs, votes, loi, elu: auto.code, aScript })
+            : { actions: [], texte: "" };
+
+        const texte = auto.texte + (ministre.texte ? ` — ${ministre.texte}` : "");
+
         return (
             <BoutonRegle
                 data-action="resoudre-loi"
-                nom={`Loi ${loi} « ${nomLoi} » : ${auto.texte}`}
+                nom={`Loi ${loi} « ${nomLoi} » : ${texte}`}
                 obstacles={auto.obstacles}
-                faire={commentaire => envoyer([{ type: "compteur", id: cle, valeur: auto.code }], commentaire + " (à la fin de la phase de vote)")}
+                faire={commentaire => envoyer([...ministre.actions, { type: "compteur", id: cle, valeur: auto.code }], commentaire + " (à la fin de la phase de vote)")}
                 title="La carte change de place à la fin de la phase de vote"
                 style={{ alignSelf: "flex-start" }}
             >
-                Résoudre : {auto.texte}
+                Résoudre : {texte}
             </BoutonRegle>
         );
     }
 
     // Script de résolution : l'effet tout de suite, la carte à sa place à la fin de la phase de vote
-    const resultat = script.resoudre({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom: ref => nomElement(search, ref), contenuDe: contenuEnCache });
+    const resultat = script.resoudre({
+        etat, index, joueurs, votes, loi, carte, options, nomDe, nom: ref => nomElement(search, ref), contenuDe: contenuEnCache,
+        connaissance, factionDe,
+    });
+
+    // Factions à égalité et leur rang (le plus grand passe devant) ; celle qui est en tête, une fois
+    // départagées ; un clic sur ↑ la fait passer devant toutes les autres
+    const departage = resultat.departage || [];
+    const rang = d => Number(etat.compteurs[d.cle]) || 0;
+    const rangMax = Math.max(0, ...departage.map(rang));
+    const tete = departage.find(d => d.enTete && departage.every(x => x === d || rang(x) < rang(d))) || null;
 
     return (
-        <BoutonRegle
-            data-action="resoudre-loi"
-            data-resolution-script={script.script}
-            nom={`Loi ${loi} « ${nomLoi} » : ${resultat.texte}`}
-            obstacles={(resultat.obstacles || []).filter(Boolean)}
-            faire={commentaire => envoyer([...resultat.actions, { type: "compteur", id: cle, valeur: resultat.code }], commentaire)}
-            title="L'effet est appliqué tout de suite ; la carte change de place à la fin de la phase de vote"
-            style={{ alignSelf: "flex-start" }}
-        >
-            Résoudre : {resultat.texte}
-        </BoutonRegle>
+        <>
+            <BoutonRegle
+                data-action="resoudre-loi"
+                data-resolution-script={script.script}
+                nom={`Loi ${loi} « ${nomLoi} » : ${resultat.texte}`}
+                obstacles={(resultat.obstacles || []).filter(Boolean)}
+                faire={commentaire => envoyer([...resultat.actions, { type: "compteur", id: cle, valeur: resultat.code }], commentaire)}
+                title="L'effet est appliqué tout de suite ; la carte change de place à la fin de la phase de vote"
+                style={{ alignSelf: "flex-start" }}
+            >
+                Résoudre : {resultat.texte}
+            </BoutonRegle>
+
+            {/* Factions à égalité (« la faction qui a le plus… ») : il n'y a pas d'ex æquo, le
+                responsable du sénat les ordonne — celle qu'il fait passer devant l'emporte */}
+            {departage.length > 0 && (
+                <div data-departage-factions={loi} style={{ fontSize: 12 }}>
+                    Égalité entre {departage.map(d => d.nom).join(", ")} :{" "}
+                    {moi === senat ? "faites passer une faction devant" : `le responsable du sénat${senat ? ` (${nomDe(senat)})` : ""} les départage`}
+                    {tete ? ` — en tête : ${tete.nom}` : ""}
+                    {moi === senat && departage.map(d => (
+                        <button
+                            key={d.userId}
+                            type="button"
+                            data-departage-faction={d.userId}
+                            disabled={d === tete}
+                            title="Responsable du sénat : faire passer cette faction devant ses ex æquo"
+                            style={{ ...styleMini, marginLeft: 4 }}
+                            onClick={() => envoyer([{ type: "compteur", id: d.cle, valeur: rangMax + 1 }], "")}
+                        >
+                            ↑ {d.nom}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </>
     );
 }
 const styleMini = { fontSize: 11, padding: "0 4px" };
@@ -325,10 +386,21 @@ export function decompteVotes({ etat, index, joueurs, search, aScript }) {
         ? joueurs.filter(j => j.userId !== u && majoritaire(loi, j.userId) === col).length
         : 0);
 
+    // Premier ministre (#223, mandat) : à l'élection d'un ministre (une loi qui est un mandat), son
+    // détenteur a 2 voix de plus, dans la colonne de son vote majoritaire
+    const estMandat = loi => {
+        const carte = (index.parZone.get("general:agenda:" + tour) || [])[loi - 1];
+        return !!carte && !carte.cache && contenuEnCache(carte.ref?.id)?.type === "mand";
+    };
+
+    const premierMinistre = (loi, col, u) => (aScript?.(u, "premier-ministre") && mandatDe(index, u, PREMIER_MINISTRE) &&
+        estMandat(loi) && majoritaire(loi, u) === col ? 2 : 0);
+
     // Bonus des scripts sur les voix d'un joueur : [[n, nom]…]
     const bonus = (loi, col, u) => [
         conspire(loi, col, u) > 0 && [conspire(loi, col, u), "Conspirer ensemble"],
         ilyaneVorsk(loi, col, u) > 0 && [ilyaneVorsk(loi, col, u), "Ilyane Vorsk"],
+        premierMinistre(loi, col, u) > 0 && [premierMinistre(loi, col, u), "Premier ministre"],
     ].filter(Boolean);
 
     const voix = (loi, col, u) => propres(loi, col, u) + bonus(loi, col, u).reduce((s, [n]) => s + n, 0);
@@ -809,6 +881,7 @@ function Decompte({ lois }) {
                             votes={votes}
                             joueurs={joueurs}
                             ouverte={enVote && caches.length === 0}
+                            senat={senat}
                         />
                         </div>
                     );

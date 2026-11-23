@@ -1,7 +1,11 @@
 import { CONTRE, POUR, estValide, resultatLoi, cleResolution, VERS_HORS_JEU, VERS_TABLE } from "./optionsVote.js";
 import { COLONNES_VOTE, joueurDeColonne } from "./voteCouleurs.js";
 import { actionsPiste, MARQUEUR } from "./etat.js";
-import { MONUMENT_ETERNEL, ORIENTATIONS, TROU_DE_VER_BETA, sansAccents } from "./agendasEnJeu.js";
+import { FAVEUR, RESSOURCES, typeUnite } from "./miseEnPlace.js";
+import {
+    CONCLAVE, MONUMENT_ETERNEL, ORIENTATIONS, PREMIER_MINISTRE, SOUTIEN_POLITIQUE, TROU_DE_VER_BETA,
+    mandatDe, sansAccents, zoneDePlanete,
+} from "./agendasEnJeu.js";
 
 // ============================================================
 // SCRIPTS DE RÉSOLUTION DES LOIS ET DIRECTIVES
@@ -17,8 +21,11 @@ import { MONUMENT_ETERNEL, ORIENTATIONS, TROU_DE_VER_BETA, sansAccents } from ".
 //
 //   id de l'agenda -> { script, resoudre, remplaceAuto }
 //     script    id du script (scripts.js : désactivable dans l'outil « Scripts de règles »)
-//     resoudre  ({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom, contenuDe }) ->
-//               { code, texte, actions, obstacles }
+//     resoudre  ({ etat, index, joueurs, votes, loi, carte, options, nomDe, nom, contenuDe,
+//               connaissance, factionDe }) -> { code, texte, actions, obstacles, departage }
+//               departage : factions à égalité, que le responsable du sénat ordonne (boutons ↑
+//               sous « Résoudre » : compteurs agenda:<tour>:<loi>:rang:<u>) — [{ userId, nom,
+//               cle, enTete }] ; tant qu'il ne l'a pas fait, un obstacle le dit
 //     remplaceAuto  un traité (ou un mandat) dont le script remplace la résolution
 //               générale : il dit lui-même où va la carte (Zone démilitarisée,
 //               Monument suprême : ce qui est élu est écrit sur la carte)
@@ -158,6 +165,105 @@ const agendasEnJeu = index => [...index.parZone]
     .filter(([zone]) => zone === "general:table" || /^joueur:\d+:(actif|tour:\d+)$/.test(zone))
     .flatMap(([, contenu]) => contenu.filter(c => !c.cache && c.ref?.type === "Agenda"));
 
+// Les 4 types de technologie de base, dans l'ordre des colonnes 1 à 4 (optionsVote.js)
+const TYPES_TECHNOLOGIE = ["gen", "spa", "mil", "soc"];
+
+// Rang donné par le responsable du sénat à une faction pour cette loi (bouton ↑ sous « Résoudre ») :
+// entre factions à égalité, le plus grand passe devant — il n'y a pas d'ex æquo
+export const cleRang = (tour, loi, u) => `agenda:${tour}:${loi}:rang:${u}`;
+
+// Faction en tête d'une liste [{ j, n }] (le plus grand n, s'il dépasse 0) ; à égalité, l'ordre du
+// responsable du sénat -> { premier, egales, nonDepartagees } — egales : les factions de tête à
+// égalité, dans son ordre ([] s'il n'y a pas d'égalité) ; nonDepartagees : celles qu'il n'a pas
+// encore ordonnées entre elles
+function enTete(etat, loi, liste) {
+
+    const rang = x => Number(etat.compteurs[cleRang(etat.tour, loi, x.j.userId)]) || 0;
+    const max = Math.max(0, ...liste.map(x => x.n));
+    const tete = max > 0 ? liste.filter(x => x.n === max).sort((a, b) => rang(b) - rang(a)) : [];
+    const exAequo = tete.filter(x => rang(x) === rang(tete[0]));
+
+    return {
+        premier: tete[0] || null,
+        egales: tete.length > 1 ? tete.map(x => x.j) : [],
+        nonDepartagees: exAequo.length > 1 ? exAequo.map(x => x.j) : [],
+    };
+}
+
+// Boutons de départage (compteur de rang de chaque faction à égalité, dans l'ordre du responsable
+// du sénat ; enTete : celle qui passe devant) et obstacle tant qu'il manque
+const departageDe = (etat, loi, factions, premier) => factions.map(j => ({
+    userId: j.userId,
+    nom: j.nom,
+    cle: cleRang(etat.tour, loi, j.userId),
+    enTete: !!premier && premier.j.userId === j.userId,
+}));
+const egaliteEntreFactions = factions => factions.length > 1 &&
+    `égalité entre ${factions.map(j => j.nom).join(" et ")} : le responsable du sénat les départage (↑ sous « Résoudre »)`;
+
+// Infanterie d'une faction : celle de sa feuille de faction, sinon une de ses infanteries en jeu ; ou null
+const infanterieDe = ({ etat, factionDe, contenuDe }, u) =>
+    (contenuDe?.(factionDe?.(u))?.units || []).map(lien => Number(lien?.id))
+        .find(id => id > 0 && typeUnite(contenuDe(id)) === "inf") ??
+    Object.values(etat.composants).find(x => !x.cache && x.ref?.type === "unit" && x.proprio === u &&
+        typeUnite(contenuDe?.(x.ref.id)) === "inf")?.ref.id ?? null;
+
+// Recrutement disponible (#330) : infanteries qu'une faction peut encore poser ce tour
+export const cleRecrutementDisponible = (tour, u) => `agenda:${tour}:recrutement:${u}`;
+
+// Concours scientifique (#314) : commerce reçu par la faction en tête, qui peut le rendre pour 3 points
+export const cleConcours = (tour, u) => `agenda:${tour}:concours:${u}`;
+
+// Subvention militaire (#342) adoptée ce tour : chaque faction peut construire un vaisseau
+export const cleSubventionMilitaire = tour => `agenda:${tour}:subvention-militaire`;
+
+// Soutiens politiques du Conclave (posés sur son habilité par « Achat de votes ») annulés : chacun
+// retourne à la réserve des promesses, sans son marqueur ; le paiement de 5 commerce de son vendeur
+// (jeton sur une case de tour à venir de son déroulé) est retiré -> { actions, soutiens, paiements }
+function annulationDesSoutiensDuConclave(etat) {
+
+    const tous = Object.values(etat.composants);
+    const soutiens = tous.filter(x => !x.cache && x.ref?.type === "Promesse" && x.ref.id === SOUTIEN_POLITIQUE &&
+        new RegExp(`^neutre:${CONCLAVE}:`).test(x.zone || ""));
+
+    const retires = new Set();
+    const actions = [];
+
+    for (const soutien of soutiens) {
+
+        const marqueurs = tous.filter(m => m.sur === soutien.id && !m.ref && m.jeton === MARQUEUR);
+        const vendeur = marqueurs.find(m => m.proprio > 0)?.proprio ?? null;
+        const tourDe = x => Number(new RegExp(`^joueur:${vendeur}:tour:(\\d+)$`).exec(x.zone || "")?.[1]) || 0;
+
+        const paiements = vendeur === null ? [] : tous.filter(x => !x.ref && x.jeton === RESSOURCES.commerce[0] && !retires.has(x.id) &&
+            tourDe(x) >= etat.tour && Number(x.marques?.montant) === 5);
+        const paiement = paiements.find(x => x.marques?.achatDeVotes) || paiements[0] || null;
+
+        actions.push(...marqueurs.map(m => ({ type: "supprimer", c: m.id })), { type: "deplacer", c: soutien.id, vers: "general:promesses" });
+
+        if (paiement) {
+            retires.add(paiement.id);
+            actions.push({ type: "supprimer", c: paiement.id });
+        }
+    }
+
+    return { actions, soutiens: soutiens.length, paiements: retires.size };
+}
+
+// Premier ministre (#223, mandat) : à l'élection d'un ministre (résolution d'un mandat), son
+// détenteur élu après avoir voté pour lui-même (sa colonne est celle où il a le plus de voix)
+// dépense la carte -> { actions, texte } (vides sinon)
+//   elu : le joueur élu ; aScript(joueur, id) : script en service
+export function premierMinistreDepense({ index, joueurs, votes, loi, elu, aScript }) {
+
+    const carte = elu > 0 && aScript?.(elu, "premier-ministre") ? mandatDe(index, elu, PREMIER_MINISTRE) : null;
+    const colonne = carte ? COLONNES_VOTE.findIndex((_, col) => joueurDeColonne(joueurs, col)?.userId === elu) : -1;
+
+    return carte && colonne >= 0 && votes.majoritaire?.(loi, elu) === colonne
+        ? { actions: [{ type: "deplacer", c: carte.id, vers: "horsJeu" }], texte: "Premier ministre dépensé (élu en votant pour lui-même)" }
+        : { actions: [], texte: "" };
+}
+
 export const RESOLUTIONS = {
 
     // Pardon (#305) : l'infamie de chaque faction revient à 0
@@ -252,6 +358,53 @@ export const RESOLUTIONS = {
         },
     },
 
+    // Concours scientifique (#314) : le type de technologie élu (colonnes 1 à 4 : génétique, spatiale,
+    // militaire, sociale) — chaque faction gagne autant de commerce que son niveau de connaissance de ce
+    // type, plus 1 par planète possédée de cette spécialité. La faction en tête (à égalité : l'ordre du
+    // responsable du sénat) peut prendre 3 points à la place : bouton « Concours scientifique » de son
+    // plateau (compteur cleConcours = le commerce qu'elle a reçu).
+    314: {
+        script: "concours-scientifique",
+        resoudre: ctx => {
+            const { etat, index, joueurs, options, votes, loi, connaissance, contenuDe } = ctx;
+            const { gagnant, egalite } = resultatLoi(options, votes, loi);
+            const type = gagnant !== null && gagnant >= 2 ? TYPES_TECHNOLOGIE[gagnant - 2] ?? null : null;
+
+            if (!type) {
+                return { code: VERS_HORS_JEU, texte: "aucun type de technologie élu : sans effet", actions: [], obstacles: [egaliteNonDepartagee(egalite)] };
+            }
+
+            const planetes = u => (index.parZone.get(`joueur:${u}:actif`) || []).filter(c => !c.cache && c.ref?.type === "planet");
+            const nonChargees = joueurs.flatMap(j => planetes(j.userId)).filter(c => !contenuDe?.(c.ref.id));
+
+            const gains = joueurs.map(j => ({
+                j,
+                n: (Number(connaissance?.(j.userId, type)) || 0) +
+                    planetes(j.userId).filter(c => (contenuDe?.(c.ref.id)?.techSpe || []).includes(type)).length,
+            }));
+
+            const { premier, egales, nonDepartagees } = enTete(etat, loi, gains);
+            const gagnants = gains.filter(x => x.n > 0);
+
+            return {
+                code: VERS_HORS_JEU,
+                texte: `${options?.libelles?.[gagnant] || type} : ` +
+                    (gagnants.length ? gagnants.map(x => `${x.j.nom} +${x.n} commerce`).join(", ") : "personne ne gagne de commerce") +
+                    (premier ? ` ; ${premier.j.nom}, en tête, peut prendre 3 points à la place (bouton « Concours scientifique » de son plateau)` : ""),
+                actions: [
+                    ...gagnants.map(x => ({ type: "compteur", id: `joueur:${x.j.userId}:commerce`, delta: x.n })),
+                    premier && { type: "compteur", id: cleConcours(etat.tour, premier.j.userId), valeur: premier.n },
+                ].filter(Boolean),
+                obstacles: [
+                    egaliteNonDepartagee(egalite),
+                    nonChargees.length > 0 && `${nonChargees.length} planète(s) pas encore chargée(s) : leur spécialité n'est pas comptée (réessayez dans un instant)`,
+                    egaliteEntreFactions(nonDepartagees),
+                ],
+                departage: departageDe(etat, loi, egales, premier),
+            };
+        },
+    },
+
     // Artefact retrouvé (#316) : la faction élue gagne la relique révélée (sans les points de fabrication)
     316: { script: "artefact-retrouve", resoudre: directiveFaction(gagneLaCarteRevelee("relique")) },
 
@@ -271,6 +424,54 @@ export const RESOLUTIONS = {
                     : (contre ? "contre l'emporte : sans effet" : "aucun système élu : sans effet"),
                 actions: numero !== null ? [{ type: "creer", ref: { type: "token", id: TROU_DE_VER_BETA }, zone: "hex:" + numero }] : [],
                 obstacles: [egaliteNonDepartagee(egalite), elu && numero === null && `${elu.nom} n'a proposé aucun système à la prévote`],
+            };
+        },
+    },
+
+    // Mobilisation (#320) : Pour l'emporte, chaque faction pose une de ses infanteries sur chaque
+    // planète qu'elle possède (sa carte dans ses éléments actifs, la planète sur la carte) — d'office
+    // (Loïc) : une faction retire à la main celles qu'elle ne veut pas
+    320: {
+        script: "mobilisation",
+        resoudre: directivePourContre(ctx => {
+            const { index, joueurs, contenuDe } = ctx;
+
+            const poses = joueurs.map(j => ({
+                j,
+                infanterie: infanterieDe(ctx, j.userId),
+                zones: (index.parZone.get(`joueur:${j.userId}:actif`) || [])
+                    .filter(c => !c.cache && c.ref?.type === "planet")
+                    .map(c => zoneDePlanete(index, contenuDe, c.ref.id))
+                    .filter(Boolean),
+            })).filter(x => x.zones.length > 0);
+
+            return {
+                texte: poses.length
+                    ? poses.map(x => `${x.j.nom} ${x.zones.length} infanterie${x.zones.length > 1 ? "s" : ""}`).join(", ") + " (une par planète possédée)"
+                    : "aucune planète possédée sur la carte",
+                actions: poses.filter(x => x.infanterie).flatMap(x => x.zones.map(zone =>
+                    ({ type: "creer", ref: { type: "unit", id: x.infanterie }, zone, proprio: x.j.userId }))),
+                obstacles: poses.filter(x => !x.infanterie).map(x => `infanterie de ${x.j.nom} introuvable : ses infanteries sont à poser à la main`),
+            };
+        }),
+    },
+
+    // Recrutement disponible (#330) : on ne vote que Pour ; chaque voix d'une faction lui permet de
+    // poser une infanterie sur une planète où elle a une structure — compteur cleRecrutementDisponible
+    // (infanteries à poser), bouton « Recrutement disponible » de son plateau
+    330: {
+        script: "recrutement-disponible",
+        resoudre: ({ etat, joueurs, votes, loi }) => {
+            const recrues = joueurs.map(j => ({ j, n: votes.voix(loi, POUR, j.userId) })).filter(x => x.n > 0);
+
+            return {
+                code: VERS_HORS_JEU,
+                texte: recrues.length
+                    ? recrues.map(x => `${x.j.nom} ${x.n} infanterie${x.n > 1 ? "s" : ""} à poser`).join(", ") +
+                        " (bouton « Recrutement disponible » de son plateau, sur une planète où elle a une structure)"
+                    : "aucune voix : sans effet",
+                actions: recrues.map(x => ({ type: "compteur", id: cleRecrutementDisponible(etat.tour, x.j.userId), valeur: x.n })),
+                obstacles: [],
             };
         },
     },
@@ -303,6 +504,30 @@ export const RESOLUTIONS = {
         resoudre: loiPourContre("un trou de ver alpha ou bêta coûte 1 influence par vaisseau"),
     },
 
+    // Prime (#337) : la faction élue est notée sur la carte (marque « elu » et son marqueur), avec un
+    // jeton de 12 commerce posé dessus ; la carte va sur la table. Chaque vaisseau de cette faction
+    // détruit y fait prendre 1 commerce (Combat.jsx, « Terminer le combat ») ; vide, elle est dépensée.
+    337: {
+        script: "prime",
+        resoudre: ctx => {
+            const { carte } = ctx;
+            const { elu, egalite } = factionElue(ctx);
+
+            return {
+                code: elu ? VERS_TABLE : VERS_HORS_JEU,
+                texte: elu
+                    ? `${elu.nom} élue : 12 commerce sur la carte, sur la table — 1 pris à chaque vaisseau de ${elu.nom} détruit`
+                    : "aucune faction élue : retirée du jeu",
+                actions: elu ? [
+                    { type: "marquer", c: carte.id, marque: "elu", valeur: elu.userId },
+                    { type: "creer", jeton: MARQUEUR, sur: carte.id, proprio: elu.userId },
+                    { type: "creer", jeton: RESSOURCES.commerce[0], sur: carte.id, marques: { montant: 12 } },
+                ] : [],
+                obstacles: [egaliteNonDepartagee(egalite)],
+            };
+        },
+    },
+
     // Révolution (#340) : toutes les lois, traités et mandats en jeu sont retirés du jeu — aussi ceux
     // résolus plus tôt dans ce tour, qui ne sont pas encore à leur place
     340: {
@@ -321,6 +546,16 @@ export const RESOLUTIONS = {
                 ],
             };
         }),
+    },
+
+    // Subvention militaire (#342) : Pour l'emporte, chaque faction peut construire un vaisseau de coût 5
+    // au plus dans son système natal — bouton « Subvention militaire » de son plateau, une fois, ce tour
+    342: {
+        script: "subvention-militaire",
+        resoudre: directivePourContre(({ etat }) => ({
+            texte: "chaque faction peut construire un vaisseau de coût 5 au plus dans son système natal (bouton « Subvention militaire » de son plateau)",
+            actions: [{ type: "compteur", id: cleSubventionMilitaire(etat.tour), valeur: 1 }],
+        })),
     },
 
     // Révolution anti intellectuel (#343) : adoptée, sur la table — rechercher une technologie use
@@ -371,11 +606,7 @@ export const RESOLUTIONS = {
             const idPlanete = elu ? designation(etat, loi, elu.userId) : 0;
 
             // Zone de la planète : la case dont la tuile la porte
-            const zone = idPlanete > 0 ? [...index.parZone].flatMap(([z, contenu]) => {
-                const tuile = /^hex:\d+$/.test(z) && contenu.find(x => x.ref?.type === "system");
-                const k = tuile ? (contenuDe?.(tuile.ref.id)?.elems || []).findIndex(lien => Number(lien?.id) === idPlanete) : -1;
-                return k >= 0 ? [`${z}:planete:${k}`] : [];
-            })[0] ?? null : null;
+            const zone = idPlanete > 0 ? zoneDePlanete(index, contenuDe, idPlanete) : null;
 
             return {
                 code: adopte ? VERS_TABLE : VERS_HORS_JEU,
@@ -428,6 +659,67 @@ export const RESOLUTIONS = {
                     egaliteNonDepartagee(egalite),
                     adopte && numero === null && `${elu ? elu.nom : "la colonne en tête"} : aucun système proposé à la prévote`,
                 ],
+            };
+        },
+    },
+
+    // Lutte contre la corruption (#717, traité) : adopté, sur la table, et les Soutiens politiques du
+    // Conclave sont annulés — retour à la réserve des promesses, et les 5 commerce que « Achat de votes »
+    // a posés sur une case de tour à venir du vendeur sont retirés (Loïc : la vente est annulée en
+    // entier). En jeu : vendre un Soutien politique est semi-bloqué (lutte-contre-la-corruption-en-jeu).
+    717: {
+        script: "lutte-contre-la-corruption",
+        remplaceAuto: true,
+        resoudre: ctx => {
+            const { adopte, voixPour, voixContre } = traiteElu(ctx);
+            const annulation = adopte ? annulationDesSoutiensDuConclave(ctx.etat) : null;
+
+            return {
+                code: adopte ? VERS_TABLE : VERS_HORS_JEU,
+                texte: adopte
+                    ? `adopté (${voixPour} contre ${voixContre}) : sur la table — ` +
+                        (annulation.soutiens
+                            ? `${annulation.soutiens} Soutien(s) politique(s) du Conclave annulé(s), ${annulation.paiements} paiement(s) de 5 commerce retiré(s)`
+                            : "le Conclave n'a aucun Soutien politique")
+                    : `rejeté (${voixPour} contre ${voixContre}) : retiré du jeu`,
+                actions: annulation?.actions || [],
+                obstacles: [],
+            };
+        },
+    },
+
+    // Ouverture bureau des mercenaires (#726) : adoptée, sur la table — à la diplomatie, un Milicien
+    // mercenaire s'achète (bouton « Bureau des mercenaires » du bandeau)
+    726: {
+        script: "ouverture-bureau-des-mercenaires",
+        resoudre: loiPourContre("à la diplomatie, un diplomate et 2 ressources : un Milicien mercenaire sur Mecatol Rex"),
+    },
+
+    // Soutien au conclave (#727) : chaque faction qui a mis au moins 3 voix Pour gagne une faveur du
+    // Conclave (jeton de faveur, marque « neutre »), et celle qui en a mis le plus une autre (à égalité :
+    // l'ordre du responsable du sénat) ; Pour l'emporte : la carte va sur la table, à côté du plateau du
+    // Conclave (il lance 3D10 votes : script « Vote du conclave : votes »), sinon elle est retirée du jeu
+    727: {
+        script: "soutien-au-conclave",
+        resoudre: ctx => {
+            const { etat, joueurs, votes, loi } = ctx;
+            const { adopte, voixPour, voixContre, egalite } = pourOuContre(ctx);
+            const pour = joueurs.map(j => ({ j, n: votes.voix(loi, POUR, j.userId) })).filter(x => x.n > 0);
+            const { premier, egales, nonDepartagees } = enTete(etat, loi, pour);
+
+            const faveurs = [
+                ...pour.filter(x => x.n >= 3).map(x => ({ j: x.j, pourquoi: `${x.n} voix Pour` })),
+                ...(premier ? [{ j: premier.j, pourquoi: "le plus de voix Pour" }] : []),
+            ];
+
+            return {
+                code: adopte ? VERS_TABLE : VERS_HORS_JEU,
+                texte: `${adopte ? "adoptée" : "rejetée"} (${voixPour} pour, ${voixContre} contre) : ` +
+                    (adopte ? "sur la table, à côté du Conclave (il lance 3D10 votes)" : "retirée du jeu") +
+                    (faveurs.length ? " — faveur du Conclave : " + faveurs.map(x => `${x.j.nom} (${x.pourquoi})`).join(", ") : " — aucune faveur"),
+                actions: faveurs.map(x => ({ type: "creer", jeton: FAVEUR, zone: `joueur:${x.j.userId}:faveurs`, marques: { neutre: CONCLAVE } })),
+                obstacles: [egaliteNonDepartagee(egalite), egaliteEntreFactions(nonDepartagees)],
+                departage: departageDe(etat, loi, egales, premier),
             };
         },
     },

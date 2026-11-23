@@ -1111,7 +1111,10 @@ export function Partie({ id }) {
             c.ref?.type === "Agenda" && c.zone === `joueur:${moi}:main`) {
 
             const compteur = `joueur:${moi}:proposition`;
-            const politique = agentDisponible(ctx, "politique");
+
+            // Mandat Chef du sénat (#328) : ajouter une loi à l'agenda n'use pas de politique
+            const chefDuSenat = ctx.aScript(moi, "chef-du-senat");
+            const politique = chefDuSenat ? null : agentDisponible(ctx, "politique");
 
             // (pas de tour suivant : là, l'action est impossible)
             if (etat.tour >= nombreTours(etat)) {
@@ -1123,10 +1126,14 @@ export function Partie({ id }) {
             // (sans politique disponible, aucun n'est usé)
             const commentaire = confirmerRegle(`Proposer ${nomElement(search, c.ref)}`, [
                 Number(etat.compteurs[compteur]) === etat.tour && "vous avez déjà proposé un agenda ce tour",
-                !politique && "vous n'avez pas de politique disponible (aucun ne sera usé)",
+                !politique && !chefDuSenat && "vous n'avez pas de politique disponible (aucun ne sera usé)",
             ]);
 
             if (commentaire) {
+                if (chefDuSenat) {
+                    setAvis("Chef du sénat : la loi est ajoutée à l'agenda sans user de politique.");
+                }
+
                 // (agent ou remplaçant : décision du joueur, le coup part ensuite)
                 choisirRemplacants([
                     politique && { type: "deplacer", c: politique.id, vers: `joueur:${moi}:agentsUses` },
@@ -1906,7 +1913,7 @@ export function Partie({ id }) {
                                 {piochePropositions}
                                 <span>
                                     Ctrl + clic sur un agenda de votre main : l'ajoute au tour
-                                    suivant (use un politique, une fois par tour).
+                                    suivant ({ctx.aScript(moi, "chef-du-senat") ? "Chef du sénat : sans user de politique" : "use un politique"}, une fois par tour).
                                 </span>
                             </div>
                         )}
