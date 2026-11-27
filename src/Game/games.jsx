@@ -14,6 +14,8 @@ import {
     Handler as HandlerFolowyn
 } from './Followyn/Followyn'
 
+import { Handler as HandlerFeodalKingdom} from './FeodalKingdom/FeodalKingdom'
+
 import { Link } from '../lib/datatype'
 import { useLocation } from 'react-router'
 import { Handler } from './Escalade/Escalade'
@@ -45,6 +47,12 @@ export const games = {
         handlers: Handler,
         tools:{},
         name:"Escalade"
+    }
+    ,
+    "feodalKingdom":{
+        handlers: HandlerFeodalKingdom,
+        tools:{},
+        name:"Feodal Kingdom"
     }
 }
 
